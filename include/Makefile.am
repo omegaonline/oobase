@@ -1,5 +1,5 @@
 
-nobase_include_HEADERS = \
+pkginclude_HEADERS = \
 	Atomic.h \
 	Buffer.h \
 	ByteSwap.h \

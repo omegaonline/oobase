@@ -1,6 +1,6 @@
 AC_PREREQ(2.61)
 
-AC_INIT(oobase,0.5.0)
+AC_INIT(OOBase,0.5.0)
 AC_CONFIG_SRCDIR([src/Buffer.cpp])
 AC_CONFIG_HEADER([include/autoheader_dummy.h include/config-autoconf.h])
 
@@ -42,10 +42,9 @@ OO_C_BUILTINS
 OO_NEW_NOTHROW
 
 # Check for the headers we use
-AC_CHECK_HEADERS([windows.h wchar.h sys/time.h asl.h syslog.h assert.h time.h errno.h sys/socket.h uuid/uuid.h pwd.h unistd.h ev.h fcntl.h sys/fcntl.h sys/un.h ])
+AC_CHECK_HEADERS([windows.h wchar.h sys/time.h asl.h syslog.h assert.h time.h errno.h sys/socket.h pwd.h unistd.h ev.h fcntl.h sys/fcntl.h sys/un.h ])
 
 # Add the correct libs to LIBS
-AC_CHECK_LIB([uuid],[uuid_generate],AC_SUBST([UUID_LIBS],["-luuid"]))
 AC_CHECK_LIB([ev],[ev_loop_new],AC_SUBST([EV_LIBS],["-lev"]))
 
 # Check for socket options
@@ -63,9 +62,6 @@ AC_CHECK_TYPES([struct sockcred])
 # Set sensible default CFLAGS if necessary
 AS_IF([test "x$oo_test_CFLAGS" != "xset"],
 [
-  # Always try to hide symbols
-  AX_CFLAGS_GCC_OPTION([-fvisibility=hidden])
-
   AS_IF([test "x$debug" = "xtrue"],
   [
     AX_CFLAGS_GCC_OPTION([-ggdb])
@@ -81,9 +77,6 @@ AS_IF([test "x$oo_test_CXXFLAGS" != "xset"],
 [
   # Always add full warnings
   AX_CXXFLAGS_WARN_ALL
-
-  # Always try to hide symbols
-  AX_CXXFLAGS_GCC_OPTION([-fvisibility=hidden])
 
   AS_IF([test "x$debug" = "xtrue"],
   [
@@ -103,8 +96,7 @@ AS_IF([test "x$debug" = "xtrue"],[CPPFLAGS="$CPPFLAGS -D_DEBUG"],[CPPFLAGS="$CPP
 m4_ifdef([LT_PREREQ],,[AC_MSG_ERROR([Need libtool version 2.2.6 or later])])
 LT_PREREQ([2.2.6])
 LT_CONFIG_LTDL_DIR([libltdl])
-LT_INIT([win32-dll disable-static dlopen])
-LT_LANG([Windows Resource])
+LT_INIT([dlopen])
 LTDL_INIT
 
 # Find sqlite3

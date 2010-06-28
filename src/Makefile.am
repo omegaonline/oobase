@@ -1,4 +1,4 @@
-noinst_LTLIBRARIES = liboobase.la liboosvrbase.la
+lib_LTLIBRARIES = liboobase.la liboosvrbase.la
 
 liboobase_la_CPPFLAGS = -I@top_srcdir@/include
 liboobase_la_CFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
