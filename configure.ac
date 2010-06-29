@@ -6,11 +6,7 @@ AC_CONFIG_HEADER([include/autoheader_dummy.h include/config-autoconf.h])
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_FILES([
-	Makefile
-	include/Makefile
-	src/Makefile
-])
+AC_CONFIG_FILES([Makefile])
 
 AM_INIT_AUTOMAKE([foreign 1.10 no-define])
 

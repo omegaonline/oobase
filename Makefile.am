@@ -1,7 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = libltdl include src
-
 EXTRA_DIST = \
 	lgpl3_0.txt
 
@@ -20,8 +18,6 @@ reallyclean: maintainer-clean
 	rm -f $(top_srcdir)/Makefile.in
 	rm -f $(top_srcdir)/aclocal.m4
 	rm -f $(top_srcdir)/configure
-	rm -f $(top_srcdir)/data/Makefile.in
-	rm -f $(top_srcdir)/include/Makefile.in
 	rm -f $(top_srcdir)/m4/argz.m4
 	rm -f $(top_srcdir)/m4/libtool.m4
 	rm -f $(top_srcdir)/m4/ltdl.m4
@@ -29,10 +25,8 @@ reallyclean: maintainer-clean
 	rm -f $(top_srcdir)/m4/ltsugar.m4
 	rm -f $(top_srcdir)/m4/ltversion.m4
 	rm -f $(top_srcdir)/m4/lt~obsolete.m4
-	rm -f $(top_srcdir)/src/Makefile.in
 	rm -f $(top_srcdir)/include/autoheader_dummy.h.in
 	rm -f $(top_srcdir)/include/autoheader_dummy.h.in~
-	rm -f $(top_srcdir)/include/Makefile.in
 	
 ####################################
 # Hook to make the ChangeLog
@@ -49,3 +43,82 @@ dist-hook:
 	else \
 		echo A git clone is required to generate a ChangeLog >&2; \
 	fi
+
+######################################
+
+lib_LTLIBRARIES = liboobase.la liboosvrbase.la
+
+liboobase_la_CPPFLAGS = -I@top_srcdir@/include
+liboobase_la_CFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
+liboobase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
+liboobase_la_LDFLAGS = $(PTHREAD_LIBS)
+
+liboobase_la_SOURCES = \
+	src/Buffer.cpp \
+	src/Condition.cpp \
+	src/DLL.cpp \
+	src/Error.cpp \
+	src/Mutex.cpp \
+	src/Once.cpp \
+	src/TLS.cpp \
+	src/Thread.cpp \
+	src/TimeVal.cpp \
+	src/PosixSocket.cpp \
+	src/Win32.cpp \
+	src/Win32Socket.cpp \
+	src/tr24731.cpp \
+	src/utf8.cpp
+
+liboosvrbase_la_CPPFLAGS = -I@top_srcdir@/include
+liboosvrbase_la_CFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
+liboosvrbase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
+liboosvrbase_la_LDFLAGS = $(PTHREAD_LIBS)
+
+if WIN32
+liboosvrbase_la_LDFLAGS += -lnetapi32 -luserenv -lshlwapi
+endif
+
+liboosvrbase_la_SOURCES = \
+	src/CmdArgs.cpp \
+	src/Database.cpp \
+	src/Logger.cpp \
+	src/PipeWin32.cpp \
+	src/Proactor.cpp \
+	src/ProactorEv.cpp \
+	src/ProactorWin32.cpp \
+	src/pw_info.cpp \
+	src/SecurityWin32.cpp \
+	src/SQLite3_comp.c
+
+pkginclude_HEADERS = \
+	include/Atomic.h \
+	include/Buffer.h \
+	include/ByteSwap.h \
+	include/CDRStream.h \
+	include/Condition.h \
+	include/DLL.h \
+	include/Destructor.h \
+	include/Mutex.h \
+	include/Once.h \
+	include/Queue.h \
+	include/Singleton.h \
+	include/SmartPtr.h \
+	include/Socket.h \
+	include/TLSSingleton.h \
+	include/Thread.h \
+	include/TimeVal.h \
+	include/PosixSocket.h \
+	include/Win32.h \
+	include/Win32Socket.h \
+	include/config-base.h \
+	include/config-msvc.h \
+	include/tr24731.h \
+	include/utf8.h \
+	include/CmdArgs.h \
+	include/Database.h \
+	include/Logger.h \
+	include/Proactor.h \
+	include/ProactorEv.h \
+	include/ProactorWin32.h \
+	include/pw_info.h \
+	include/SecurityWin32.h
