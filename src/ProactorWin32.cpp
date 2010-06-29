@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/oobase/Proactor.h"
+#include "../include/OOBase/Proactor.h"
 
 #if defined(_WIN32)
 
@@ -27,8 +27,8 @@
 #define STATUS_PIPE_BROKEN 0xC000014BL
 #endif
 
-#include "../include/oobase/Win32Socket.h"
-#include "../include/oobase/ProactorWin32.h"
+#include "../include/OOBase/Win32Socket.h"
+#include "../include/OOBase/ProactorWin32.h"
 
 namespace
 {

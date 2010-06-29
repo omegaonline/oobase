@@ -307,7 +307,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ProactorEv.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\ProactorWin32.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\pw_info.cpp"
 				>
 			</File>
 			<File
@@ -325,27 +333,27 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath="..\include\oobase\CmdArgs.h"
+				RelativePath="..\include\OOBase\CmdArgs.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\Database.h"
+				RelativePath="..\include\OOBase\Database.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\Logger.h"
+				RelativePath="..\include\OOBase\Logger.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\Proactor.h"
+				RelativePath="..\include\OOBase\Proactor.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\ProactorWin32.h"
+				RelativePath="..\include\OOBase\ProactorWin32.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\SecurityWin32.h"
+				RelativePath="..\include\OOBase\SecurityWin32.h"
 				>
 			</File>
 		</Filter>

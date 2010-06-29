@@ -1,5 +1,7 @@
 ACLOCAL_AMFLAGS = -I m4
 
+SUBDIRS = include
+
 EXTRA_DIST = \
 	lgpl3_0.txt
 
@@ -54,6 +56,7 @@ liboobase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
 liboobase_la_LDFLAGS = $(PTHREAD_LIBS)
 
 liboobase_la_SOURCES = \
+	src/version.c \
 	src/Buffer.cpp \
 	src/Condition.cpp \
 	src/DLL.cpp \
@@ -89,36 +92,3 @@ liboosvrbase_la_SOURCES = \
 	src/pw_info.cpp \
 	src/SecurityWin32.cpp \
 	src/SQLite3_comp.c
-
-pkginclude_HEADERS = \
-	include/oobase/Atomic.h \
-	include/oobase/Buffer.h \
-	include/oobase/ByteSwap.h \
-	include/oobase/CDRStream.h \
-	include/oobase/Condition.h \
-	include/oobase/DLL.h \
-	include/oobase/Destructor.h \
-	include/oobase/Mutex.h \
-	include/oobase/Once.h \
-	include/oobase/Queue.h \
-	include/oobase/Singleton.h \
-	include/oobase/SmartPtr.h \
-	include/oobase/Socket.h \
-	include/oobase/TLSSingleton.h \
-	include/oobase/Thread.h \
-	include/oobase/TimeVal.h \
-	include/oobase/PosixSocket.h \
-	include/oobase/Win32.h \
-	include/oobase/Win32Socket.h \
-	include/oobase/config-base.h \
-	include/oobase/config-msvc.h \
-	include/oobase/tr24731.h \
-	include/oobase/utf8.h \
-	include/oobase/CmdArgs.h \
-	include/oobase/Database.h \
-	include/oobase/Logger.h \
-	include/oobase/Proactor.h \
-	include/oobase/ProactorEv.h \
-	include/oobase/ProactorWin32.h \
-	include/oobase/pw_info.h \
-	include/oobase/SecurityWin32.h

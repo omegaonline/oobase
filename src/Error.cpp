@@ -19,8 +19,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/oobase/Win32.h"
-#include "../include/oobase/tr24731.h"
+#include "../include/OOBase/Win32.h"
+#include "../include/OOBase/tr24731.h"
 
 namespace OOBase
 {

@@ -19,8 +19,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/oobase/Database.h"
-#include "../include/oobase/Logger.h"
+#include "../include/OOBase/Database.h"
+#include "../include/OOBase/Logger.h"
 
 #if defined(HAVE_SQLITE3) || defined(HAVE_SQLITE3_AMALGAMATION)
 

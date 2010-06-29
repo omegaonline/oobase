@@ -5,7 +5,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/oobase/config-base.h"
+#include "../include/OOBase/config-base.h"
 
 #ifdef HAVE_SQLITE3_AMALGAMATION
 

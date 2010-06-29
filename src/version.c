@@ -19,37 +19,28 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Once.h"
+#include "../include/OOBase/version.h"
 
-#if defined(_WIN32)
-
-namespace
+const char* OOBase_GetVersion()
 {
-	static BOOL __stdcall PINIT_ONCE_FN_impl(INIT_ONCE* /*InitOnce*/, void* Parameter, void** /*Context*/)
-	{
-		(*((OOBase::Once::pfn_once)Parameter))();
-		return TRUE;
-	}
-}
-
-void OOBase::Once::Run(once_t* key, pfn_once fn)
-{
-	void* p = 0;
-	if (!Win32::InitOnceExecuteOnce(key,&PINIT_ONCE_FN_impl,(void*)fn,&p))
-		OOBase_CallCriticalFailure(GetLastError());
-}
-
-#elif defined(HAVE_PTHREAD)
-
-void OOBase::Once::Run(once_t* key, pfn_once fn)
-{
-	int err = pthread_once(key,fn);
-	if (err != 0)
-		OOBase_CallCriticalFailure(err);
-}
-
+#if defined(_DEBUG)
+	return OOBASE_VERSION " (Debug build)";
 #else
-
-#error Fix me!
-
+	return OOBASE_VERSION;
 #endif
+}
+
+unsigned int OOBase_GetMajorVersion()
+{
+	return OOBASE_MAJOR_VERSION;
+}
+
+unsigned int OOBase_GetMinorVersion()
+{
+	return OOBASE_MINOR_VERSION;
+}
+
+unsigned int OOBase_GetPatchVersion()
+{
+	return OOBASE_PATCH_VERSION;
+}

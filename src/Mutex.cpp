@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/oobase/Mutex.h"
+#include "../include/OOBase/Mutex.h"
 
 #if defined(_WIN32)
 

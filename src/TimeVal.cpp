@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/oobase/TimeVal.h"
+#include "../include/OOBase/TimeVal.h"
 
 #if defined(HAVE_SYS_TIME_H) && (HAVE_SYS_TIME_H == 1)
 #include <sys/time.h>

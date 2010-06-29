@@ -19,8 +19,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/oobase/TLSSingleton.h"
-#include "../include/oobase/Singleton.h"
+#include "../include/OOBase/TLSSingleton.h"
+#include "../include/OOBase/Singleton.h"
 
 #include <map>
 

@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/oobase/SmartPtr.h"
+#include "../include/OOBase/SmartPtr.h"
 
 #if defined(_WIN32)
 

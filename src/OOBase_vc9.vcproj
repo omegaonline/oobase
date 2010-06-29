@@ -295,6 +295,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\PosixSocket.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Thread.cpp"
 				>
 			</File>
@@ -308,6 +312,10 @@
 			</File>
 			<File
 				RelativePath=".\utf8.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\version.c"
 				>
 			</File>
 			<File
@@ -325,91 +333,95 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath="..\include\oobase\Atomic.h"
+				RelativePath="..\include\OOBase\Atomic.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\Buffer.h"
+				RelativePath="..\include\OOBase\Buffer.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\ByteSwap.h"
+				RelativePath="..\include\OOBase\ByteSwap.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\CDRStream.h"
+				RelativePath="..\include\OOBase\CDRStream.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\Condition.h"
+				RelativePath="..\include\OOBase\Condition.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\config-base.h"
+				RelativePath="..\include\OOBase\config-base.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\config-msvc.h"
+				RelativePath="..\include\OOBase\config-msvc.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\Destructor.h"
+				RelativePath="..\include\OOBase\Destructor.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\DLL.h"
+				RelativePath="..\include\OOBase\DLL.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\Mutex.h"
+				RelativePath="..\include\OOBase\Mutex.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\Once.h"
+				RelativePath="..\include\OOBase\Once.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\Queue.h"
+				RelativePath="..\include\OOBase\Queue.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\Singleton.h"
+				RelativePath="..\include\OOBase\Singleton.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\SmartPtr.h"
+				RelativePath="..\include\OOBase\SmartPtr.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\Socket.h"
+				RelativePath="..\include\OOBase\Socket.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\Thread.h"
+				RelativePath="..\include\OOBase\Thread.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\TimeVal.h"
+				RelativePath="..\include\OOBase\TimeVal.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\TLSSingleton.h"
+				RelativePath="..\include\OOBase\TLSSingleton.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\tr24731.h"
+				RelativePath="..\include\OOBase\tr24731.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\utf8.h"
+				RelativePath="..\include\OOBase\utf8.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\Win32.h"
+				RelativePath="..\include\OOBase\version.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\oobase\Win32Socket.h"
+				RelativePath="..\include\OOBase\Win32.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\Win32Socket.h"
 				>
 			</File>
 		</Filter>

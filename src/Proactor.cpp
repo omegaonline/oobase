@@ -19,12 +19,13 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/oobase/Proactor.h"
+#include "../include/OOBase/version.h"
+#include "../include/OOBase/Proactor.h"
 
 #if defined(_WIN32)
-#include "../include/oobase/ProactorWin32.h"
+#include "../include/OOBase/ProactorWin32.h"
 #elif defined(HAVE_EV_H)
-#include "../include/oobase/ProactorEv.h"
+#include "../include/OOBase/ProactorEv.h"
 #else
 #error No libev installed
 #endif

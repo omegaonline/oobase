@@ -22,13 +22,11 @@
 #ifndef OOBASE_CONFIG_BASE_H_INCLUDED_
 #define OOBASE_CONFIG_BASE_H_INCLUDED_
 
-#if defined(HAVE_CONFIG_H)
-	// Autoconf
-	#include "config-autoconf.h"
-#elif defined(_MSC_VER)
+#if defined(_MSC_VER)
 	#include "config-msvc.h"
 #else
-	#error Please add support for your dev environment or use autoconf
+	// Autoconf
+	#include "config-autoconf.h"
 #endif
 
 #if defined(HAVE_STDLIB_H)

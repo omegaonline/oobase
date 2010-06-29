@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/oobase/config-base.h"
+#include "../include/OOBase/config-base.h"
 
 #include <stdio.h>
 #include <stdarg.h>

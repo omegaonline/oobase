@@ -19,37 +19,30 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Once.h"
+#ifndef OOBASE_VERSION_H_INCLUDED_
+#define OOBASE_VERSION_H_INCLUDED_
 
-#if defined(_WIN32)
+#define OOBASE_MAJOR_VERSION  0
+#define OOBASE_MINOR_VERSION  5
+#define OOBASE_PATCH_VERSION  0
 
-namespace
+#define OOBASE_VERSION_III(n)        #n
+#define OOBASE_VERSION_II(a,b,c)     OOBASE_VERSION_III(a.b.c)
+#define OOBASE_VERSION_I(a,b,c)      OOBASE_VERSION_II(a,b,c)
+#define OOBASE_VERSION               OOBASE_VERSION_I(OOBASE_MAJOR_VERSION,OOBASE_MINOR_VERSION,OOBASE_PATCH_VERSION)
+
+#if defined(__cplusplus)
+extern "C"
 {
-	static BOOL __stdcall PINIT_ONCE_FN_impl(INIT_ONCE* /*InitOnce*/, void* Parameter, void** /*Context*/)
-	{
-		(*((OOBase::Once::pfn_once)Parameter))();
-		return TRUE;
-	}
-}
+#endif // __cplusplus
 
-void OOBase::Once::Run(once_t* key, pfn_once fn)
-{
-	void* p = 0;
-	if (!Win32::InitOnceExecuteOnce(key,&PINIT_ONCE_FN_impl,(void*)fn,&p))
-		OOBase_CallCriticalFailure(GetLastError());
-}
+unsigned int OOBase_GetMajorVersion();
+unsigned int OOBase_GetMinorVersion();
+unsigned int OOBase_GetPatchVersion();
+const char* OOBase_GetVersion();
 
-#elif defined(HAVE_PTHREAD)
+#if defined(__cplusplus)
+} // extern "C"
+#endif // __cplusplus
 
-void OOBase::Once::Run(once_t* key, pfn_once fn)
-{
-	int err = pthread_once(key,fn);
-	if (err != 0)
-		OOBase_CallCriticalFailure(err);
-}
-
-#else
-
-#error Fix me!
-
-#endif
+#endif // OOBASE_VERSION_H_INCLUDED_
