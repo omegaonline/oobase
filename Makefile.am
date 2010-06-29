@@ -25,8 +25,8 @@ reallyclean: maintainer-clean
 	rm -f $(top_srcdir)/m4/ltsugar.m4
 	rm -f $(top_srcdir)/m4/ltversion.m4
 	rm -f $(top_srcdir)/m4/lt~obsolete.m4
-	rm -f $(top_srcdir)/include/autoheader_dummy.h.in
-	rm -f $(top_srcdir)/include/autoheader_dummy.h.in~
+	rm -f $(top_srcdir)/include/oobase/autoheader_dummy.h.in
+	rm -f $(top_srcdir)/include/oobase/autoheader_dummy.h.in~
 	
 ####################################
 # Hook to make the ChangeLog
@@ -91,34 +91,34 @@ liboosvrbase_la_SOURCES = \
 	src/SQLite3_comp.c
 
 pkginclude_HEADERS = \
-	include/Atomic.h \
-	include/Buffer.h \
-	include/ByteSwap.h \
-	include/CDRStream.h \
-	include/Condition.h \
-	include/DLL.h \
-	include/Destructor.h \
-	include/Mutex.h \
-	include/Once.h \
-	include/Queue.h \
-	include/Singleton.h \
-	include/SmartPtr.h \
-	include/Socket.h \
-	include/TLSSingleton.h \
-	include/Thread.h \
-	include/TimeVal.h \
-	include/PosixSocket.h \
-	include/Win32.h \
-	include/Win32Socket.h \
-	include/config-base.h \
-	include/config-msvc.h \
-	include/tr24731.h \
-	include/utf8.h \
-	include/CmdArgs.h \
-	include/Database.h \
-	include/Logger.h \
-	include/Proactor.h \
-	include/ProactorEv.h \
-	include/ProactorWin32.h \
-	include/pw_info.h \
-	include/SecurityWin32.h
+	include/oobase/Atomic.h \
+	include/oobase/Buffer.h \
+	include/oobase/ByteSwap.h \
+	include/oobase/CDRStream.h \
+	include/oobase/Condition.h \
+	include/oobase/DLL.h \
+	include/oobase/Destructor.h \
+	include/oobase/Mutex.h \
+	include/oobase/Once.h \
+	include/oobase/Queue.h \
+	include/oobase/Singleton.h \
+	include/oobase/SmartPtr.h \
+	include/oobase/Socket.h \
+	include/oobase/TLSSingleton.h \
+	include/oobase/Thread.h \
+	include/oobase/TimeVal.h \
+	include/oobase/PosixSocket.h \
+	include/oobase/Win32.h \
+	include/oobase/Win32Socket.h \
+	include/oobase/config-base.h \
+	include/oobase/config-msvc.h \
+	include/oobase/tr24731.h \
+	include/oobase/utf8.h \
+	include/oobase/CmdArgs.h \
+	include/oobase/Database.h \
+	include/oobase/Logger.h \
+	include/oobase/Proactor.h \
+	include/oobase/ProactorEv.h \
+	include/oobase/ProactorWin32.h \
+	include/oobase/pw_info.h \
+	include/oobase/SecurityWin32.h

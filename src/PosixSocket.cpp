@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "PosixSocket.h"
+#include "../include/oobase/PosixSocket.h"
 
 #if (!defined(_WIN32) && defined(HAVE_SYS_SOCKET_H)) || defined(DOXYGEN)
 

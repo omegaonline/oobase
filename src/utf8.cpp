@@ -19,8 +19,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/utf8.h"
-#include "../include/SmartPtr.h"
+#include "../include/oobase/utf8.h"
+#include "../include/oobase/SmartPtr.h"
 
 std::wstring OOBase::from_utf8(const char* sz, size_t len)
 {

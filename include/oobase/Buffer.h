@@ -112,9 +112,9 @@ namespace OOBase
 		char*   m_wr_ptr;   ///< The current write pointer.
 		char*   m_rd_ptr;   ///< The current read pointer.
 
-		int priv_malloc(char*& ptr, size_t& bytes);
-		int priv_realloc(char*& ptr, size_t& bytes);
-		void priv_free(char* ptr);
+		static int priv_malloc(char*& ptr, size_t& bytes);
+		static int priv_realloc(char*& ptr, size_t& bytes);
+		static void priv_free(char* ptr);
 	};
 }
 

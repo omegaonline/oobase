@@ -318,27 +318,27 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath="..\include\CmdArgs.h"
+				RelativePath="..\include\oobase\CmdArgs.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\Database.h"
+				RelativePath="..\include\oobase\Database.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\Logger.h"
+				RelativePath="..\include\oobase\Logger.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\Proactor.h"
+				RelativePath="..\include\oobase\Proactor.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\ProactorWin32.h"
+				RelativePath="..\include\oobase\ProactorWin32.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\SecurityWin32.h"
+				RelativePath="..\include\oobase\SecurityWin32.h"
 				>
 			</File>
 		</Filter>

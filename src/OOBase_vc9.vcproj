@@ -59,6 +59,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
+				OutputFile="$(OutDir)\$(ProjectName)d.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -118,6 +119,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
+				OutputFile="$(OutDir)\$(ProjectName)d.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -327,87 +329,87 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\Buffer.h"
+				RelativePath="..\include\oobase\Buffer.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\ByteSwap.h"
+				RelativePath="..\include\oobase\ByteSwap.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\CDRStream.h"
+				RelativePath="..\include\oobase\CDRStream.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\Condition.h"
+				RelativePath="..\include\oobase\Condition.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\config-base.h"
+				RelativePath="..\include\oobase\config-base.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\config-msvc.h"
+				RelativePath="..\include\oobase\config-msvc.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\Destructor.h"
+				RelativePath="..\include\oobase\Destructor.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\DLL.h"
+				RelativePath="..\include\oobase\DLL.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\Mutex.h"
+				RelativePath="..\include\oobase\Mutex.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\Once.h"
+				RelativePath="..\include\oobase\Once.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\Queue.h"
+				RelativePath="..\include\oobase\Queue.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\Singleton.h"
+				RelativePath="..\include\oobase\Singleton.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\SmartPtr.h"
+				RelativePath="..\include\oobase\SmartPtr.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\Socket.h"
+				RelativePath="..\include\oobase\Socket.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\Thread.h"
+				RelativePath="..\include\oobase\Thread.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\TimeVal.h"
+				RelativePath="..\include\oobase\TimeVal.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\TLSSingleton.h"
+				RelativePath="..\include\oobase\TLSSingleton.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\tr24731.h"
+				RelativePath="..\include\oobase\tr24731.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\utf8.h"
+				RelativePath="..\include\oobase\utf8.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\Win32.h"
+				RelativePath="..\include\oobase\Win32.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\Win32Socket.h"
+				RelativePath="..\include\oobase\Win32Socket.h"
 				>
 			</File>
 		</Filter>
