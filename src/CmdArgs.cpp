@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/CmdArgs.h"
+#include "../include/CmdArgs.h"
 
 bool OOSvrBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, const char* long_opt)
 {

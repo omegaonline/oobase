@@ -315,10 +315,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\version.c"
-				>
-			</File>
-			<File
 				RelativePath=".\Win32.cpp"
 				>
 			</File>
@@ -410,10 +406,6 @@
 			</File>
 			<File
 				RelativePath="..\include\OOBase\utf8.h"
-				>
-			</File>
-			<File
-				RelativePath="..\include\OOBase\version.h"
 				>
 			</File>
 			<File

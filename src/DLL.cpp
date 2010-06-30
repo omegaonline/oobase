@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/DLL.h"
+#include "../include/DLL.h"
 
 #if defined(_WIN32)
 
@@ -64,7 +64,7 @@ void* OOBase::DLL::symbol(const char* sym_name)
 
 #else
 
-#include "../include/OOBase/Singleton.h"
+#include "../include/Singleton.h"
 
 namespace
 {

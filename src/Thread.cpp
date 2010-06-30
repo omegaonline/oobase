@@ -19,12 +19,12 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Thread.h"
+#include "../include/Thread.h"
 
 #if defined(_WIN32)
 
 #include <process.h>
-#include "../include/OOBase/TLSSingleton.h"
+#include "../include/TLSSingleton.h"
 
 #endif
 

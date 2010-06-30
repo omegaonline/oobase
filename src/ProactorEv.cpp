@@ -19,14 +19,14 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Proactor.h"
+#include "../include/Proactor.h"
 
 #include <algorithm>
 
 #if defined(HAVE_EV_H)
 
-#include "../include/OOBase/ProactorEv.h"
-#include "../include/OOBase/PosixSocket.h"
+#include "../include/ProactorEv.h"
+#include "../include/PosixSocket.h"
 
 #if defined(HAVE_SYS_UN_H)
 #include <sys/un.h>

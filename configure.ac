@@ -2,11 +2,11 @@ AC_PREREQ(2.61)
 
 AC_INIT(OOBase,0.5.0)
 AC_CONFIG_SRCDIR([src/Buffer.cpp])
-AC_CONFIG_HEADER([include/oobase/autoheader_dummy.h include/oobase/config-autoconf.h])
+AC_CONFIG_HEADER([include/autoheader_dummy.h include/config-autoconf.h])
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_FILES([Makefile include/Makefile])
+AC_CONFIG_FILES([Makefile])
 
 AM_INIT_AUTOMAKE([foreign 1.10 no-define])
 

@@ -1,7 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = include
-
 EXTRA_DIST = \
 	lgpl3_0.txt
 
@@ -17,18 +15,18 @@ astyle:
 	astyle -A1 -T4 -K -N -w -U -c -n -R $(srcdir)/*.cpp
 
 reallyclean: maintainer-clean
-	rm -f $(top_srcdir)/Makefile.in
-	rm -f $(top_srcdir)/aclocal.m4
-	rm -f $(top_srcdir)/configure
-	rm -f $(top_srcdir)/m4/argz.m4
-	rm -f $(top_srcdir)/m4/libtool.m4
-	rm -f $(top_srcdir)/m4/ltdl.m4
-	rm -f $(top_srcdir)/m4/ltoptions.m4
-	rm -f $(top_srcdir)/m4/ltsugar.m4
-	rm -f $(top_srcdir)/m4/ltversion.m4
-	rm -f $(top_srcdir)/m4/lt~obsolete.m4
-	rm -f $(top_srcdir)/include/oobase/autoheader_dummy.h.in
-	rm -f $(top_srcdir)/include/oobase/autoheader_dummy.h.in~
+	rm -f $(srcdir)/Makefile.in
+	rm -f $(srcdir)/aclocal.m4
+	rm -f $(srcdir)/configure
+	rm -f $(srcdir)/m4/argz.m4
+	rm -f $(srcdir)/m4/libtool.m4
+	rm -f $(srcdir)/m4/ltdl.m4
+	rm -f $(srcdir)/m4/ltoptions.m4
+	rm -f $(srcdir)/m4/ltsugar.m4
+	rm -f $(srcdir)/m4/ltversion.m4
+	rm -f $(srcdir)/m4/lt~obsolete.m4
+	rm -f $(srcdir)/include/oobase/autoheader_dummy.h.in
+	rm -f $(srcdir)/include/oobase/autoheader_dummy.h.in~
 	
 ####################################
 # Hook to make the ChangeLog
@@ -48,15 +46,37 @@ dist-hook:
 
 ######################################
 
-lib_LTLIBRARIES = liboobase.la liboosvrbase.la
+noinst_LTLIBRARIES = liboobase.la liboosvrbase.la
 
-liboobase_la_CPPFLAGS = -I@top_srcdir@/include
+#liboobase_la_CPPFLAGS = -I.@srcdir@/include
 liboobase_la_CFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
 liboobase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
 liboobase_la_LDFLAGS = $(PTHREAD_LIBS)
 
 liboobase_la_SOURCES = \
-	src/version.c \
+	include/Atomic.h \
+	include/Buffer.h \
+	include/ByteSwap.h \
+	include/CDRStream.h \
+	include/Condition.h \
+	include/DLL.h \
+	include/Destructor.h \
+	include/Mutex.h \
+	include/Once.h \
+	include/Queue.h \
+	include/Singleton.h \
+	include/SmartPtr.h \
+	include/Socket.h \
+	include/TLSSingleton.h \
+	include/Thread.h \
+	include/TimeVal.h \
+	include/PosixSocket.h \
+	include/Win32.h \
+	include/Win32Socket.h \
+	include/config-base.h \
+	include/config-msvc.h \
+	include/tr24731.h \
+	include/utf8.h \
 	src/Buffer.cpp \
 	src/Condition.cpp \
 	src/DLL.cpp \
@@ -72,7 +92,7 @@ liboobase_la_SOURCES = \
 	src/tr24731.cpp \
 	src/utf8.cpp
 
-liboosvrbase_la_CPPFLAGS = -I@top_srcdir@/include
+#liboosvrbase_la_CPPFLAGS = -I.@srcdir@/include
 liboosvrbase_la_CFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
 liboosvrbase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
 liboosvrbase_la_LDFLAGS = $(PTHREAD_LIBS)
@@ -82,6 +102,14 @@ liboosvrbase_la_LDFLAGS += -lnetapi32 -luserenv -lshlwapi
 endif
 
 liboosvrbase_la_SOURCES = \
+	include/CmdArgs.h \
+	include/Database.h \
+	include/Logger.h \
+	include/Proactor.h \
+	include/ProactorEv.h \
+	include/ProactorWin32.h \
+	include/pw_info.h \
+	include/SecurityWin32.h \
 	src/CmdArgs.cpp \
 	src/Database.cpp \
 	src/Logger.cpp \

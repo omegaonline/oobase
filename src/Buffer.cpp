@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Buffer.h"
+#include "../include/Buffer.h"
 
 OOBase::Buffer::Buffer(size_t cbSize) :
 		m_refcount(1),

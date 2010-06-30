@@ -19,11 +19,11 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Logger.h"
-#include "../include/OOBase/Singleton.h"
-#include "../include/OOBase/SmartPtr.h"
-#include "../include/OOBase/tr24731.h"
-#include "../include/OOBase/SecurityWin32.h"
+#include "../include/Logger.h"
+#include "../include/Singleton.h"
+#include "../include/SmartPtr.h"
+#include "../include/tr24731.h"
+#include "../include/SecurityWin32.h"
 
 #include <stdio.h>
 
