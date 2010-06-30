@@ -37,9 +37,9 @@ typedef struct ev_loop ev_loop_t;
 #include <deque>
 #include <vector>
 
-#include "Thread.h"
-#include "Condition.h"
-#include "SmartPtr.h"
+#include "../OOBase/Thread.h"
+#include "../OOBase/Condition.h"
+#include "../OOBase/SmartPtr.h"
 
 namespace OOSvrBase
 {

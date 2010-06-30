@@ -19,13 +19,13 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/Proactor.h"
-#include "../include/SmartPtr.h"
+#include "../include/OOSvrBase/Proactor.h"
+#include "../include/OOBase/SmartPtr.h"
 
 #if defined(_WIN32)
 
-#include "../include/ProactorWin32.h"
-#include "../include/Win32Socket.h"
+#include "../include/OOSvrBase/ProactorWin32.h"
+#include "../include/OOBase/Win32Socket.h"
 
 namespace 
 {

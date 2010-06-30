@@ -22,7 +22,7 @@
 #ifndef OOSVRBASE_DATABASE_H_INCLUDED_
 #define OOSVRBASE_DATABASE_H_INCLUDED_
 
-#include "SmartPtr.h"
+#include "../OOBase/SmartPtr.h"
 
 #if !defined(HAVE_SQLITE3) && !defined(HAVE_SQLITE3_AMALGAMATION)
 #error SQLite3 required!

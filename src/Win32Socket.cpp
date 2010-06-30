@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/Win32Socket.h"
+#include "../include/OOBase/Win32Socket.h"
 
 #if defined(_WIN32)
 

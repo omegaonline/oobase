@@ -22,7 +22,7 @@
 #ifndef OOSVRBASE_PROACTOR_H_INCLUDED_
 #define OOSVRBASE_PROACTOR_H_INCLUDED_
 
-#include "Socket.h"
+#include "../OOBase/Socket.h"
 
 #if !defined(_WIN32)
 typedef struct

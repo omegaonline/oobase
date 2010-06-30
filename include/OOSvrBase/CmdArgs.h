@@ -22,7 +22,7 @@
 #ifndef OOSVRBASE_CMDARGS_H_INCLUDED_
 #define OOSVRBASE_CMDARGS_H_INCLUDED_
 
-#include "config-base.h"
+#include "../config-base.h"
 
 #include <map>
 #include <iostream>

@@ -24,7 +24,7 @@
 
 #if defined(_WIN32)
 
-#include "SmartPtr.h"
+#include "../OOBase/SmartPtr.h"
 
 #include <userenv.h>
 #include <lm.h>

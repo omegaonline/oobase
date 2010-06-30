@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/pw_info.h"
+#include "../include/OOSvrBase/pw_info.h"
 
 #if defined(HAVE_PWD_H)
 

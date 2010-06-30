@@ -22,7 +22,7 @@
 #ifndef OOBASE_TIME_H_INCLUDED_
 #define OOBASE_TIME_H_INCLUDED_
 
-#include "config-base.h"
+#include "../config-base.h"
 
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>

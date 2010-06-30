@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/Condition.h"
+#include "../include/OOBase/Condition.h"
 
 #if defined(_WIN32)
 

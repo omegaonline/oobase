@@ -22,7 +22,7 @@
 #ifndef OOSVRBASE_PW_INFO_H_INCLUDED_
 #define OOSVRBASE_PW_INFO_H_INCLUDED_
 
-#include "SmartPtr.h"
+#include "../OOBase/SmartPtr.h"
 
 #if defined(HAVE_PWD_H)
 

@@ -22,7 +22,7 @@
 #ifndef OOBASE_BYTE_SWAP_H_INCLUDED_
 #define OOBASE_BYTE_SWAP_H_INCLUDED_
 
-#include "config-base.h"
+#include "../config-base.h"
 
 #if defined(_MSC_VER) && defined(_W64)
 // Turn off stupid 64-bit warnings..

@@ -349,11 +349,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\config-base.h"
+				RelativePath="..\include\config-base.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\config-msvc.h"
+				RelativePath="..\include\config-msvc.h"
 				>
 			</File>
 			<File
@@ -370,6 +370,10 @@
 			</File>
 			<File
 				RelativePath="..\include\OOBase\Once.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\PosixSocket.h"
 				>
 			</File>
 			<File

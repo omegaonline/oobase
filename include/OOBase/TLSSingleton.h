@@ -22,7 +22,7 @@
 #ifndef OOBASE_TLS_SINGLETON_H_INCLUDED_
 #define OOBASE_TLS_SINGLETON_H_INCLUDED_
 
-#include "config-base.h"
+#include "../config-base.h"
 
 namespace OOBase
 {

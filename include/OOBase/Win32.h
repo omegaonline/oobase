@@ -22,7 +22,7 @@
 #ifndef OOBASE_WIN32_H_INCLUDED_
 #define OOBASE_WIN32_H_INCLUDED_
 
-#include "config-base.h"
+#include "../config-base.h"
 
 #if defined(_WIN32)
 

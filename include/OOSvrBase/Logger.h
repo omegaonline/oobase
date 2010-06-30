@@ -22,7 +22,7 @@
 #ifndef OOSVRBASE_LOGGER_H_INCLUDED_
 #define OOSVRBASE_LOGGER_H_INCLUDED_
 
-#include "config-base.h"
+#include "../config-base.h"
 
 namespace OOSvrBase
 {

@@ -333,27 +333,43 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath="..\include\OOBase\CmdArgs.h"
+				RelativePath="..\include\OOSvrBase\CmdArgs.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\Database.h"
+				RelativePath="..\include\config-base.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\Logger.h"
+				RelativePath="..\include\config-msvc.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\Proactor.h"
+				RelativePath="..\include\OOSvrBase\Database.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\ProactorWin32.h"
+				RelativePath="..\include\OOSvrBase\Logger.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\SecurityWin32.h"
+				RelativePath="..\include\OOSvrBase\Proactor.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOSvrBase\ProactorEv.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOSvrBase\ProactorWin32.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOSvrBase\pw_info.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOSvrBase\SecurityWin32.h"
 				>
 			</File>
 		</Filter>
