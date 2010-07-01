@@ -53,6 +53,8 @@ liboobase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
 liboobase_la_LDFLAGS = $(PTHREAD_LIBS)
 
 liboobase_la_SOURCES = \
+	include/config-base.h \
+	include/config-msvc.h \
 	include/OOBase/Atomic.h \
 	include/OOBase/Buffer.h \
 	include/OOBase/ByteSwap.h \
@@ -72,8 +74,6 @@ liboobase_la_SOURCES = \
 	include/OOBase/PosixSocket.h \
 	include/OOBase/Win32.h \
 	include/OOBase/Win32Socket.h \
-	include/OOBase/config-base.h \
-	include/OOBase/config-msvc.h \
 	include/OOBase/tr24731.h \
 	include/OOBase/utf8.h \
 	src/Buffer.cpp \
