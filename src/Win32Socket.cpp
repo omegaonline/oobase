@@ -20,236 +20,55 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/Win32Socket.h"
+#include "../include/OOBase/Singleton.h"
 
 #if defined(_WIN32)
 
-OOBase::Win32::SocketImpl::SocketImpl(HANDLE hSocket) :
-		m_hSocket(hSocket),
-		m_hReadEvent(NULL),
-		m_hWriteEvent(NULL)
+namespace
 {
-}
-
-OOBase::Win32::SocketImpl::~SocketImpl()
-{
-	close();
-
-	if (m_hReadEvent)
-		CloseHandle(m_hReadEvent);
-
-	if (m_hWriteEvent)
-		CloseHandle(m_hWriteEvent);
-}
-
-int OOBase::Win32::SocketImpl::send(const void* buf, size_t len, const OOBase::timeval_t* timeout)
-{
-	if (!m_hWriteEvent)
+	struct WSAOnce
 	{
-		m_hWriteEvent = CreateEventW(NULL,TRUE,FALSE,NULL);
-		if (!m_hWriteEvent)
-			return GetLastError();
-	}
-
-	OVERLAPPED ov = {0};
-	ov.hEvent = m_hWriteEvent;
-
-	const char* cbuf = reinterpret_cast<const char*>(buf);
-	while (len > 0)
-	{
-		DWORD dwWritten = 0;
-		if (WriteFile(m_hSocket,cbuf,static_cast<DWORD>(len),&dwWritten,&ov))
+		WSAOnce()
 		{
-			if (!SetEvent(m_hWriteEvent))
-				return GetLastError();
-		}
-		else
-		{
-			DWORD ret = GetLastError();
-			if (ret != ERROR_IO_PENDING)
-				return ret;
-
-			// Wait...
-			if (timeout)
-			{
-				DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout->msec());
-				if (dwWait == WAIT_TIMEOUT)
-				{
-					CancelIo(m_hSocket);
-					return WAIT_TIMEOUT;
-				}
-				else if (dwWait != WAIT_OBJECT_0)
-				{
-					ret = GetLastError();
-					CancelIo(m_hSocket);
-					return ret;
-				}
-			}
+			WSADATA wsa;
+			int err = WSAStartup(MAKEWORD(2,2),&wsa);
+			if (err != 0)
+				OOBase_CallCriticalFailure(WSAGetLastError());
+			
+			if (LOBYTE(wsa.wVersion) != 2 || HIBYTE(wsa.wVersion) != 2)
+				OOBase_CallCriticalFailure("Very old Winsock dll");
 		}
 
-		if (!GetOverlappedResult(m_hSocket,&ov,&dwWritten,TRUE))
+		~WSAOnce()
 		{
-			DWORD ret = GetLastError();
-			CancelIo(m_hSocket);
-			return ret;
+			WSACleanup();
 		}
-
-		cbuf += dwWritten;
-		len -= dwWritten;
-	}
-
-	return 0;
+	};
 }
 
-size_t OOBase::Win32::SocketImpl::recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout)
+void OOBase::Win32::WSAStartup()
 {
-	assert(perr);
-	*perr = 0;
-
-	if (!m_hReadEvent)
-	{
-		m_hReadEvent = CreateEventW(NULL,TRUE,FALSE,NULL);
-		if (!m_hReadEvent)
-		{
-			*perr = GetLastError();
-			return 0;
-		}
-	}
-
-	OVERLAPPED ov = {0};
-	ov.hEvent = m_hReadEvent;
-
-	char* cbuf = reinterpret_cast<char*>(buf);
-	size_t total = len;
-	while (total > 0)
-	{
-		DWORD dwRead = 0;
-		if (ReadFile(m_hSocket,cbuf,static_cast<DWORD>(total),&dwRead,&ov))
-		{
-			if (!SetEvent(m_hReadEvent))
-			{
-				*perr = GetLastError();
-				return 0;
-			}
-		}
-		else
-		{
-			*perr = GetLastError();
-			if (*perr == ERROR_MORE_DATA)
-				dwRead = static_cast<DWORD>(total);
-			else
-			{
-				if (*perr != ERROR_IO_PENDING)
-					return (len - total);
-
-				// Wait...
-				if (timeout)
-				{
-					DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout->msec());
-					if (dwWait == WAIT_TIMEOUT)
-					{
-						CancelIo(m_hSocket);
-						*perr = WAIT_TIMEOUT;
-						return (len - total);
-					}
-					else if (dwWait != WAIT_OBJECT_0)
-					{
-						*perr = GetLastError();
-						CancelIo(m_hSocket);
-						return (len - total);
-					}
-				}
-			}
-		}
-
-		if (!GetOverlappedResult(m_hSocket,&ov,&dwRead,TRUE))
-		{
-			*perr = GetLastError();
-			CancelIo(m_hSocket);
-			return (len - total);
-		}
-
-		cbuf += dwRead;
-		total -= dwRead;
-	}
-
-	*perr = 0;
-	return len;
+	// Use a singleton to init once
+	Singleton<WSAOnce,WSAOnce>::instance();
 }
 
-void OOBase::Win32::SocketImpl::close()
+OOBase::Socket* OOBase::Socket::connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait)
 {
-	if (m_hSocket.is_valid())
-		CloseHandle(m_hSocket.detach());
-}
+	// Ensure we have winsock loaded
+	Win32::WSAStartup();
 
-OOBase::LocalSocket::uid_t OOBase::Win32::LocalSocket::get_uid()
-{
-	if (!ImpersonateNamedPipeClient(m_hSocket))
-		OOBase_CallCriticalFailure(GetLastError());
+	OOBase::SOCKET sock = OOBase::connect(address,port,perr,wait);
+	if (sock == INVALID_SOCKET)
+		return 0;
 
-	OOBase::Win32::SmartHandle uid;
-	BOOL bRes = OpenThreadToken(GetCurrentThread(),TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_IMPERSONATE,FALSE,&uid);
-	DWORD err = 0;
-	if (!bRes)
-		err = GetLastError();
-
-	if (!RevertToSelf())
-		OOBase_CallCriticalFailure(GetLastError());
-
-	if (!bRes)
-		OOBase_CallCriticalFailure(err);
-
-	return uid.detach();
-}
-
-OOBase::LocalSocket* OOBase::LocalSocket::connect_local(const std::string& path, int* perr, const timeval_t* wait)
-{
-	assert(perr);
-	*perr = 0;
-
-	std::string pipe_name = "\\\\.\\pipe\\" + path;
-
-	Win32::SmartHandle hPipe;
-	for (;;)
-	{
-		hPipe = CreateFileA(pipe_name.c_str(),
-							PIPE_ACCESS_DUPLEX,
-							0,
-							NULL,
-							OPEN_EXISTING,
-							FILE_FLAG_OVERLAPPED,
-							NULL);
-
-		if (hPipe != INVALID_HANDLE_VALUE)
-			break;
-
-		DWORD dwErr = GetLastError();
-		if (dwErr != ERROR_PIPE_BUSY)
-		{
-			*perr = dwErr;
-			return 0;
-		}
-
-		DWORD dwWait = NMPWAIT_USE_DEFAULT_WAIT;
-		if (wait)
-			dwWait = wait->msec();
-
-		if (!WaitNamedPipeA(pipe_name.c_str(),dwWait))
-		{
-			*perr = GetLastError();
-			return 0;
-		}
-	}
-
-	LocalSocket* pSocket = 0;
-	OOBASE_NEW(pSocket,Win32::LocalSocket(hPipe));
+	OOBase::Win32::Socket* pSocket = 0;
+	OOBASE_NEW(pSocket,OOBase::Win32::Socket(sock));
 	if (!pSocket)
 	{
-		*perr = ERROR_OUTOFMEMORY;
+		*perr = ENOMEM;
+		closesocket(sock);
 		return 0;
 	}
-
-	hPipe.detach();
 
 	return pSocket;
 }

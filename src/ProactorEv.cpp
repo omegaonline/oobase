@@ -19,18 +19,32 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#if defined(_MSC_VER)
+#define _CRT_NONSTDC_NO_WARNINGS
+#pragma warning(disable: 4127)
+#endif
+
 #include "../include/OOSvrBase/Proactor.h"
 
-#include <algorithm>
-
 #if defined(HAVE_EV_H)
-
 #include "../include/OOSvrBase/ProactorEv.h"
-#include "../include/OOBase/PosixSocket.h"
 
 #if defined(HAVE_SYS_UN_H)
 #include <sys/un.h>
 #endif /* HAVE_SYS_UN_H */
+
+#if defined(_WIN32)
+#include <io.h>
+
+#define ssize_t int
+
+#endif // _WIN32
+
+#include <functional>
+#include <algorithm>
+
+#include "../include/OOBase/Win32Socket.h"
+#include "../include/OOBase/PosixSocket.h"
 
 namespace
 {
@@ -366,7 +380,7 @@ namespace
 		int err = 0;
 		while (to_write > 0)
 		{
-			ssize_t have_sent = send(m_write_watcher->fd,m_current_write->rd_ptr(),to_write,MSG_NOSIGNAL);
+			ssize_t have_sent = send(m_write_watcher->fd,m_current_write->rd_ptr(),to_write,0);
 			if (have_sent <= 0)
 			{
 				if (errno == EAGAIN)
@@ -469,14 +483,7 @@ namespace
 				return;
 			}
 		}
-		else
-		{
-			// Add FD_CLOEXEC
-			err = OOBase::POSIX::fcntl_addfd(new_fd,FD_CLOEXEC);
-			if (err != 0)
-				::close(new_fd);
-		}
-
+		
 		// Prepare socket if okay
 		SocketType* pSocket = 0;
 		if (err == 0)
@@ -747,7 +754,7 @@ void OOSvrBase::Ev::ProactorImpl::on_io(ev_loop_t*, ev_io* w, int events)
 	static_cast<ProactorImpl*>(w->data)->on_io_i(static_cast<io_watcher*>(w),events);
 }
 
-void OOSvrBase::Ev::ProactorImpl::on_io_i(io_watcher* watcher, int events)
+void OOSvrBase::Ev::ProactorImpl::on_io_i(io_watcher* watcher, int /*events*/)
 {
 	try
 	{
@@ -765,6 +772,12 @@ void OOSvrBase::Ev::ProactorImpl::on_io_i(io_watcher* watcher, int events)
 
 OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa)
 {
+#if !defined(HAVE_SYS_UN_H)
+	// If we don't have unix sockets, we can't do much, use Win32 Proactor instead
+	*perr = ENOENT;
+	return 0;
+#else
+
 	// path is a UNIX pipe name - e.g. /tmp/ooserverd
 
 	int fd = socket(PF_UNIX,SOCK_STREAM,0);
@@ -775,7 +788,7 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor* handler, con
 	}
 
 	// Set non-blocking
-	*perr = OOBase::POSIX::fcntl_addfl(O_NONBLOCK);
+	*perr = OOBase::POSIX::fcntl_addfl(fd,O_NONBLOCK);
 	if (*perr != 0)
 	{
 		close(fd);
@@ -842,6 +855,7 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor* handler, con
 	}
 
 	return pAccept.detach();
+#endif
 }
 
 OOSvrBase::AsyncSocket* OOSvrBase::Ev::ProactorImpl::attach_socket(IOHandler* handler, int* perr, OOBase::Socket* sock)
@@ -849,33 +863,11 @@ OOSvrBase::AsyncSocket* OOSvrBase::Ev::ProactorImpl::attach_socket(IOHandler* ha
 	assert(perr);
 	assert(sock);
 
-	// Cast to our known base
-	OOBase::POSIX::Socket* pOrigSock = static_cast<OOBase::POSIX::Socket*>(sock);
-
 	// Duplicate the contained handle
-	int new_fd = dup(pOrigSock->get_fd());
-	if (new_fd == -1)
-	{
-		*perr = errno;
+	int new_fd = sock->duplicate_async(perr);
+	if (new_fd == INVALID_SOCKET)
 		return 0;
-	}
-
-	// Set non-blocking
-	*perr = OOBase::POSIX::fcntl_addfl(new_fd,O_NONBLOCK);
-	if (*perr != 0)
-	{
-		close(new_fd);
-		return 0;
-	}
-
-	// Add FD_CLOEXEC
-	*perr = OOBase::POSIX::fcntl_addfd(new_fd,FD_CLOEXEC);
-	if (*perr != 0)
-	{
-		close(new_fd);
-		return 0;
-	}
-
+	
 	// Alloc a new async socket
 	::AsyncSocket* pSock;
 	OOBASE_NEW(pSock,::AsyncSocket(this));

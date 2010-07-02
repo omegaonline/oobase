@@ -30,80 +30,51 @@ namespace OOBase
 {
 	namespace Win32
 	{
-		class SocketImpl
+		void WSAStartup();
+
+		class Socket : public OOBase::Socket
 		{
 		public:
-			SocketImpl(HANDLE hSocket);
-			virtual ~SocketImpl();
+			Socket(SOCKET hSocket);
+			virtual ~Socket();
 
 			virtual int send(const void* buf, size_t len, const OOBase::timeval_t* timeout = 0);
 			virtual size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout = 0);
 			virtual void close();
-
-			HANDLE peek_handle() const
-			{
-				return m_hSocket;
-			}
-
-		protected:
-			SmartHandle m_hSocket;
-
+			
 		private:
-			HANDLE m_hReadEvent;
-			HANDLE m_hWriteEvent;
-		};
+			SOCKET m_hSocket;
 
-		template <typename Base>
-		class SocketTempl :
-				public Base,
-				public SocketImpl
-		{
-		public:
-			SocketTempl(HANDLE hSocket) :
-					SocketImpl(hSocket)
-			{}
-
-			virtual ~SocketTempl()
-			{}
-
-			int send(const void* buf, size_t len, const timeval_t* timeout = 0)
+			int close_on_exec()
 			{
-				return SocketImpl::send(buf,len,timeout);
+				return 0;
 			}
 
-			size_t recv(void* buf, size_t len, int* perr, const timeval_t* timeout = 0)
-			{
-				return SocketImpl::recv(buf,len,perr,timeout);
-			}
-
-			void close()
-			{
-				SocketImpl::close();
-			}
-
-		private:
-			SocketTempl(const SocketTempl&);
-			SocketTempl& operator = (const SocketTempl&);
+			OOBase::SOCKET duplicate_async(int* perr) const;
 		};
 
-		class Socket :
-				public SocketTempl<OOBase::Socket>
+		class LocalSocket : public OOBase::LocalSocket
 		{
 		public:
-			Socket(HANDLE hSocket) :
-					SocketTempl<OOBase::Socket>(hSocket)
-			{}
-		};
+			LocalSocket(HANDLE hPipe);
+			virtual ~LocalSocket();
 
-		class LocalSocket :
-				public SocketTempl<OOBase::LocalSocket>
-		{
-		public:
-			LocalSocket(HANDLE hSocket) :
-					SocketTempl<OOBase::LocalSocket>(hSocket)
-			{}
-
+			virtual int send(const void* buf, size_t len, const OOBase::timeval_t* timeout = 0);
+			virtual size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout = 0);
+			virtual void close();
 			virtual OOBase::LocalSocket::uid_t get_uid();
+
+		private:
+			SmartHandle m_hPipe;
+			SmartHandle m_hReadEvent;
+			SmartHandle m_hWriteEvent;
+
+			int close_on_exec()
+			{
+				return 0;
+			}
+
+			OOBase::SOCKET duplicate_async(int* perr) const;
 		};
 	}
 }

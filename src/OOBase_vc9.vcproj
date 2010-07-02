@@ -299,6 +299,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Socket.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Thread.cpp"
 				>
 			</File>
@@ -316,6 +320,10 @@
 			</File>
 			<File
 				RelativePath=".\Win32.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Win32Pipe.cpp"
 				>
 			</File>
 			<File

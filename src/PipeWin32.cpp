@@ -52,6 +52,17 @@ namespace
 
 		int accept_named_pipe(bool bExclusive);
 
+		int close_on_exec()
+		{
+			return 0;
+		}
+
+		SOCKET duplicate_async(int* perr) const
+		{
+			*perr = ERROR_INVALID_FUNCTION;
+			return INVALID_SOCKET;
+		}
+
 	private:
 		OOSvrBase::Win32::ProactorImpl* m_pProactor;
 		OOBase::SpinLock                m_lock;

@@ -41,17 +41,15 @@ namespace OOBase
 			SocketImpl(int fd);
 			virtual ~SocketImpl();
 
-			virtual int send(const void* buf, size_t len, const OOBase::timeval_t* timeout = 0);
-			virtual size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout = 0);
+			virtual int send(const void* buf, size_t len, const OOBase::timeval_t* wait = 0);
+			virtual size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* wait = 0);
 			virtual void close();
+			virtual int close_on_exec();
 
-			int get_fd() const
-			{
-				return m_fd;
-			}
+			OOBase::SOCKET duplicate_async(int* perr) const;
 
 		protected:
-			int m_fd;
+			int  m_fd;
 		};
 
 		template <class Base>
@@ -80,6 +78,16 @@ namespace OOBase
 			void close()
 			{
 				SocketImpl::close();
+			}
+
+			int close_on_exec()
+			{
+				return SocketImpl::close_on_exec();
+			}
+
+			OOBase::SOCKET duplicate_async(int* perr) const
+			{
+				return SocketImpl::duplicate_async(perr);
 			}
 
 		private:

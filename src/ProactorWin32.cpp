@@ -430,17 +430,11 @@ OOSvrBase::AsyncSocket* OOSvrBase::Win32::ProactorImpl::attach_socket(IOHandler*
 	assert(perr);
 	assert(sock);
 
-	// Cast to our known base
-	OOBase::Win32::Socket* pOrigSock = static_cast<OOBase::Win32::Socket*>(sock);
-
 	// Duplicate the contained handle
-	HANDLE hClone;
-	if (!DuplicateHandle(GetCurrentProcess(),pOrigSock->peek_handle(),GetCurrentProcess(),&hClone,0,FALSE,DUPLICATE_SAME_ACCESS))
-	{
-		*perr = GetLastError();
+	HANDLE hClone = (HANDLE)sock->duplicate_async(perr);
+	if (hClone == (HANDLE)INVALID_SOCKET)
 		return 0;
-	}
-
+	
 	// Alloc a new async socket
 	::AsyncSocket* pSock;
 	OOBASE_NEW(pSock,::AsyncSocket(this,hClone,handler));

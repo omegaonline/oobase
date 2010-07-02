@@ -21,21 +21,21 @@
 
 #include "../include/OOSvrBase/Proactor.h"
 
-#if defined(_WIN32)
-#include "../include/OOSvrBase/ProactorWin32.h"
-#elif defined(HAVE_EV_H)
+#if defined(HAVE_EV_H)
 #include "../include/OOSvrBase/ProactorEv.h"
+#elif defined(_WIN32)
+#include "../include/OOSvrBase/ProactorWin32.h"
 #else
-#error No libev installed
+#error No proactor implementation
 #endif
 
 OOSvrBase::Proactor::Proactor() :
 		m_impl(0)
 {
-#if defined(_WIN32)
-	OOBASE_NEW(m_impl,Win32::ProactorImpl());
-#elif defined(HAVE_EV_H)
+#if defined(HAVE_EV_H)
 	OOBASE_NEW(m_impl,Ev::ProactorImpl());
+#elif defined(_WIN32)
+	OOBASE_NEW(m_impl,Win32::ProactorImpl());
 #endif
 
 	if (!m_impl)
