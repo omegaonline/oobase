@@ -26,6 +26,8 @@
 #pragma warning(disable: 4127)
 #endif
 
+#include <netdb.h>
+
 #if defined(_WIN32)
 #include <ws2tcpip.h>
 
@@ -53,7 +55,7 @@ OOBase::SOCKET OOBase::socket(int family, int socktype, int protocol, int* perr)
 		return sock;
 	}
 
-#if defined(_WIN32)	
+#if defined(_WIN32)
 	u_long v = 1;
 	if (ioctlsocket(sock,FIONBIO,&v) == -1)
 	{
@@ -111,7 +113,7 @@ int OOBase::connect(SOCKET sock, const sockaddr* addr, size_t addrlen, const tim
 		else if (count == 1)
 		{
 			// If connect() did something...
-			int len = sizeof(err);
+			socklen_t len = sizeof(err);
 			if (getsockopt(sock,SOL_SOCKET,SO_ERROR,(char*)&err,&len) == -1)
 				return WSAGetLastError();
 
@@ -127,12 +129,12 @@ OOBase::SOCKET OOBase::connect(const std::string& address, const std::string& po
 	// Start a countdown
 	timeval_t wait2 = (wait ? *wait : timeval_t::MaxTime);
 	Countdown countdown(&wait2);
-	
+
 	// Resolve the passed in addresses...
 	addrinfo hints = {0};
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
-	
+
 	addrinfo* pResults = 0;
 	if (getaddrinfo(address.c_str(),port.c_str(),&hints,&pResults) != 0)
 	{
@@ -169,13 +171,13 @@ OOBase::SOCKET OOBase::connect(const std::string& address, const std::string& po
 	if (sock != INVALID_SOCKET)
 		*perr = 0;
 
-	return sock;	
+	return sock;
 }
 
 int OOBase::send(SOCKET sock, const void* buf, size_t len, const timeval_t* wait)
 {
 	const char* cbuf = static_cast<const char*>(buf);
-	
+
 	::timeval tv;
 	if (wait)
 	{
@@ -220,7 +222,7 @@ int OOBase::send(SOCKET sock, const void* buf, size_t len, const timeval_t* wait
 				if (FD_ISSET(sock,&efds))
 				{
 					// Error
-					int len = sizeof(err);
+					socklen_t len = sizeof(err);
 					if (getsockopt(sock,SOL_SOCKET,SO_ERROR,(char*)&err,&len) == -1)
 						return WSAGetLastError();
 
@@ -237,7 +239,7 @@ size_t OOBase::recv(SOCKET sock, void* buf, size_t len, int* perr, const timeval
 {
 	char* cbuf = static_cast<char*>(buf);
 	size_t total_recv = 0;
-	
+
 	::timeval tv;
 	if (wait)
 	{
@@ -283,7 +285,7 @@ size_t OOBase::recv(SOCKET sock, void* buf, size_t len, int* perr, const timeval
 				if (FD_ISSET(sock,&efds))
 				{
 					// Error
-					int len = sizeof(*perr);
+					socklen_t len = sizeof(*perr);
 					if (getsockopt(sock,SOL_SOCKET,SO_ERROR,(char*)perr,&len) == -1)
 						*perr = WSAGetLastError();
 
