@@ -52,6 +52,38 @@ void OOBase::Win32::WSAStartup()
 	Singleton<WSAOnce,WSAOnce>::instance();
 }
 
+OOBase::Win32::Socket::Socket(SOCKET hSocket) :
+		m_hSocket(hSocket)
+{
+}
+
+OOBase::Win32::Socket::~Socket()
+{
+	close();
+}
+
+int OOBase::Win32::Socket::send(const void* buf, size_t len, const OOBase::timeval_t* wait)
+{
+	return OOBase::send(m_hSocket,buf,len,wait);
+}
+
+size_t OOBase::Win32::Socket::recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* wait)
+{
+	return OOBase::recv(m_hSocket,buf,len,perr,wait);
+}
+
+void OOBase::Win32::Socket::close()
+{
+	closesocket(m_hSocket);
+	m_hSocket = INVALID_SOCKET;
+}
+
+OOBase::SOCKET OOBase::Win32::Socket::duplicate_async(int* perr) const
+{
+	*perr = ERROR_INVALID_FUNCTION;
+	return INVALID_SOCKET;
+}
+
 OOBase::Socket* OOBase::Socket::connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait)
 {
 	// Ensure we have winsock loaded

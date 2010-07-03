@@ -52,6 +52,10 @@ liboobase_la_CFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
 liboobase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
 liboobase_la_LDFLAGS = $(PTHREAD_LIBS)
 
+if WIN32
+liboobase_la_LDFLAGS += -lws2_32
+endif
+
 liboobase_la_SOURCES = \
 	include/config-base.h \
 	include/config-msvc.h \
@@ -82,11 +86,13 @@ liboobase_la_SOURCES = \
 	src/Error.cpp \
 	src/Mutex.cpp \
 	src/Once.cpp \
+	src/Socket.cpp \
 	src/TLS.cpp \
 	src/Thread.cpp \
 	src/TimeVal.cpp \
 	src/PosixSocket.cpp \
 	src/Win32.cpp \
+	src/Win32Pipe.cpp \
 	src/Win32Socket.cpp \
 	src/tr24731.cpp \
 	src/utf8.cpp
