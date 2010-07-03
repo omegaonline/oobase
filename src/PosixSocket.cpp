@@ -23,14 +23,6 @@
 
 #if (!defined(_WIN32) && defined(HAVE_SYS_SOCKET_H)) || defined(DOXYGEN)
 
-#if defined(HAVE_FCNTL_H)
-#include <fcntl.h>
-#endif /* HAVE_FCNTL_H */
-
-#if defined(HAVE_SYS_FCNTL_H)
-#include <sys/fcntl.h>
-#endif /* HAVE_SYS_FCNTL_H */
-
 #if defined(HAVE_SYS_UN_H)
 #include <sys/un.h>
 #endif /* HAVE_SYS_UN_H */
@@ -180,7 +172,7 @@ OOBase::Socket* OOBase::Socket::connect(const std::string& address, const std::s
 	if (!pSocket)
 	{
 		*perr = ENOMEM;
-		close(sock);
+		::close(sock);
 		return 0;
 	}
 
@@ -189,30 +181,27 @@ OOBase::Socket* OOBase::Socket::connect(const std::string& address, const std::s
 
 OOBase::LocalSocket* OOBase::LocalSocket::connect_local(const std::string& path, int* perr, const timeval_t* wait)
 {
-	OOBase::SOCKET sock = OOBase::socket(AF_UNIX,SOCK_STREAM,0);
+	OOBase::SOCKET sock = OOBase::socket(AF_UNIX,SOCK_STREAM,0,perr);
 	if (sock == INVALID_SOCKET)
-	{
-		*perr = errno;
 		return 0;
-	}
 
 	sockaddr_un addr;
 	addr.sun_family = AF_UNIX;
 	memset(addr.sun_path,0,sizeof(addr.sun_path));
 	path.copy(addr.sun_path,sizeof(addr.sun_path)-1);
 
-	if (*perr = OOBase::connect(sock,(sockaddr*)(&addr),sizeof(addr),wait) != 0)
+	if ((*perr = OOBase::connect(sock,(sockaddr*)(&addr),sizeof(addr),wait)) != 0)
 	{
-		::close(fd);
+		::close(sock);
 		return 0;
 	}
 
 	OOBase::POSIX::LocalSocket* pSocket = 0;
-	OOBASE_NEW(pSocket,OOBase::POSIX::LocalSocket(fd,path));
+	OOBASE_NEW(pSocket,OOBase::POSIX::LocalSocket(sock,path));
 	if (!pSocket)
 	{
 		*perr = ENOMEM;
-		::close(fd);
+		::close(sock);
 		return 0;
 	}
 
@@ -231,12 +220,12 @@ OOBase::POSIX::SocketImpl::~SocketImpl()
 
 int OOBase::POSIX::SocketImpl::send(const void* buf, size_t len, const OOBase::timeval_t* wait)
 {
-	return send(m_fd,buf,len,wait);
+	return OOBase::send(m_fd,buf,len,wait);
 }
 
 size_t OOBase::POSIX::SocketImpl::recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* wait)
 {
-	return recv(m_fd,buf,len,perr,wait);
+	return OOBase::recv(m_fd,buf,len,perr,wait);
 }
 
 void OOBase::POSIX::SocketImpl::close()
@@ -259,7 +248,7 @@ OOBase::SOCKET OOBase::POSIX::SocketImpl::duplicate_async(int* perr) const
 		*perr = errno;
 		return INVALID_SOCKET;
 	}
-	
+
 	int new_fd = dup(m_fd);
 	if (new_fd == -1)
 	{
@@ -273,7 +262,7 @@ OOBase::SOCKET OOBase::POSIX::SocketImpl::duplicate_async(int* perr) const
 		int err = fcntl_addfd(new_fd,FD_CLOEXEC);
 		if (err != 0)
 		{
-			close(new_fd);
+			::close(new_fd);
 			*perr = errno;
 			return INVALID_SOCKET;
 		}
@@ -283,7 +272,7 @@ OOBase::SOCKET OOBase::POSIX::SocketImpl::duplicate_async(int* perr) const
 	*perr = OOBase::POSIX::fcntl_addfl(new_fd,O_NONBLOCK);
 	if (*perr != 0)
 	{
-		close(new_fd);
+		::close(new_fd);
 		return INVALID_SOCKET;
 	}
 

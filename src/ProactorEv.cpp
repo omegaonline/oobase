@@ -123,6 +123,17 @@ namespace
 
 		void close();
 
+		int close_on_exec()
+		{
+			return EINVAL;
+		}
+
+		OOBase::SOCKET duplicate_async(int* perr) const
+		{
+			*perr = EINVAL;
+			return INVALID_SOCKET;
+		}
+
 	private:
 		OOBase::Condition::Mutex                 m_lock;
 		OOSvrBase::Ev::ProactorImpl*             m_proactor;
@@ -483,7 +494,7 @@ namespace
 				return;
 			}
 		}
-		
+
 		// Prepare socket if okay
 		SocketType* pSocket = 0;
 		if (err == 0)
@@ -867,7 +878,7 @@ OOSvrBase::AsyncSocket* OOSvrBase::Ev::ProactorImpl::attach_socket(IOHandler* ha
 	int new_fd = sock->duplicate_async(perr);
 	if (new_fd == INVALID_SOCKET)
 		return 0;
-	
+
 	// Alloc a new async socket
 	::AsyncSocket* pSock;
 	OOBASE_NEW(pSock,::AsyncSocket(this));
