@@ -1,5 +1,8 @@
 # Stuff we don't want to track
 
+# doxygen docs
+doc/
+
 # automake stuff
 configure
 aclocal.m4
