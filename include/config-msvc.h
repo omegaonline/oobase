@@ -68,10 +68,4 @@
 /* Define to 1 if you have the <wchar.h> header file. */
 #define HAVE_WCHAR_H 1
 
-/* Define to 1 if you have the `_wcstoi64' function. */
-#define HAVE__WCSTOI64 1
-
-/* Define to 1 if you have the `_wcstoui64' function. */
-#define HAVE__WCSTOUI64 1
-
 #endif // OOBASE_CONFIG_MSVC_H_INCLUDED_

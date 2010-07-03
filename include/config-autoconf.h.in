@@ -12,6 +12,9 @@
 /* Define to 1 if you have the <ev.h> header file. */
 #undef HAVE_EV_H
 
+/* Define to 1 if you have the <fcntl.h> header file. */
+#undef HAVE_FCNTL_H
+
 /* Define to 1 if you have the `getpeereid' function. */
 #undef HAVE_GETPEEREID
 
@@ -23,6 +26,9 @@
 
 /* Define to 1 if you have the LOCAL_CREDS socket option */
 #undef HAVE_LOCAL_CREDS
+
+/* Define to 1 if you have the <netdb.h> header file. */
+#undef HAVE_NETDB_H
 
 /* Define to 1 if you have new (std::nothrow) support */
 #undef HAVE_NEW_NOTHROW
@@ -63,6 +69,9 @@
 /* Define to 1 if you have the <syslog.h> header file. */
 #undef HAVE_SYSLOG_H
 
+/* Define to 1 if you have the <sys/fcntl.h> header file. */
+#undef HAVE_SYS_FCNTL_H
+
 /* Define to 1 if you have the <sys/socket.h> header file. */
 #undef HAVE_SYS_SOCKET_H
 
@@ -100,8 +109,3 @@
    your system. */
 #undef PTHREAD_CREATE_JOINABLE
 
-/* Define to 1 if you have the <sys/fcntl.h> header file. */
-#undef HAVE_SYS_FCNTL_H
-
-/* Define to 1 if you have the <fcntl.h> header file. */
-#undef HAVE_FCNTL_H

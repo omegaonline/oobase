@@ -26,7 +26,9 @@
 #pragma warning(disable: 4127)
 #endif
 
+#if defined(HAVE_NETDB_H)
 #include <netdb.h>
+#endif
 
 #if defined(_WIN32)
 #include <ws2tcpip.h>
