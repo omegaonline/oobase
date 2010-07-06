@@ -673,6 +673,7 @@ int OOSvrBase::Ev::ProactorImpl::worker_i()
 			if ((*i)->callback)
 				(*(*i)->callback)((*i)->param);
 		}
+
 		io_queue.clear();
 	}
 }

@@ -27,7 +27,7 @@ reallyclean: maintainer-clean
 	rm -f $(srcdir)/m4/lt~obsolete.m4
 	rm -f $(srcdir)/include/OOBase/autoheader_dummy.h.in
 	rm -f $(srcdir)/include/OOBase/autoheader_dummy.h.in~
-	
+
 ####################################
 # Hook to make the ChangeLog
 dist-hook:
@@ -50,7 +50,7 @@ noinst_LTLIBRARIES = liboobase.la liboosvrbase.la
 
 liboobase_la_CFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
 liboobase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
-liboobase_la_LDFLAGS = $(PTHREAD_LIBS)
+liboobase_la_LDFLAGS = $(PTHREAD_LIBS) $(LIBLTDL)
 
 if WIN32
 liboobase_la_LDFLAGS += -lws2_32
@@ -99,7 +99,7 @@ liboobase_la_SOURCES = \
 
 liboosvrbase_la_CFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
 liboosvrbase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
-liboosvrbase_la_LDFLAGS = $(PTHREAD_LIBS)
+liboosvrbase_la_LDFLAGS = $(PTHREAD_LIBS) $(EV_LIBS)
 
 if WIN32
 liboosvrbase_la_LDFLAGS += -lnetapi32 -luserenv -lshlwapi
