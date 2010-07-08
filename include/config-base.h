@@ -23,10 +23,10 @@
 #define OOBASE_CONFIG_BASE_H_INCLUDED_
 
 #if defined(_MSC_VER)
-	#include "config-msvc.h"
+	#include "oobase-msvc.h"
 #else
 	// Autoconf
-	#include "config-autoconf.h"
+	#include <oobase-autoconf.h>
 #endif
 
 #if defined(HAVE_STDLIB_H)

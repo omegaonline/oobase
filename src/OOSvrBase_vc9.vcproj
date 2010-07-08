@@ -343,15 +343,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\config-msvc.h"
-				>
-			</File>
-			<File
 				RelativePath="..\include\OOSvrBase\Database.h"
 				>
 			</File>
 			<File
 				RelativePath="..\include\OOSvrBase\Logger.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\oobase-msvc.h"
 				>
 			</File>
 			<File

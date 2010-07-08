@@ -361,10 +361,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\config-msvc.h"
-				>
-			</File>
-			<File
 				RelativePath="..\include\OOBase\Destructor.h"
 				>
 			</File>
@@ -378,6 +374,10 @@
 			</File>
 			<File
 				RelativePath="..\include\OOBase\Once.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\oobase-msvc.h"
 				>
 			</File>
 			<File
