@@ -39,6 +39,9 @@
 /* Define to 1 if you have the <pwd.h> header file. */
 #undef HAVE_PWD_H
 
+/* Define to 1 if you have the <signal.h> header file. */
+#undef HAVE_SIGNAL_H
+
 /* Define to 1 if you have the SO_PEERCRED socket option */
 #undef HAVE_SO_PEERCRED
 

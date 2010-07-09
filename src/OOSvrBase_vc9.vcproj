@@ -325,6 +325,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Service.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\SQLite3_comp.c"
 				>
 			</File>
@@ -372,6 +376,10 @@
 			</File>
 			<File
 				RelativePath="..\include\OOSvrBase\SecurityWin32.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOSvrBase\Service.h"
 				>
 			</File>
 		</Filter>

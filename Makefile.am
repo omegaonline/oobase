@@ -116,6 +116,7 @@ liboosvrbase_la_SOURCES = \
 	include/OOSvrBase/ProactorWin32.h \
 	include/OOSvrBase/pw_info.h \
 	include/OOSvrBase/SecurityWin32.h \
+	include/OOSvrBase/Service.h \
 	src/CmdArgs.cpp \
 	src/Database.cpp \
 	src/Logger.cpp \
@@ -125,4 +126,5 @@ liboosvrbase_la_SOURCES = \
 	src/ProactorWin32.cpp \
 	src/pw_info.cpp \
 	src/SecurityWin32.cpp \
+	src/Service.cpp \
 	src/SQLite3_comp.c
