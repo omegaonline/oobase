@@ -19,45 +19,35 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#ifndef OOBASE_POSIX_SOCKET_H_INCLUDED_
-#define OOBASE_POSIX_SOCKET_H_INCLUDED_
+#ifndef OOBASE_BSD_SOCKET_H_INCLUDED_
+#define OOBASE_BSD_SOCKET_H_INCLUDED_
 
 #include "Socket.h"
 
-#if (!defined(_WIN32) && defined(HAVE_SYS_SOCKET_H)) || defined(DOXYGEN)
-
-#include <sys/socket.h>
-
-#if defined(HAVE_FCNTL_H)
-#include <fcntl.h>
-#endif /* HAVE_FCNTL_H */
-
-#if defined(HAVE_SYS_FCNTL_H)
-#include <sys/fcntl.h>
-#endif /* HAVE_SYS_FCNTL_H */
-
 namespace OOBase
 {
-	namespace POSIX
+	namespace BSD
 	{
-		int fcntl_addfd(int fd, int flags);
-		int fcntl_addfl(int fd, int flags);
+		// Try to align winsock and unix ;)
+#if defined(_WIN32)
+		using ::SOCKET;
+#else
+		typedef int SOCKET;
+#endif
 
 		class SocketImpl
 		{
 		public:
-			SocketImpl(int fd);
+			SocketImpl(SOCKET fd);
 			virtual ~SocketImpl();
 
 			virtual int send(const void* buf, size_t len, const OOBase::timeval_t* wait = 0);
 			virtual size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* wait = 0);
 			virtual void close();
-			virtual int close_on_exec();
-
-			OOBase::SOCKET duplicate_async(int* perr) const;
+			virtual int close_on_exec(bool set);
 
 		protected:
-			int  m_fd;
+			SOCKET  m_fd;
 		};
 
 		template <class Base>
@@ -66,7 +56,7 @@ namespace OOBase
 				public SocketImpl
 		{
 		public:
-			SocketTempl(int fd) :
+			SocketTempl(SOCKET fd) :
 					SocketImpl(fd)
 			{}
 
@@ -88,14 +78,9 @@ namespace OOBase
 				SocketImpl::close();
 			}
 
-			int close_on_exec()
+			int close_on_exec(bool set)
 			{
-				return SocketImpl::close_on_exec();
-			}
-
-			OOBase::SOCKET duplicate_async(int* perr) const
-			{
-				return SocketImpl::duplicate_async(perr);
+				return SocketImpl::close_on_exec(set);
 			}
 
 		private:
@@ -107,36 +92,39 @@ namespace OOBase
 				public SocketTempl<OOBase::Socket>
 		{
 		public:
-			Socket(int fd) :
+			Socket(SOCKET fd) :
 					SocketTempl<OOBase::Socket>(fd)
 			{}
 		};
 
+		// Helpers for timed socket operations - All sockets are expected to be non-blocking!
+		//
+		// WARNING - THIS IS ALL MOVING WHEN THE EV PROACTOR STUFF IS TESTED PROPERLY!
+		//
+		SOCKET socket(int family, int socktype, int protocol, int* perr);
+		int connect(SOCKET sock, const sockaddr* addr, size_t addrlen, const timeval_t* wait = 0);
+		SOCKET connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait = 0);
+		int send(SOCKET sock, const void* buf, size_t len, const timeval_t* wait = 0);
+		size_t recv(SOCKET sock, void* buf, size_t len, int* perr, const timeval_t* wait = 0);
+
+		int set_non_blocking(SOCKET sock, bool set);
+		int set_close_on_exec(SOCKET sock, bool set);
+	}
+
+#if defined(HAVE_UNISTD_H)
+	namespace POSIX
+	{
 		class LocalSocket :
 				public SocketTempl<OOBase::LocalSocket>
 		{
 		public:
-			LocalSocket(int fd, const std::string& path) :
-					SocketTempl<OOBase::LocalSocket>(fd),
-					m_path(path)
+			LocalSocket(int fd) : SocketTempl<OOBase::LocalSocket>(fd)
 			{}
 
-			virtual ~LocalSocket()
-			{
-#if defined(HAVE_UNISTD_H)
-				if (!m_path.empty())
-					unlink(m_path.c_str());
-#endif
-			}
-
 			virtual OOBase::LocalSocket::uid_t get_uid();
-
-		private:
-			std::string m_path;
 		};
 	}
+#endif
 }
 
-#endif // !defined(_WIN32) && defined(HAVE_SYS_SOCKET_H)
-
-#endif // OOBASE_POSIX_SOCKET_H_INCLUDED_
+#endif // OOBASE_BSD_SOCKET_H_INCLUDED_

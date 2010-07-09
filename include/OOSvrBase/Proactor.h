@@ -95,6 +95,8 @@ namespace OOSvrBase
 			virtual ~ProactorImpl() {}
 
 			virtual OOBase::Socket* accept_local(Acceptor* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa) = 0;
+			virtual OOBase::Socket* accept_remote(Acceptor* handler, const std::string& address, const std::string& port, int* perr) = 0;
+
 			virtual AsyncSocket* attach_socket(IOHandler* handler, int* perr, OOBase::Socket* sock) = 0;
 
 		private:
@@ -110,6 +112,7 @@ namespace OOSvrBase
 		~Proactor();
 
 		OOBase::Socket* accept_local(Acceptor* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa = 0);
+		OOBase::Socket* accept_remote(Acceptor* handler, const std::string& address, const std::string& port, int* perr);
 
 		AsyncSocket* attach_socket(IOHandler* handler, int* perr, OOBase::Socket* sock);
 

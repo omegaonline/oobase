@@ -248,7 +248,7 @@ OOBase::LocalSocket* OOBase::LocalSocket::connect_local(const std::string& path,
 	return pSocket;
 }
 
-OOBase::SOCKET OOBase::Win32::LocalSocket::duplicate_async(int* perr) const
+/*OOBase::SOCKET OOBase::Win32::LocalSocket::async_steal(int* perr)
 {
 	// Duplicate the contained handle
 	HANDLE hClone;
@@ -259,6 +259,6 @@ OOBase::SOCKET OOBase::Win32::LocalSocket::duplicate_async(int* perr) const
 	}
 
 	return (SOCKET)hClone;
-}
+}*/
 
 #endif // _WIN32

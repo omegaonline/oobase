@@ -33,18 +33,38 @@
 #include <sys/un.h>
 #endif /* HAVE_SYS_UN_H */
 
-#if defined(_WIN32)
-#include <io.h>
-
-#define ssize_t int
-
-#endif // _WIN32
-
 #include <functional>
 #include <algorithm>
 
 #include "../include/OOBase/Win32Socket.h"
-#include "../include/OOBase/PosixSocket.h"
+#include "../include/OOBase/BSDSocket.h"
+
+
+//////////////////////
+// GUFF TO GO!
+
+
+#if defined(_WIN32)
+#include <ws2tcpip.h>
+
+#include <io.h>
+#define ssize_t int
+
+#define ETIMEDOUT WSAETIMEDOUT
+#define EINPROGRESS WSAEWOULDBLOCK
+#define ssize_t int
+#define SHUT_RDWR SD_BOTH
+
+#else
+
+#define WSAGetLastError() (errno)
+#define closesocket(fd) ::close(fd)
+
+#define WSAEWOULDBLOCK EAGAIN
+
+#endif
+
+
 
 namespace
 {
@@ -100,7 +120,7 @@ namespace
 	class AcceptSocket : public OOBase::Socket
 	{
 	public:
-		AcceptSocket(OOSvrBase::Ev::ProactorImpl* pProactor, const std::string& path) :
+		AcceptSocket(OOSvrBase::Ev::ProactorImpl* pProactor, const std::string& path = std::string()) :
 				m_proactor(pProactor),
 				m_watcher(0),
 				m_handler(0),
@@ -123,15 +143,9 @@ namespace
 
 		void close();
 
-		int close_on_exec()
+		int close_on_exec(bool /*set*/)
 		{
 			return EINVAL;
-		}
-
-		OOBase::SOCKET duplicate_async(int* perr) const
-		{
-			*perr = EINVAL;
-			return INVALID_SOCKET;
 		}
 
 	private:
@@ -204,6 +218,11 @@ namespace
 			m_proactor->remove_watcher(m_write_watcher);
 			m_write_watcher = 0;
 		}
+
+#if defined(HAVE_SYS_UN_H)
+		if (!m_path.empty())
+			unlink(m_path.c_str());
+#endif
 	}
 
 	int AsyncSocket::read(OOBase::Buffer* buffer, size_t len)
@@ -483,11 +502,10 @@ namespace
 
 		// Call accept on the fd...
 		int err = 0;
-		socklen_t len = 0;
-		int new_fd = accept(m_watcher->fd,NULL,&len);
-		if (new_fd == -1)
+		OOBase::SOCKET new_fd = accept(m_watcher->fd,NULL,NULL);
+		if (new_fd == INVALID_SOCKET)
 		{
-			err = errno;
+			err = WSAGetLastError();//errno;
 			if (err == EAGAIN)
 			{
 				// libev can give spurious readiness...
@@ -499,7 +517,7 @@ namespace
 		SocketType* pSocket = 0;
 		if (err == 0)
 		{
-			OOBASE_NEW(pSocket,SocketType(new_fd,m_path));
+			OOBASE_NEW(pSocket,SocketType(new_fd));
 			if (!pSocket)
 			{
 				err = ENOMEM;
@@ -512,14 +530,20 @@ namespace
 		if (err != 0 || !m_closing)
 			again = m_handler->on_accept(pSocket,err) && (err == 0);
 
-		if (!again)
+		if (again)
 		{
-			// close socket - close the watcher...
-			::close(m_watcher->fd);
-			m_proactor->remove_watcher(m_watcher);
-			m_watcher = 0;
-		}
+			err = m_proactor->start_watcher(m_watcher);
+			if (err == 0)
+				return;
 
+			m_handler->on_accept(0,err);
+		}
+		
+		// close socket - close the watcher...
+		::close(m_watcher->fd);
+		m_proactor->remove_watcher(m_watcher);
+		m_watcher = 0;
+		
 		// If we are closing
 		if (m_closing)
 			m_close_cond.signal();
@@ -547,6 +571,8 @@ namespace
 OOSvrBase::Ev::ProactorImpl::ProactorImpl() :
 		m_pLoop(0), m_pIOQueue(0), m_bStop(false)
 {
+	OOBase::Win32::WSAStartup();
+
 	// Create an ev loop
 	m_pLoop = ev_loop_new(EVFLAG_AUTO | EVFLAG_NOENV);
 	if (!m_pLoop)
@@ -615,6 +641,9 @@ int OOSvrBase::Ev::ProactorImpl::worker_i()
 	for (;;)
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_ev_lock);
+
+		if (m_bStop)
+			return 0;
 
 		// Swap over the IO queue to our local one...
 		m_pIOQueue = &io_queue;
@@ -782,6 +811,39 @@ void OOSvrBase::Ev::ProactorImpl::on_io_i(io_watcher* watcher, int /*events*/)
 	}
 }
 
+OOSvrBase::AsyncSocket* OOSvrBase::Ev::ProactorImpl::attach_socket(IOHandler* handler, int* perr, OOBase::Socket* sock)
+{
+	assert(perr);
+	assert(sock);
+
+	// Duplicate the contained handle
+	OOBase::BSD::SocketImpl* pImpl = sock->async_cast<OOBase::BSD::SocketImpl>();
+
+	int new_fd = INVALID_SOCKET; //sock->async_steal(perr);
+	if (new_fd == INVALID_SOCKET)
+		return 0;
+
+	// Alloc a new async socket
+	::AsyncSocket* pSock;
+	OOBASE_NEW(pSock,::AsyncSocket(this));
+	if (!pSock)
+	{
+		close(new_fd);
+		*perr = ENOMEM;
+		return 0;
+	}
+
+	*perr = pSock->bind(handler,new_fd);
+	if (*perr != 0)
+	{
+		close(new_fd);
+		pSock->release();
+		return 0;
+	}
+
+	return pSock;
+}
+
 OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa)
 {
 #if !defined(HAVE_SYS_UN_H)
@@ -792,29 +854,10 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor* handler, con
 
 	// path is a UNIX pipe name - e.g. /tmp/ooserverd
 
-	int fd = socket(PF_UNIX,SOCK_STREAM,0);
+	int fd = OOBase::socket(PF_UNIX,SOCK_STREAM,0,perr);
 	if (fd == -1)
-	{
-		*perr = errno;
 		return 0;
-	}
-
-	// Set non-blocking
-	*perr = OOBase::POSIX::fcntl_addfl(fd,O_NONBLOCK);
-	if (*perr != 0)
-	{
-		close(fd);
-		return 0;
-	}
-
-	// Add FD_CLOEXEC
-	*perr = OOBase::POSIX::fcntl_addfd(fd,FD_CLOEXEC);
-	if (*perr != 0)
-	{
-		close(fd);
-		return 0;
-	}
-
+	
 	// Compose filename
 	sockaddr_un addr;
 	addr.sun_family = AF_UNIX;
@@ -870,35 +913,89 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor* handler, con
 #endif
 }
 
-OOSvrBase::AsyncSocket* OOSvrBase::Ev::ProactorImpl::attach_socket(IOHandler* handler, int* perr, OOBase::Socket* sock)
+OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor* handler, const std::string& address, const std::string& port, int* perr)
 {
-	assert(perr);
-	assert(sock);
-
-	// Duplicate the contained handle
-	int new_fd = sock->duplicate_async(perr);
-	if (new_fd == INVALID_SOCKET)
-		return 0;
-
-	// Alloc a new async socket
-	::AsyncSocket* pSock;
-	OOBASE_NEW(pSock,::AsyncSocket(this));
-	if (!pSock)
+	OOBase::BSD::SOCKET sock = INVALID_SOCKET;
+	if (address.empty())
 	{
-		close(new_fd);
-		*perr = ENOMEM;
+		sockaddr_in addr = {0};
+		addr.sin_family = AF_INET;
+		addr.sin_addr.S_un.S_addr = ADDR_ANY;
+
+		if (!port.empty())
+			addr.sin_port = htons((u_short)atoi(port.c_str()));
+
+		if ((sock = OOBase::BSD::socket(AF_INET,SOCK_STREAM,0,perr)) == INVALID_SOCKET)
+			return 0;
+		
+		if (bind(sock,(sockaddr*)&addr,sizeof(sockaddr_in)) == SOCKET_ERROR)
+		{
+			*perr = WSAGetLastError();
+			closesocket(sock);
+			return 0;
+		}
+	}
+	else
+	{
+		// Resolve the passed in addresses...
+		addrinfo hints = {0};
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_flags = AI_PASSIVE;
+
+		addrinfo* pResults = 0;
+		if (getaddrinfo(address.c_str(),port.c_str(),&hints,&pResults) != 0)
+		{
+			*perr = WSAGetLastError();
+			return 0;
+		}
+
+		// Loop trying to connect on each address until one succeeds
+		for (addrinfo* pAddr = pResults; pAddr != 0; pAddr = pAddr->ai_next)
+		{
+			if ((sock = OOBase::BSD::socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,perr)) != INVALID_SOCKET)
+			{
+				if (bind(sock,pAddr->ai_addr,pAddr->ai_addrlen) == SOCKET_ERROR)
+				{
+					*perr = WSAGetLastError();
+					closesocket(sock);
+				}
+				else
+					break;
+			}
+		}
+
+		// Done with address info
+		freeaddrinfo(pResults);
+
+		// Clear error
+		if (sock != INVALID_SOCKET)
+			*perr = 0;
+	}
+
+	// Now start the socket listening...
+	if (listen(sock,SOMAXCONN) == SOCKET_ERROR)
+	{
+		*perr = WSAGetLastError();
+		closesocket(sock);
 		return 0;
 	}
 
-	*perr = pSock->bind(handler,new_fd);
+	// Wrap up in a controlling socket class
+	OOBase::SmartPtr<AcceptSocket<OOBase::BSD::Socket> > pAccept = 0;
+	OOBASE_NEW(pAccept,AcceptSocket<OOBase::BSD::Socket>(this));
+	if (!pAccept)
+		*perr = ENOMEM;
+	else
+		*perr = pAccept->init(handler,sock);
+
 	if (*perr != 0)
 	{
-		close(new_fd);
-		pSock->release();
+		closesocket(sock);
 		return 0;
 	}
 
-	return pSock;
+	return pAccept.detach();
 }
 
 #endif // HAVE_EV_H

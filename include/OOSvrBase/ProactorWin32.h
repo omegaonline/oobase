@@ -42,8 +42,10 @@ namespace OOSvrBase
 			ProactorImpl();
 			virtual ~ProactorImpl();
 
-			virtual OOBase::Socket* accept_local(Acceptor* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa);
-			virtual AsyncSocket* attach_socket(IOHandler* handler, int* perr, OOBase::Socket* sock);
+			OOBase::Socket* accept_local(Acceptor* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa);
+			OOBase::Socket* accept_remote(Acceptor* handler, const std::string& address, const std::string& port, int* perr);
+
+			AsyncSocket* attach_socket(IOHandler* handler, int* perr, OOBase::Socket* sock);
 		};
 	}
 }

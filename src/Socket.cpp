@@ -20,11 +20,19 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/Win32Socket.h"
-#include "../include/OOBase/PosixSocket.h"
+#include "../include/OOBase/BSDSocket.h"
 
 #if defined(_MSC_VER)
 #pragma warning(disable: 4127)
 #endif
+
+#if defined(HAVE_FCNTL_H)
+#include <fcntl.h>
+#endif /* HAVE_FCNTL_H */
+
+#if defined(HAVE_SYS_FCNTL_H)
+#include <sys/fcntl.h>
+#endif /* HAVE_SYS_FCNTL_H */
 
 #if defined(HAVE_NETDB_H)
 #include <netdb.h>
@@ -46,37 +54,72 @@
 
 #endif
 
-OOBase::SOCKET OOBase::socket(int family, int socktype, int protocol, int* perr)
+int OOBase::BSD::set_non_blocking(SOCKET sock, bool set)
+{
+#if defined (_WIN32)
+	u_long v = (set ? 1 : 0);
+	if (ioctlsocket(sock,FIONBIO,&v) == -1)
+		return WSAGetLastError();
+
+#elif defined(HAVE_FCNTL_H) || defined(HAVE_SYS_FCNTL_H)
+	int flags = fcntl(fd,F_GETFL);
+	if (flags == -1)
+		return errno;
+
+	flags = (set ? flags | O_NONBLOCK : flags & ~O_NONBLOCK);		
+	if (fcntl(fd,F_SETFL,flags) == -1)
+		return errno;
+#endif
+
+	return 0;
+}
+
+int OOBase::BSD::set_close_on_exec(SOCKET sock, bool set)
+{
+#if defined(HAVE_FCNTL_H) || defined(HAVE_SYS_FCNTL_H)
+	int flags = fcntl(fd,F_GETFD);
+	if (flags == -1)
+		return errno;
+
+	flags = (set ? flags | FD_CLOEXEC : flags & ~FD_CLOEXEC);
+	if (fcntl(fd,F_GETFD,flags) == -1)
+		return errno;
+#else
+	(void)set;
+	(void)sock;
+	return 0;
+#endif
+}
+
+OOBase::BSD::SOCKET OOBase::BSD::socket(int family, int socktype, int protocol, int* perr)
 {
 	*perr = 0;
 
-	OOBase::SOCKET sock = ::socket(family,socktype,protocol);
+	OOBase::BSD::SOCKET sock = ::socket(family,socktype,protocol);
 	if (sock == INVALID_SOCKET)
 	{
 		*perr = WSAGetLastError();
 		return sock;
 	}
 
-#if defined(_WIN32)
-	u_long v = 1;
-	if (ioctlsocket(sock,FIONBIO,&v) == -1)
+	*perr = set_non_blocking(sock,true);
+	if (*perr != 0)
 	{
-		*perr = WSAGetLastError();
 		closesocket(sock);
 		return INVALID_SOCKET;
 	}
-#else
-	if ((*perr = POSIX::fcntl_addfl(sock,O_NONBLOCK)) != 0)
+
+	*perr = set_close_on_exec(sock,true);
+	if (*perr != 0)
 	{
-		close(sock);
+		closesocket(sock);
 		return INVALID_SOCKET;
 	}
-#endif
 
 	return sock;
 }
 
-int OOBase::connect(SOCKET sock, const sockaddr* addr, size_t addrlen, const timeval_t* wait)
+int OOBase::BSD::connect(SOCKET sock, const sockaddr* addr, size_t addrlen, const timeval_t* wait)
 {
 	// Do the connect
 	if (::connect(sock,addr,addrlen) != -1)
@@ -126,7 +169,7 @@ int OOBase::connect(SOCKET sock, const sockaddr* addr, size_t addrlen, const tim
 	}
 }
 
-OOBase::SOCKET OOBase::connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait)
+OOBase::BSD::SOCKET OOBase::BSD::connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait)
 {
 	// Start a countdown
 	timeval_t wait2 = (wait ? *wait : timeval_t::MaxTime);
@@ -150,12 +193,12 @@ OOBase::SOCKET OOBase::connect(const std::string& address, const std::string& po
 		return ETIMEDOUT;
 
 	// Loop trying to connect on each address until one succeeds
-	OOBase::SOCKET sock = INVALID_SOCKET;
-	for (addrinfo* pAddr = pResults; pAddr->ai_next != 0; pAddr = pAddr->ai_next)
+	SOCKET sock = INVALID_SOCKET;
+	for (addrinfo* pAddr = pResults; pAddr != 0; pAddr = pAddr->ai_next)
 	{
-		if ((sock = OOBase::socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,perr)) != INVALID_SOCKET)
+		if ((sock = socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,perr)) != INVALID_SOCKET)
 		{
-			if ((*perr = OOBase::connect(sock,pAddr->ai_addr,pAddr->ai_addrlen,&wait2)) != 0)
+			if ((*perr = connect(sock,pAddr->ai_addr,pAddr->ai_addrlen,&wait2)) != 0)
 				closesocket(sock);
 			else
 				break;
@@ -176,7 +219,7 @@ OOBase::SOCKET OOBase::connect(const std::string& address, const std::string& po
 	return sock;
 }
 
-int OOBase::send(SOCKET sock, const void* buf, size_t len, const timeval_t* wait)
+int OOBase::BSD::send(SOCKET sock, const void* buf, size_t len, const timeval_t* wait)
 {
 	const char* cbuf = static_cast<const char*>(buf);
 
@@ -237,7 +280,7 @@ int OOBase::send(SOCKET sock, const void* buf, size_t len, const timeval_t* wait
 	}
 }
 
-size_t OOBase::recv(SOCKET sock, void* buf, size_t len, int* perr, const timeval_t* wait)
+size_t OOBase::BSD::recv(SOCKET sock, void* buf, size_t len, int* perr, const timeval_t* wait)
 {
 	char* cbuf = static_cast<char*>(buf);
 	size_t total_recv = 0;

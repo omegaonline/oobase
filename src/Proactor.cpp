@@ -52,6 +52,11 @@ OOBase::Socket* OOSvrBase::Proactor::accept_local(Acceptor* handler, const std::
 	return m_impl->accept_local(handler,path,perr,psa);
 }
 
+OOBase::Socket* OOSvrBase::Proactor::accept_remote(Acceptor* handler, const std::string& address, const std::string& port, int* perr)
+{
+	return m_impl->accept_remote(handler,address,port,perr);
+}
+
 OOSvrBase::AsyncSocket* OOSvrBase::Proactor::attach_socket(IOHandler* handler, int* perr, OOBase::Socket* sock)
 {
 	return m_impl->attach_socket(handler,perr,sock);

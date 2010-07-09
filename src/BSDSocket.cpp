@@ -19,37 +19,18 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/PosixSocket.h"
+#include "../include/OOBase/BSDSocket.h"
 
-#if (!defined(_WIN32) && defined(HAVE_SYS_SOCKET_H)) || defined(DOXYGEN)
+#if !defined(_WIN32)
+#define closesocket(fd) ::close(fd)
+#define INVALID_SOCKET (-1)
+#endif
+
+#if defined(HAVE_UNISTD_H)
 
 #if defined(HAVE_SYS_UN_H)
 #include <sys/un.h>
-#endif /* HAVE_SYS_UN_H */
-
-int OOBase::POSIX::fcntl_addfd(int fd, int flags)
-{
-	int oldflags = fcntl(fd,F_GETFD);
-	if (oldflags == -1 ||
-			fcntl(fd,F_SETFD,oldflags | flags) == -1)
-	{
-		return errno;
-	}
-
-	return 0;
-}
-
-int OOBase::POSIX::fcntl_addfl(int fd, int flags)
-{
-	int oldflags = fcntl(fd,F_GETFL);
-	if (oldflags == -1 ||
-			fcntl(fd,F_SETFL,oldflags | flags) == -1)
-	{
-		return errno;
-	}
-
-	return 0;
-}
+#endif
 
 OOBase::LocalSocket::uid_t OOBase::POSIX::LocalSocket::get_uid()
 {
@@ -161,24 +142,6 @@ OOBase::LocalSocket::uid_t OOBase::POSIX::LocalSocket::get_uid()
 #endif
 }
 
-OOBase::Socket* OOBase::Socket::connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait)
-{
-	OOBase::SOCKET sock = OOBase::connect(address,port,perr,wait);
-	if (sock == INVALID_SOCKET)
-		return 0;
-
-	OOBase::POSIX::Socket* pSocket = 0;
-	OOBASE_NEW(pSocket,OOBase::POSIX::Socket(sock));
-	if (!pSocket)
-	{
-		*perr = ENOMEM;
-		::close(sock);
-		return 0;
-	}
-
-	return pSocket;
-}
-
 OOBase::LocalSocket* OOBase::LocalSocket::connect_local(const std::string& path, int* perr, const timeval_t* wait)
 {
 	OOBase::SOCKET sock = OOBase::socket(AF_UNIX,SOCK_STREAM,0,perr);
@@ -208,75 +171,64 @@ OOBase::LocalSocket* OOBase::LocalSocket::connect_local(const std::string& path,
 	return pSocket;
 }
 
-OOBase::POSIX::SocketImpl::SocketImpl(int fd) :
+#endif // defined(HAVE_UNISTD_H)
+
+OOBase::Socket* OOBase::Socket::connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait)
+{
+	BSD::SOCKET sock = BSD::connect(address,port,perr,wait);
+	if (sock == INVALID_SOCKET)
+		return 0;
+
+	OOBase::BSD::Socket* pSocket = 0;
+	OOBASE_NEW(pSocket,OOBase::BSD::Socket(sock));
+	if (!pSocket)
+	{
+		*perr = ENOMEM;
+		closesocket(sock);
+		return 0;
+	}
+
+	return pSocket;
+}
+
+OOBase::BSD::SocketImpl::SocketImpl(SOCKET fd) :
 		m_fd(fd)
 {
 }
 
-OOBase::POSIX::SocketImpl::~SocketImpl()
+OOBase::BSD::SocketImpl::~SocketImpl()
 {
 	close();
 }
 
-int OOBase::POSIX::SocketImpl::send(const void* buf, size_t len, const OOBase::timeval_t* wait)
+int OOBase::BSD::SocketImpl::send(const void* buf, size_t len, const OOBase::timeval_t* wait)
 {
-	return OOBase::send(m_fd,buf,len,wait);
+	return BSD::send(m_fd,buf,len,wait);
 }
 
-size_t OOBase::POSIX::SocketImpl::recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* wait)
+size_t OOBase::BSD::SocketImpl::recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* wait)
 {
-	return OOBase::recv(m_fd,buf,len,perr,wait);
+	return BSD::recv(m_fd,buf,len,perr,wait);
 }
 
-void OOBase::POSIX::SocketImpl::close()
+void OOBase::BSD::SocketImpl::close()
 {
-	::close(m_fd);
-	m_fd = -1;
+	if (m_fd != INVALID_SOCKET)
+	{
+		closesocket(m_fd);
+		m_fd = INVALID_SOCKET;
+	}
 }
 
-int OOBase::POSIX::SocketImpl::close_on_exec()
+int OOBase::BSD::SocketImpl::close_on_exec(bool set)
 {
-	return fcntl_addfd(m_fd,FD_CLOEXEC);
+	return BSD::set_close_on_exec(m_fd,set);
 }
 
-OOBase::SOCKET OOBase::POSIX::SocketImpl::duplicate_async(int* perr) const
+/*OOBase::BSD::SOCKET OOBase::BSD::SocketImpl::async_steal(int* perr)
 {
-	// See if we are FD_CLOEXEC
-	int flags = fcntl(m_fd,F_GETFD);
-	if (flags == -1)
-	{
-		*perr = errno;
-		return INVALID_SOCKET;
-	}
-
-	int new_fd = dup(m_fd);
-	if (new_fd == -1)
-	{
-		*perr = errno;
-		return INVALID_SOCKET;
-	}
-
-	// Copy CLOEXEC status to dup'ed descriptor
-	if (flags & FD_CLOEXEC)
-	{
-		int err = fcntl_addfd(new_fd,FD_CLOEXEC);
-		if (err != 0)
-		{
-			::close(new_fd);
-			*perr = errno;
-			return INVALID_SOCKET;
-		}
-	}
-
-	// Set non-blocking
-	*perr = OOBase::POSIX::fcntl_addfl(new_fd,O_NONBLOCK);
-	if (*perr != 0)
-	{
-		::close(new_fd);
-		return INVALID_SOCKET;
-	}
-
+	int new_fd = m_fd;
+	m_fd = INVALID_SOCKET;
 	return new_fd;
 }
-
-#endif // !defined(_WIN32) && defined(HAVE_SYS_SOCKET_H)
+*/

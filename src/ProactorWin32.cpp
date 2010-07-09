@@ -431,7 +431,10 @@ OOSvrBase::AsyncSocket* OOSvrBase::Win32::ProactorImpl::attach_socket(IOHandler*
 	assert(sock);
 
 	// Duplicate the contained handle
-	HANDLE hClone = (HANDLE)sock->duplicate_async(perr);
+	OOBase::Win32::Socket* pOrigSock = sock->async_cast<OOBase::Win32::Socket>();
+
+
+	HANDLE hClone = (HANDLE)INVALID_SOCKET;//(HANDLE)sock->async_steal(perr);
 	if (hClone == (HANDLE)INVALID_SOCKET)
 		return 0;
 	
@@ -455,5 +458,10 @@ OOSvrBase::AsyncSocket* OOSvrBase::Win32::ProactorImpl::attach_socket(IOHandler*
 	return pSock;
 }
 
+OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_remote(Acceptor* handler, const std::string& address, const std::string& port, int* perr)
+{
+	void* TODO;
+	return 0;
+}
 
 #endif // _WIN32

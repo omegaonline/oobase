@@ -52,15 +52,9 @@ namespace
 
 		int accept_named_pipe(bool bExclusive);
 
-		int close_on_exec()
+		int close_on_exec(bool /*set*/)
 		{
 			return 0;
-		}
-
-		SOCKET duplicate_async(int* perr) const
-		{
-			*perr = ERROR_INVALID_FUNCTION;
-			return INVALID_SOCKET;
 		}
 
 	private:
@@ -234,19 +228,19 @@ namespace
 		if (again)
 		{
 			dwErr = accept_named_pipe(false);
-			if (dwErr != 0)
-				m_sync_handler->on_accept(0,dwErr);
+			if (dwErr == 0)
+				return;
+				
+			m_sync_handler->on_accept(0,dwErr);
 		}
-		else
-		{
-			// Unregister ourselves
-			if (m_hWait)
-				UnregisterWaitEx(m_hWait,NULL);
-			m_hWait = 0;
+		
+		// Unregister ourselves
+		if (m_hWait)
+			UnregisterWaitEx(m_hWait,NULL);
+		m_hWait = 0;
 
-			// Set the event because we will not be pending again...
-			SetEvent(m_hClosed);
-		}
+		// Set the event because we will not be pending again...
+		SetEvent(m_hClosed);
 	}
 }
 

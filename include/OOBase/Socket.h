@@ -34,14 +34,6 @@
 
 namespace OOBase
 {
-	// Try to align winsock and unix ;)
-#if defined(_WIN32)
-	using ::SOCKET;
-#else
-	typedef int SOCKET;
-	#define INVALID_SOCKET (-1)
-#endif
-
 	class Socket
 	{
 	public:
@@ -83,10 +75,15 @@ namespace OOBase
 		}
 
 		virtual void close() = 0;
-		virtual int close_on_exec() = 0;
-		virtual SOCKET duplicate_async(int* perr) const = 0;
-
+		virtual int close_on_exec(bool set) = 0;
+		
 		static Socket* connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait = 0);
+
+		template <typename T>
+		T* async_cast()
+		{
+			return static_cast<T*>(this);
+		}
 
 	protected:
 		Socket() {}
@@ -116,13 +113,6 @@ namespace OOBase
 	protected:
 		LocalSocket() {}
 	};
-
-	// Helpers for timed socket operations - All sockets are expected to be non-blocking!
-	SOCKET socket(int family, int socktype, int protocol, int* perr);
-	int connect(SOCKET sock, const sockaddr* addr, size_t addrlen, const timeval_t* wait = 0);
-	SOCKET connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait = 0);
-	int send(SOCKET sock, const void* buf, size_t len, const timeval_t* wait = 0);
-	size_t recv(SOCKET sock, void* buf, size_t len, int* perr, const timeval_t* wait = 0);
 }
 
 #endif // OOBASE_SOCKET_H_INCLUDED_
