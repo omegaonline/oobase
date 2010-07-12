@@ -30,8 +30,6 @@ namespace OOBase
 {
 	namespace Win32
 	{
-		void WSAStartup();
-
 		class Socket : public OOBase::Socket
 		{
 		public:
@@ -44,11 +42,6 @@ namespace OOBase
 			
 		private:
 			SOCKET m_hSocket;
-
-			int close_on_exec(bool /*set*/)
-			{
-				return 0;
-			}
 		};
 
 		class LocalSocket : public OOBase::LocalSocket
@@ -66,11 +59,6 @@ namespace OOBase
 			SmartHandle m_hPipe;
 			SmartHandle m_hReadEvent;
 			SmartHandle m_hWriteEvent;
-
-			int close_on_exec(bool /*set*/)
-			{
-				return 0;
-			}
 		};
 	}
 }

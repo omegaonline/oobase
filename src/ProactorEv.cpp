@@ -20,10 +20,13 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #if defined(_MSC_VER)
-#define _CRT_NONSTDC_NO_WARNINGS
+//#define _CRT_NONSTDC_NO_WARNINGS
+
+// libev causes MSVC to moan
 #pragma warning(disable: 4127)
 #endif
 
+#include "../include/OOBase/BSDSocket.h"
 #include "../include/OOSvrBase/Proactor.h"
 
 #if defined(HAVE_EV_H)
@@ -36,35 +39,25 @@
 #include <functional>
 #include <algorithm>
 
-#include "../include/OOBase/Win32Socket.h"
-#include "../include/OOBase/BSDSocket.h"
-
-
 //////////////////////
 // GUFF TO GO!
-
 
 #if defined(_WIN32)
 #include <ws2tcpip.h>
 
-#include <io.h>
 #define ssize_t int
 
-#define ETIMEDOUT WSAETIMEDOUT
-#define EINPROGRESS WSAEWOULDBLOCK
-#define ssize_t int
 #define SHUT_RDWR SD_BOTH
+
+#define socket_errno WSAGetLastError()
+#define SOCKET_WOULD_BLOCK WSAEWOULDBLOCK
 
 #else
 
-#define WSAGetLastError() (errno)
-#define closesocket(fd) ::close(fd)
-
-#define WSAEWOULDBLOCK EAGAIN
+#define socket_errno (errno)
+#define SOCKET_WOULD_BLOCK EAGAIN
 
 #endif
-
-
 
 namespace
 {
@@ -81,10 +74,10 @@ namespace
 			m_current_read.m_buffer = 0;
 		}
 
-		int bind(OOSvrBase::IOHandler* handler, int fd);
+		int bind(OOSvrBase::IOHandler<OOSvrBase::AsyncSocket>* handler, int fd);
 
-		int read(OOBase::Buffer* buffer, size_t len = 0);
-		int write(OOBase::Buffer* buffer);
+		int async_read(OOBase::Buffer* buffer, size_t len = 0);
+		int async_write(OOBase::Buffer* buffer);
 		void close();
 
 	private:
@@ -96,15 +89,15 @@ namespace
 			size_t          m_to_read;
 		};
 
-		OOBase::Mutex                            m_lock;
-		OOSvrBase::Ev::ProactorImpl*             m_proactor;
-		OOSvrBase::Ev::ProactorImpl::io_watcher* m_read_watcher;
-		OOSvrBase::Ev::ProactorImpl::io_watcher* m_write_watcher;
-		OOSvrBase::IOHandler*                    m_handler;
-		std::deque<AsyncRead>                    m_async_reads;
-		std::deque<OOBase::Buffer*>              m_async_writes;
-		AsyncRead                                m_current_read;
-		OOBase::Buffer*                          m_current_write;
+		OOBase::Mutex                                 m_lock;
+		OOSvrBase::Ev::ProactorImpl*                  m_proactor;
+		OOSvrBase::Ev::ProactorImpl::io_watcher*      m_read_watcher;
+		OOSvrBase::Ev::ProactorImpl::io_watcher*      m_write_watcher;
+		OOSvrBase::IOHandler<OOSvrBase::AsyncSocket>* m_handler;
+		std::deque<AsyncRead>                         m_async_reads;
+		std::deque<OOBase::Buffer*>                   m_async_writes;
+		AsyncRead                                     m_current_read;
+		OOBase::Buffer*                               m_current_write;
 
 		static void on_read(void* param);
 		static void on_write(void* param);
@@ -116,7 +109,7 @@ namespace
 		int write_next();
 	};
 
-	template <typename SocketType>
+	template <typename SocketType, typename AcceptType>
 	class AcceptSocket : public OOBase::Socket
 	{
 	public:
@@ -128,7 +121,7 @@ namespace
 				m_path(path)
 		{}
 
-		int init(OOSvrBase::Acceptor* handler, int fd);
+		int init(OOSvrBase::Acceptor<AcceptType>* handler, int fd);
 
 		int send(const void* /*buf*/, size_t /*len*/, const OOBase::timeval_t* /*timeout*/ = 0)
 		{
@@ -143,16 +136,11 @@ namespace
 
 		void close();
 
-		int close_on_exec(bool /*set*/)
-		{
-			return EINVAL;
-		}
-
 	private:
 		OOBase::Condition::Mutex                 m_lock;
 		OOSvrBase::Ev::ProactorImpl*             m_proactor;
 		OOSvrBase::Ev::ProactorImpl::io_watcher* m_watcher;
-		OOSvrBase::Acceptor*                     m_handler;
+		OOSvrBase::Acceptor<AcceptType>*         m_handler;
 		OOBase::Condition                        m_close_cond;
 		bool                                     m_closing;
 		std::string                              m_path;
@@ -171,7 +159,7 @@ namespace
 		{}
 	}
 
-	int AsyncSocket::bind(OOSvrBase::IOHandler* handler, int fd)
+	int AsyncSocket::bind(OOSvrBase::IOHandler<OOSvrBase::AsyncSocket>* handler, int fd)
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
@@ -211,7 +199,7 @@ namespace
 
 			m_async_writes.clear();
 
-			::close(m_read_watcher->fd);
+			OOBase::BSD::Socket::close(m_read_watcher->fd);
 
 			m_proactor->remove_watcher(m_read_watcher);
 			m_read_watcher = 0;
@@ -225,7 +213,7 @@ namespace
 #endif
 	}
 
-	int AsyncSocket::read(OOBase::Buffer* buffer, size_t len)
+	int AsyncSocket::async_read(OOBase::Buffer* buffer, size_t len)
 	{
 		assert(buffer);
 
@@ -299,7 +287,7 @@ namespace
 		int err = 0;
 		while (to_read > 0)
 		{
-			ssize_t have_read = recv(m_read_watcher->fd,m_current_read.m_buffer->wr_ptr(),to_read,0);
+			ssize_t have_read = ::recv(m_read_watcher->fd,m_current_read.m_buffer->wr_ptr(),to_read,0);
 			if (have_read == 0)
 			{
 				closed = true;
@@ -307,7 +295,8 @@ namespace
 			}
 			else if (have_read < 0)
 			{
-				if (errno == EAGAIN)
+				err = socket_errno;
+				if (err == SOCKET_WOULD_BLOCK)
 				{
 					if (!inexact || m_current_read.m_buffer->length() == 0)
 					{
@@ -315,8 +304,6 @@ namespace
 						return true;
 					}
 				}
-				else
-					err = errno;
 				break;
 			}
 
@@ -350,7 +337,7 @@ namespace
 		return false;
 	}
 
-	int AsyncSocket::write(OOBase::Buffer* buffer)
+	int AsyncSocket::async_write(OOBase::Buffer* buffer)
 	{
 		assert(buffer);
 
@@ -410,16 +397,15 @@ namespace
 		int err = 0;
 		while (to_write > 0)
 		{
-			ssize_t have_sent = send(m_write_watcher->fd,m_current_write->rd_ptr(),to_write,0);
+			ssize_t have_sent = ::send(m_write_watcher->fd,m_current_write->rd_ptr(),to_write,0);
 			if (have_sent <= 0)
 			{
-				if (errno == EAGAIN)
+				err = socket_errno;
+				if (err == SOCKET_WOULD_BLOCK)
 				{
 					m_async_writes.push_front(m_current_write);
 					return true;
 				}
-
-				err = errno;
 				break;
 			}
 
@@ -463,8 +449,8 @@ namespace
 		static_cast<AsyncSocket*>(param)->write_next();
 	}
 
-	template <typename SocketType>
-	int AcceptSocket<SocketType>::init(OOSvrBase::Acceptor* handler, int fd)
+	template <typename SocketType, typename AcceptType>
+	int AcceptSocket<SocketType,AcceptType>::init(OOSvrBase::Acceptor<AcceptType>* handler, int fd)
 	{
 		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 
@@ -485,14 +471,14 @@ namespace
 		return 0;
 	}
 
-	template <typename SocketType>
-	void AcceptSocket<SocketType>::on_accept(void* param)
+	template <typename SocketType, typename AcceptType>
+	void AcceptSocket<SocketType,AcceptType>::on_accept(void* param)
 	{
 		return static_cast<AcceptSocket*>(param)->on_accept_i();
 	}
 
-	template <typename SocketType>
-	void AcceptSocket<SocketType>::on_accept_i()
+	template <typename SocketType, typename AcceptType>
+	void AcceptSocket<SocketType,AcceptType>::on_accept_i()
 	{
 		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 
@@ -502,11 +488,11 @@ namespace
 
 		// Call accept on the fd...
 		int err = 0;
-		OOBase::SOCKET new_fd = accept(m_watcher->fd,NULL,NULL);
+		OOBase::BSD::socket_t new_fd = accept(m_watcher->fd,NULL,NULL);
 		if (new_fd == INVALID_SOCKET)
 		{
-			err = WSAGetLastError();//errno;
-			if (err == EAGAIN)
+			err = socket_errno;
+			if (err == SOCKET_WOULD_BLOCK)
 			{
 				// libev can give spurious readiness...
 				return;
@@ -521,7 +507,7 @@ namespace
 			if (!pSocket)
 			{
 				err = ENOMEM;
-				::close(new_fd);
+				OOBase::BSD::Socket::close(new_fd);
 			}
 		}
 
@@ -540,7 +526,7 @@ namespace
 		}
 		
 		// close socket - close the watcher...
-		::close(m_watcher->fd);
+		OOBase::BSD::Socket::close(m_watcher->fd);
 		m_proactor->remove_watcher(m_watcher);
 		m_watcher = 0;
 		
@@ -549,8 +535,8 @@ namespace
 			m_close_cond.signal();
 	}
 
-	template <typename SocketType>
-	void AcceptSocket<SocketType>::close()
+	template <typename SocketType, typename AcceptType>
+	void AcceptSocket<SocketType,AcceptType>::close()
 	{
 		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 
@@ -571,8 +557,6 @@ namespace
 OOSvrBase::Ev::ProactorImpl::ProactorImpl() :
 		m_pLoop(0), m_pIOQueue(0), m_bStop(false)
 {
-	OOBase::Win32::WSAStartup();
-
 	// Create an ev loop
 	m_pLoop = ev_loop_new(EVFLAG_AUTO | EVFLAG_NOENV);
 	if (!m_pLoop)
@@ -811,7 +795,7 @@ void OOSvrBase::Ev::ProactorImpl::on_io_i(io_watcher* watcher, int /*events*/)
 	}
 }
 
-OOSvrBase::AsyncSocket* OOSvrBase::Ev::ProactorImpl::attach_socket(IOHandler* handler, int* perr, OOBase::Socket* sock)
+/*OOSvrBase::AsyncSocket* OOSvrBase::Ev::ProactorImpl::attach_socket(IOHandler* handler, int* perr, OOBase::Socket* sock)
 {
 	assert(perr);
 	assert(sock);
@@ -842,13 +826,18 @@ OOSvrBase::AsyncSocket* OOSvrBase::Ev::ProactorImpl::attach_socket(IOHandler* ha
 	}
 
 	return pSock;
-}
+}*/
 
-OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa)
+OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa)
 {
 #if !defined(HAVE_SYS_UN_H)
 	// If we don't have unix sockets, we can't do much, use Win32 Proactor instead
 	*perr = ENOENT;
+
+	(void)handler;
+	(void)path;
+	(void)psa;
+
 	return 0;
 #else
 
@@ -913,9 +902,9 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor* handler, con
 #endif
 }
 
-OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor* handler, const std::string& address, const std::string& port, int* perr)
+OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor<OOSvrBase::AsyncSocket>* handler, const std::string& address, const std::string& port, int* perr)
 {
-	OOBase::BSD::SOCKET sock = INVALID_SOCKET;
+	OOBase::BSD::socket_t sock = INVALID_SOCKET;
 	if (address.empty())
 	{
 		sockaddr_in addr = {0};
@@ -925,13 +914,13 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor* handler, co
 		if (!port.empty())
 			addr.sin_port = htons((u_short)atoi(port.c_str()));
 
-		if ((sock = OOBase::BSD::socket(AF_INET,SOCK_STREAM,0,perr)) == INVALID_SOCKET)
+		if ((sock = OOBase::BSD::Socket::create(AF_INET,SOCK_STREAM,0,perr)) == INVALID_SOCKET)
 			return 0;
 		
 		if (bind(sock,(sockaddr*)&addr,sizeof(sockaddr_in)) == SOCKET_ERROR)
 		{
-			*perr = WSAGetLastError();
-			closesocket(sock);
+			*perr = socket_errno;
+			OOBase::BSD::Socket::close(sock);
 			return 0;
 		}
 	}
@@ -946,19 +935,19 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor* handler, co
 		addrinfo* pResults = 0;
 		if (getaddrinfo(address.c_str(),port.c_str(),&hints,&pResults) != 0)
 		{
-			*perr = WSAGetLastError();
+			*perr = socket_errno;
 			return 0;
 		}
 
 		// Loop trying to connect on each address until one succeeds
 		for (addrinfo* pAddr = pResults; pAddr != 0; pAddr = pAddr->ai_next)
 		{
-			if ((sock = OOBase::BSD::socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,perr)) != INVALID_SOCKET)
+			if ((sock = OOBase::BSD::Socket::create(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,perr)) != INVALID_SOCKET)
 			{
 				if (bind(sock,pAddr->ai_addr,pAddr->ai_addrlen) == SOCKET_ERROR)
 				{
-					*perr = WSAGetLastError();
-					closesocket(sock);
+					*perr = socket_errno;
+					OOBase::BSD::Socket::close(sock);
 				}
 				else
 					break;
@@ -976,14 +965,15 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor* handler, co
 	// Now start the socket listening...
 	if (listen(sock,SOMAXCONN) == SOCKET_ERROR)
 	{
-		*perr = WSAGetLastError();
-		closesocket(sock);
+		*perr = socket_errno;
+		OOBase::BSD::Socket::close(sock);
 		return 0;
 	}
 
 	// Wrap up in a controlling socket class
-	OOBase::SmartPtr<AcceptSocket<OOBase::BSD::Socket> > pAccept = 0;
-	OOBASE_NEW(pAccept,AcceptSocket<OOBase::BSD::Socket>(this));
+	typedef AcceptSocket<::AsyncSocket,OOSvrBase::AsyncSocket> socktype_t;
+	OOBase::SmartPtr<socktype_t> pAccept = 0;
+	OOBASE_NEW(pAccept,socktype_t(this));
 	if (!pAccept)
 		*perr = ENOMEM;
 	else
@@ -991,7 +981,7 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor* handler, co
 
 	if (*perr != 0)
 	{
-		closesocket(sock);
+		OOBase::BSD::Socket::close(sock);
 		return 0;
 	}
 

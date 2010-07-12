@@ -32,8 +32,6 @@
 
 #include <ev.h>
 
-typedef struct ev_loop ev_loop_t;
-
 #include <deque>
 #include <vector>
 
@@ -45,16 +43,16 @@ namespace OOSvrBase
 {
 	namespace Ev
 	{
+		typedef struct ev_loop ev_loop_t;
+
 		class ProactorImpl : public detail::ProactorImpl
 		{
 		public:
 			ProactorImpl();
 			~ProactorImpl();
 
-			OOBase::Socket* accept_local(Acceptor* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa);
-			OOBase::Socket* accept_remote(Acceptor* handler, const std::string& address, const std::string& port, int* perr);
-
-			AsyncSocket* attach_socket(IOHandler* handler, int* perr, OOBase::Socket* sock);
+			OOBase::Socket* accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa);
+			OOBase::Socket* accept_remote(Acceptor<AsyncSocket>* handler, const std::string& address, const std::string& port, int* perr);
 
 			struct io_watcher : public ev_io
 			{

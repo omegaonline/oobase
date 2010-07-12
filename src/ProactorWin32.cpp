@@ -35,11 +35,11 @@ namespace
 	class AsyncSocket : public OOSvrBase::AsyncSocket
 	{
 	public:
-		AsyncSocket(OOSvrBase::Win32::ProactorImpl* pProactor, HANDLE handle, OOSvrBase::IOHandler* handler);
+		AsyncSocket(OOSvrBase::Win32::ProactorImpl* pProactor, HANDLE handle, OOSvrBase::IOHandler<OOSvrBase::AsyncSocket>* handler);
 		int bind();
 
-		int read(OOBase::Buffer* buffer, size_t len);
-		int write(OOBase::Buffer* buffer);
+		int async_read(OOBase::Buffer* buffer, size_t len);
+		int async_write(OOBase::Buffer* buffer);
 		void close();
 
 	private:
@@ -70,17 +70,17 @@ namespace
 			size_t          m_to_read;
 		};
 
-		OOBase::Mutex                   m_lock;
-		OOSvrBase::Win32::ProactorImpl* m_pProactor;
-		OOBase::Win32::SmartHandle      m_handle;
-		OOSvrBase::IOHandler*           m_handler;
-		Completion                      m_read_complete;
-		Completion                      m_write_complete;
-		std::deque<AsyncRead>           m_async_reads;
-		std::deque<OOBase::Buffer*>     m_async_writes;
+		OOBase::Mutex                                 m_lock;
+		OOSvrBase::Win32::ProactorImpl*               m_pProactor;
+		OOBase::Win32::SmartHandle                    m_handle;
+		OOSvrBase::IOHandler<OOSvrBase::AsyncSocket>* m_handler;
+		Completion                                    m_read_complete;
+		Completion                                    m_write_complete;
+		std::deque<AsyncRead>                         m_async_reads;
+		std::deque<OOBase::Buffer*>                   m_async_writes;
 	};
 
-	AsyncSocket::AsyncSocket(OOSvrBase::Win32::ProactorImpl* pProactor, HANDLE handle, OOSvrBase::IOHandler* handler) :
+	AsyncSocket::AsyncSocket(OOSvrBase::Win32::ProactorImpl* pProactor, HANDLE handle, OOSvrBase::IOHandler<OOSvrBase::AsyncSocket>* handler) :
 			m_pProactor(pProactor),
 			m_handle(handle),
 			m_handler(handler)
@@ -106,7 +106,7 @@ namespace
 		return 0;
 	}
 
-	int AsyncSocket::read(OOBase::Buffer* buffer, size_t len)
+	int AsyncSocket::async_read(OOBase::Buffer* buffer, size_t len)
 	{
 		assert(buffer);
 
@@ -165,7 +165,7 @@ namespace
 		return 0;
 	}
 
-	int AsyncSocket::write(OOBase::Buffer* buffer)
+	int AsyncSocket::async_write(OOBase::Buffer* buffer)
 	{
 		assert(buffer);
 
@@ -425,7 +425,7 @@ OOSvrBase::Win32::ProactorImpl::~ProactorImpl()
 {
 }
 
-OOSvrBase::AsyncSocket* OOSvrBase::Win32::ProactorImpl::attach_socket(IOHandler* handler, int* perr, OOBase::Socket* sock)
+/*OOSvrBase::AsyncSocket* OOSvrBase::Win32::ProactorImpl::attach_socket(IOHandler* handler, int* perr, OOBase::Socket* sock)
 {
 	assert(perr);
 	assert(sock);
@@ -456,9 +456,9 @@ OOSvrBase::AsyncSocket* OOSvrBase::Win32::ProactorImpl::attach_socket(IOHandler*
 	}
 
 	return pSock;
-}
+}*/
 
-OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_remote(Acceptor* handler, const std::string& address, const std::string& port, int* perr)
+OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_remote(Acceptor<AsyncSocket>* handler, const std::string& address, const std::string& port, int* perr)
 {
 	void* TODO;
 	return 0;

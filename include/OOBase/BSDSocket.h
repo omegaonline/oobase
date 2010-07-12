@@ -30,98 +30,50 @@ namespace OOBase
 	{
 		// Try to align winsock and unix ;)
 #if defined(_WIN32)
-		using ::SOCKET;
+		typedef SOCKET socket_t;
 #else
-		typedef int SOCKET;
+		typedef int socket_t;
+		#define INVALID_SOCKET (-1)
 #endif
 
-		class SocketImpl
+		class Socket : public OOBase::Socket
 		{
 		public:
-			SocketImpl(SOCKET fd);
-			virtual ~SocketImpl();
+			Socket(socket_t sock);
+			virtual ~Socket();
+			
+			int send(const void* buf, size_t len, const timeval_t* timeout = 0);
+			size_t recv(void* buf, size_t len, int* perr, const timeval_t* timeout = 0);
+			void close();
+			
+			static socket_t create(int family, int socktype, int protocol, int* perr);
+			static int connect(socket_t sock, const sockaddr* addr, size_t addrlen, const timeval_t* wait = 0);
+			static socket_t connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait = 0);
+			static int send(socket_t sock, const void* buf, size_t len, const timeval_t* wait = 0);
+			static size_t recv(socket_t sock, void* buf, size_t len, int* perr, const timeval_t* wait = 0);
+			static int close(socket_t sock);
 
-			virtual int send(const void* buf, size_t len, const OOBase::timeval_t* wait = 0);
-			virtual size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* wait = 0);
-			virtual void close();
-			virtual int close_on_exec(bool set);
-
-		protected:
-			SOCKET  m_fd;
-		};
-
-		template <class Base>
-		class SocketTempl :
-				public Base,
-				public SocketImpl
-		{
-		public:
-			SocketTempl(SOCKET fd) :
-					SocketImpl(fd)
-			{}
-
-			virtual ~SocketTempl()
-			{}
-
-			int send(const void* buf, size_t len, const OOBase::timeval_t* timeout = 0)
-			{
-				return SocketImpl::send(buf,len,timeout);
-			}
-
-			size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout = 0)
-			{
-				return SocketImpl::recv(buf,len,perr,timeout);
-			}
-
-			void close()
-			{
-				SocketImpl::close();
-			}
-
-			int close_on_exec(bool set)
-			{
-				return SocketImpl::close_on_exec(set);
-			}
+			static int set_non_blocking(socket_t sock, bool set);
+			static int set_close_on_exec(socket_t sock, bool set);
 
 		private:
-			SocketTempl(const SocketTempl&) {}
-			SocketTempl& operator = (const SocketTempl&) { return *this; }
+			socket_t  m_sock;
 		};
-
-		class Socket :
-				public SocketTempl<OOBase::Socket>
-		{
-		public:
-			Socket(SOCKET fd) :
-					SocketTempl<OOBase::Socket>(fd)
-			{}
-		};
-
-		// Helpers for timed socket operations - All sockets are expected to be non-blocking!
-		//
-		// WARNING - THIS IS ALL MOVING WHEN THE EV PROACTOR STUFF IS TESTED PROPERLY!
-		//
-		SOCKET socket(int family, int socktype, int protocol, int* perr);
-		int connect(SOCKET sock, const sockaddr* addr, size_t addrlen, const timeval_t* wait = 0);
-		SOCKET connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait = 0);
-		int send(SOCKET sock, const void* buf, size_t len, const timeval_t* wait = 0);
-		size_t recv(SOCKET sock, void* buf, size_t len, int* perr, const timeval_t* wait = 0);
-
-		int set_non_blocking(SOCKET sock, bool set);
-		int set_close_on_exec(SOCKET sock, bool set);
 	}
 
-#if defined(HAVE_UNISTD_H)
+#if defined(HAVE_SYS_UN_H)
 	namespace POSIX
 	{
-		class LocalSocket :
-				public SocketTempl<OOBase::LocalSocket>
+		class LocalSocket : public OOBase::LocalSocket
 		{
 		public:
-			LocalSocket(int fd) : SocketTempl<OOBase::LocalSocket>(fd)
-			{}
+			LocalSocket(int fd);
 
-			virtual OOBase::LocalSocket::uid_t get_uid();
+			int send(const void* buf, size_t len, const timeval_t* timeout = 0);
+			size_t recv(void* buf, size_t len, int* perr, const timeval_t* timeout = 0);
+			void close();
+
+			OOBase::LocalSocket::uid_t get_uid();
 		};
 	}
 #endif

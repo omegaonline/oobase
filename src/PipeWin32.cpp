@@ -19,13 +19,13 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOSvrBase/Proactor.h"
 #include "../include/OOBase/SmartPtr.h"
+#include "../include/OOBase/Win32Socket.h"
+
+#include "../include/OOSvrBase/Proactor.h"
+#include "../include/OOSvrBase/ProactorWin32.h"
 
 #if defined(_WIN32)
-
-#include "../include/OOSvrBase/ProactorWin32.h"
-#include "../include/OOBase/Win32Socket.h"
 
 namespace 
 {
@@ -35,7 +35,7 @@ namespace
 		PipeAcceptor(OOSvrBase::Win32::ProactorImpl* pProactor, const std::string& pipe_name, LPSECURITY_ATTRIBUTES psa);
 		virtual ~PipeAcceptor();
 
-		int init(OOSvrBase::Acceptor* sync_handler);
+		int init(OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* sync_handler);
 
 		int send(const void* /*buf*/, size_t /*len*/, const OOBase::timeval_t* /*timeout*/ = 0)
 		{
@@ -52,22 +52,17 @@ namespace
 
 		int accept_named_pipe(bool bExclusive);
 
-		int close_on_exec(bool /*set*/)
-		{
-			return 0;
-		}
-
 	private:
-		OOSvrBase::Win32::ProactorImpl* m_pProactor;
-		OOBase::SpinLock                m_lock;
-		OVERLAPPED                      m_ov;
-		bool                            m_closed;
-		OOSvrBase::Acceptor*            m_sync_handler;
-		OOBase::Win32::SmartHandle      m_hPipe;
-		OOBase::Win32::SmartHandle      m_hClosed;
-		std::string                     m_pipe_name;
-		LPSECURITY_ATTRIBUTES           m_psa;
-		HANDLE                          m_hWait;
+		OOSvrBase::Win32::ProactorImpl*                   m_pProactor;
+		OOBase::SpinLock                                  m_lock;
+		OVERLAPPED                                        m_ov;
+		bool                                              m_closed;
+		OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* m_sync_handler;
+		OOBase::Win32::SmartHandle                        m_hPipe;
+		OOBase::Win32::SmartHandle                        m_hClosed;
+		std::string                                       m_pipe_name;
+		LPSECURITY_ATTRIBUTES                             m_psa;
+		HANDLE                                            m_hWait;
 
 		static VOID CALLBACK accept_named_pipe_i(PVOID lpParameter, BOOLEAN /*TimerOrWaitFired*/);
 		void do_accept();
@@ -92,7 +87,7 @@ namespace
 			CloseHandle(m_ov.hEvent);
 	}
 
-	int PipeAcceptor::init(OOSvrBase::Acceptor* sync_handler)
+	int PipeAcceptor::init(OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* sync_handler)
 	{
 		m_sync_handler = sync_handler;
 
@@ -244,7 +239,7 @@ namespace
 	}
 }
 
-OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_local(Acceptor* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa)
+OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa)
 {
 	*perr = 0;
 

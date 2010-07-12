@@ -37,8 +37,6 @@ namespace OOBase
 	class Socket
 	{
 	public:
-		virtual ~Socket() {}
-
 		virtual int send(const void* buf, size_t len, const timeval_t* timeout = 0) = 0;
 
 		template <typename T>
@@ -75,8 +73,7 @@ namespace OOBase
 		}
 
 		virtual void close() = 0;
-		virtual int close_on_exec(bool set) = 0;
-		
+				
 		static Socket* connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait = 0);
 
 		template <typename T>
@@ -87,7 +84,7 @@ namespace OOBase
 
 	protected:
 		Socket() {}
-
+		
 	private:
 		Socket(const Socket&);
 		Socket& operator = (const Socket&);

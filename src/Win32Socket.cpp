@@ -24,34 +24,6 @@
 
 #if defined(_WIN32)
 
-namespace
-{
-	struct WSAOnce
-	{
-		WSAOnce()
-		{
-			WSADATA wsa;
-			int err = WSAStartup(MAKEWORD(2,2),&wsa);
-			if (err != 0)
-				OOBase_CallCriticalFailure(WSAGetLastError());
-			
-			if (LOBYTE(wsa.wVersion) != 2 || HIBYTE(wsa.wVersion) != 2)
-				OOBase_CallCriticalFailure("Very old Winsock dll");
-		}
-
-		~WSAOnce()
-		{
-			WSACleanup();
-		}
-	};
-}
-
-void OOBase::Win32::WSAStartup()
-{
-	// Use a singleton to init once
-	Singleton<WSAOnce,WSAOnce>::instance();
-}
-
 OOBase::Win32::Socket::Socket(SOCKET hSocket) :
 		m_hSocket(hSocket)
 {
