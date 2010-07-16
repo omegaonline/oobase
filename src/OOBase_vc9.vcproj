@@ -60,6 +60,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="$(OutDir)\$(ProjectName)d.lib"
+				AdditionalLibraryDirectories="ws2_32.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -120,6 +121,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="$(OutDir)\$(ProjectName)d.lib"
+				AdditionalLibraryDirectories="ws2_32.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -181,6 +183,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
+				AdditionalLibraryDirectories="ws2_32.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -244,6 +247,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
+				AdditionalLibraryDirectories="ws2_32.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -299,10 +303,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\PosixSocket.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\Thread.cpp"
 				>
 			</File>
@@ -323,10 +323,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\Win32Pipe.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\Win32Socket.cpp"
 				>
 			</File>
@@ -341,7 +337,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\BSDSocket.h"
+				RelativePath="..\include\OOBase\internal\BSDSocket.h"
 				>
 			</File>
 			<File
@@ -425,7 +421,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\Win32Socket.h"
+				RelativePath="..\include\OOBase\internal\Win32Impl.h"
 				>
 			</File>
 		</Filter>

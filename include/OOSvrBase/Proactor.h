@@ -33,80 +33,45 @@ typedef struct
 
 namespace OOSvrBase
 {
-	class Proactor;
+	class AsyncSocket;
+
+	class IOHandler
+	{
+	public:
+		virtual void on_recv(AsyncSocket* pSocket, OOBase::Buffer* buffer, int err) = 0;
+		virtual void on_sent(AsyncSocket* pSocket, OOBase::Buffer* buffer, int err) = 0;
+		virtual void on_closed(AsyncSocket* pSocket) = 0;
+	};
 
 	class AsyncSocket : public OOBase::Socket
 	{
 	public:
-		virtual int async_read(OOBase::Buffer* buffer, size_t len = 0) = 0;
-		virtual int async_write(OOBase::Buffer* buffer) = 0;
+		virtual void bind_handler(IOHandler* handler) = 0;
 		
-		void addref()
-		{
-			++m_ref_count;
-		}
+		virtual int async_recv(OOBase::Buffer* buffer, size_t len = 0) = 0;
+		virtual int async_send(OOBase::Buffer* buffer) = 0;
 
-		void release()
-		{
-			if (--m_ref_count == 0)
-				delete this;
-		}
-
-	protected:
-		AsyncSocket() : m_ref_count(1)
-		{}
-
-		virtual ~AsyncSocket() {}
-
-	private:
-		AsyncSocket(const AsyncSocket&);
-		AsyncSocket& operator = (const AsyncSocket&);
-
-		OOBase::AtomicInt<size_t> m_ref_count;
+		// A more efficient non-const version...
+		virtual int send_buffer(OOBase::Buffer* buffer, const OOBase::timeval_t* timeout = 0) = 0;
 	};
 
-	class AsyncLocalSocket : public OOBase::LocalSocket
+	class AsyncLocalSocket : public AsyncSocket
 	{
 	public:
-		virtual int async_read(OOBase::Buffer* buffer, size_t len = 0) = 0;
-		virtual int async_write(OOBase::Buffer* buffer) = 0;
-
-		virtual OOBase::LocalSocket::uid_t get_uid() = 0;
-		
-		void addref()
-		{
-			++m_ref_count;
-		}
-
-		void release()
-		{
-			if (--m_ref_count == 0)
-				delete this;
-		}
+		/** \typedef uid_t
+		 *  The platform specific user id type.
+		 */
+#if defined(_WIN32)
+		typedef HANDLE uid_t;
+#elif defined(HAVE_UNISTD_H)
+		typedef ::uid_t uid_t;
+#else
+#error Fix me!
+#endif
+		virtual int get_uid(uid_t& uid) = 0;
 
 	protected:
-		AsyncLocalSocket() : m_ref_count(1)
-		{}
-
-		virtual ~AsyncLocalSocket() {}
-
-	private:
-		AsyncLocalSocket(const AsyncLocalSocket&);
-		AsyncLocalSocket& operator = (const AsyncLocalSocket&);
-
-		OOBase::AtomicInt<size_t> m_ref_count;
-	};
-
-	template <typename SOCKET_TYPE>
-	class IOHandler
-	{
-	public:
-		virtual void on_read(SOCKET_TYPE* /*pSocket*/, OOBase::Buffer* /*buffer*/, int /*err*/) {}
-		virtual void on_write(SOCKET_TYPE* /*pSocket*/, OOBase::Buffer* /*buffer*/, int /*err*/) {}
-		virtual void on_closed(SOCKET_TYPE* /*pSocket*/) {}
-
-	protected:
-		virtual ~IOHandler() {}
+		AsyncLocalSocket() {}
 	};
 
 	template <typename SOCKET_TYPE>
@@ -114,42 +79,22 @@ namespace OOSvrBase
 	{
 	public:
 		virtual bool on_accept(SOCKET_TYPE* pSocket, int err) = 0;
-
-	protected:
-		virtual ~Acceptor() {}
 	};
-
-	namespace detail
-	{
-		class ProactorImpl
-		{
-		public:
-			ProactorImpl() {}
-			virtual ~ProactorImpl() {}
-
-			virtual OOBase::Socket* accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa) = 0;
-			virtual OOBase::Socket* accept_remote(Acceptor<AsyncSocket>* handler, const std::string& address, const std::string& port, int* perr) = 0;
-
-		private:
-			ProactorImpl(const ProactorImpl&);
-			ProactorImpl& operator = (const ProactorImpl&);
-		};
-	}
 
 	class Proactor
 	{
 	public:
 		Proactor();
-		~Proactor();
+		virtual ~Proactor();
 
-		OOBase::Socket* accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa = 0);
-		OOBase::Socket* accept_remote(Acceptor<AsyncSocket>* handler, const std::string& address, const std::string& port, int* perr);
+		virtual OOBase::Socket* accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa = 0);
+		virtual OOBase::Socket* accept_remote(Acceptor<AsyncSocket>* handler, const std::string& address, const std::string& port, int* perr);
 
 	private:
 		Proactor(const Proactor&);
 		Proactor& operator = (const Proactor&);
 
-		detail::ProactorImpl* m_impl;
+		Proactor* m_impl;
 	};
 }
 

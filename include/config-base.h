@@ -207,7 +207,7 @@ namespace OOBase
 
 #if !defined(HAVE_STATIC_ASSERT)
 #define static_assert(expr,msg) \
-	{ struct s_a { char static_check[expr ? 1 : -1]; }; }
+	{ struct static_assert { char static_check[expr ? 1 : -1]; }; }
 #endif
 
 #endif

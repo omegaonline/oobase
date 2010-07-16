@@ -33,7 +33,7 @@ namespace
 
 #if defined(_WIN32)
 
-	class Win32Thread : public OOBase::detail::ThreadImpl
+	class Win32Thread : public OOBase::Thread
 	{
 	public:
 		Win32Thread();
@@ -78,7 +78,7 @@ namespace
 		DWORD dwWait = WaitForSingleObject(m_hThread,0);
 		if (dwWait == WAIT_TIMEOUT)
 		{
-			CloseHandle(m_hThread.detach());
+			m_hThread.close();
 			return true;
 		}
 		else if (dwWait != WAIT_OBJECT_0)
@@ -94,8 +94,7 @@ namespace
 		assert(!is_running());
 
 		// Close any open handles, this allows restarting
-		if (m_hThread.is_valid())
-			CloseHandle(m_hThread.detach());
+		m_hThread.close();
 
 		wrapper wrap;
 		wrap.m_thread_fn = thread_fn;
@@ -131,7 +130,7 @@ namespace
 		DWORD dwWait = WaitForSingleObject(m_hThread,(wait ? wait->msec() : INFINITE));
 		if (dwWait == WAIT_OBJECT_0)
 		{
-			CloseHandle(m_hThread.detach());
+			m_hThread.close();
 			return true;
 		}
 		else if (dwWait != WAIT_TIMEOUT)
@@ -172,7 +171,7 @@ namespace
 
 #if defined(HAVE_PTHREAD)
 
-	class PthreadThread : public OOBase::detail::ThreadImpl
+	class PthreadThread : public OOBase::Thread
 	{
 	public:
 		PthreadThread();
@@ -393,17 +392,10 @@ void OOBase::Thread::yield()
 #if defined(_WIN32)
 	::Sleep(0);
 #elif defined(HAVE_PTHREAD)
-	for (;;)
-	{
-		if (!pthread_yield())
-			break;
-
-		if (errno != EINTR)
-			OOBase_CallCriticalFailure(errno);
-	}
+	pthread_yield();
 #else
 	// Just perform a tiny sleep
-	return Thread::sleep(timeval_t(0,1));
+	Thread::sleep(timeval_t(0,1));
 #endif
 }
 

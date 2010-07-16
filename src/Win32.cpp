@@ -20,6 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/SmartPtr.h"
+#include "../include/OOBase/internal/Win32Impl.h"
 
 #if defined(_WIN32)
 

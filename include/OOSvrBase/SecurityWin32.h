@@ -79,6 +79,16 @@ namespace OOSvrBase
 {
 	namespace Win32
 	{
+		template <typename T>
+		class SIDDestructor
+		{
+		public:
+			static void destroy(T* ptr)
+			{
+				FreeSid(ptr);
+			}
+		};
+
 		class sec_descript_t
 		{
 		public:

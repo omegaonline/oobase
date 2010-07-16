@@ -35,9 +35,9 @@
 #include <deque>
 #include <vector>
 
-#include "../OOBase/Thread.h"
-#include "../OOBase/Condition.h"
-#include "../OOBase/SmartPtr.h"
+#include "../../OOBase/Thread.h"
+#include "../../OOBase/Condition.h"
+#include "../../OOBase/SmartPtr.h"
 
 namespace OOSvrBase
 {
@@ -45,7 +45,7 @@ namespace OOSvrBase
 	{
 		typedef struct ev_loop ev_loop_t;
 
-		class ProactorImpl : public detail::ProactorImpl
+		class ProactorImpl : public Proactor
 		{
 		public:
 			ProactorImpl();
@@ -56,32 +56,23 @@ namespace OOSvrBase
 
 			struct io_watcher : public ev_io
 			{
-				void* param;
-				void (*callback)(void*);
+				void (*callback)(io_watcher*);
 			};
 
-			int add_watcher(io_watcher*& pNew, int fd, int events, void* param, void (*callback)(void*));
-			int start_watcher(io_watcher* watcher);
-			int stop_watcher(io_watcher* watcher);
-			int remove_watcher(io_watcher* watcher);
-
+			void init_watcher(io_watcher* watcher, int fd, int events);
+			void start_watcher(io_watcher* watcher);
+						
 		private:
-			struct io_info
-			{
-				io_watcher* watcher;
-				int         op; // 0-start,1-stop,2-delete
-			};
-
 			// The following vars all use this lock
 			OOBase::Mutex            m_ev_lock;
 			ev_loop_t*               m_pLoop;
-			std::deque<io_watcher*>* m_pIOQueue;
+			std::queue<io_watcher*>* m_pIOQueue;
 			bool                     m_bAsyncTriggered;
 
 			// The following vars all use this lock
-			OOBase::SpinLock    m_lock;
-			bool                m_bStop;
-			std::deque<io_info> m_update_queue;
+			OOBase::SpinLock        m_lock;
+			bool                    m_bStop;
+			std::queue<io_watcher*> m_start_queue;
 
 			// The following vars don't...
 			std::vector<OOBase::SmartPtr<OOBase::Thread> > m_workers;

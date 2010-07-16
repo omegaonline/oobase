@@ -32,6 +32,16 @@ namespace OOBase
 	{
 		std::string FormatMessage(DWORD dwErr = GetLastError());
 
+		template <typename T>
+		class LocalAllocDestructor
+		{
+		public:
+			static void destroy(T* ptr)
+			{
+				::LocalFree(ptr);
+			}
+		};
+
 		class SmartHandle
 		{
 		public:
@@ -47,7 +57,7 @@ namespace OOBase
 
 			~SmartHandle()
 			{
-				CloseHandle(m_handle);
+				close();
 			}
 
 			HANDLE detach()
@@ -55,6 +65,14 @@ namespace OOBase
 				HANDLE h = m_handle;
 				m_handle = INVALID_HANDLE_VALUE;
 				return h;
+			}
+
+			DWORD close()
+			{
+				if (is_valid() && !CloseHandle(detach()))
+					return GetLastError();
+				else
+					return 0;
 			}
 
 			bool is_valid() const
@@ -82,120 +100,7 @@ namespace OOBase
 			SmartHandle& operator = (const SmartHandle&);
 
 			HANDLE m_handle;
-		};
-
-		class rwmutex_t
-		{
-		public:
-			rwmutex_t();
-			~rwmutex_t();
-
-			void acquire();
-			void release();
-			void acquire_read();
-			void release_read();
-
-		private:
-			LONG                       m_nReaders;
-			OOBase::Win32::SmartHandle m_hReaderEvent;
-			OOBase::Win32::SmartHandle m_hEvent;
-			OOBase::Win32::SmartHandle m_hWriterMutex;
-		};
-
-		class condition_variable_t
-		{
-		public:
-			condition_variable_t();
-			~condition_variable_t();
-
-			bool wait(HANDLE hMutex, DWORD dwMilliseconds);
-			void signal();
-			void broadcast();
-
-		private:
-			CRITICAL_SECTION m_waiters_lock;
-			unsigned long    m_waiters;
-			bool             m_broadcast;
-			SmartHandle      m_sema;
-			SmartHandle      m_waiters_done;
-		};
-
-		class condition_mutex_t;
-
-		template <typename T>
-		class LocalAllocDestructor
-		{
-		public:
-			static void destroy(T* ptr)
-			{
-				LocalFree(ptr);
-			}
-		};
-
-		template <typename T>
-		class SIDDestructor
-		{
-		public:
-			static void destroy(T* ptr)
-			{
-				FreeSid(ptr);
-			}
-		};
-	}
-}
-
-// Declare types and function not declared prior to Vista
-#if (WINVER < 0x0600)
-
-typedef LONG INIT_ONCE;
-typedef BOOL (__stdcall *PINIT_ONCE_FN) (INIT_ONCE* InitOnce, void* Parameter, void** Context);
-
-typedef OOBase::Win32::rwmutex_t* SRWLOCK;
-typedef OOBase::Win32::condition_variable_t* CONDITION_VARIABLE;
-
-#endif
-
-namespace OOBase
-{
-	namespace Win32
-	{
-		BOOL InitOnceExecuteOnce(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context);
-
-		void InitializeSRWLock(SRWLOCK* SRWLock);
-		void AcquireSRWLockShared(SRWLOCK* SRWLock);
-		void AcquireSRWLockExclusive(SRWLOCK* SRWLock);
-		void ReleaseSRWLockShared(SRWLOCK* SRWLock);
-		void ReleaseSRWLockExclusive(SRWLOCK* SRWLock);
-		void DeleteSRWLock(SRWLOCK* SRWLock);
-
-		void InitializeConditionVariable(CONDITION_VARIABLE* ConditionVariable);
-		BOOL SleepConditionVariable(CONDITION_VARIABLE* ConditionVariable, condition_mutex_t* Mutex, DWORD dwMilliseconds);
-		void WakeConditionVariable(CONDITION_VARIABLE* ConditionVariable);
-		void WakeAllConditionVariable(CONDITION_VARIABLE* ConditionVariable);
-		void DeleteConditionVariable(CONDITION_VARIABLE* ConditionVariable);
-
-		BOOL BindIoCompletionCallback(HANDLE FileHandle, LPOVERLAPPED_COMPLETION_ROUTINE Function, ULONG Flags);
-
-		class condition_mutex_t
-		{
-			// We need private access in this function
-			friend BOOL SleepConditionVariable(CONDITION_VARIABLE* ConditionVariable, condition_mutex_t* Mutex, DWORD dwMilliseconds);
-
-		public:
-			condition_mutex_t();
-			~condition_mutex_t();
-
-			bool tryacquire();
-			void acquire();
-			void release();
-
-		private:
-			union U
-			{
-				CRITICAL_SECTION m_cs;
-				HANDLE           m_mutex;
-			} u;
-		};
+		};	
 	}
 }
 

@@ -20,6 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/Mutex.h"
+#include "../include/OOBase/internal/Win32Impl.h"
 
 #if defined(_WIN32)
 
@@ -118,18 +119,7 @@ void OOBase::RWMutex::release_read()
 	Win32::ReleaseSRWLockShared(&m_lock);
 }
 
-#else
-
-#if defined(HAVE_FUTEX_H)
-
-OOBase::SpinLock::SpinLock(unsigned int max_spin)
-{
-	#error Fix me!
-}
-
-#endif
-
-#if defined(HAVE_PTHREAD)
+#elif defined(HAVE_PTHREAD)
 
 OOBase::Mutex::Mutex()
 {
@@ -139,7 +129,11 @@ OOBase::Mutex::Mutex()
 	{
 		err = pthread_mutexattr_settype(&attr,PTHREAD_MUTEX_RECURSIVE);
 		if (!err)
-			err = pthread_mutex_init(&m_mutex,&attr);
+		{
+			err = pthread_mutexattr_setpshared(&attr,PTHREAD_PROCESS_PRIVATE);
+			if (!err)
+				err = pthread_mutex_init(&m_mutex,&attr);
+		}
 
 		pthread_mutexattr_destroy(&attr);
 	}
@@ -202,7 +196,17 @@ void OOBase::Mutex::release()
 
 OOBase::RWMutex::RWMutex()
 {
-	int err = pthread_rwlock_init(&m_mutex,NULL);
+	pthread_rwlockattr_t attr;
+	int err = pthread_rwlockattr_init(&attr);
+	if (!err)
+	{
+		err = pthread_rwlockattr_setpshared(&attr,PTHREAD_PROCESS_PRIVATE);
+		if (!err)
+			err = pthread_rwlock_init(&m_mutex,&attr);
+
+		pthread_rwlockattr_destroy(&attr);
+	}
+
 	if (err)
 		OOBase_CallCriticalFailure(err);
 }
@@ -241,7 +245,5 @@ void OOBase::RWMutex::release_read()
 #else
 
 #error Fix me!
-
-#endif
 
 #endif

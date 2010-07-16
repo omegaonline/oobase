@@ -20,6 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/Condition.h"
+#include "../include/OOBase/internal/Win32Impl.h"
 
 #if defined(_WIN32)
 
@@ -52,9 +53,19 @@ void OOBase::Condition::broadcast()
 
 OOBase::Condition::Condition()
 {
-	int err = pthread_cond_init(&m_var,NULL);
+	pthread_condattr_t attr;
+	int err = pthread_condattr_init(&attr);
+	if (!err)
+	{
+		err = pthread_condattr_setpshared(&attr,PTHREAD_PROCESS_PRIVATE);
+		if (!err)
+			err = pthread_cond_init(&m_var,&attr);
+			
+		pthread_condattr_destory(&attr);
+	}
+
 	if (err)
-		OOBase_CallCriticalFailure(err);
+		OOBase_CallCriticalFailure(err);	
 }
 
 OOBase::Condition::~Condition()
@@ -100,5 +111,93 @@ void OOBase::Condition::broadcast()
 #else
 
 #error Fix me!
+
+#endif
+
+#if defined(_WIN32)
+
+OOBase::Event::Event(bool bSet, bool bAutoReset) :
+		m_handle(::CreateEvent(NULL,bAutoReset ? FALSE : TRUE,bSet ? TRUE : FALSE,NULL))
+{
+	if (!m_handle.is_valid())
+		OOBase_CallCriticalFailure(GetLastError());
+}
+
+OOBase::Event::~Event()
+{
+}
+
+void OOBase::Event::set()
+{
+	if (!::SetEvent(m_handle))
+		OOBase_CallCriticalFailure(GetLastError());
+}
+
+bool OOBase::Event::wait(const timeval_t* wait)
+{
+	DWORD dwWait = WaitForSingleObject(m_handle,(wait ? wait->msec() : INFINITE));
+	if (dwWait == WAIT_OBJECT_0)
+		return true;
+	else if (dwWait != WAIT_TIMEOUT)
+		OOBase_CallCriticalFailure(GetLastError());
+
+	return false;
+}
+
+void OOBase::Event::reset()
+{
+	if (!::ResetEvent(m_handle))
+		OOBase_CallCriticalFailure(GetLastError());
+}
+
+#else
+
+OOBase::Event::Event(bool bSet, bool bAutoReset) :
+		m_bAuto(bAutoReset), m_bSet(bSet)
+{
+}
+
+OOBase::Event::~Event()
+{
+}
+
+void OOBase::Event::set()
+{
+	Guard<Condition::Mutex> guard(m_lock);
+
+	// Only set if we are not set
+	if (!m_bSet)
+	{
+		m_bSet = true;
+
+		// If we are an auto event, signal 1 thread only
+		if (m_bAuto)
+			m_cond.signal();
+		else
+			m_cond.broadcast();
+	}
+}
+
+bool OOBase::Event::wait(const timeval_t* wait)
+{
+	Guard<Condition::Mutex> guard(m_lock);
+
+	while (!m_bSet)
+	{
+		if (!m_cond.wait(m_lock,wait))
+			return false;
+	}
+
+	// Reset if we are an auto event
+	if (m_bAuto)
+		m_bSet = false;
+}
+
+void OOBase::Event::reset()
+{
+	Guard<Condition::Mutex> guard(m_lock);
+
+	m_bSet = false;
+}
 
 #endif

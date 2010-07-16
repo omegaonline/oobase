@@ -26,35 +26,16 @@
 
 namespace OOBase
 {
-	namespace detail
-	{
-		class ThreadImpl
-		{
-		public:
-			ThreadImpl() {}
-			virtual ~ThreadImpl() {}
-
-			virtual void run(int (*thread_fn)(void*), void* param) = 0;
-			virtual bool join(const timeval_t* wait = 0) = 0;
-			virtual void abort() = 0;
-			virtual bool is_running() = 0;
-
-		private:
-			ThreadImpl(const ThreadImpl&);
-			ThreadImpl& operator = (const ThreadImpl&);
-		};
-	}
-
 	class Thread
 	{
 	public:
 		Thread();
-		~Thread();
+		virtual ~Thread();
 
-		void run(int (*thread_fn)(void*), void* param);
-		bool join(const timeval_t* wait = 0);
-		void abort();
-		bool is_running();
+		virtual void run(int (*thread_fn)(void*), void* param);
+		virtual bool join(const timeval_t* wait = 0);
+		virtual void abort();
+		virtual bool is_running();
 
 		static void sleep(const timeval_t& wait);
 		static void yield();
@@ -63,7 +44,7 @@ namespace OOBase
 		Thread(const Thread&);
 		Thread& operator = (const Thread&);
 
-		detail::ThreadImpl* m_impl;
+		Thread* m_impl;
 	};
 }
 

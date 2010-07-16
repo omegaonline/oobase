@@ -19,38 +19,27 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Once.h"
-#include "../include/OOBase/internal/Win32Impl.h"
+#ifndef OOBASE_BSD_SOCKET_H_INCLUDED_
+#define OOBASE_BSD_SOCKET_H_INCLUDED_
 
-#if defined(_WIN32)
+#include "../Socket.h"
 
-namespace
+namespace OOBase
 {
-	static BOOL __stdcall PINIT_ONCE_FN_impl(INIT_ONCE* /*InitOnce*/, void* Parameter, void** /*Context*/)
+	namespace BSD
 	{
-		(*((OOBase::Once::pfn_once)Parameter))();
-		return TRUE;
+		// Try to align winsock and BSD ;)
+#if defined(_WIN32)
+		typedef SOCKET socket_t;
+#else
+		typedef int socket_t;
+		#define INVALID_SOCKET (-1)
+#endif
+
+		socket_t create_socket(int family, int socktype, int protocol, int* perr);
+		int set_non_blocking(socket_t sock, bool set);
+		int set_close_on_exec(socket_t sock, bool set);
 	}
 }
 
-void OOBase::Once::Run(once_t* key, pfn_once fn)
-{
-	void* p = 0;
-	if (!Win32::InitOnceExecuteOnce(key,&PINIT_ONCE_FN_impl,(void*)fn,&p))
-		OOBase_CallCriticalFailure(GetLastError());
-}
-
-#elif defined(HAVE_PTHREAD)
-
-void OOBase::Once::Run(once_t* key, pfn_once fn)
-{
-	int err = pthread_once(key,fn);
-	if (err != 0)
-		OOBase_CallCriticalFailure(err);
-}
-
-#else
-
-#error Fix me!
-
-#endif
+#endif // OOBASE_BSD_SOCKET_H_INCLUDED_

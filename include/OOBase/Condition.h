@@ -23,6 +23,7 @@
 #define OOBASE_CONDITION_H_INCLUDED_
 
 #include "Mutex.h"
+#include "internal/Win32Impl.h"
 
 namespace OOBase
 {
@@ -62,6 +63,34 @@ namespace OOBase
 		pthread_cond_t     m_var;
 #else
 #error Fix me!
+#endif
+	};
+
+	class Event
+	{
+	public:
+		Event(bool bSet = false, bool bAutoReset = true);
+		~Event();
+
+		void set();
+		bool wait(const timeval_t* wait = 0);
+		void reset();
+
+	private:
+		Event(const Event&);
+		Event& operator = (const Event&);
+
+		/** \var m_var
+		 *  The platform specific event variable.
+		 *  We use an OOBase::Condition for non Win32 platforms
+		 */
+#if defined(_WIN32)
+		Win32::SmartHandle m_handle;
+#else
+		Condition          m_cond;
+		Condition::Mutex   m_lock;
+		bool               m_bAuto;
+		bool               m_bSet;
 #endif
 	};
 }

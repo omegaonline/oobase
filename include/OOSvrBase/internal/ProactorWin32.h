@@ -30,13 +30,11 @@
 #error Includes have got confused, check Proactor.h
 #endif
 
-#include <deque>
-
 namespace OOSvrBase
 {
 	namespace Win32
 	{
-		class ProactorImpl : public detail::ProactorImpl
+		class ProactorImpl : public Proactor
 		{
 		public:
 			ProactorImpl();

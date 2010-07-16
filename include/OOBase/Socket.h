@@ -37,20 +37,24 @@ namespace OOBase
 	class Socket
 	{
 	public:
+		virtual size_t recv(void* buf, size_t len, int* perr, const timeval_t* timeout = 0) = 0;
 		virtual int send(const void* buf, size_t len, const timeval_t* timeout = 0) = 0;
+		virtual void close() = 0;
+				
+		static Socket* connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait = 0);
+		static Socket* connect_local(const std::string& path, int* perr, const timeval_t* wait = 0);
 
+		// Helpers
 		template <typename T>
 		int send(const T& val, const timeval_t* timeout = 0)
 		{
 			return send(&val,sizeof(T),timeout);
 		}
 
-		int send_buffer(const Buffer* buffer, const timeval_t* timeout = 0)
+		virtual int send_buffer(const Buffer* buffer, const timeval_t* timeout = 0)
 		{
 			return send(buffer->rd_ptr(),buffer->length(),timeout);
 		}
-
-		virtual size_t recv(void* buf, size_t len, int* perr, const timeval_t* timeout = 0) = 0;
 
 		template <typename T>
 		int recv(T& val, const timeval_t* timeout = 0)
@@ -60,7 +64,7 @@ namespace OOBase
 			return err;
 		}
 
-		int recv_buffer(Buffer* buffer, size_t len, const timeval_t* timeout = 0)
+		virtual int recv_buffer(Buffer* buffer, size_t len, const timeval_t* timeout = 0)
 		{
 			int err = buffer->space(len);
 			if (err == 0)
@@ -72,43 +76,12 @@ namespace OOBase
 			return err;
 		}
 
-		virtual void close() = 0;
-				
-		static Socket* connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait = 0);
-
-		template <typename T>
-		T* async_cast()
-		{
-			return static_cast<T*>(this);
-		}
-
 	protected:
 		Socket() {}
 		
 	private:
 		Socket(const Socket&);
 		Socket& operator = (const Socket&);
-	};
-
-	class LocalSocket : public Socket
-	{
-	public:
-		/** \typedef uid_t
-		 *  The platform specific user id type.
-		 */
-#if defined(_WIN32)
-		typedef HANDLE uid_t;
-#elif defined(HAVE_UNISTD_H)
-		typedef ::uid_t uid_t;
-#else
-#error Fix me!
-#endif
-		virtual uid_t get_uid() = 0;
-
-		static LocalSocket* connect_local(const std::string& path, int* perr, const timeval_t* wait = 0);
-
-	protected:
-		LocalSocket() {}
 	};
 }
 

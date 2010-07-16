@@ -27,30 +27,36 @@
 #define STATUS_PIPE_BROKEN 0xC000014BL
 #endif
 
-#include "../include/OOBase/Win32Socket.h"
-#include "../include/OOSvrBase/ProactorWin32.h"
+#include "../include/OOBase/SmartPtr.h"
+#include "../include/OOSvrBase/internal/ProactorImpl.h"
+#include "../include/OOSvrBase/internal/ProactorWin32.h"
+
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 4250) // Moans about virtual base classes
+#endif
 
 namespace
 {
-	class AsyncSocket : public OOSvrBase::AsyncSocket
+	class IOHelper : public OOSvrBase::detail::AsyncIOHelper
 	{
 	public:
-		AsyncSocket(OOSvrBase::Win32::ProactorImpl* pProactor, HANDLE handle, OOSvrBase::IOHandler<OOSvrBase::AsyncSocket>* handler);
-		int bind();
+		IOHelper(HANDLE handle);
+		virtual ~IOHelper();
 
-		int async_read(OOBase::Buffer* buffer, size_t len);
-		int async_write(OOBase::Buffer* buffer);
-		void close();
+		int bind();
+		
+		void recv(AsyncOp* recv_op);
+		void send(AsyncOp* send_op);
+				
+	protected:
+		OOBase::Win32::SmartHandle m_handle;
 
 	private:
-		virtual ~AsyncSocket();
-
-		bool do_read(DWORD dwToRead);
-		int read_next();
+		void do_read();
 		void handle_read(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered);
 
-		bool do_write();
-		int write_next();
+		void do_write();
 		void handle_write(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered);
 
 		static VOID CALLBACK completion_fn(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped);
@@ -58,47 +64,55 @@ namespace
 		struct Completion
 		{
 			OVERLAPPED      m_ov;
-			OOBase::Buffer* m_buffer;
+			AsyncOp*        m_op;
 			bool            m_is_reading;
-			size_t          m_to_read;
-			AsyncSocket*    m_this_ptr;
+			IOHelper*       m_this_ptr;
 		};
 
-		struct AsyncRead
-		{
-			OOBase::Buffer* m_buffer;
-			size_t          m_to_read;
-		};
-
-		OOBase::Mutex                                 m_lock;
-		OOSvrBase::Win32::ProactorImpl*               m_pProactor;
-		OOBase::Win32::SmartHandle                    m_handle;
-		OOSvrBase::IOHandler<OOSvrBase::AsyncSocket>* m_handler;
-		Completion                                    m_read_complete;
-		Completion                                    m_write_complete;
-		std::deque<AsyncRead>                         m_async_reads;
-		std::deque<OOBase::Buffer*>                   m_async_writes;
+		Completion m_read_complete;
+		Completion m_write_complete;
 	};
 
-	AsyncSocket::AsyncSocket(OOSvrBase::Win32::ProactorImpl* pProactor, HANDLE handle, OOSvrBase::IOHandler<OOSvrBase::AsyncSocket>* handler) :
-			m_pProactor(pProactor),
-			m_handle(handle),
-			m_handler(handler)
+	class PipeIOHelper : public IOHelper
+	{
+	public:
+		PipeIOHelper(HANDLE handle) : IOHelper(handle)
+		{}
+
+		void shutdown()
+		{
+			DisconnectNamedPipe(m_handle);
+		}
+	};
+
+	class SocketIOHelper : public IOHelper
+	{
+	public:
+		SocketIOHelper(HANDLE handle) : IOHelper(handle)
+		{}
+
+		void shutdown()
+		{
+			::shutdown((SOCKET)(HANDLE)m_handle,SD_BOTH);
+		}
+	};
+
+	IOHelper::IOHelper(HANDLE handle) :
+			m_handle(handle)
 	{
 		m_read_complete.m_is_reading = true;
-		m_read_complete.m_buffer = 0;
+		m_read_complete.m_op = 0;
 		m_read_complete.m_this_ptr = this;
 		m_write_complete.m_is_reading = false;
-		m_write_complete.m_buffer = 0;
+		m_write_complete.m_op = 0;
 		m_write_complete.m_this_ptr = this;
 	}
 
-	AsyncSocket::~AsyncSocket()
+	IOHelper::~IOHelper()
 	{
-		close();
 	}
 
-	int AsyncSocket::bind()
+	int IOHelper::bind()
 	{
 		if (!OOBase::Win32::BindIoCompletionCallback(m_handle,&completion_fn,0))
 			return GetLastError();
@@ -106,313 +120,319 @@ namespace
 		return 0;
 	}
 
-	int AsyncSocket::async_read(OOBase::Buffer* buffer, size_t len)
+	void IOHelper::recv(AsyncOp* recv_op)
 	{
-		assert(buffer);
+		assert(!m_read_complete.m_op);
 
-		if (len > 0)
-		{
-			int err = buffer->space(len);
-			if (err != 0)
-				return err;
-		}
-
-		AsyncRead read = { buffer->duplicate(), len };
-
-		OOBase::Guard<OOBase::Mutex> guard(m_lock);
-
-		try
-		{
-			m_async_reads.push_back(read);
-		}
-		catch (std::exception&)
-		{
-			read.m_buffer->release();
-			return ERROR_OUTOFMEMORY;
-		}
-
-		if (m_read_complete.m_buffer)
-			return 0;
-
-		return read_next();
+		// Reset the completion info
+		memset(&m_read_complete.m_ov,0,sizeof(OVERLAPPED));
+		m_read_complete.m_op = recv_op;
+				
+		do_read();
 	}
 
-	int AsyncSocket::read_next()
+	void IOHelper::send(AsyncOp* send_op)
 	{
-		do
-		{
-			AsyncRead read;
-			try
-			{
-				if (m_async_reads.empty())
-					return 0;
+		assert(!m_write_complete.m_op);
 
-				read = m_async_reads.front();
-				m_async_reads.pop_front();
-			}
-			catch (std::exception&)
-			{
-				return ERROR_OUTOFMEMORY;
-			}
-
-			// Reset the completion info
-			memset(&m_read_complete.m_ov,0,sizeof(OVERLAPPED));
-			m_read_complete.m_buffer = read.m_buffer;
-			m_read_complete.m_to_read = read.m_to_read;
-		}
-		while (!do_read(static_cast<DWORD>(m_read_complete.m_to_read)));
-
-		return 0;
+		// Reset the completion info
+		memset(&m_write_complete.m_ov,0,sizeof(OVERLAPPED));
+		m_write_complete.m_op = send_op;
+				
+		do_write();
 	}
 
-	int AsyncSocket::async_write(OOBase::Buffer* buffer)
-	{
-		assert(buffer);
-
-		if (buffer->length() == 0)
-			return 0;
-
-		OOBase::Guard<OOBase::Mutex> guard(m_lock);
-
-		try
-		{
-			m_async_writes.push_back(buffer->duplicate());
-		}
-		catch (std::exception&)
-		{
-			buffer->release();
-			return ERROR_OUTOFMEMORY;
-		}
-
-		if (m_write_complete.m_buffer)
-			return 0;
-
-		return write_next();
-	}
-
-	int AsyncSocket::write_next()
-	{
-		do
-		{
-			OOBase::Buffer* buffer = 0;
-			try
-			{
-				if (m_async_writes.empty())
-					return 0;
-
-				buffer = m_async_writes.front();
-				m_async_writes.pop_front();
-			}
-			catch (std::exception&)
-			{
-				return ERROR_OUTOFMEMORY;
-			}
-
-			// Reset the completion info
-			memset(&m_write_complete.m_ov,0,sizeof(OVERLAPPED));
-			m_write_complete.m_buffer = buffer;
-
-		}
-		while (!do_write());
-
-		return 0;
-	}
-
-	VOID CALLBACK AsyncSocket::completion_fn(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped)
+	VOID CALLBACK IOHelper::completion_fn(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped)
 	{
 		Completion* pInfo = CONTAINING_RECORD(lpOverlapped,Completion,m_ov);
-		AsyncSocket* this_ptr = pInfo->m_this_ptr;
 		if (pInfo->m_is_reading)
-			this_ptr->handle_read(dwErrorCode,dwNumberOfBytesTransfered);
+			pInfo->m_this_ptr->handle_read(dwErrorCode,dwNumberOfBytesTransfered);
 		else
-			this_ptr->handle_write(dwErrorCode,dwNumberOfBytesTransfered);
-
-		this_ptr->release();
+			pInfo->m_this_ptr->handle_write(dwErrorCode,dwNumberOfBytesTransfered);
 	}
 
-	bool AsyncSocket::do_read(DWORD dwToRead)
+	void IOHelper::do_read()
 	{
-		addref();
-
+		DWORD dwToRead = static_cast<DWORD>(m_read_complete.m_op->len);
 		if (dwToRead == 0)
-			dwToRead = static_cast<DWORD>(m_read_complete.m_buffer->space());
+			dwToRead = static_cast<DWORD>(m_read_complete.m_op->buffer->space());
 
 		DWORD dwRead = 0;
-		if (!ReadFile(m_handle,m_read_complete.m_buffer->wr_ptr(),dwToRead,&dwRead,&m_read_complete.m_ov))
+		if (!ReadFile(m_handle,m_read_complete.m_op->buffer->wr_ptr(),dwToRead,&dwRead,&m_read_complete.m_ov))
 		{
 			DWORD dwErr = GetLastError();
 			if (dwErr != ERROR_IO_PENDING)
-			{
-				// Update wr_ptr
-				m_read_complete.m_buffer->wr_ptr(dwRead);
-
-				bool closed = false;
-				if (dwErr == ERROR_BROKEN_PIPE)
-					closed = true;
-
-				if (closed)
-					dwErr = 0;
-
-				if (m_handler && (m_read_complete.m_buffer->length() != 0 || dwErr != 0))
-					m_handler->on_read(this,m_read_complete.m_buffer,dwErr);
-
-				if (m_handler && closed)
-					m_handler->on_closed(this);
-
-				m_read_complete.m_buffer->release();
-				m_read_complete.m_buffer = 0;
-
-				release();
-
-				return closed;
-			}
+				handle_read(dwErr,dwRead);
 		}
-
-		return true;
 	}
 
-	void AsyncSocket::handle_read(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered)
+	void IOHelper::handle_read(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered)
 	{
-		OOBase::Guard<OOBase::Mutex> guard(m_lock);
-
 		// Update wr_ptr
-		m_read_complete.m_buffer->wr_ptr(dwNumberOfBytesTransfered);
+		m_read_complete.m_op->buffer->wr_ptr(dwNumberOfBytesTransfered);
 
-		if (m_read_complete.m_to_read)
-			m_read_complete.m_to_read -= dwNumberOfBytesTransfered;
+		if (m_read_complete.m_op->len)
+			m_read_complete.m_op->len -= dwNumberOfBytesTransfered;
 
-		bool closed = false;
-		if (dwErrorCode == 0 && m_read_complete.m_to_read > 0)
+		if (dwErrorCode == 0 && m_read_complete.m_op->len > 0)
 		{
 			// More to read
-			if (do_read(static_cast<DWORD>(m_read_complete.m_to_read)))
-				return;
+			return do_read();
 		}
-		else
-		{
-			// Work out if we are a close or an 'actual' error
-			if (dwErrorCode == STATUS_PIPE_BROKEN)
-				closed = true;
+		
+		// Stash op... another op may be about to occur...
+		AsyncOp* op = m_read_complete.m_op;
+		m_read_complete.m_op = 0;
 
-			if (closed)
-				dwErrorCode = 0;
-
-			// Call handlers
-			if (m_handler && (m_read_complete.m_buffer->length() != 0 || dwErrorCode != 0))
-				m_handler->on_read(this,m_read_complete.m_buffer,dwErrorCode);
-
-			if (m_handler && closed)
-				m_handler->on_closed(this);
-
-			// Release the completed buffer
-			m_read_complete.m_buffer->release();
-			m_read_complete.m_buffer = 0;
-		}
-
-		// Read the next
-		if (!closed)
-			read_next();
+		// Call handlers
+		m_handler->on_recv(op,dwErrorCode);
 	}
 
-	bool AsyncSocket::do_write()
+	void IOHelper::do_write()
 	{
-		addref();
-
 		DWORD dwWritten = 0;
-		if (!WriteFile(m_handle,m_write_complete.m_buffer->rd_ptr(),static_cast<DWORD>(m_write_complete.m_buffer->length()),&dwWritten,&m_write_complete.m_ov))
+		if (!WriteFile(m_handle,m_write_complete.m_op->buffer->rd_ptr(),static_cast<DWORD>(m_write_complete.m_op->buffer->length()),&dwWritten,&m_write_complete.m_ov))
 		{
 			DWORD dwErr = GetLastError();
 			if (dwErr != ERROR_IO_PENDING)
-			{
-				// Update rd_ptr
-				m_write_complete.m_buffer->rd_ptr(dwWritten);
-
-				bool closed = false;
-				if (dwErr == ERROR_BROKEN_PIPE)
-					closed = true;
-
-				if (closed)
-					dwErr = 0;
-
-				if (m_handler && (dwWritten != 0 || dwErr != 0))
-					m_handler->on_write(this,m_write_complete.m_buffer,dwErr);
-
-				if (m_handler && closed)
-					m_handler->on_closed(this);
-
-				m_write_complete.m_buffer->release();
-				m_write_complete.m_buffer = 0;
-
-				release();
-
-				return closed;
-			}
+				handle_write(dwErr,dwWritten);
 		}
-
-		return true;
 	}
 
-	void AsyncSocket::handle_write(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered)
+	void IOHelper::handle_write(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered)
 	{
-		OOBase::Guard<OOBase::Mutex> guard(m_lock);
-
 		// Update rd_ptr
-		m_write_complete.m_buffer->rd_ptr(dwNumberOfBytesTransfered);
+		m_write_complete.m_op->buffer->rd_ptr(dwNumberOfBytesTransfered);
 
-		bool closed = false;
-		if (dwErrorCode == 0 && m_write_complete.m_buffer->length() > 0)
+		if (dwErrorCode == 0 && m_write_complete.m_op->buffer->length() > 0)
 		{
 			// More to send
-			if (do_write())
-				return;
+			return do_write();
 		}
-		else
-		{
-			// Work out if we are a close or an 'actual' error
-			if (dwErrorCode == STATUS_PIPE_BROKEN)
-				closed = true;
+		
+		// Stash op... another op may be about to occur...
+		AsyncOp* op = m_write_complete.m_op;
+		m_write_complete.m_op = 0;
 
-			if (closed)
-				dwErrorCode = 0;
-
-			// Call handlers
-			if (m_handler && (dwNumberOfBytesTransfered != 0 || dwErrorCode != 0))
-				m_handler->on_write(this,m_write_complete.m_buffer,dwErrorCode);
-
-			if (m_handler && closed)
-				m_handler->on_closed(this);
-
-			// Release the completed buffer
-			m_write_complete.m_buffer->release();
-			m_write_complete.m_buffer = 0;
-		}
-
-		// Write the next
-		if (!closed)
-			write_next();
+		// Call handlers
+		m_handler->on_sent(op,dwErrorCode);
 	}
 
-	void AsyncSocket::close()
+	class AsyncLocalSocket : public OOSvrBase::detail::AsyncSocketTempl<OOSvrBase::AsyncLocalSocket>
 	{
-		OOBase::Guard<OOBase::Mutex> guard(m_lock);
-
-		m_handler = 0;
-
-		// Empty the queues
-		for (std::deque<AsyncRead>::iterator i=m_async_reads.begin(); i!=m_async_reads.end(); ++i)
-			i->m_buffer->release();
-
-		m_async_reads.clear();
-
-		for (std::deque<OOBase::Buffer*>::iterator i=m_async_writes.begin(); i!=m_async_writes.end(); ++i)
-			(*i)->release();
-
-		m_async_writes.clear();
-
-		if (m_handle.is_valid())
+	public:
+		AsyncLocalSocket(IOHelper* helper, HANDLE hPipe) :
+				OOSvrBase::detail::AsyncSocketTempl<OOSvrBase::AsyncLocalSocket>(helper),
+				m_hPipe(hPipe)
 		{
-			CancelIo(m_handle);
-			CloseHandle(m_handle.detach());
+		}
+
+		static AsyncLocalSocket* Create(HANDLE hPipe)
+		{
+			PipeIOHelper* helper = 0;
+			OOBASE_NEW(helper,PipeIOHelper(hPipe));
+			if (!helper)
+				return 0;
+
+			AsyncLocalSocket* sock = 0;
+			OOBASE_NEW(sock,AsyncLocalSocket(helper,hPipe));
+			if (!sock)
+			{
+				delete helper;
+				return 0;
+			}
+
+			return sock;
+		}
+
+	private:
+		bool is_close(int err) const
+		{
+			return  (err == STATUS_PIPE_BROKEN);
+		}
+
+		HANDLE m_hPipe;
+
+		int get_uid(OOSvrBase::AsyncLocalSocket::uid_t& uid);
+	};
+
+	int AsyncLocalSocket::get_uid(OOSvrBase::AsyncLocalSocket::uid_t& uid)
+	{
+		if (!ImpersonateNamedPipeClient(m_hPipe))
+			return GetLastError();
+
+		OOBase::Win32::SmartHandle ptruid;
+		BOOL bRes = OpenThreadToken(GetCurrentThread(),TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_IMPERSONATE,FALSE,&ptruid);
+		DWORD err = 0;
+		if (!bRes)
+			err = GetLastError();
+
+		if (!RevertToSelf())
+			OOBase_CallCriticalFailure(GetLastError());
+		
+		if (!bRes)
+			return err;
+
+		uid = ptruid.detach();
+		return 0;
+	}
+
+	class PipeAcceptor : public OOBase::Socket
+	{
+	public:
+		PipeAcceptor(const std::string& pipe_name, LPSECURITY_ATTRIBUTES psa, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler);
+		virtual ~PipeAcceptor();
+
+		int send(const void* /*buf*/, size_t /*len*/, const OOBase::timeval_t* /*timeout*/ = 0)
+		{
+			return ERROR_INVALID_FUNCTION;
+		}
+
+		size_t recv(void* /*buf*/, size_t /*len*/, int* perr, const OOBase::timeval_t* /*timeout*/ = 0)
+		{
+			*perr = ERROR_INVALID_FUNCTION;
+			return 0;
+		}
+
+		void close();
+
+		int accept_named_pipe(bool bExclusive);
+
+	private:
+		static VOID CALLBACK completion_fn(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped);
+
+		struct Completion
+		{
+			OVERLAPPED                 m_ov;
+			OOBase::Win32::SmartHandle m_hPipe;
+			PipeAcceptor*              m_this_ptr;
+		};
+
+		Completion                                         m_completion;
+		OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>*  m_handler;
+		const std::string                                  m_pipe_name;
+		LPSECURITY_ATTRIBUTES                              m_psa;
+		OOBase::AtomicInt<size_t>                          m_refcount;
+		
+		void do_accept(OOBase::Win32::SmartHandle& hPipe, DWORD dwErr);
+	};
+
+	PipeAcceptor::PipeAcceptor(const std::string& pipe_name, LPSECURITY_ATTRIBUTES psa, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler) :
+			m_handler(handler),
+			m_pipe_name(pipe_name),
+			m_psa(psa),
+			m_refcount(0)
+	{
+		m_completion.m_this_ptr = this;
+	}
+
+	PipeAcceptor::~PipeAcceptor()
+	{
+		close();
+	}
+
+	int PipeAcceptor::accept_named_pipe(bool bExclusive)
+	{
+		assert(!m_completion.m_hPipe.is_valid());
+
+		DWORD dwOpenMode = PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED;
+
+		if (bExclusive)
+			dwOpenMode |= FILE_FLAG_FIRST_PIPE_INSTANCE;
+
+		m_completion.m_hPipe = CreateNamedPipeA(m_pipe_name.c_str(),dwOpenMode,
+								   PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+								   PIPE_UNLIMITED_INSTANCES,
+								   0,
+								   4096,
+								   4096,
+								   m_psa);
+
+		if (!m_completion.m_hPipe.is_valid())
+			return GetLastError();
+
+		if (!OOBase::Win32::BindIoCompletionCallback(m_completion.m_hPipe,&completion_fn,0))
+		{
+			int err = GetLastError();
+			m_completion.m_hPipe.close();
+			return err;
+		}
+
+		memset(&m_completion.m_ov,0,sizeof(OVERLAPPED));
+
+		++m_refcount;
+
+		DWORD dwErr = 0;
+		if (ConnectNamedPipe(m_completion.m_hPipe,&m_completion.m_ov))
+			dwErr = ERROR_PIPE_CONNECTED;
+		else
+		{
+			dwErr = GetLastError();
+			if (dwErr == ERROR_IO_PENDING)
+				dwErr = 0;
+		}
+
+		if (dwErr == ERROR_PIPE_CONNECTED)
+		{
+			do_accept(m_completion.m_hPipe,0);
+			dwErr = 0;
+		}
+		else if (dwErr != 0)
+		{
+			m_completion.m_hPipe.close();
+			--m_refcount;
+		}
+
+		return dwErr;
+	}
+
+	VOID CALLBACK PipeAcceptor::completion_fn(DWORD dwErrorCode, DWORD, LPOVERLAPPED lpOverlapped)
+	{
+		Completion* pInfo = CONTAINING_RECORD(lpOverlapped,Completion,m_ov);
+		
+		pInfo->m_this_ptr->do_accept(pInfo->m_hPipe,dwErrorCode);
+	}
+
+	void PipeAcceptor::do_accept(OOBase::Win32::SmartHandle& hPipe, DWORD dwErr)
+	{
+		AsyncLocalSocket* pSocket = 0;
+		if (dwErr == 0 && hPipe.is_valid())
+		{
+			pSocket = AsyncLocalSocket::Create(hPipe);
+			if (!pSocket)
+			{
+				hPipe.close();
+				dwErr = ERROR_OUTOFMEMORY;
+			}
+			else
+				hPipe.detach();
+		}
+
+		// Call the acceptor
+		bool again = m_handler->on_accept(pSocket,dwErr);
+
+		// Submit another accept if we want
+		while (again)
+		{
+			dwErr = accept_named_pipe(false);
+			if (dwErr == 0)
+				break;
+				
+			again = m_handler->on_accept(0,dwErr);
+		}
+
+		--m_refcount;
+	}
+
+	void PipeAcceptor::close()
+	{
+		if (DisconnectNamedPipe(m_completion.m_hPipe))
+		{
+			// Tight spin waiting for the completion to finish
+			while (m_refcount.value() > 0)
+			{
+				WaitForSingleObject(m_completion.m_hPipe,INFINITE);
+			}
 		}
 	}
 }
@@ -425,43 +445,29 @@ OOSvrBase::Win32::ProactorImpl::~ProactorImpl()
 {
 }
 
-/*OOSvrBase::AsyncSocket* OOSvrBase::Win32::ProactorImpl::attach_socket(IOHandler* handler, int* perr, OOBase::Socket* sock)
+OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa)
 {
-	assert(perr);
-	assert(sock);
-
-	// Duplicate the contained handle
-	OOBase::Win32::Socket* pOrigSock = sock->async_cast<OOBase::Win32::Socket>();
-
-
-	HANDLE hClone = (HANDLE)INVALID_SOCKET;//(HANDLE)sock->async_steal(perr);
-	if (hClone == (HANDLE)INVALID_SOCKET)
-		return 0;
-	
-	// Alloc a new async socket
-	::AsyncSocket* pSock;
-	OOBASE_NEW(pSock,::AsyncSocket(this,hClone,handler));
-	if (!pSock)
-	{
-		CloseHandle(hClone);
+	OOBase::SmartPtr<PipeAcceptor> pAcceptor = 0;
+	OOBASE_NEW(pAcceptor,PipeAcceptor("\\\\.\\pipe\\" + path,psa,handler));
+	if (!pAcceptor)
 		*perr = ERROR_OUTOFMEMORY;
-		return 0;
-	}
-
-	*perr = pSock->bind();
+	else
+		*perr = pAcceptor->accept_named_pipe(true);
+	
 	if (*perr != 0)
-	{
-		pSock->release();
 		return 0;
-	}
 
-	return pSock;
-}*/
+	return pAcceptor.detach();
+}
 
 OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_remote(Acceptor<AsyncSocket>* handler, const std::string& address, const std::string& port, int* perr)
 {
 	void* TODO;
 	return 0;
 }
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 #endif // _WIN32

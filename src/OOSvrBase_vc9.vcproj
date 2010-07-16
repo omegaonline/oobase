@@ -46,7 +46,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="C:\Work\sqlite;C:\Work\libev-3.9"
+				AdditionalIncludeDirectories="C:\sqlite3;..\..\libev-3.9"
 				PreprocessorDefinitions="HAVE_EV_H;HAVE_SQLITE3_AMALGAMATION"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
@@ -64,9 +64,9 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalDependencies="libev.lib ws2_32.lib"
+				AdditionalDependencies="libev.lib"
 				OutputFile="$(OutDir)\$(ProjectName)d.lib"
-				AdditionalLibraryDirectories="&quot;C:\Work\libev-3.9\Debug&quot;"
+				AdditionalLibraryDirectories="..\..\OOHttp\Debug"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -177,7 +177,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="3"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="C:\sqlite3"
+				AdditionalIncludeDirectories="C:\sqlite3;..\libev-3.9"
 				PreprocessorDefinitions="HAVE_SQLITE3_AMALGAMATION;NDEBUG"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -301,10 +301,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\PipeWin32.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\Proactor.cpp"
 				>
 			</File>
@@ -363,11 +359,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOSvrBase\ProactorEv.h"
+				RelativePath="..\include\OOSvrBase\internal\ProactorEv.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOSvrBase\ProactorWin32.h"
+				RelativePath="..\include\OOSvrBase\internal\ProactorImpl.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOSvrBase\internal\ProactorWin32.h"
 				>
 			</File>
 			<File

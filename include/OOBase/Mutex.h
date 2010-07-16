@@ -57,7 +57,7 @@ namespace OOBase
 #endif
 	};
 
-#if defined(_WIN32) || defined(HAVE_FUTEX_H)
+#if defined(_WIN32)
 	/// A non-recursive mutex that spins in user-mode before aquiring the kernel mutex
 	class SpinLock
 	{
@@ -77,13 +77,10 @@ namespace OOBase
 		/** \var m_cs
 		 *  The platform specific spin-lock variable.
 		 */
-#if defined(_WIN32)
 		CRITICAL_SECTION m_cs;
-#else
-#error Futexes?!?
-#endif
 	};
 #else
+	// Pthreads mutexes already spin allegedly...
 	typedef Mutex SpinLock;
 #endif
 
