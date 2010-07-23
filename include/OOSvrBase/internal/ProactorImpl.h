@@ -36,7 +36,7 @@ namespace OOSvrBase
 {
 	namespace detail
 	{
-		class AsyncHandler;
+		class AsyncHandlerRaw;
 
 		class AsyncIOHelper
 		{
@@ -44,7 +44,7 @@ namespace OOSvrBase
 			virtual ~AsyncIOHelper()
 			{}
 
-			void bind_handler(AsyncHandler* handler)
+			void bind_handler(AsyncHandlerRaw* handler)
 			{
 				m_handler = handler;
 			}
@@ -64,33 +64,44 @@ namespace OOSvrBase
 			AsyncIOHelper() : m_handler(0)
 			{}
 
-			AsyncHandler* m_handler;
+			AsyncHandlerRaw* m_handler;
 		};
 
-		class AsyncHandler
+		class AsyncHandlerRaw
 		{
 		public:
 			virtual void on_recv(AsyncIOHelper::AsyncOp* recv_op, int err) = 0;
 			virtual void on_sent(AsyncIOHelper::AsyncOp* send_op, int err) = 0;
 		};
 
-		class AsyncSocketImpl;
+		class AsyncHandler
+		{
+		public:
+			virtual void on_recv(OOBase::Buffer* buffer, int err) = 0;
+			virtual void on_sent(OOBase::Buffer* buffer, int err) = 0;
+			virtual void on_closed() = 0;
+			virtual bool is_close(int err) const = 0;
+		};
 
 		class AsyncQueued
 		{
 		public:
-			AsyncQueued(bool sender, AsyncSocketImpl* parent);
+			AsyncQueued(bool sender, AsyncIOHelper* helper, AsyncHandler* handler);
 			~AsyncQueued();
 
-			void close();
+			void complete_asyncs();
+
 			int async_op(OOBase::Buffer* buffer, size_t len);
 			int sync_op(OOBase::Buffer* buffer, size_t len, const OOBase::timeval_t* timeout);
-			void notify_async(AsyncIOHelper::AsyncOp* op, int err, void* param, void (*callback)(void*,OOBase::Buffer*,int));
+			bool notify_async(AsyncIOHelper::AsyncOp* op, int err);
+			void shutdown();
 			
-		private:
-			bool             m_sender;
-			AsyncSocketImpl* m_parent;
-			OOBase::SpinLock m_lock;
+		protected:
+			bool                  m_sender;
+			AsyncIOHelper*        m_helper;
+			AsyncHandler*         m_handler;
+			
+			OOBase::SpinLock      m_lock;
 
 			std::queue<AsyncIOHelper::AsyncOp*> m_ops;
 			
@@ -105,30 +116,24 @@ namespace OOSvrBase
 			void issue_next();
 		};
 
-		class AsyncSocketImpl : public AsyncHandler				
+		class AsyncSocketImpl : public AsyncHandlerRaw				
 		{
-			friend class AsyncQueued;
-
 		public:
-			AsyncSocketImpl(AsyncIOHelper* helper);
+			AsyncSocketImpl(AsyncIOHelper* helper, AsyncHandler* handler);
+
+			void dispose();
 			
 			int async_recv(OOBase::Buffer* buffer, size_t len);
 			int async_send(OOBase::Buffer* buffer);
 
 			int send(const void* buf, size_t len, const OOBase::timeval_t* timeout);
-			int send_buffer(OOBase::Buffer* buffer, const OOBase::timeval_t* timeout);
+			int send(OOBase::Buffer* buffer, const OOBase::timeval_t* timeout);
 
 			size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout);
-			int recv_buffer(OOBase::Buffer* buffer, size_t len, const OOBase::timeval_t* timeout);
+			int recv(OOBase::Buffer* buffer, size_t len, const OOBase::timeval_t* timeout);
 
-			void drop();
-
-		protected:
-			virtual void on_async_recv(OOBase::Buffer* buffer, int err) = 0;
-			virtual void on_async_sent(OOBase::Buffer* buffer, int err) = 0;
-			virtual void on_async_closed() = 0;
-			virtual bool is_close(int err) const = 0;
-
+			void shutdown();
+						
 		private:
 			void addref();
 			void release();
@@ -137,81 +142,85 @@ namespace OOSvrBase
 
 			AsyncQueued               m_receiver;
 			AsyncQueued               m_sender;
-			OOBase::AtomicInt<size_t> m_close_count;
-
+			OOBase::AtomicInt<size_t> m_refcount;
+			
 			void on_recv(AsyncIOHelper::AsyncOp* recv_op, int err);
 			void on_sent(AsyncIOHelper::AsyncOp* send_op, int err);
-			void on_closed();
-
-			static void on_async_recv_i(void* param, OOBase::Buffer* buffer, int err);
-			static void on_async_sent_i(void* param, OOBase::Buffer* buffer, int err);
 		};
 
 		template <typename SOCKET_TYPE>
-		class AsyncSocketTempl : public SOCKET_TYPE
+		class AsyncSocketTempl : 
+				public AsyncHandler,
+				public SOCKET_TYPE
 		{
 		public:
 			AsyncSocketTempl(AsyncIOHelper* helper) : 
-					m_pImpl(0),
-					m_io_handler(0)
-			{
-				AsyncSocketImpl
+					m_pImpl(0)
+			{ 
+				OOBASE_NEW(m_pImpl,AsyncSocketImpl(helper,this));
+				if (!m_pImpl)
+					OOBase_OutOfMemory();
 			}
 
 			virtual ~AsyncSocketTempl()
 			{
-				m_pImpl->release();
+				m_pImpl->dispose();
 			}
 
 			void bind_handler(OOSvrBase::IOHandler* handler)
 			{
 				assert(!m_io_handler);
-				m_io_handler = handler;
+				m_io_handler = handler;				
+			}
+
+			int recv(OOBase::Buffer* buffer, size_t len, const OOBase::timeval_t* timeout = 0)
+			{
+				return m_pImpl->recv(buffer,len,timeout);
 			}
 
 			size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout = 0)
 			{
-				return AsyncSocketImpl::recv(buf,len,perr,timeout);
+				return m_pImpl->recv(buf,len,perr,timeout);
 			}
 
 			int send(const void* buffer, size_t len, const OOBase::timeval_t* timeout = 0)
 			{
-				return AsyncSocketImpl::send(buffer,len,timeout);
+				return m_pImpl->send(buffer,len,timeout);
 			}
 
-			int send_buffer(OOBase::Buffer* buffer, const OOBase::timeval_t* timeout)
+			int send(OOBase::Buffer* buffer, const OOBase::timeval_t* timeout)
 			{
-				return AsyncSocketImpl::send_buffer(buffer,timeout);
+				return m_pImpl->send(buffer,timeout);
 			}
 
-			void close()
+			void shutdown()
 			{
-				return AsyncSocketImpl::close();
+				return m_pImpl->shutdown();
 			}
 
 			int async_recv(OOBase::Buffer* buffer, size_t len = 0)
 			{
 				assert(m_io_handler);
-				return AsyncSocketImpl::async_recv(buffer,len);
+				return m_pImpl->async_recv(buffer,len);
 			}
 
 			int async_send(OOBase::Buffer* buffer)
 			{
 				assert(m_io_handler);
-				return AsyncSocketImpl::async_send(buffer);
+				return m_pImpl->async_send(buffer);
 			}
 
-			void on_async_recv(OOBase::Buffer* buffer, int err)
+			void on_recv(OOBase::Buffer* buffer, int err)
 			{
 				m_io_handler->on_recv(this,buffer,err);
 			}
 
-			void on_async_sent(OOBase::Buffer* buffer, int err)
+			void on_sent(OOBase::Buffer* buffer, int err)
 			{
 				m_io_handler->on_sent(this,buffer,err);
 			}
 
-			void on_async_closed()
+			void on_closed()
 			{
 				m_io_handler->on_closed(this);
 			}

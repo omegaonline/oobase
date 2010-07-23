@@ -221,23 +221,27 @@ namespace
 	class AsyncLocalSocket : public OOSvrBase::detail::AsyncSocketTempl<OOSvrBase::AsyncLocalSocket>
 	{
 	public:
-		AsyncLocalSocket(IOHelper* helper, HANDLE hPipe) :
+		AsyncLocalSocket(HANDLE hPipe, PipeIOHelper* helper) :
 				OOSvrBase::detail::AsyncSocketTempl<OOSvrBase::AsyncLocalSocket>(helper),
 				m_hPipe(hPipe)
 		{
 		}
 
-		static AsyncLocalSocket* Create(HANDLE hPipe)
+		static AsyncLocalSocket* Create(HANDLE hPipe, DWORD& dwErr)
 		{
 			PipeIOHelper* helper = 0;
 			OOBASE_NEW(helper,PipeIOHelper(hPipe));
 			if (!helper)
+			{
+				dwErr = ERROR_OUTOFMEMORY;
 				return 0;
+			}
 
 			AsyncLocalSocket* sock = 0;
-			OOBASE_NEW(sock,AsyncLocalSocket(helper,hPipe));
+			OOBASE_NEW(sock,AsyncLocalSocket(hPipe,helper));
 			if (!sock)
 			{
+				dwErr = ERROR_OUTOFMEMORY;
 				delete helper;
 				return 0;
 			}
@@ -294,7 +298,7 @@ namespace
 			return 0;
 		}
 
-		void close();
+		void shutdown();
 
 		int accept_named_pipe(bool bExclusive);
 
@@ -308,31 +312,44 @@ namespace
 			PipeAcceptor*              m_this_ptr;
 		};
 
+		OOBase::Condition::Mutex                           m_lock;
+		OOBase::Condition                                  m_condition;
+		bool                                               m_closed;
 		Completion                                         m_completion;
 		OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>*  m_handler;
 		const std::string                                  m_pipe_name;
 		LPSECURITY_ATTRIBUTES                              m_psa;
-		OOBase::AtomicInt<size_t>                          m_refcount;
+		size_t                                             m_async_count;
 		
 		void do_accept(OOBase::Win32::SmartHandle& hPipe, DWORD dwErr);
 	};
 
 	PipeAcceptor::PipeAcceptor(const std::string& pipe_name, LPSECURITY_ATTRIBUTES psa, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler) :
+			m_closed(false),
 			m_handler(handler),
 			m_pipe_name(pipe_name),
 			m_psa(psa),
-			m_refcount(0)
+			m_async_count(0)
 	{
 		m_completion.m_this_ptr = this;
 	}
 
 	PipeAcceptor::~PipeAcceptor()
 	{
-		close();
+		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
+
+		m_closed = true;
+
+		while (m_async_count)
+		{
+			m_condition.wait(m_lock);
+		}
 	}
 
 	int PipeAcceptor::accept_named_pipe(bool bExclusive)
 	{
+		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
+
 		assert(!m_completion.m_hPipe.is_valid());
 
 		DWORD dwOpenMode = PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED;
@@ -360,7 +377,7 @@ namespace
 
 		memset(&m_completion.m_ov,0,sizeof(OVERLAPPED));
 
-		++m_refcount;
+		++m_async_count;
 
 		DWORD dwErr = 0;
 		if (ConnectNamedPipe(m_completion.m_hPipe,&m_completion.m_ov))
@@ -374,13 +391,14 @@ namespace
 
 		if (dwErr == ERROR_PIPE_CONNECTED)
 		{
+			guard.release();
 			do_accept(m_completion.m_hPipe,0);
 			dwErr = 0;
 		}
 		else if (dwErr != 0)
 		{
 			m_completion.m_hPipe.close();
-			--m_refcount;
+			--m_async_count;
 		}
 
 		return dwErr;
@@ -395,49 +413,55 @@ namespace
 
 	void PipeAcceptor::do_accept(OOBase::Win32::SmartHandle& hPipe, DWORD dwErr)
 	{
-		AsyncLocalSocket* pSocket = 0;
-		if (dwErr == 0 && hPipe.is_valid())
+		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
+
+		--m_async_count;
+
+		if (m_closed)
 		{
-			pSocket = AsyncLocalSocket::Create(hPipe);
-			if (!pSocket)
-			{
-				hPipe.close();
-				dwErr = ERROR_OUTOFMEMORY;
-			}
-			else
-				hPipe.detach();
+			hPipe.close();
+			m_condition.signal();
 		}
-
-		// Call the acceptor
-		bool again = m_handler->on_accept(pSocket,dwErr);
-
-		// Submit another accept if we want
-		while (again)
+		else
 		{
-			dwErr = accept_named_pipe(false);
+			AsyncLocalSocket* pSocket = 0;
 			if (dwErr == 0)
-				break;
-				
-			again = m_handler->on_accept(0,dwErr);
-		}
+			{
+				pSocket = AsyncLocalSocket::Create(hPipe,dwErr);
+				if (pSocket)
+					hPipe.detach();
+				else
+					hPipe.close();
+			}
 
-		--m_refcount;
+			guard.release();
+
+			// Call the acceptor
+			bool again = m_handler->on_accept(pSocket,dwErr);
+
+			// Submit another accept if we want
+			while (again)
+			{
+				dwErr = accept_named_pipe(false);
+				if (dwErr == 0)
+					break;
+					
+				again = m_handler->on_accept(0,dwErr);
+			}
+		}
 	}
 
-	void PipeAcceptor::close()
+	void PipeAcceptor::shutdown()
 	{
-		if (DisconnectNamedPipe(m_completion.m_hPipe))
-		{
-			// Tight spin waiting for the completion to finish
-			while (m_refcount.value() > 0)
-			{
-				WaitForSingleObject(m_completion.m_hPipe,INFINITE);
-			}
-		}
+		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
+
+		if (m_completion.m_hPipe.is_valid())
+			DisconnectNamedPipe(m_completion.m_hPipe);
 	}
 }
 
-OOSvrBase::Win32::ProactorImpl::ProactorImpl()
+OOSvrBase::Win32::ProactorImpl::ProactorImpl() :
+		OOSvrBase::Proactor(false)
 {
 }
 

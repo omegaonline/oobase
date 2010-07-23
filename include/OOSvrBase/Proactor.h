@@ -52,7 +52,7 @@ namespace OOSvrBase
 		virtual int async_send(OOBase::Buffer* buffer) = 0;
 
 		// A more efficient non-const version...
-		virtual int send_buffer(OOBase::Buffer* buffer, const OOBase::timeval_t* timeout = 0) = 0;
+		virtual int send(OOBase::Buffer* buffer, const OOBase::timeval_t* timeout = 0) = 0;
 	};
 
 	class AsyncLocalSocket : public AsyncSocket
@@ -89,6 +89,9 @@ namespace OOSvrBase
 
 		virtual OOBase::Socket* accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa = 0);
 		virtual OOBase::Socket* accept_remote(Acceptor<AsyncSocket>* handler, const std::string& address, const std::string& port, int* perr);
+
+	protected:
+		Proactor(bool);
 
 	private:
 		Proactor(const Proactor&);

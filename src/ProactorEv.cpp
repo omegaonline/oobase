@@ -310,9 +310,9 @@ namespace
 			return 0;
 		}
 
-		void close();
+		void shutdown();
 
-		void do_accept();
+		void accept();
 
 	private:
 		struct Completion : public OOSvrBase::Ev::ProactorImpl::io_watcher
@@ -320,20 +320,23 @@ namespace
 			AcceptSocket* m_this_ptr;
 		};
 
+		OOBase::Condition::Mutex                 m_lock;
+		OOBase::Condition                        m_condition;
 		OOSvrBase::Ev::ProactorImpl*             m_proactor;
 		Completion                               m_watcher;
 		OOSvrBase::Acceptor<SOCKET_TYPE>*        m_handler;
-		OOBase::AtomicInt<size_t>                m_refcount;
+		size_t                                   m_async_count;
 		bool                                     m_closed;
 
 		static void on_accept(OOSvrBase::Ev::ProactorImpl::io_watcher* watcher);	
+		void do_accept();
 	};
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
 	AcceptSocket<SOCKET_TYPE,SOCKET_IMPL>::AcceptSocket(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::BSD::socket_t sock, OOSvrBase::Acceptor<SOCKET_TYPE>* handler) :
 				m_proactor(pProactor),
 				m_handler(handler),
-				m_refcount(0),
+				m_async_count(0),
 				m_closed(false)
 	{
 		m_watcher.m_this_ptr = this;
@@ -347,7 +350,24 @@ namespace
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
 	AcceptSocket<SOCKET_TYPE,SOCKET_IMPL>::~AcceptSocket()
 	{
+		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
+
+		m_closed = true;
+
 		closesocket(m_watcher.fd);
+
+		while (m_async_count)
+		{
+			m_condition.wait(m_lock);
+		}
+	}
+
+	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
+	void AcceptSocket<SOCKET_TYPE,SOCKET_IMPL>::accept()
+	{
+		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
+
+		do_accept();
 	}
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
@@ -355,10 +375,15 @@ namespace
 	{
 		AcceptSocket* pThis = static_cast<Completion*>(watcher)->m_this_ptr;
 
+		OOBase::Guard<OOBase::Condition::Mutex> guard(pThis->m_lock);
+
 		if (!pThis->m_closed)
 			pThis->do_accept();
 
-		--pThis->m_refcount;
+		--pThis->m_async_count;
+
+		if (pThis->m_closed)
+			pThis->m_condition.signal();
 	}
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
@@ -366,13 +391,13 @@ namespace
 	{
 		// Call accept on the fd...
 		int err = 0;
-		OOBase::BSD::socket_t new_fd = accept(m_watcher.fd,0,0);
+		OOBase::BSD::socket_t new_fd = ::accept(m_watcher.fd,0,0);
 		if (new_fd == INVALID_SOCKET)
 		{
 			err = socket_errno;
 			if (err == SOCKET_WOULD_BLOCK)
 			{
-				++m_refcount;
+				++m_async_count;
 				m_proactor->start_watcher(&m_watcher);
 				return;
 			}
@@ -405,25 +430,16 @@ namespace
 		}
 
 		// Call the handler...
-		if (m_handler->on_accept(pSocket,err))
+		if (m_handler->on_accept(pSocket,err) && !m_closed)
 			do_accept();
 	}
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
-	void AcceptSocket<SOCKET_TYPE,SOCKET_IMPL>::close()
+	void AcceptSocket<SOCKET_TYPE,SOCKET_IMPL>::shutdown()
 	{
-		if (!m_closed)
-		{
-			shutdown(m_watcher.fd,SHUT_RDWR);
+		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 
-			m_closed = true;
-
-			// Tight spin...
-			while (m_refcount.value() > 0)
-			{
-				OOBase::Thread::yield();
-			}
-		}
+		closesocket(m_watcher.fd);
 	}
 
 #if defined(HAVE_SYS_UN_H)
@@ -445,7 +461,10 @@ namespace
 }
 
 OOSvrBase::Ev::ProactorImpl::ProactorImpl() :
-		m_pLoop(0), m_pIOQueue(0), m_bStop(false)
+		OOSvrBase::Proactor(false),
+		m_pLoop(0),
+		m_pIOQueue(0),
+		m_bStop(false)
 {
 	// Create an ev loop
 	m_pLoop = ev_loop_new(EVFLAG_AUTO | EVFLAG_NOENV);
@@ -561,6 +580,7 @@ int OOSvrBase::Ev::ProactorImpl::worker_i()
 
 void OOSvrBase::Ev::ProactorImpl::init_watcher(io_watcher* watcher, int fd, int events)
 {
+	watcher->data = this;
 	ev_io_init(watcher,&on_io,fd,events);
 }
 
@@ -676,7 +696,7 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor<AsyncLocalSoc
 		return 0;
 	}
 
-	pAccept->do_accept();
+	pAccept->accept();
 	return pAccept.detach();
 
 #endif
@@ -763,7 +783,7 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor<OOSvrBase::A
 		return 0;
 	}
 
-	pAccept->do_accept();
+	pAccept->accept();
 	return pAccept.detach();
 }
 

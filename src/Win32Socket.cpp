@@ -34,7 +34,7 @@ namespace
 
 		size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* wait = 0);
 		int send(const void* buf, size_t len, const OOBase::timeval_t* wait = 0);
-		void close();
+		void shutdown();
 		
 	private:
 		bool                       m_shutdown;
@@ -57,7 +57,7 @@ namespace
 
 	Socket::~Socket()
 	{
-		close();
+		shutdown();
 	}
 
 	int Socket::send(const void* buf, size_t len, const OOBase::timeval_t* timeout)
@@ -195,12 +195,10 @@ namespace
 		return len;
 	}
 
-	void Socket::close()
+	void Socket::shutdown()
 	{
 		if (m_shutdown)
-			shutdown((SOCKET)(HANDLE)m_handle,SD_BOTH);
-
-		m_handle.close();
+			::shutdown((SOCKET)(HANDLE)m_handle,SD_BOTH);
 	}
 }
 

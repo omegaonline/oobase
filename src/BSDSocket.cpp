@@ -65,7 +65,7 @@ namespace
 		
 		int send(const void* buf, size_t len, const OOBase::timeval_t* timeout = 0);
 		size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout = 0);
-		void close();
+		void shutdown();
 		
 	private:
 		OOBase::BSD::socket_t  m_sock;
@@ -78,7 +78,7 @@ namespace
 
 	Socket::~Socket()
 	{
-		close();
+		closesocket(m_sock);
 	}
 
 	int Socket::send(const void* buf, size_t len, const OOBase::timeval_t* wait)
@@ -205,15 +205,9 @@ namespace
 		}
 	}
 
-	void Socket::close()
+	void Socket::shutdown()
 	{
-		if (m_sock != INVALID_SOCKET)
-		{
-			shutdown(m_sock,SHUT_RDWR);
-
-			closesocket(m_sock);
-			m_sock = INVALID_SOCKET;
-		}
+		::shutdown(m_sock,SHUT_RDWR);
 	}
 
 	int connect_i(OOBase::BSD::socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* wait)

@@ -59,6 +59,7 @@ namespace
 	};
 
 	Win32Thread::Win32Thread() :
+			OOBase::Thread(false),
 			m_hThread(0)
 	{
 	}
@@ -199,6 +200,7 @@ namespace
 	};
 
 	PthreadThread::PthreadThread() :
+			OOBase::Thread(false),
 			m_running(false)
 	{
 		int err = pthread_cond_init(&m_condition,NULL);
@@ -360,6 +362,11 @@ OOBase::Thread::Thread() :
 
 	if (!m_impl)
 		OOBase_OutOfMemory();
+}
+
+OOBase::Thread::Thread(bool) :
+		m_impl(0)
+{
 }
 
 OOBase::Thread::~Thread()
