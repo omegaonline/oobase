@@ -189,18 +189,15 @@
 namespace OOBase
 {
 	void CallCriticalFailureMem(const char* pszFile, unsigned int nLine);
-	void CallCriticalFailureE(const char* pszFile, unsigned int nLine, int);
-	void CallCriticalFailureX(const char* pszFile, unsigned int nLine, int);
-	void CallCriticalFailureX(const char* pszFile, unsigned int nLine, const char*);
+	void CallCriticalFailure(const char* pszFile, unsigned int nLine, int);
+	void CallCriticalFailure(const char* pszFile, unsigned int nLine, const char*);
 
 	std::string strerror(int err);
+	std::string system_error_text(int err);
 }
 
 #define OOBase_CallCriticalFailure(expr) \
-	OOBase::CallCriticalFailureX(__FILE__,__LINE__,expr)
-
-#define OOBase_CallCriticalFailureErrno(expr) \
-	OOBase::CallCriticalFailureE(__FILE__,__LINE__,expr)
+	OOBase::CallCriticalFailure(__FILE__,__LINE__,expr)
 
 #define OOBase_OutOfMemory() \
 	OOBase::CallCriticalFailureMem(__FILE__,__LINE__)
