@@ -72,6 +72,7 @@ namespace OOBase
 		Event(bool bSet = false, bool bAutoReset = true);
 		~Event();
 
+		bool is_set();
 		void set();
 		bool wait(const timeval_t* wait = 0);
 		void reset();
