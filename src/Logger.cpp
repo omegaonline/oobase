@@ -121,11 +121,11 @@ namespace
 	 *  e.g. \link Win32Logger \endlink , \link ASLLogger \endlink or \link SysLogLogger \endlink
 	 */
 #if defined(_WIN32)
-	typedef OOBase::Singleton<Win32Logger,Win32Logger> LOGGER;
+	typedef OOBase::Singleton<Win32Logger> LOGGER;
 #elif defined(HAVE_ASL_H)
-	typedef OOBase::Singleton<ASLLogger,ASLLogger> LOGGER;
+	typedef OOBase::Singleton<ASLLogger> LOGGER;
 #elif defined(HAVE_SYSLOG_H)
-	typedef OOBase::Singleton<SysLogLogger,SysLogLogger> LOGGER;
+	typedef OOBase::Singleton<SysLogLogger> LOGGER;
 #else
 #error Fix me!
 #endif

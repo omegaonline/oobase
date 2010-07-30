@@ -112,9 +112,9 @@ namespace
 	 *  e.g. \link Win32TLSGlobal \endlink or \link PthreadTLSGlobal \endlink
 	 */
 #if defined(_WIN32)
-	typedef OOBase::Singleton<Win32TLSGlobal,Win32TLSGlobal> TLS_GLOBAL;
+	typedef OOBase::Singleton<Win32TLSGlobal> TLS_GLOBAL;
 #elif defined(HAVE_PTHREAD)
-	typedef OOBase::Singleton<PthreadTLSGlobal,PthreadTLSGlobal> TLS_GLOBAL;
+	typedef OOBase::Singleton<PthreadTLSGlobal> TLS_GLOBAL;
 #else
 #error Fix me!
 #endif
