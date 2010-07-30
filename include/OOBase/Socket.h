@@ -32,10 +32,25 @@
 #include <winsock2.h>
 #endif
 
+// Try to align winsock and BSD ;)
+#if !defined(_WIN32)
+#define INVALID_SOCKET (-1)
+#endif
+
 namespace OOBase
 {
 	class Socket
 	{
+	public:
+		/** \typedef socket_t
+		 *  The platform specific socket type.
+		 */
+#if defined(_WIN32)
+		typedef SOCKET socket_t;
+#else
+		typedef int socket_t;
+#endif
+
 	public:
 		virtual size_t recv(void* buf, size_t len, int* perr, const timeval_t* timeout = 0) = 0;
 		virtual int send(const void* buf, size_t len, const timeval_t* timeout = 0) = 0;

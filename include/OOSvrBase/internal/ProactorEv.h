@@ -54,6 +54,9 @@ namespace OOSvrBase
 			OOBase::Socket* accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa);
 			OOBase::Socket* accept_remote(Acceptor<AsyncSocket>* handler, const std::string& address, const std::string& port, int* perr);
 
+			AsyncSocket* attach_socket(OOBase::Socket::socket_t sock, int* perr);
+			AsyncLocalSocket* attach_local_socket(OOBase::Socket::socket_t sock, int* perr);
+
 			struct io_watcher : public ev_io
 			{
 				void (*callback)(io_watcher*);

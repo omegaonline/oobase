@@ -79,7 +79,7 @@ namespace
 		PipeIOHelper(HANDLE handle) : IOHelper(handle)
 		{}
 
-		void shutdown()
+		void shutdown(bool /*bSend*/, bool /*bRecv*/)
 		{
 			DisconnectNamedPipe(m_handle);
 		}
@@ -91,9 +91,16 @@ namespace
 		SocketIOHelper(HANDLE handle) : IOHelper(handle)
 		{}
 
-		void shutdown()
+		void shutdown(bool bSend, bool bRecv)
 		{
-			::shutdown((SOCKET)(HANDLE)m_handle,SD_BOTH);
+			int how = -1;
+			if (bSend)
+				how = (bRecv ? SD_BOTH : SD_SEND);
+			else if (bRecv)
+				how = SD_RECEIVE;
+
+			if (how != -1)
+				::shutdown((SOCKET)(HANDLE)m_handle,how);
 		}
 	};
 
@@ -340,6 +347,9 @@ namespace
 
 		m_closed = true;
 
+		if (m_completion.m_hPipe.is_valid())
+			DisconnectNamedPipe(m_completion.m_hPipe);
+
 		while (m_async_count)
 		{
 			m_condition.wait(m_lock);
@@ -452,11 +462,7 @@ namespace
 	}
 
 	void PipeAcceptor::shutdown()
-	{
-		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
-
-		if (m_completion.m_hPipe.is_valid())
-			DisconnectNamedPipe(m_completion.m_hPipe);
+	{		
 	}
 }
 

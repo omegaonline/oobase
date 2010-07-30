@@ -60,7 +60,7 @@ namespace
 	class Socket : public OOBase::Socket
 	{
 	public:
-		Socket(OOBase::BSD::socket_t sock);
+		Socket(OOBase::Socket::socket_t sock);
 		virtual ~Socket();
 		
 		int send(const void* buf, size_t len, const OOBase::timeval_t* timeout = 0);
@@ -68,10 +68,10 @@ namespace
 		void shutdown();
 		
 	private:
-		OOBase::BSD::socket_t  m_sock;
+		OOBase::Socket::socket_t  m_sock;
 	};
 
-	Socket::Socket(OOBase::BSD::socket_t sock) :
+	Socket::Socket(OOBase::Socket::socket_t sock) :
 			m_sock(sock)
 	{
 	}
@@ -210,7 +210,7 @@ namespace
 		::shutdown(m_sock,SHUT_RDWR);
 	}
 
-	int connect_i(OOBase::BSD::socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* wait)
+	int connect_i(OOBase::Socket::socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* wait)
 	{
 		// Do the connect
 		if (::connect(sock,addr,addrlen) != -1)
@@ -260,7 +260,7 @@ namespace
 		}
 	}
 
-	OOBase::BSD::socket_t connect_i(const std::string& address, const std::string& port, int* perr, const OOBase::timeval_t* wait)
+	OOBase::Socket::socket_t connect_i(const std::string& address, const std::string& port, int* perr, const OOBase::timeval_t* wait)
 	{
 		// Start a countdown
 		OOBase::timeval_t wait2 = (wait ? *wait : OOBase::timeval_t::MaxTime);
@@ -284,7 +284,7 @@ namespace
 			return ETIMEDOUT;
 
 		// Loop trying to connect on each address until one succeeds
-		OOBase::BSD::socket_t sock = INVALID_SOCKET;
+		OOBase::Socket::socket_t sock = INVALID_SOCKET;
 		for (addrinfo* pAddr = pResults; pAddr != 0; pAddr = pAddr->ai_next)
 		{
 			if ((sock = OOBase::BSD::create_socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,perr)) != INVALID_SOCKET)
@@ -311,11 +311,11 @@ namespace
 	}
 }
 
-OOBase::BSD::socket_t OOBase::BSD::create_socket(int family, int socktype, int protocol, int* perr)
+OOBase::Socket::socket_t OOBase::BSD::create_socket(int family, int socktype, int protocol, int* perr)
 {
 	*perr = 0;
 
-	OOBase::BSD::socket_t sock = ::socket(family,socktype,protocol);
+	OOBase::Socket::socket_t sock = ::socket(family,socktype,protocol);
 	if (sock == INVALID_SOCKET)
 	{
 		*perr = socket_errno;
@@ -380,7 +380,7 @@ int OOBase::BSD::set_close_on_exec(SOCKET sock, bool set)
 //#if !defined(_WIN32)
 OOBase::Socket* OOBase::Socket::connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait)
 {
-	BSD::socket_t sock = connect_i(address,port,perr,wait);
+	Socket::socket_t sock = connect_i(address,port,perr,wait);
 	if (sock == INVALID_SOCKET)
 		return 0;
 

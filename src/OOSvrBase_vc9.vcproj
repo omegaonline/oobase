@@ -177,8 +177,8 @@
 				Name="VCCLCompilerTool"
 				Optimization="3"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="C:\sqlite3;..\libev-3.9"
-				PreprocessorDefinitions="HAVE_SQLITE3_AMALGAMATION;NDEBUG"
+				AdditionalIncludeDirectories="C:\sqlite3;..\..\libev-3.9"
+				PreprocessorDefinitions="HAVE_EV_H;HAVE_SQLITE3_AMALGAMATION;NDEBUG"
 				StringPooling="true"
 				RuntimeLibrary="0"
 				RuntimeTypeInfo="false"
@@ -196,6 +196,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
+				AdditionalDependencies="libev.lib netapi32.lib userenv.lib shlwapi.lib"
+				AdditionalLibraryDirectories="..\..\OOHttp\Release"
 			/>
 			<Tool
 				Name="VCALinkTool"
