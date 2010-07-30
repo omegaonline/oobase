@@ -38,7 +38,7 @@ namespace
 		OOBase::Condition        m_condition;
 		int                      m_result;
 	};
-	typedef OOBase::Singleton<QuitData,QuitData> QUIT;
+	typedef OOBase::Singleton<QuitData> QUIT;
 
 #if defined(_WIN32)
 
@@ -99,12 +99,10 @@ namespace
 		// Wait for the event to be signalled
 		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 
-		m_result = -1;
-		do
+		while (m_result == -1)
 		{
 			m_condition.wait(m_lock);
-
-		} while (m_result == -1);
+		} 
 
 		return m_result;
 	}
@@ -215,11 +213,19 @@ int OOSvrBase::Service::wait_for_quit()
 		{NULL, NULL}
 	};	
 
+	// Because it can take a while to determine if we are a service or not,
+	// install the Ctrl+C handlers first
+	QUIT::instance();
+
+	LOG_DEBUG(("Attempting Win32 service start..."));
+
 	if (!StartServiceCtrlDispatcherW(ste))
 	{
 		DWORD err = GetLastError();
 		if (err == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT)
 		{
+			LOG_DEBUG(("Not a Win32 service"));
+
 			// We are running from the shell...
 			return Server::wait_for_quit();
 		}
