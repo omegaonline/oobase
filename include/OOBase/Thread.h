@@ -41,7 +41,7 @@ namespace OOBase
 		static void yield();
 
 	protected:
-		Thread(bool);
+		explicit Thread(bool);
 
 	private:
 		Thread(const Thread&);

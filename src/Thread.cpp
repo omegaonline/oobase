@@ -152,6 +152,9 @@ namespace
 	{
 		wrapper* wrap = static_cast<wrapper*>(param);
 
+		// Make sure we init any thread-local storage support
+		OOBase::TLS::ThreadStart();
+
 		// Copy the values out before we signal
 		int (*thread_fn)(void*) = wrap->m_thread_fn;
 		void* p = wrap->m_param;
