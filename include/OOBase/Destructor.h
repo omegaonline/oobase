@@ -49,6 +49,12 @@ namespace OOBase
 			}
 		}
 
+		template <typename T>
+		static void add_instance(T* p)
+		{
+			add_destructor(&DeleteDestructor<T>::destroy_void,p);
+		}
+
 		static void remove_destructor(pfn_destructor pfn, void* p)
 		{
 			try
@@ -61,6 +67,12 @@ namespace OOBase
 			{
 				OOBase_CallCriticalFailure(e.what());
 			}
+		}
+
+		template <typename T>
+		static void remove_instance(T* p)
+		{
+			remove_destructor(&DeleteDestructor<T>::destroy_void,p);
 		}
 
 	private:

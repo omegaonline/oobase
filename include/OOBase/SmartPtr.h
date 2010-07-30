@@ -34,6 +34,11 @@ namespace OOBase
 		{
 			delete ptr;
 		}
+
+		static void destroy_void(void* ptr)
+		{
+			delete static_cast<T*>(ptr);
+		}
 	};
 
 	template <typename T>
