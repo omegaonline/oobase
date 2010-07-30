@@ -272,6 +272,11 @@ void OOBase::TLS::Remove(const void* key)
 	}
 }
 
+void OOBase::TLS::ThreadStart()
+{
+	TLSMap::instance(false);
+}
+
 void OOBase::TLS::ThreadExit()
 {
 	TLSMap* inst = TLSMap::instance(false);
