@@ -285,6 +285,8 @@ namespace
 		{
 			switch (err)
 			{
+			case ERROR_INVALID_HANDLE:
+			case ERROR_NETNAME_DELETED:
 			case WSAECONNABORTED:
 			case WSAECONNRESET:
 				return true;
@@ -840,8 +842,11 @@ OOSvrBase::AsyncSocket* OOSvrBase::Win32::ProactorImpl::attach_socket(OOBase::So
 
 OOSvrBase::AsyncLocalSocket* OOSvrBase::Win32::ProactorImpl::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)
 {
-	void* TODO;
-	return 0;
+	// Wrap socket
+	DWORD dwErr = 0;
+	OOSvrBase::AsyncLocalSocket* pSocket = ::AsyncLocalSocket::Create((HANDLE)sock,dwErr);
+	*perr = dwErr;	
+	return pSocket;
 }
 
 #if defined(_MSC_VER)
