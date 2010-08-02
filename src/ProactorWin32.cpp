@@ -836,8 +836,12 @@ OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_remote(Acceptor<AsyncSock
 
 OOSvrBase::AsyncSocket* OOSvrBase::Win32::ProactorImpl::attach_socket(OOBase::Socket::socket_t sock, int* perr)
 {
-	void* TODO;
-	return 0;
+	// The socket must have been opened as WSA_FLAG_OVERLAPPED!!!
+
+	DWORD dwErr = 0;
+	OOSvrBase::AsyncSocket* pSocket = ::AsyncSocket::Create(sock,dwErr);
+	*perr = dwErr;	
+	return pSocket;
 }
 
 OOSvrBase::AsyncLocalSocket* OOSvrBase::Win32::ProactorImpl::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)
