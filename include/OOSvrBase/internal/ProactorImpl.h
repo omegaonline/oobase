@@ -58,6 +58,7 @@ namespace OOSvrBase
 
 			virtual void recv(AsyncOp* recv_op) = 0;
 			virtual void send(AsyncOp* send_op) = 0;
+			virtual void close() = 0;
 			virtual void shutdown(bool bSend, bool bRecv) = 0;
 			
 		protected:
@@ -93,15 +94,15 @@ namespace OOSvrBase
 			int sync_op(OOBase::Buffer* buffer, size_t len, const OOBase::timeval_t* timeout);
 			bool notify_async(AsyncIOHelper::AsyncOp* op, int err);
 			void shutdown();
+
 			void dispose();
-			
+						
 		private:
 			const bool            m_sender;
 			AsyncIOHelper* const  m_helper;
 			AsyncHandler*         m_handler;
 			
-			OOBase::Condition::Mutex            m_lock;
-			OOBase::Condition                   m_condition;
+			OOBase::SpinLock                    m_lock;
 			bool                                m_closed;
 			std::queue<AsyncIOHelper::AsyncOp*> m_ops;
 			
@@ -113,7 +114,7 @@ namespace OOSvrBase
 			};
 
 			int async_op(OOBase::Buffer* buffer, size_t len, BlockingInfo* param);
-			void issue_next(OOBase::Guard<OOBase::Condition::Mutex>& guard);
+			void issue_next(OOBase::Guard<OOBase::SpinLock>& guard);
 		};
 
 		class AsyncSocketImpl : public AsyncHandlerRaw				

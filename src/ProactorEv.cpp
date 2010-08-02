@@ -66,6 +66,7 @@ namespace
 		
 		void recv(AsyncOp* recv_op);
 		void send(AsyncOp* send_op);
+		void close();
 		void shutdown(bool bSend, bool bRecv);
 				
 	private:
@@ -104,6 +105,11 @@ namespace
 	}
 
 	IOHelper::~IOHelper()
+	{
+		closesocket(m_read_complete.fd);
+	}
+
+	void IOHelper::close()
 	{
 		closesocket(m_read_complete.fd);
 	}

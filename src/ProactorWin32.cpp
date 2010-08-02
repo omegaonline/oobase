@@ -48,6 +48,8 @@ namespace
 		
 		void recv(AsyncOp* recv_op);
 		void send(AsyncOp* send_op);
+
+		void close();
 				
 	protected:
 		OOBase::Win32::SmartHandle m_handle;
@@ -117,6 +119,11 @@ namespace
 
 	IOHelper::~IOHelper()
 	{
+	}
+
+	void IOHelper::close()
+	{
+		m_handle.close();
 	}
 
 	int IOHelper::bind()
