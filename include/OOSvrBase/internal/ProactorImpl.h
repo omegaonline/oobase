@@ -129,6 +129,8 @@ namespace OOSvrBase
 
 			int send(OOBase::Buffer* buffer, const OOBase::timeval_t* timeout);
 			int recv(OOBase::Buffer* buffer, size_t len, const OOBase::timeval_t* timeout);
+
+			void shutdown(bool bSend, bool bRecv);
 						
 		private:
 			void addref();
@@ -168,6 +170,11 @@ namespace OOSvrBase
 			{
 				assert(!m_io_handler);
 				m_io_handler = handler;
+			}
+
+			void shutdown(bool bSend, bool bRecv)
+			{
+				return m_pImpl->shutdown(bSend,bRecv);
 			}
 
 			int recv(OOBase::Buffer* buffer, size_t len, const OOBase::timeval_t* timeout = 0)

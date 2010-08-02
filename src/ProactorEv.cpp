@@ -335,7 +335,7 @@ namespace
 			return 0;
 		}
 
-		void shutdown();
+		void shutdown(bool bSend, bool bRecv);
 
 		void accept();
 
@@ -460,7 +460,7 @@ namespace
 	}
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
-	void AcceptSocket<SOCKET_TYPE,SOCKET_IMPL>::shutdown()
+	void AcceptSocket<SOCKET_TYPE,SOCKET_IMPL>::shutdown(bool /*bSend*/, bool /*bRecv*/)
 	{
 	}
 

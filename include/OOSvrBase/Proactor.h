@@ -55,6 +55,8 @@ namespace OOSvrBase
 
 		virtual int recv(OOBase::Buffer* buffer, size_t len = 0, const OOBase::timeval_t* timeout = 0) = 0;
 		virtual int send(OOBase::Buffer* buffer, const OOBase::timeval_t* timeout = 0) = 0;
+
+		virtual void shutdown(bool bSend, bool bRecv) = 0;
 	};
 
 	class AsyncLocalSocket : public AsyncSocket

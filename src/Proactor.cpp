@@ -189,7 +189,7 @@ void OOSvrBase::detail::AsyncQueued::issue_next(OOBase::Guard<OOBase::SpinLock>&
 {
 	// Lock is assumed to be held...
 
-	if (!m_ops.empty())
+	while (!m_ops.empty())
 	{
 		AsyncIOHelper::AsyncOp* op = 0;
 		try
@@ -216,23 +216,25 @@ void OOSvrBase::detail::AsyncQueued::issue_next(OOBase::Guard<OOBase::SpinLock>&
 		// This is a shutdown message
 		m_helper->shutdown(m_sender,!m_sender);
 
-		if (m_sender)
-		{
-			// Issue a close, which will abort any pending recv's...
-			m_helper->close();			
-		}
-
 		m_ops.pop();
 	}
 		
-	// Only receiver emits on_closed...
-	if (!m_sender && m_closed && m_handler)
+	if (m_closed)
 	{
-		// And let waiter know we have an empty queue...
-		guard.release();
+		// Only receiver emits on_closed...
+		if (!m_sender && m_handler)
+		{
+			// And let waiter know we have an empty queue...
+			guard.release();
 
-		// Now notify handler that we have closed and finished all ops
-		m_handler->on_closed();
+			// Now notify handler that we have closed and finished all ops
+			m_handler->on_closed();
+		}
+		else if (m_sender)
+		{
+			// Issue a close, which will abort any pending recv's...
+			m_helper->close();
+		}
 	}
 }
 
@@ -385,6 +387,15 @@ void OOSvrBase::detail::AsyncSocketImpl::dispose()
 	m_sender.dispose();
 
 	release();
+}
+
+void OOSvrBase::detail::AsyncSocketImpl::shutdown(bool bSend, bool bRecv)
+{
+	if (bSend)
+		m_sender.shutdown();
+
+	if (bRecv)
+		m_receiver.shutdown();
 }
 
 void OOSvrBase::detail::AsyncSocketImpl::addref()

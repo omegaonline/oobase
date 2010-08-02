@@ -34,30 +34,26 @@ namespace
 
 		size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* wait = 0);
 		int send(const void* buf, size_t len, const OOBase::timeval_t* wait = 0);
-		void shutdown();
+		void shutdown(bool bSend, bool bRecv);
 		
 	private:
-		bool                       m_shutdown;
 		OOBase::Win32::SmartHandle m_handle;
 		OOBase::Win32::SmartHandle m_hReadEvent;
 		OOBase::Win32::SmartHandle m_hWriteEvent;
 	};
 
 	Socket::Socket(SOCKET hSocket) :
-			m_shutdown(true),
 			m_handle((HANDLE)hSocket)
 	{
 	}
 
 	Socket::Socket(HANDLE hPipe) :
-			m_shutdown(false),
 			m_handle(hPipe)
 	{
 	}
 
 	Socket::~Socket()
 	{
-		shutdown();
 	}
 
 	int Socket::send(const void* buf, size_t len, const OOBase::timeval_t* timeout)
@@ -195,10 +191,16 @@ namespace
 		return len;
 	}
 
-	void Socket::shutdown()
+	void Socket::shutdown(bool bSend, bool bRecv)
 	{
-		if (m_shutdown)
-			::shutdown((SOCKET)(HANDLE)m_handle,SD_BOTH);
+		int how = -1;
+		if (bSend)
+			how = (bRecv ? SD_BOTH : SD_SEND);
+		else if (bRecv)
+			how = SD_RECEIVE;
+
+		if (how != -1)
+			::shutdown((SOCKET)(HANDLE)m_handle,how);
 	}
 }
 

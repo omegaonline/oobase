@@ -41,6 +41,8 @@
 #include <ws2tcpip.h>
 
 #define SHUT_RDWR SD_BOTH
+#define SHUT_RD   SD_RECEIVE
+#define SHUT_WR   SD_SEND
 #define ETIMEDOUT WSAETIMEDOUT
 #define EINPROGRESS WSAEWOULDBLOCK
 #define ssize_t int
@@ -65,7 +67,7 @@ namespace
 		
 		int send(const void* buf, size_t len, const OOBase::timeval_t* timeout = 0);
 		size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout = 0);
-		void shutdown();
+		void shutdown(bool bSend, bool bRecv);
 		
 	private:
 		OOBase::Socket::socket_t  m_sock;
@@ -205,9 +207,16 @@ namespace
 		}
 	}
 
-	void Socket::shutdown()
+	void Socket::shutdown(bool bSend, bool bRecv)
 	{
-		::shutdown(m_sock,SHUT_RDWR);
+		int how = -1;
+		if (bSend)
+			how = (bRecv ? SHUT_RDWR : SHUT_WR);
+		else if (bRecv)
+			how = SHUT_RD;
+
+		if (how != -1)
+			::shutdown(m_sock,how);
 	}
 
 	int connect_i(OOBase::Socket::socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* wait)

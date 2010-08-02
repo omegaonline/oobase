@@ -82,9 +82,7 @@ namespace
 		{}
 
 		void shutdown(bool /*bSend*/, bool /*bRecv*/)
-		{
-			DisconnectNamedPipe(m_handle);
-		}
+		{}
 	};
 
 	class SocketIOHelper : public IOHelper
@@ -312,7 +310,7 @@ namespace
 			return 0;
 		}
 
-		void shutdown();
+		void shutdown(bool bSend, bool bRecv);
 
 		int accept_named_pipe(bool bExclusive);
 
@@ -354,8 +352,7 @@ namespace
 
 		m_closed = true;
 
-		if (m_completion.m_hPipe.is_valid())
-			DisconnectNamedPipe(m_completion.m_hPipe);
+		m_completion.m_hPipe.close();
 
 		while (m_async_count)
 		{
@@ -468,8 +465,8 @@ namespace
 		}
 	}
 
-	void PipeAcceptor::shutdown()
-	{		
+	void PipeAcceptor::shutdown(bool /*bSend*/, bool /*bRecv*/)
+	{
 	}
 }
 
