@@ -460,6 +460,7 @@ namespace
 			if (m_completion.m_socket != INVALID_SOCKET)
 				closesocket(m_completion.m_socket);
 
+			guard.release();
 			m_condition.signal();
 			return;
 		}
@@ -689,6 +690,7 @@ namespace
 		{
 			m_completion.m_hPipe.close();
 			
+			guard.release();
 			m_condition.signal();
 			return;
 		}

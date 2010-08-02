@@ -403,19 +403,19 @@ namespace
 		OOBase::Guard<OOBase::Condition::Mutex> guard(pThis->m_lock);
 
 		--pThis->m_async_count;
-
-		pThis->do_accept(guard);
+		
+		if (pThis->m_closed)
+		{
+			guard.release();
+			pThis->m_condition.signal();
+		}
+		else
+			pThis->do_accept(guard);
 	}
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
 	void SocketAcceptor<SOCKET_TYPE,SOCKET_IMPL>::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 	{
-		if (m_closed)
-		{
-			pThis->m_condition.signal();
-			return;
-		}
-
 		// Call accept on the fd...
 		int err = 0;
 		OOBase::Socket::socket_t new_fd = ::accept(m_watcher.fd,0,0);
@@ -460,7 +460,12 @@ namespace
 
 		// Call the handler...
 		if (m_handler->on_accept(pSocket,err))
-			do_accept();
+		{
+			guard.acquire();
+
+			if (!m_closed)
+				do_accept(guard);
+		}
 	}
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
