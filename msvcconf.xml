@@ -2,7 +2,5 @@
 <MsvcConf>
   <Project Name="OOSvrBase">
     <Include Name="sqlite3.c" Define="HAVE_SQLITE3_AMALGAMATION" />
-    <Include Name="ev.h" Define="HAVE_EV_H" />
-    <Library Name="libev.lib" />    
   </Project>
 </MsvcConf>
