@@ -36,8 +36,21 @@
 #pragma warning(disable: 4250) // Moans about virtual base classes
 #endif
 
+#include <Ws2tcpip.h>
+#include <mswsock.h>
+
 namespace
 {
+	SOCKET create_socket(int family, int socktype, int protocol, int* perr)
+	{
+		*perr = 0;
+		SOCKET sock = WSASocket(family,socktype,protocol,NULL,0,WSA_FLAG_OVERLAPPED);
+		if (sock == INVALID_SOCKET)
+			*perr = WSAGetLastError();
+
+		return sock;
+	}
+
 	class IOHelper : public OOSvrBase::detail::AsyncIOHelper
 	{
 	public:
@@ -48,8 +61,8 @@ namespace
 		
 		void recv(AsyncOp* recv_op);
 		void send(AsyncOp* send_op);
-
-		void close();
+		
+		void close();		
 				
 	protected:
 		OOBase::Win32::SmartHandle m_handle;
@@ -81,7 +94,7 @@ namespace
 		PipeIOHelper(HANDLE handle) : IOHelper(handle)
 		{}
 
-		void shutdown(bool /*bSend*/, bool /*bRecv*/)
+		virtual void shutdown(bool /*bSend*/, bool /*bRecv*/)
 		{}
 	};
 
@@ -230,6 +243,246 @@ namespace
 		m_handler->on_sent(op,dwErrorCode);
 	}
 
+	class AsyncSocket : public OOSvrBase::detail::AsyncSocketTempl<OOSvrBase::AsyncSocket>
+	{
+	public:
+		AsyncSocket(IOHelper* helper) :
+				OOSvrBase::detail::AsyncSocketTempl<OOSvrBase::AsyncSocket>(helper)
+		{
+		}
+
+		static AsyncSocket* Create(SOCKET sock, DWORD& dwErr)
+		{
+			IOHelper* helper = 0;
+			OOBASE_NEW(helper,SocketIOHelper((HANDLE)sock));
+			if (!helper)
+			{
+				dwErr = ERROR_OUTOFMEMORY;
+				return 0;
+			}
+
+			dwErr = helper->bind();
+			if (dwErr)
+			{
+				delete helper;
+				return 0;
+			}
+
+			AsyncSocket* pSock = 0;
+			OOBASE_NEW(pSock,AsyncSocket(helper));
+			if (!pSock)
+			{
+				dwErr = ERROR_OUTOFMEMORY;
+				delete helper;
+				return 0;
+			}
+
+			return pSock;
+		}
+
+	private:
+		bool is_close(int err) const
+		{
+			switch (err)
+			{
+			case WSAECONNABORTED:
+			case WSAECONNRESET:
+				return true;
+
+			default:
+				return false;
+			}
+		}
+	};
+
+	class SocketAcceptor : public OOBase::Socket
+	{
+	public:
+		SocketAcceptor(SOCKET sock, OOSvrBase::Acceptor<OOSvrBase::AsyncSocket>* handler, int address_family);
+		virtual ~SocketAcceptor();
+
+		int send(const void* /*buf*/, size_t /*len*/, const OOBase::timeval_t* /*timeout*/ = 0)
+		{
+			return ERROR_INVALID_FUNCTION;
+		}
+
+		size_t recv(void* /*buf*/, size_t /*len*/, int* perr, const OOBase::timeval_t* /*timeout*/ = 0)
+		{
+			*perr = ERROR_INVALID_FUNCTION;
+			return 0;
+		}
+
+		void shutdown(bool bSend, bool bRecv);
+
+		int accept();
+
+	private:
+		static VOID CALLBACK completion_fn(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped);
+
+		struct Completion
+		{
+			OVERLAPPED                 m_ov;
+			SOCKET                     m_socket;
+			SocketAcceptor*            m_this_ptr;
+			char                       m_addresses[(sizeof(sockaddr_in6) + 16)*2];
+		};
+
+		OOBase::Condition::Mutex                      m_lock;
+		OOBase::Condition                             m_condition;
+		bool                                          m_closed;
+		Completion                                    m_completion;
+		SOCKET                                        m_socket;
+		OOSvrBase::Acceptor<OOSvrBase::AsyncSocket>*  m_handler;
+		size_t                                        m_async_count;
+		int                                           m_address_family;
+		LPFN_ACCEPTEX                                 m_lpfnAcceptEx;
+				
+		void do_accept(DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
+		void next_accept();
+	};
+
+	SocketAcceptor::SocketAcceptor(SOCKET sock, OOSvrBase::Acceptor<OOSvrBase::AsyncSocket>* handler, int address_family) :
+			m_closed(false),
+			m_socket(sock),
+			m_handler(handler),
+			m_async_count(0),
+			m_address_family(address_family),
+			m_lpfnAcceptEx(0)
+	{
+		assert(address_family == AF_INET || address_family == AF_INET6);
+		assert(m_socket != INVALID_SOCKET);
+
+		m_completion.m_this_ptr = this;
+	}
+
+	SocketAcceptor::~SocketAcceptor()
+	{
+		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
+
+		m_closed = true;
+
+		closesocket(m_socket);
+
+		while (m_async_count)
+		{
+			m_condition.wait(m_lock);
+		}
+	}
+
+	int SocketAcceptor::accept()
+	{
+		//----------------------------------------
+		// Load the AcceptEx function into memory using WSAIoctl.
+		// The WSAIoctl function is an extension of the ioctlsocket()
+		// function that can use overlapped I/O. The function's 3rd
+		// through 6th parameters are input and output buffers where
+		// we pass the pointer to our AcceptEx function. This is used
+		// so that we can call the AcceptEx function directly, rather
+		// than refer to the Mswsock.lib library.
+		static const GUID guid_AcceptEx = WSAID_ACCEPTEX;
+
+		DWORD dwBytes;
+		if (WSAIoctl(m_socket, 
+			SIO_GET_EXTENSION_FUNCTION_POINTER, 
+			(void*)&guid_AcceptEx, 
+			sizeof(guid_AcceptEx),
+			&m_lpfnAcceptEx, 
+			sizeof(m_lpfnAcceptEx), 
+			&dwBytes, 
+			NULL, 
+			NULL) != 0)
+		{
+			int err = WSAGetLastError();
+			closesocket(m_socket);
+			return err;
+		}
+
+		if (!OOBase::Win32::BindIoCompletionCallback((HANDLE)m_socket,&completion_fn,0))
+		{
+			int err = GetLastError();
+			closesocket(m_socket);
+			return err;
+		}
+
+		// Just accept the next one...
+		next_accept();
+
+		return 0;
+	}
+
+	void SocketAcceptor::next_accept()
+	{
+		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
+
+		if (m_closed)
+			return;
+
+		memset(&m_completion.m_ov,0,sizeof(OVERLAPPED));
+
+		int err = 0;
+		m_completion.m_socket = create_socket(m_address_family,SOCK_STREAM,IPPROTO_TCP,&err);
+		if (!err)
+		{
+			++m_async_count;
+
+			DWORD dwBytes = 0;
+			if (!(*m_lpfnAcceptEx)(m_socket,m_completion.m_socket,m_completion.m_addresses,0,sizeof(m_completion.m_addresses)/2,sizeof(m_completion.m_addresses)/2,&dwBytes,&m_completion.m_ov))
+			{
+				err = WSAGetLastError();
+				if (err == ERROR_IO_PENDING)
+				{
+					// Async - finish later...
+					return;
+				}
+			}
+
+			--m_async_count;
+		}
+
+		do_accept(err,guard);
+	}
+
+	VOID CALLBACK SocketAcceptor::completion_fn(DWORD dwErrorCode, DWORD, LPOVERLAPPED lpOverlapped)
+	{
+		Completion* pInfo = CONTAINING_RECORD(lpOverlapped,Completion,m_ov);
+		
+		OOBase::Guard<OOBase::Condition::Mutex> guard(pInfo->m_this_ptr->m_lock);
+
+		--pInfo->m_this_ptr->m_async_count;
+
+		pInfo->m_this_ptr->do_accept(dwErrorCode,guard);
+	}
+
+	void SocketAcceptor::do_accept(DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard)
+	{
+		if (m_closed)
+		{
+			if (m_completion.m_socket != INVALID_SOCKET)
+				closesocket(m_completion.m_socket);
+
+			m_condition.signal();
+			return;
+		}
+		
+		AsyncSocket* pSocket = 0;
+		if (dwErr == 0)
+		{
+			pSocket = AsyncSocket::Create(m_completion.m_socket,dwErr);
+			if (!pSocket && m_completion.m_socket != INVALID_SOCKET)
+				closesocket(m_completion.m_socket);
+		}
+
+		guard.release();
+
+		// Call the acceptor
+		if (m_handler->on_accept(pSocket,dwErr))
+			next_accept();
+	}
+
+	void SocketAcceptor::shutdown(bool /*bSend*/, bool /*bRecv*/)
+	{
+	}
+
 	class AsyncLocalSocket : public OOSvrBase::detail::AsyncSocketTempl<OOSvrBase::AsyncLocalSocket>
 	{
 	public:
@@ -312,7 +565,7 @@ namespace
 
 		void shutdown(bool bSend, bool bRecv);
 
-		int accept_named_pipe(bool bExclusive);
+		void accept();
 
 	private:
 		static VOID CALLBACK completion_fn(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped);
@@ -333,7 +586,8 @@ namespace
 		LPSECURITY_ATTRIBUTES                              m_psa;
 		size_t                                             m_async_count;
 		
-		void do_accept(OOBase::Win32::SmartHandle& hPipe, DWORD dwErr);
+		void next_accept(bool bExclusive);
+		void do_accept(DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
 	};
 
 	PipeAcceptor::PipeAcceptor(const std::string& pipe_name, LPSECURITY_ATTRIBUTES psa, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler) :
@@ -360,17 +614,26 @@ namespace
 		}
 	}
 
-	int PipeAcceptor::accept_named_pipe(bool bExclusive)
+	void PipeAcceptor::accept()
+	{
+		next_accept(true);
+	}
+
+	void PipeAcceptor::next_accept(bool bExclusive)
 	{
 		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 
 		assert(!m_completion.m_hPipe.is_valid());
+
+		if (m_closed)
+			return;
 
 		DWORD dwOpenMode = PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED;
 
 		if (bExclusive)
 			dwOpenMode |= FILE_FLAG_FIRST_PIPE_INSTANCE;
 
+		DWORD dwErr = 0;
 		m_completion.m_hPipe = CreateNamedPipeA(m_pipe_name.c_str(),dwOpenMode,
 								   PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
 								   PIPE_UNLIMITED_INSTANCES,
@@ -380,89 +643,71 @@ namespace
 								   m_psa);
 
 		if (!m_completion.m_hPipe.is_valid())
-			return GetLastError();
-
-		if (!OOBase::Win32::BindIoCompletionCallback(m_completion.m_hPipe,&completion_fn,0))
-		{
-			int err = GetLastError();
-			m_completion.m_hPipe.close();
-			return err;
-		}
-
-		memset(&m_completion.m_ov,0,sizeof(OVERLAPPED));
-
-		++m_async_count;
-
-		DWORD dwErr = 0;
-		if (ConnectNamedPipe(m_completion.m_hPipe,&m_completion.m_ov))
-			dwErr = ERROR_PIPE_CONNECTED;
-		else
+			dwErr = GetLastError();
+		else if (!OOBase::Win32::BindIoCompletionCallback(m_completion.m_hPipe,&completion_fn,0))
 		{
 			dwErr = GetLastError();
-			if (dwErr == ERROR_IO_PENDING)
-				dwErr = 0;
+			m_completion.m_hPipe.close();
 		}
 
-		if (dwErr == ERROR_PIPE_CONNECTED)
+		if (dwErr == 0)
 		{
-			guard.release();
-			do_accept(m_completion.m_hPipe,0);
-			dwErr = 0;
-		}
-		else if (dwErr != 0)
-		{
-			m_completion.m_hPipe.close();
+			memset(&m_completion.m_ov,0,sizeof(OVERLAPPED));
+
+			++m_async_count;
+
+			if (!ConnectNamedPipe(m_completion.m_hPipe,&m_completion.m_ov))
+			{
+				dwErr = GetLastError();
+				if (dwErr == ERROR_IO_PENDING)
+				{
+					// Will complete later...
+					return;
+				}
+			}
+
 			--m_async_count;
 		}
 
-		return dwErr;
+		do_accept(dwErr,guard);
 	}
 
 	VOID CALLBACK PipeAcceptor::completion_fn(DWORD dwErrorCode, DWORD, LPOVERLAPPED lpOverlapped)
 	{
 		Completion* pInfo = CONTAINING_RECORD(lpOverlapped,Completion,m_ov);
 		
-		pInfo->m_this_ptr->do_accept(pInfo->m_hPipe,dwErrorCode);
+		OOBase::Guard<OOBase::Condition::Mutex> guard(pInfo->m_this_ptr->m_lock);
+
+		--pInfo->m_this_ptr->m_async_count;
+
+		pInfo->m_this_ptr->do_accept(dwErrorCode,guard);
 	}
 
-	void PipeAcceptor::do_accept(OOBase::Win32::SmartHandle& hPipe, DWORD dwErr)
+	void PipeAcceptor::do_accept(DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard)
 	{
-		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
-
-		--m_async_count;
-
 		if (m_closed)
 		{
-			hPipe.close();
+			m_completion.m_hPipe.close();
+			
 			m_condition.signal();
+			return;
 		}
-		else
+
+		AsyncLocalSocket* pSocket = 0;
+		if (dwErr == 0)
 		{
-			AsyncLocalSocket* pSocket = 0;
-			if (dwErr == 0)
-			{
-				pSocket = AsyncLocalSocket::Create(hPipe,dwErr);
-				if (pSocket)
-					hPipe.detach();
-				else
-					hPipe.close();
-			}
-
-			guard.release();
-
-			// Call the acceptor
-			bool again = m_handler->on_accept(pSocket,dwErr);
-
-			// Submit another accept if we want
-			while (again)
-			{
-				dwErr = accept_named_pipe(false);
-				if (dwErr == 0)
-					break;
-					
-				again = m_handler->on_accept(0,dwErr);
-			}
+			pSocket = AsyncLocalSocket::Create(m_completion.m_hPipe,dwErr);
+			if (pSocket)
+				m_completion.m_hPipe.detach();
+			else
+				m_completion.m_hPipe.close();
 		}
+
+		guard.release();
+
+		// Call the acceptor
+		if (m_handler->on_accept(pSocket,dwErr))
+			next_accept(false);
 	}
 
 	void PipeAcceptor::shutdown(bool /*bSend*/, bool /*bRecv*/)
@@ -484,17 +729,114 @@ OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_local(Acceptor<AsyncLocal
 	OOBase::SmartPtr<PipeAcceptor> pAcceptor = 0;
 	OOBASE_NEW(pAcceptor,PipeAcceptor("\\\\.\\pipe\\" + path,psa,handler));
 	if (!pAcceptor)
+	{
 		*perr = ERROR_OUTOFMEMORY;
-	else
-		*perr = pAcceptor->accept_named_pipe(true);
-	
-	if (*perr != 0)
 		return 0;
-
+	}
+		
+	pAcceptor->accept();
 	return pAcceptor.detach();
 }
 
 OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_remote(Acceptor<AsyncSocket>* handler, const std::string& address, const std::string& port, int* perr)
+{
+	*perr = 0;
+
+	int af_family = AF_INET;
+	OOBase::Socket::socket_t sock = INVALID_SOCKET;
+	if (address.empty())
+	{
+		sockaddr_in addr = {0};
+		addr.sin_family = AF_INET;
+		addr.sin_addr.S_un.S_addr = ADDR_ANY;
+
+		if (!port.empty())
+			addr.sin_port = htons((u_short)atoi(port.c_str()));
+
+		if ((sock = create_socket(AF_INET,SOCK_STREAM,IPPROTO_TCP,perr)) == INVALID_SOCKET)
+			return 0;
+		
+		if (bind(sock,(sockaddr*)&addr,sizeof(sockaddr_in)) == SOCKET_ERROR)
+		{
+			*perr = WSAGetLastError();
+			closesocket(sock);
+			return 0;
+		}
+	}
+	else
+	{
+		// Resolve the passed in addresses...
+		addrinfo hints = {0};
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_flags = AI_PASSIVE;
+		hints.ai_protocol = IPPROTO_TCP;
+
+		addrinfo* pResults = 0;
+		if (getaddrinfo(address.c_str(),port.c_str(),&hints,&pResults) != 0)
+		{
+			*perr = WSAGetLastError();
+			return 0;
+		}
+
+		// Loop trying to connect on each address until one succeeds
+		for (addrinfo* pAddr = pResults; pAddr != 0; pAddr = pAddr->ai_next)
+		{
+			if ((sock = create_socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,perr)) != INVALID_SOCKET)
+			{
+				if (bind(sock,pAddr->ai_addr,pAddr->ai_addrlen) == SOCKET_ERROR)
+				{
+					*perr = WSAGetLastError();
+					closesocket(sock);
+				}
+				else
+				{
+					af_family = pAddr->ai_family;
+					break;
+				}
+			}
+		}
+
+		// Done with address info
+		freeaddrinfo(pResults);
+
+		// Clear error
+		if (sock != INVALID_SOCKET)
+			*perr = 0;
+	}
+
+	// Now start the socket listening...
+	if (listen(sock,SOMAXCONN) == SOCKET_ERROR)
+	{
+		*perr = WSAGetLastError();
+		closesocket(sock);
+		return 0;
+	}
+
+	// Wrap up in a controlling socket class
+	OOBase::SmartPtr<SocketAcceptor> pAccept = 0;
+	OOBASE_NEW(pAccept,SocketAcceptor(sock,handler,af_family));
+	if (!pAccept)
+	{
+		*perr = ENOMEM;
+		closesocket(sock);
+		return 0;
+	}
+
+	*perr = pAccept->accept();
+	if (*perr)
+		return 0;
+
+	return pAccept.detach();
+}
+
+OOSvrBase::AsyncSocket* OOSvrBase::Win32::ProactorImpl::attach_socket(OOBase::Socket::socket_t sock, int* perr)
+{
+	void* TODO;
+	return 0;
+}
+
+OOSvrBase::AsyncLocalSocket* OOSvrBase::Win32::ProactorImpl::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)
 {
 	void* TODO;
 	return 0;

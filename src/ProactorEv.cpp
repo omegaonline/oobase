@@ -318,11 +318,11 @@ namespace
 #endif
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
-	class AcceptSocket : public OOBase::Socket
+	class SocketAcceptor : public OOBase::Socket
 	{
 	public:
-		AcceptSocket(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::Socket::socket_t sock, OOSvrBase::Acceptor<SOCKET_TYPE>* handler);
-		virtual ~AcceptSocket();
+		SocketAcceptor(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::Socket::socket_t sock, OOSvrBase::Acceptor<SOCKET_TYPE>* handler);
+		virtual ~SocketAcceptor();
 
 		int send(const void* /*buf*/, size_t /*len*/, const OOBase::timeval_t* /*timeout*/ = 0)
 		{
@@ -342,7 +342,7 @@ namespace
 	private:
 		struct Completion : public OOSvrBase::Ev::ProactorImpl::io_watcher
 		{
-			AcceptSocket* m_this_ptr;
+			SocketAcceptor* m_this_ptr;
 		};
 
 		OOBase::Condition::Mutex                 m_lock;
@@ -354,11 +354,11 @@ namespace
 		bool                                     m_closed;
 
 		static void on_accept(OOSvrBase::Ev::ProactorImpl::io_watcher* watcher);	
-		void do_accept();
+		void do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard);
 	};
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
-	AcceptSocket<SOCKET_TYPE,SOCKET_IMPL>::AcceptSocket(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::Socket::socket_t sock, OOSvrBase::Acceptor<SOCKET_TYPE>* handler) :
+	SocketAcceptor<SOCKET_TYPE,SOCKET_IMPL>::SocketAcceptor(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::Socket::socket_t sock, OOSvrBase::Acceptor<SOCKET_TYPE>* handler) :
 				m_proactor(pProactor),
 				m_handler(handler),
 				m_async_count(0),
@@ -373,7 +373,7 @@ namespace
 	}
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
-	AcceptSocket<SOCKET_TYPE,SOCKET_IMPL>::~AcceptSocket()
+	SocketAcceptor<SOCKET_TYPE,SOCKET_IMPL>::~SocketAcceptor()
 	{
 		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 
@@ -388,32 +388,34 @@ namespace
 	}
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
-	void AcceptSocket<SOCKET_TYPE,SOCKET_IMPL>::accept()
+	void SocketAcceptor<SOCKET_TYPE,SOCKET_IMPL>::accept()
 	{
 		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 
-		do_accept();
+		do_accept(guard);
 	}
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
-	void AcceptSocket<SOCKET_TYPE,SOCKET_IMPL>::on_accept(OOSvrBase::Ev::ProactorImpl::io_watcher* watcher)
+	void SocketAcceptor<SOCKET_TYPE,SOCKET_IMPL>::on_accept(OOSvrBase::Ev::ProactorImpl::io_watcher* watcher)
 	{
-		AcceptSocket* pThis = static_cast<Completion*>(watcher)->m_this_ptr;
+		SocketAcceptor* pThis = static_cast<Completion*>(watcher)->m_this_ptr;
 
 		OOBase::Guard<OOBase::Condition::Mutex> guard(pThis->m_lock);
 
-		if (!pThis->m_closed)
-			pThis->do_accept();
-
 		--pThis->m_async_count;
 
-		if (pThis->m_closed)
-			pThis->m_condition.signal();
+		pThis->do_accept(guard);
 	}
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
-	void AcceptSocket<SOCKET_TYPE,SOCKET_IMPL>::do_accept()
+	void SocketAcceptor<SOCKET_TYPE,SOCKET_IMPL>::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 	{
+		if (m_closed)
+		{
+			pThis->m_condition.signal();
+			return;
+		}
+
 		// Call accept on the fd...
 		int err = 0;
 		OOBase::Socket::socket_t new_fd = ::accept(m_watcher.fd,0,0);
@@ -454,26 +456,28 @@ namespace
 			}
 		}
 
+		guard.release();
+
 		// Call the handler...
-		if (m_handler->on_accept(pSocket,err) && !m_closed)
+		if (m_handler->on_accept(pSocket,err))
 			do_accept();
 	}
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
-	void AcceptSocket<SOCKET_TYPE,SOCKET_IMPL>::shutdown(bool /*bSend*/, bool /*bRecv*/)
+	void SocketAcceptor<SOCKET_TYPE,SOCKET_IMPL>::shutdown(bool /*bSend*/, bool /*bRecv*/)
 	{
 	}
 
 #if defined(HAVE_SYS_UN_H)
-	class AcceptLocalSocket : public AcceptSocket<OOSvrBase::AsyncLocalSocket,AsyncLocalSocket>
+	class LocalSocketAcceptor : public SocketAcceptor<OOSvrBase::AsyncLocalSocket,AsyncLocalSocket>
 	{
 	public:
-		AcceptLocalSocket(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::Socket::socket_t sock, OOSvrBase::IOHandler<SOCKET_TYPE>* sock_handler, OOSvrBase::Acceptor<SOCKET_TYPE>* handler, const std::string& path) :
-				AcceptSocket<OOSvrBase::AsyncLocalSocket,AsyncLocalSocket>(pProactor,sock,sock_handler,handler),
+		LocalSocketAcceptor(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::Socket::socket_t sock, OOSvrBase::IOHandler<SOCKET_TYPE>* sock_handler, OOSvrBase::Acceptor<SOCKET_TYPE>* handler, const std::string& path) :
+				SocketAcceptor<OOSvrBase::AsyncLocalSocket,AsyncLocalSocket>(pProactor,sock,sock_handler,handler),
 				m_path(path)
 		{}
 
-		virtual ~AcceptLocalSocket()
+		virtual ~LocalSocketAcceptor()
 		{
 			if (!m_path.empty())
 				unlink(m_path.c_str());
@@ -709,8 +713,8 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor<AsyncLocalSoc
 	}
 
 	// Wrap up in a controlling socket class
-	OOBase::SmartPtr<AcceptLocalSocket> pAccept = 0;
-	OOBASE_NEW(pAccept,AcceptLocalSocket(this,sock,sock_handler,handler,path));
+	OOBase::SmartPtr<LocalSocketAcceptor> pAccept = 0;
+	OOBASE_NEW(pAccept,LocalSocketAcceptor(this,sock,sock_handler,handler,path));
 	if (!pAccept)
 	{
 		*perr = ENOMEM;
@@ -737,7 +741,7 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor<OOSvrBase::A
 		if (!port.empty())
 			addr.sin_port = htons((u_short)atoi(port.c_str()));
 
-		if ((sock = OOBase::BSD::create_socket(AF_INET,SOCK_STREAM,0,perr)) == INVALID_SOCKET)
+		if ((sock = OOBase::BSD::create_socket(AF_INET,SOCK_STREAM,IPPROTO_TCP,perr)) == INVALID_SOCKET)
 			return 0;
 		
 		if (bind(sock,(sockaddr*)&addr,sizeof(sockaddr_in)) == SOCKET_ERROR)
@@ -754,6 +758,7 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor<OOSvrBase::A
 		hints.ai_family = AF_UNSPEC;
 		hints.ai_socktype = SOCK_STREAM;
 		hints.ai_flags = AI_PASSIVE;
+		hints.ai_protocol = IPPROTO_TCP;
 
 		addrinfo* pResults = 0;
 		if (getaddrinfo(address.c_str(),port.c_str(),&hints,&pResults) != 0)
@@ -794,7 +799,7 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor<OOSvrBase::A
 	}
 
 	// Wrap up in a controlling socket class
-	typedef AcceptSocket<OOSvrBase::AsyncSocket,::AsyncSocket> socket_templ_t;
+	typedef SocketAcceptor<OOSvrBase::AsyncSocket,::AsyncSocket> socket_templ_t;
 	OOBase::SmartPtr<socket_templ_t> pAccept = 0;
 	OOBASE_NEW(pAccept,socket_templ_t(this,sock,handler));
 	if (!pAccept)
