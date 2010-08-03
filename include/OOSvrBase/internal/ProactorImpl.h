@@ -24,6 +24,7 @@
 
 #include "../../OOBase/TimeVal.h"
 #include "../../OOBase/Condition.h"
+#include "../../OOBase/Pool.h"
 
 #include <queue>
 
@@ -105,13 +106,15 @@ namespace OOSvrBase
 			OOBase::SpinLock                    m_lock;
 			bool                                m_closed;
 			std::queue<AsyncIOHelper::AsyncOp*> m_ops;
-			
+						
 			struct BlockingInfo
 			{
 				OOBase::Event ev;
 				int           err;
 				bool          cancelled;
 			};
+
+			OOBase::Pool<AsyncIOHelper::AsyncOp,5> m_pool;
 
 			int async_op(OOBase::Buffer* buffer, size_t len, BlockingInfo* param);
 			void issue_next(OOBase::Guard<OOBase::SpinLock>& guard);

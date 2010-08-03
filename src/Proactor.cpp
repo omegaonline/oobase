@@ -147,9 +147,10 @@ int OOSvrBase::detail::AsyncQueued::async_op(OOBase::Buffer* buffer, size_t len)
 
 int OOSvrBase::detail::AsyncQueued::async_op(OOBase::Buffer* buffer, size_t len, BlockingInfo* param)
 {
+	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+
 	// Build a new AsyncOp
-	AsyncIOHelper::AsyncOp* op = 0;
-	OOBASE_NEW(op,AsyncIOHelper::AsyncOp);
+	AsyncIOHelper::AsyncOp* op = m_pool.alloc();
 	if (!op)
 		return ERROR_OUTOFMEMORY;
 	
@@ -157,12 +158,10 @@ int OOSvrBase::detail::AsyncQueued::async_op(OOBase::Buffer* buffer, size_t len,
 	op->len = len;
 	op->param = param;
 
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
-
 	if (m_closed)
 	{
 		op->buffer->release();
-		delete op;
+		m_pool.free(op);
 		return ENOTCONN;
 	}
 
@@ -269,10 +268,6 @@ bool OOSvrBase::detail::AsyncQueued::notify_async(AsyncIOHelper::AsyncOp* op, in
 			block_info->ev.set();	
 		}
 
-		// Done with our copy of the op
-		op->buffer->release();
-		delete op;
-
 		// This is a sync op, caller need not release() us
 		bRelease = false;
 	}
@@ -308,11 +303,11 @@ bool OOSvrBase::detail::AsyncQueued::notify_async(AsyncIOHelper::AsyncOp* op, in
 			// Acquire lock... we need it for issue_next
 			guard.acquire();
 		}
-		
-		// Done with our copy of the op
-		op->buffer->release();
-		delete op;
 	}
+
+	// Done with our copy of the op
+	op->buffer->release();
+	m_pool.free(op);
 
 	if (bClose)
 		m_closed = true;
