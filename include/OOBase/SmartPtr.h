@@ -63,7 +63,7 @@ namespace OOBase
 
 	namespace detail
 	{
-		template <typename T, typename Destructor = DeleteDestructor<T> >
+		template <typename T, typename Destructor>
 		class SmartPtrImpl
 		{
 			class SmartPtrNode
