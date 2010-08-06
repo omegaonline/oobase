@@ -69,12 +69,13 @@ namespace
 
 	private:
 		void do_read();
-		void handle_read(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered);
+		void handle_read(DWORD dwErrorCode);
 
 		void do_write();
-		void handle_write(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered);
+		void handle_write(DWORD dwErrorCode);
 
 		static VOID CALLBACK completion_fn(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped);
+		static DWORD CALLBACK completion_fn2(LPVOID lpThreadParameter);
 
 		struct Completion
 		{
@@ -82,6 +83,7 @@ namespace
 			AsyncOp*        m_op;
 			bool            m_is_reading;
 			IOHelper*       m_this_ptr;
+			DWORD           m_err;
 		};
 
 		Completion m_read_complete;
@@ -151,6 +153,7 @@ namespace
 
 		// Reset the completion info
 		memset(&m_read_complete.m_ov,0,sizeof(OVERLAPPED));
+		m_read_complete.m_err = 0;
 		m_read_complete.m_op = recv_op;
 				
 		do_read();
@@ -162,6 +165,7 @@ namespace
 
 		// Reset the completion info
 		memset(&m_write_complete.m_ov,0,sizeof(OVERLAPPED));
+		m_write_complete.m_err = 0;
 		m_write_complete.m_op = send_op;
 				
 		do_write();
@@ -170,10 +174,37 @@ namespace
 	VOID CALLBACK IOHelper::completion_fn(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped)
 	{
 		Completion* pInfo = CONTAINING_RECORD(lpOverlapped,Completion,m_ov);
+
+		// Stash error code
+		pInfo->m_err = dwErrorCode;
+
 		if (pInfo->m_is_reading)
-			pInfo->m_this_ptr->handle_read(dwErrorCode,dwNumberOfBytesTransfered);
+		{
+			// Update wr_ptr
+			pInfo->m_op->buffer->wr_ptr(dwNumberOfBytesTransfered);
+
+			if (pInfo->m_op->len)
+				pInfo->m_op->len -= dwNumberOfBytesTransfered;
+		}
 		else
-			pInfo->m_this_ptr->handle_write(dwErrorCode,dwNumberOfBytesTransfered);
+		{
+			// Update rd_ptr
+			pInfo->m_op->buffer->rd_ptr(dwNumberOfBytesTransfered);
+		}
+
+		// Now forward the completion into the worker pool again as a 'long function'
+		if (!QueueUserWorkItem(completion_fn2,pInfo,WT_EXECUTELONGFUNCTION))
+			OOBase_CallCriticalFailure(GetLastError());
+	}
+
+	DWORD IOHelper::completion_fn2(LPVOID lpThreadParameter)
+	{
+		Completion* pInfo = static_cast<Completion*>(lpThreadParameter);
+		if (pInfo->m_is_reading)
+			pInfo->m_this_ptr->handle_read(pInfo->m_err);
+		else
+			pInfo->m_this_ptr->handle_write(pInfo->m_err);	
+		return 0;
 	}
 
 	void IOHelper::do_read()
@@ -187,18 +218,12 @@ namespace
 		{
 			DWORD dwErr = GetLastError();
 			if (dwErr != ERROR_IO_PENDING)
-				handle_read(dwErr,dwRead);
+				completion_fn(dwErr,dwRead,&m_read_complete.m_ov);
 		}
 	}
 
-	void IOHelper::handle_read(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered)
+	void IOHelper::handle_read(DWORD dwErrorCode)
 	{
-		// Update wr_ptr
-		m_read_complete.m_op->buffer->wr_ptr(dwNumberOfBytesTransfered);
-
-		if (m_read_complete.m_op->len)
-			m_read_complete.m_op->len -= dwNumberOfBytesTransfered;
-
 		if (dwErrorCode == 0 && m_read_complete.m_op->len > 0)
 		{
 			// More to read
@@ -220,15 +245,12 @@ namespace
 		{
 			DWORD dwErr = GetLastError();
 			if (dwErr != ERROR_IO_PENDING)
-				handle_write(dwErr,dwWritten);
+				completion_fn(dwErr,dwWritten,&m_write_complete.m_ov);
 		}
 	}
 
-	void IOHelper::handle_write(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered)
+	void IOHelper::handle_write(DWORD dwErrorCode)
 	{
-		// Update rd_ptr
-		m_write_complete.m_op->buffer->rd_ptr(dwNumberOfBytesTransfered);
-
 		if (dwErrorCode == 0 && m_write_complete.m_op->buffer->length() > 0)
 		{
 			// More to send
@@ -505,6 +527,13 @@ namespace
 				return 0;
 			}
 
+			dwErr = helper->bind();
+			if (dwErr)
+			{
+				delete helper;
+				return 0;
+			}
+
 			AsyncLocalSocket* sock = 0;
 			OOBASE_NEW(sock,AsyncLocalSocket(hPipe,helper));
 			if (!sock)
@@ -640,10 +669,7 @@ namespace
 		m_completion.m_hPipe = CreateNamedPipeA(m_pipe_name.c_str(),dwOpenMode,
 								   PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
 								   PIPE_UNLIMITED_INSTANCES,
-								   0,
-								   4096,
-								   4096,
-								   m_psa);
+								   8192,8192,0,m_psa);
 
 		if (!m_completion.m_hPipe.is_valid())
 			dwErr = GetLastError();
@@ -850,6 +876,65 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::Win32::ProactorImpl::attach_local_socket
 	DWORD dwErr = 0;
 	OOSvrBase::AsyncLocalSocket* pSocket = ::AsyncLocalSocket::Create((HANDLE)sock,dwErr);
 	*perr = dwErr;	
+	return pSocket;
+}
+
+OOSvrBase::AsyncLocalSocket* OOSvrBase::Win32::ProactorImpl::connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait)
+{
+	assert(perr);
+	*perr = 0;
+
+	std::string pipe_name = "\\\\.\\pipe\\" + path;
+
+	OOBase::timeval_t wait2 = (wait ? *wait : OOBase::timeval_t::MaxTime);
+	OOBase::Countdown countdown(&wait2);
+
+	OOBase::Win32::SmartHandle hPipe;
+	while (wait2 != OOBase::timeval_t::Zero)
+	{
+		hPipe = CreateFileA(pipe_name.c_str(),
+							PIPE_ACCESS_DUPLEX,
+							0,
+							NULL,
+							OPEN_EXISTING,
+							FILE_FLAG_OVERLAPPED,
+							NULL);
+
+		if (hPipe != INVALID_HANDLE_VALUE)
+			break;
+
+		DWORD dwErr = GetLastError();
+		if (dwErr != ERROR_PIPE_BUSY)
+		{
+			*perr = dwErr;
+			return 0;
+		}
+
+		DWORD dwWait = NMPWAIT_USE_DEFAULT_WAIT;
+		if (wait)
+		{
+			countdown.update();
+
+			dwWait = wait2.msec();
+		}
+
+		if (!WaitNamedPipeA(pipe_name.c_str(),dwWait))
+		{
+			*perr = GetLastError();
+			return 0;
+		}
+	}
+
+	// Wrap socket
+	DWORD dwErr = 0;
+	OOSvrBase::AsyncLocalSocket* pSocket = ::AsyncLocalSocket::Create(hPipe,dwErr);
+	*perr = dwErr;
+
+	if (pSocket)
+		hPipe.detach();
+	else
+		hPipe.close();
+	
 	return pSocket;
 }
 

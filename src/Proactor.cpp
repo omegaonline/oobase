@@ -81,6 +81,11 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::Proactor::attach_local_socket(OOBase::So
 	return m_impl->attach_local_socket(sock,perr);
 }
 
+OOSvrBase::AsyncLocalSocket* OOSvrBase::Proactor::connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait)
+{
+	return m_impl->connect_local_socket(path,perr,wait);
+}
+
 OOSvrBase::detail::AsyncQueued::AsyncQueued(bool sender, AsyncIOHelper* helper, AsyncHandler* handler) :
 		m_sender(sender),
 		m_helper(helper),

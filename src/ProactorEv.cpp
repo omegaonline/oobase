@@ -833,7 +833,7 @@ OOSvrBase::AsyncSocket* OOSvrBase::Ev::ProactorImpl::attach_socket(OOBase::Socke
 	return pSocket;
 }
 
-OOSvrBase::AsyncLocalSocket* OOSvrBase::Ev::ProactorImpl::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)
+OOSvrBase::AsyncLocalSocket* OOSvrBase::Ev::ProactorImpl::connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait)
 {
 #if !defined(HAVE_SYS_UN_H)
 	// If we don't have unix sockets, we can't do much, use Win32 Proactor instead
@@ -856,6 +856,11 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::Ev::ProactorImpl::attach_local_socket(OO
 	
 	return pSocket;
 #endif
+}
+
+OOSvrBase::AsyncLocalSocket* OOSvrBase::Ev::ProactorImpl::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)
+{
+	FIX ME!
 }
 
 #if defined(_MSC_VER)

@@ -211,8 +211,11 @@ OOBase::Socket* OOBase::Socket::connect_local(const std::string& path, int* perr
 
 	std::string pipe_name = "\\\\.\\pipe\\" + path;
 
+	timeval_t wait2 = (wait ? *wait : timeval_t::MaxTime);
+	Countdown countdown(&wait2);
+
 	Win32::SmartHandle hPipe;
-	for (;;)
+	while (wait2 != timeval_t::Zero)
 	{
 		hPipe = CreateFileA(pipe_name.c_str(),
 							PIPE_ACCESS_DUPLEX,
@@ -234,7 +237,11 @@ OOBase::Socket* OOBase::Socket::connect_local(const std::string& path, int* perr
 
 		DWORD dwWait = NMPWAIT_USE_DEFAULT_WAIT;
 		if (wait)
-			dwWait = wait->msec();
+		{
+			countdown.update();
+
+			dwWait = wait2.msec();
+		}
 
 		if (!WaitNamedPipeA(pipe_name.c_str(),dwWait))
 		{

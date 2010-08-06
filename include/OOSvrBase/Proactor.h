@@ -97,6 +97,9 @@ namespace OOSvrBase
 		virtual AsyncSocket* attach_socket(OOBase::Socket::socket_t sock, int* perr);
 		virtual AsyncLocalSocket* attach_local_socket(OOBase::Socket::socket_t sock, int* perr);
 
+		//virtual AsyncLocalSocket* connect_socket(const std::string& address, const std::string& port, int* perr, const OOBase::timeval_t* wait = 0);
+		virtual AsyncLocalSocket* connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait = 0);
+
 	protected:
 		explicit Proactor(bool);
 
