@@ -66,7 +66,7 @@ namespace OOBase
 			return send(&val,sizeof(T),timeout);
 		}
 
-		int send(const Buffer* buffer, const timeval_t* timeout = 0)
+		int send_buffer(const Buffer* buffer, const timeval_t* timeout = 0)
 		{
 			return send(buffer->rd_ptr(),buffer->length(),timeout);
 		}
@@ -79,7 +79,7 @@ namespace OOBase
 			return err;
 		}
 
-		int recv(Buffer* buffer, const timeval_t* timeout = 0)
+		int recv_buffer(Buffer* buffer, const timeval_t* timeout = 0)
 		{
 			return recv(buffer,0,timeout);
 		}
