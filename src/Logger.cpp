@@ -329,15 +329,6 @@ void OOSvrBase::Logger::log(Priority priority, const char* fmt, ...)
 	va_end(args);
 }
 
-std::string OOSvrBase::Logger::format_error(int err)
-{
-#if defined(_WIN32)
-	return OOBase::Win32::FormatMessage(err);
-#else
-	return OOBase::strerror(err);
-#endif
-}
-
 void OOSvrBase::Logger::filenum_t::log(const char* fmt, ...)
 {
 	va_list args;

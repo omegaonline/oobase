@@ -38,8 +38,7 @@ namespace OOSvrBase
 
 		void open(const char* name);
 		void log(Priority priority, const char* fmt, ...);
-		std::string format_error(int err);
-
+		
 		struct filenum_t
 		{
 			filenum_t(Priority priority, const char* pszFilename, unsigned int nLine) :
