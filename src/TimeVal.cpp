@@ -20,6 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/TimeVal.h"
+#include "../include/OOBase/tr24731.h"
 
 #if defined(HAVE_SYS_TIME_H) && (HAVE_SYS_TIME_H == 1)
 #include <sys/time.h>
@@ -30,7 +31,7 @@
 const OOBase::timeval_t OOBase::timeval_t::MaxTime(LLONG_MAX, 999999);
 const OOBase::timeval_t OOBase::timeval_t::Zero(0, 0);
 
-OOBase::timeval_t OOBase::gettimeofday()
+OOBase::timeval_t OOBase::timeval_t::gettimeofday()
 {
 
 #if defined(_WIN32)
@@ -107,8 +108,40 @@ OOBase::timeval_t OOBase::timeval_t::deadline(unsigned long msec)
 	return gettimeofday() + timeval_t(msec / 1000,(msec % 1000) * 1000);
 }
 
+::tm OOBase::timeval_t::gmtime() const
+{
+	time_t t = this->m_tv_sec;
+	::tm v = {0};
+
+#if defined(HAVE_PTHREADS_H)
+	gmtime_r(&t,&v);
+#elif defined(HAVE_TR_24731)
+	gmtime_s(&v,&t);
+#else
+	v = *gmtime(&t);
+#endif
+
+	return v;
+}
+
+::tm OOBase::timeval_t::localtime() const
+{
+	time_t t = this->m_tv_sec;
+	::tm v = {0};
+
+#if defined(HAVE_PTHREADS_H)
+	localtime_r(&t,&v);
+#elif defined(HAVE_TR_24731)
+	localtime_s(&v,&t);
+#else
+	v = *localtime(&t);
+#endif
+
+	return v;
+}
+
 OOBase::Countdown::Countdown(timeval_t* wait) :
-		m_start(gettimeofday()),
+		m_start(timeval_t::gettimeofday()),
 		m_wait(wait)
 {
 	assert(wait);
@@ -116,7 +149,7 @@ OOBase::Countdown::Countdown(timeval_t* wait) :
 
 void OOBase::Countdown::update()
 {
-	timeval_t now = gettimeofday();
+	timeval_t now = timeval_t::gettimeofday();
 	timeval_t diff = (now - m_start);
 	if (diff >= *m_wait)
 		*m_wait = timeval_t::Zero;

@@ -102,6 +102,10 @@ namespace OOBase
 		static const timeval_t Zero;
 
 		static timeval_t deadline(unsigned long msec);
+		static timeval_t gettimeofday();
+
+		::tm gmtime() const;
+		::tm localtime() const;
 
 	private:
 		int cmp(const timeval_t& rhs) const
@@ -144,9 +148,7 @@ namespace OOBase
 		timeval_t res = t1;
 		return res -= t2;
 	}
-
-	timeval_t gettimeofday();
-	
+		
 	class Countdown
 	{
 	public:
