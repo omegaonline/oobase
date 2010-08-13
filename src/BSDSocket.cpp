@@ -370,7 +370,7 @@ int OOBase::BSD::set_non_blocking(SOCKET sock, bool set)
 
 int OOBase::BSD::set_close_on_exec(SOCKET sock, bool set)
 {
-#if defined(HAVE_FCNTL_H) || defined(HAVE_SYS_FCNTL_H)
+#if (defined(HAVE_FCNTL_H) || defined(HAVE_SYS_FCNTL_H)) && defined(HAVE_UNISTD_H)
 	int flags = fcntl(sock,F_GETFD);
 	if (flags == -1)
 		return errno;

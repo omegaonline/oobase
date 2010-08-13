@@ -562,6 +562,8 @@ int OOSvrBase::Ev::ProactorImpl::worker_i()
 {
 	for (std::queue<io_watcher*> io_queue;!m_bStop;)
 	{
+		// Make this a condition variable and spawn more threads on demand...
+		void* TODO;
 		OOBase::Guard<OOBase::Mutex> guard(m_ev_lock);
 
 		// Swap over the IO queue to our local one...
