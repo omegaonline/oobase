@@ -24,7 +24,6 @@
 
 #include "../../OOBase/TimeVal.h"
 #include "../../OOBase/Condition.h"
-#include "../../OOBase/Pool.h"
 
 #include <queue>
 
@@ -114,7 +113,7 @@ namespace OOSvrBase
 				bool          cancelled;
 			};
 
-			OOBase::Pool<AsyncIOHelper::AsyncOp,5> m_pool;
+			std::vector<AsyncIOHelper::AsyncOp*> m_vecAsyncs;
 
 			int async_op(OOBase::Buffer* buffer, size_t len, BlockingInfo* param);
 			void issue_next(OOBase::Guard<OOBase::SpinLock>& guard);
@@ -139,7 +138,7 @@ namespace OOSvrBase
 			void addref();
 			void release();
 
-			~AsyncSocketImpl();
+			virtual ~AsyncSocketImpl();
 
 			AsyncQueued               m_receiver;
 			AsyncQueued               m_sender;

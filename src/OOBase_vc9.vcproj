@@ -383,10 +383,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\Pool.h"
-				>
-			</File>
-			<File
 				RelativePath="..\include\OOBase\Queue.h"
 				>
 			</File>

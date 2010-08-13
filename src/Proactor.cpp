@@ -98,6 +98,12 @@ OOSvrBase::detail::AsyncQueued::~AsyncQueued()
 {
 	assert(m_ops.empty());
 
+	while (!m_vecAsyncs.empty())
+	{
+		delete m_vecAsyncs.back();
+		m_vecAsyncs.pop_back();
+	}
+
 	if (!m_sender)
 		delete m_helper;
 }
@@ -119,21 +125,24 @@ void OOSvrBase::detail::AsyncQueued::shutdown()
 {
 	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-	// See if we have an op in progress
-	bool bIssueNow = m_ops.empty();
-	
-	// Insert a NULL into queue
-	try
+	if (!m_closed)
 	{
-		m_ops.push(0);
-	} 
-	catch (std::exception& e)
-	{
-		OOBase_CallCriticalFailure(e.what());
-	}
+		// See if we have an op in progress
+		bool bIssueNow = m_ops.empty();
+		
+		// Insert a NULL into queue
+		try
+		{
+			m_ops.push(0);
+		} 
+		catch (std::exception& e)
+		{
+			OOBase_CallCriticalFailure(e.what());
+		}
 
-	if (bIssueNow)
-		issue_next(guard);
+		if (bIssueNow)
+			issue_next(guard);
+	}
 }
 
 int OOSvrBase::detail::AsyncQueued::async_op(OOBase::Buffer* buffer, size_t len)
@@ -154,21 +163,33 @@ int OOSvrBase::detail::AsyncQueued::async_op(OOBase::Buffer* buffer, size_t len,
 {
 	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
+	if (m_closed)
+		return ENOTCONN;
+	
 	// Build a new AsyncOp
-	AsyncIOHelper::AsyncOp* op = m_pool.alloc();
-	if (!op)
-		return ERROR_OUTOFMEMORY;
+	AsyncIOHelper::AsyncOp* op = 0;
+	if (!m_vecAsyncs.empty())
+	{
+		try
+		{
+			op = m_vecAsyncs.back();
+			m_vecAsyncs.pop_back();
+		}
+		catch (std::exception& e)
+		{
+			OOBase_CallCriticalFailure(e.what());
+		}
+	}
+	else
+	{
+		OOBASE_NEW(op,AsyncIOHelper::AsyncOp);
+		if (!op)
+			return ERROR_OUTOFMEMORY;
+	}
 	
 	op->buffer = buffer->duplicate();
 	op->len = len;
 	op->param = param;
-
-	if (m_closed)
-	{
-		op->buffer->release();
-		m_pool.free(op);
-		return ENOTCONN;
-	}
 
 	// See if we have an op in progress
 	bool bIssueNow = m_ops.empty();
@@ -312,14 +333,34 @@ bool OOSvrBase::detail::AsyncQueued::notify_async(AsyncIOHelper::AsyncOp* op, in
 
 	// Done with our copy of the op
 	op->buffer->release();
-	m_pool.free(op);
 
+	if (m_vecAsyncs.size() < 4)
+	{
+		try
+		{
+			m_vecAsyncs.push_back(op);
+		}
+		catch (std::exception&)
+		{
+			delete op;
+		}
+	}
+	else
+		delete op;
+	
 	if (bClose)
 		m_closed = true;
 
 	// Pop the op we just performed
-	assert(m_ops.front() == op);
-	m_ops.pop();
+	try
+	{
+		assert(m_ops.front() == op);
+		m_ops.pop();
+	}
+	catch (std::exception& e)
+	{
+		OOBase_CallCriticalFailure(e.what());
+	}
 
 	issue_next(guard);
 
