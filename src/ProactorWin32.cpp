@@ -39,6 +39,22 @@
 #include <Ws2tcpip.h>
 #include <mswsock.h>
 
+#if !defined(WSAID_ACCEPTEX)
+
+typedef BOOL (PASCAL* LPFN_ACCEPTEX)(
+    SOCKET sListenSocket,
+    SOCKET sAcceptSocket,
+    PVOID lpOutputBuffer,
+    DWORD dwReceiveDataLength,
+    DWORD dwLocalAddressLength,
+    DWORD dwRemoteAddressLength,
+    LPDWORD lpdwBytesReceived,
+    LPOVERLAPPED lpOverlapped);
+
+#define WSAID_ACCEPTEX {0xb5367df1,0xcbac,0x11cf,{0x95,0xca,0x00,0x80,0x5f,0x48,0xa1,0x92}}
+
+#endif // !defined(WSAID_ACCEPTEX)
+
 namespace
 {
 	SOCKET create_socket(int family, int socktype, int protocol, int* perr)
@@ -568,7 +584,7 @@ namespace
 	private:
 		bool is_close(int err) const
 		{
-			return  (err == STATUS_PIPE_BROKEN);
+			return  (err == (int)STATUS_PIPE_BROKEN);
 		}
 
 		HANDLE m_hPipe;
