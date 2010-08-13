@@ -64,9 +64,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalDependencies="userenv.lib shlwapi.lib netapi32.lib"
 				OutputFile="$(OutDir)\$(ProjectName)d.lib"
-				AdditionalLibraryDirectories="..\..\OOHttp\Debug"
+				AdditionalLibraryDirectories=""
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -196,8 +195,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalDependencies="netapi32.lib userenv.lib shlwapi.lib"
-				AdditionalLibraryDirectories="..\..\OOHttp\Release"
+				AdditionalLibraryDirectories=""
 			/>
 			<Tool
 				Name="VCALinkTool"
