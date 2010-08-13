@@ -97,7 +97,9 @@ namespace
 		{}
 
 		virtual void shutdown(bool /*bSend*/, bool /*bRecv*/)
-		{}
+		{
+			m_handle.close();
+		}
 	};
 
 	class SocketIOHelper : public IOHelper
@@ -171,7 +173,7 @@ namespace
 		do_write();
 	}
 
-	VOID CALLBACK IOHelper::completion_fn(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped)
+	VOID IOHelper::completion_fn(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped)
 	{
 		Completion* pInfo = CONTAINING_RECORD(lpOverlapped,Completion,m_ov);
 
@@ -342,10 +344,12 @@ namespace
 
 	private:
 		static VOID CALLBACK completion_fn(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped);
+		static DWORD CALLBACK completion_fn2(LPVOID lpThreadParameter);
 
 		struct Completion
 		{
 			OVERLAPPED                 m_ov;
+			DWORD                      m_err;
 			SOCKET                     m_socket;
 			SocketAcceptor*            m_this_ptr;
 			char                       m_addresses[(sizeof(sockaddr_in6) + 16)*2];
@@ -442,6 +446,7 @@ namespace
 			return;
 
 		memset(&m_completion.m_ov,0,sizeof(OVERLAPPED));
+		m_completion.m_err = 0;
 
 		int err = 0;
 		m_completion.m_socket = create_socket(m_address_family,SOCK_STREAM,IPPROTO_TCP,&err);
@@ -466,15 +471,29 @@ namespace
 		do_accept(err,guard);
 	}
 
-	VOID CALLBACK SocketAcceptor::completion_fn(DWORD dwErrorCode, DWORD, LPOVERLAPPED lpOverlapped)
+	VOID SocketAcceptor::completion_fn(DWORD dwErrorCode, DWORD, LPOVERLAPPED lpOverlapped)
 	{
 		Completion* pInfo = CONTAINING_RECORD(lpOverlapped,Completion,m_ov);
+		
+		// Stash error code
+		pInfo->m_err = dwErrorCode;
+
+		// Now forward the completion into the worker pool again as a 'long function'
+		if (!QueueUserWorkItem(completion_fn2,pInfo,WT_EXECUTELONGFUNCTION))
+			OOBase_CallCriticalFailure(GetLastError());
+	}
+
+	DWORD SocketAcceptor::completion_fn2(LPVOID lpThreadParameter)
+	{
+		Completion* pInfo = static_cast<Completion*>(lpThreadParameter);
 		
 		OOBase::Guard<OOBase::Condition::Mutex> guard(pInfo->m_this_ptr->m_lock);
 
 		--pInfo->m_this_ptr->m_async_count;
 
-		pInfo->m_this_ptr->do_accept(dwErrorCode,guard);
+		pInfo->m_this_ptr->do_accept(pInfo->m_err,guard);
+
+		return 0;
 	}
 
 	void SocketAcceptor::do_accept(DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard)
@@ -600,12 +619,13 @@ namespace
 		void accept();
 
 	private:
-		static VOID CALLBACK completion_fn(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped);
+		static VOID CALLBACK completion_fn(PVOID lpParameter, BOOLEAN TimerOrWaitFired);
 
 		struct Completion
 		{
 			OVERLAPPED                 m_ov;
 			OOBase::Win32::SmartHandle m_hPipe;
+			HANDLE                     m_hWait;
 			PipeAcceptor*              m_this_ptr;
 		};
 
@@ -673,16 +693,20 @@ namespace
 
 		if (!m_completion.m_hPipe.is_valid())
 			dwErr = GetLastError();
-		else if (!OOBase::Win32::BindIoCompletionCallback(m_completion.m_hPipe,&completion_fn,0))
-		{
-			dwErr = GetLastError();
-			m_completion.m_hPipe.close();
-		}
 
 		if (dwErr == 0)
 		{
 			memset(&m_completion.m_ov,0,sizeof(OVERLAPPED));
+			m_completion.m_ov.hEvent = ::CreateEvent(NULL,TRUE,FALSE,NULL);
+			if (!m_completion.m_ov.hEvent)
+			{
+				dwErr = GetLastError();
+				m_completion.m_hPipe.close();
+			}
+		}
 
+		if (dwErr == 0)
+		{
 			++m_async_count;
 
 			if (!ConnectNamedPipe(m_completion.m_hPipe,&m_completion.m_ov))
@@ -690,9 +714,20 @@ namespace
 				dwErr = GetLastError();
 				if (dwErr == ERROR_IO_PENDING)
 				{
-					// Will complete later...
-					return;
+					if (RegisterWaitForSingleObject(&m_completion.m_hWait,m_completion.m_ov.hEvent,&completion_fn,&m_completion,INFINITE,WT_EXECUTELONGFUNCTION | WT_EXECUTEONLYONCE))
+					{
+						// Will complete later...
+						return;
+					}
+					else
+						dwErr = GetLastError();
+					
+					m_completion.m_hPipe.close();
+					CloseHandle(m_completion.m_ov.hEvent);					
 				}
+				
+				if (dwErr == ERROR_PIPE_CONNECTED)
+					dwErr = 0;
 			}
 
 			--m_async_count;
@@ -701,9 +736,18 @@ namespace
 		do_accept(dwErr,guard);
 	}
 
-	VOID CALLBACK PipeAcceptor::completion_fn(DWORD dwErrorCode, DWORD, LPOVERLAPPED lpOverlapped)
+	VOID PipeAcceptor::completion_fn(PVOID lpParameter, BOOLEAN /*TimerOrWaitFired*/)
 	{
-		Completion* pInfo = CONTAINING_RECORD(lpOverlapped,Completion,m_ov);
+		Completion* pInfo = static_cast<Completion*>(lpParameter);
+
+		DWORD dwErrorCode = 0;
+		DWORD dwBytes = 0;
+		if (!GetOverlappedResult(pInfo->m_hPipe,&pInfo->m_ov,&dwBytes,TRUE))
+			dwErrorCode = GetLastError();
+
+		// Close the handles first...
+		UnregisterWait(pInfo->m_hWait);
+		CloseHandle(pInfo->m_ov.hEvent);
 		
 		OOBase::Guard<OOBase::Condition::Mutex> guard(pInfo->m_this_ptr->m_lock);
 
@@ -716,8 +760,6 @@ namespace
 	{
 		if (m_closed)
 		{
-			m_completion.m_hPipe.close();
-			
 			guard.release();
 			m_condition.signal();
 			return;

@@ -40,15 +40,18 @@ namespace
 		OOBase::Win32::SmartHandle m_handle;
 		OOBase::Win32::SmartHandle m_hReadEvent;
 		OOBase::Win32::SmartHandle m_hWriteEvent;
+		const bool                 m_bRealSocket;
 	};
 
 	Socket::Socket(SOCKET hSocket) :
-			m_handle((HANDLE)hSocket)
+			m_handle((HANDLE)hSocket),
+			m_bRealSocket(true)
 	{
 	}
 
 	Socket::Socket(HANDLE hPipe) :
-			m_handle(hPipe)
+			m_handle(hPipe),
+			m_bRealSocket(false)
 	{
 	}
 
@@ -193,14 +196,19 @@ namespace
 
 	void Socket::shutdown(bool bSend, bool bRecv)
 	{
-		int how = -1;
-		if (bSend)
-			how = (bRecv ? SD_BOTH : SD_SEND);
-		else if (bRecv)
-			how = SD_RECEIVE;
+		if (m_bRealSocket)
+		{
+			int how = -1;
+			if (bSend)
+				how = (bRecv ? SD_BOTH : SD_SEND);
+			else if (bRecv)
+				how = SD_RECEIVE;
 
-		if (how != -1)
-			::shutdown((SOCKET)(HANDLE)m_handle,how);
+			if (how != -1)
+				::shutdown((SOCKET)(HANDLE)m_handle,how);
+		}
+		else
+			m_handle.close();
 	}
 }
 
