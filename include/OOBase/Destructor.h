@@ -24,6 +24,7 @@
 
 #include "Mutex.h"
 #include "Once.h"
+#include "SmartPtr.h"
 
 #include <list>
 

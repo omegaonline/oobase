@@ -66,38 +66,36 @@ liboobase_la_SOURCES = \
 	include/OOBase/ByteSwap.h \
 	include/OOBase/CDRStream.h \
 	include/OOBase/Condition.h \
-	include/OOBase/DLL.h \
 	include/OOBase/Destructor.h \
+	include/OOBase/DLL.h \
 	include/OOBase/Mutex.h \
 	include/OOBase/Once.h \
 	include/OOBase/Queue.h \
 	include/OOBase/Singleton.h \
 	include/OOBase/SmartPtr.h \
 	include/OOBase/Socket.h \
-	include/OOBase/TLSSingleton.h \
 	include/OOBase/Thread.h \
 	include/OOBase/TimeVal.h \
-	include/OOBase/PosixSocket.h \
-	include/OOBase/Win32.h \
-	include/OOBase/Win32Socket.h \
+	include/OOBase/TLSSingleton.h \
 	include/OOBase/tr24731.h \
 	include/OOBase/utf8.h \
+	include/OOBase/Win32.h \
+	include/OOBase/internal/BSDSocket.h \
+	include/OOBase/internal/Win32Impl.h \
+	src/BSDSocket.cpp \
 	src/Buffer.cpp \
 	src/Condition.cpp \
 	src/DLL.cpp \
 	src/Error.cpp \
 	src/Mutex.cpp \
 	src/Once.cpp \
-	src/Socket.cpp \
-	src/TLS.cpp \
 	src/Thread.cpp \
 	src/TimeVal.cpp \
-	src/PosixSocket.cpp \
-	src/Win32.cpp \
-	src/Win32Pipe.cpp \
-	src/Win32Socket.cpp \
+	src/TLS.cpp \
 	src/tr24731.cpp \
-	src/utf8.cpp
+	src/utf8.cpp \
+	src/Win32.cpp \
+	src/Win32Socket.cpp	
 
 liboosvrbase_la_CFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
 liboosvrbase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
@@ -112,15 +110,15 @@ liboosvrbase_la_SOURCES = \
 	include/OOSvrBase/Database.h \
 	include/OOSvrBase/Logger.h \
 	include/OOSvrBase/Proactor.h \
-	include/OOSvrBase/ProactorEv.h \
-	include/OOSvrBase/ProactorWin32.h \
 	include/OOSvrBase/pw_info.h \
 	include/OOSvrBase/SecurityWin32.h \
 	include/OOSvrBase/Service.h \
+	include/OOSvrBase/internal/ProactorEv.h \
+	include/OOSvrBase/internal/ProactorImpl.h \
+	include/OOSvrBase/internal/ProactorWin32.h \
 	src/CmdArgs.cpp \
 	src/Database.cpp \
 	src/Logger.cpp \
-	src/PipeWin32.cpp \
 	src/Proactor.cpp \
 	src/ProactorEv.cpp \
 	src/ProactorWin32.cpp \

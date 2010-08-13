@@ -23,6 +23,7 @@
 #define OOBASE_QUEUE_H_INCLUDED_
 
 #include "Condition.h"
+#include "Thread.h"
 
 #include <queue>
 

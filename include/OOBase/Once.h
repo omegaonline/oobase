@@ -23,6 +23,7 @@
 #define OOBASE_ONCE_H_INCLUDED_
 
 #include "Win32.h"
+#include "internal/Win32Impl.h"
 
 namespace OOBase
 {
