@@ -22,6 +22,10 @@
 #include "../include/OOBase/TimeVal.h"
 #include "../include/OOBase/tr24731.h"
 
+#if defined(HAVE_TIME_H) && (HAVE_TIME_H == 1)
+#include <time.h>
+#endif
+
 #if defined(HAVE_SYS_TIME_H) && (HAVE_SYS_TIME_H == 1)
 #include <sys/time.h>
 #endif
@@ -118,7 +122,7 @@ OOBase::timeval_t OOBase::timeval_t::deadline(unsigned long msec)
 #elif defined(HAVE_TR_24731)
 	gmtime_s(&v,&t);
 #else
-	v = *gmtime(&t);
+	v = *::gmtime(&t);
 #endif
 
 	return v;
@@ -134,7 +138,7 @@ OOBase::timeval_t OOBase::timeval_t::deadline(unsigned long msec)
 #elif defined(HAVE_TR_24731)
 	localtime_s(&v,&t);
 #else
-	v = *localtime(&t);
+	v = *::localtime(&t);
 #endif
 
 	return v;
