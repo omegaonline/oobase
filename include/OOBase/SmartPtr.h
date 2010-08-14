@@ -34,6 +34,11 @@ namespace OOBase
 		{
 			delete ptr;
 		}
+
+		static void destroy_void(void* ptr)
+		{
+			delete static_cast<T*>(ptr);
+		}
 	};
 
 	template <typename T>
@@ -58,7 +63,7 @@ namespace OOBase
 
 	namespace detail
 	{
-		template <typename T, typename Destructor = DeleteDestructor<T> >
+		template <typename T, typename Destructor>
 		class SmartPtrImpl
 		{
 			class SmartPtrNode

@@ -49,7 +49,7 @@ namespace OOBase
 	{
 	public:
 		/// The constructor allocates the internal buffer to size \p cbSize.
-		Buffer(size_t cbSize = 256);
+		Buffer(size_t cbSize = 256, size_t align = 1);
 
 		/// Return a reference counted copy
 		Buffer* duplicate();
@@ -80,6 +80,9 @@ namespace OOBase
 
 		/// Reset the read and write pointers to start().
 		int reset(size_t align = 1);
+
+		/// Move the read to start() and copy any existing data 'up' with it, setting wr_ptr() correctly.
+		int compact(size_t align = 1);
 
 		/// Get the amount of space remaining in bytes.
 		size_t space() const;

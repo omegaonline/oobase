@@ -40,6 +40,9 @@ namespace OOBase
 		static void sleep(const timeval_t& wait);
 		static void yield();
 
+	protected:
+		explicit Thread(bool);
+
 	private:
 		Thread(const Thread&);
 		Thread& operator = (const Thread&);

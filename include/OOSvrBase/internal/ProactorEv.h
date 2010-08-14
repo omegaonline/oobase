@@ -27,7 +27,7 @@
 #endif
 
 #if !defined(HAVE_EV_H)
-#error Includes have got confused, check Proactor.h
+#error Includes have got confused, check Proactor.cpp
 #endif
 
 #include <ev.h>
@@ -53,6 +53,11 @@ namespace OOSvrBase
 
 			OOBase::Socket* accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa);
 			OOBase::Socket* accept_remote(Acceptor<AsyncSocket>* handler, const std::string& address, const std::string& port, int* perr);
+
+			AsyncSocket* attach_socket(OOBase::Socket::socket_t sock, int* perr);
+			AsyncLocalSocket* attach_local_socket(OOBase::Socket::socket_t sock, int* perr);
+
+			AsyncLocalSocket* connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait);
 
 			struct io_watcher : public ev_io
 			{

@@ -33,10 +33,11 @@ namespace OOBase
 		void Set(const void* key, void* val);
 		void Remove(const void* key);
 
+		void ThreadStart();
 		void ThreadExit();
 	}
 
-	template <typename T, typename DLL>
+	template <typename T, typename DLL = T>
 	class TLSSingleton
 	{
 	public:

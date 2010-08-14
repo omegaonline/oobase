@@ -23,6 +23,7 @@
 #define OOBASE_QUEUE_H_INCLUDED_
 
 #include "Condition.h"
+#include "Thread.h"
 
 #include <queue>
 
@@ -56,27 +57,27 @@ namespace OOBase
 
 			Guard<Condition::Mutex> guard(m_lock);
 
-			++m_waiters;
-
 			while (!m_closed && m_queue.size() >= m_bound)
 			{
 				if (!m_space.wait(m_lock,(wait ? &wait2 : 0)))
-				{
-					--m_waiters;
 					return timedout;
-				}
 			}
-
-			--m_waiters;
 
 			if (m_closed)
 				return closed;
 
-			m_queue.push(val);
+			try
+			{
+				m_queue.push(val);
+			}
+			catch (std::exception& e)
+			{
+				OOBase_CallCriticalFailure(e.what());
+			}
 
 			guard.release();
 
-			m_available.signal(); //broadcast();
+			m_available.signal();
 
 			return success;
 		}
@@ -90,35 +91,43 @@ namespace OOBase
 
 			Guard<Condition::Mutex> guard(m_lock);
 
-			++m_waiters;
-
 			while (!m_pulsed && !m_closed && m_queue.empty())
 			{
+				++m_waiters;
+
 				if (!m_available.wait(m_lock,(wait ? &wait2 : 0)))
 				{
 					--m_waiters;
 					return timedout;
 				}
-			}
 
-			--m_waiters;
+				--m_waiters;
+			}
 
 			if (m_pulsed)
 				return pulsed;
 
 			if (!m_queue.empty())
 			{
-				val=m_queue.front();
-				m_queue.pop();
+				try
+				{
+					val = m_queue.front();
+					m_queue.pop();
+				}
+				catch (std::exception& e)
+				{
+					OOBase_CallCriticalFailure(e.what());
+				}
 
 				guard.release();
 
-				m_space.broadcast();
+				m_space.signal();
 
 				return success;
 			}
 
 			// Must be closed
+			assert(m_closed);
 			return closed;
 		}
 
@@ -145,25 +154,23 @@ namespace OOBase
 			bool bSignal = !m_pulsed;
 			m_pulsed = true;
 
-			guard.release();
-
 			if (bSignal)
 			{
 				m_available.broadcast();
-				m_space.broadcast();
-
-				for (;;)
+				
+				while (m_waiters)
 				{
-					guard.acquire();
-
-					if (m_waiters==0)
-					{
-						m_pulsed = false;
-						return;
-					}
-
+					// Give any waiting threads a chance to wake...
 					guard.release();
+
+					// Let them pick up...
+					Thread::yield();
+
+					// Now re-acquire in order to check again
+					guard.acquire();
 				}
+
+				m_pulsed = false;
 			}
 		}
 

@@ -127,6 +127,11 @@ OOBase::Event::~Event()
 {
 }
 
+bool OOBase::Event::is_set()
+{
+	return (WaitForSingleObject(m_handle,0) == WAIT_OBJECT_0);
+}
+
 void OOBase::Event::set()
 {
 	if (!::SetEvent(m_handle))
@@ -159,6 +164,19 @@ OOBase::Event::Event(bool bSet, bool bAutoReset) :
 
 OOBase::Event::~Event()
 {
+}
+
+bool OOBase::Event::is_set()
+{
+	Guard<Condition::Mutex> guard(m_lock);
+
+	bool bSet = m_bSet;
+
+	// Reset if we are an auto event
+	if (bSet && m_bAuto)
+		m_bSet = false;
+
+	return bSet;
 }
 
 void OOBase::Event::set()

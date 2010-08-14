@@ -21,18 +21,22 @@
 
 #include "../include/OOBase/Buffer.h"
 
-OOBase::Buffer::Buffer(size_t cbSize) :
+OOBase::Buffer::Buffer(size_t cbSize, size_t align) :
 		m_refcount(1),
 		m_capacity(0),
 		m_buffer(0),
 		m_wr_ptr(0),
 		m_rd_ptr(0)
 {
+	// Make sure we have room to align tiny blocks with big alignment...
+	if (cbSize < align)
+		cbSize += align;
+
 	int err = priv_malloc(m_buffer,cbSize);
 	if (err == 0)
 	{
 		m_capacity = cbSize;
-		reset();
+		reset(align);
 	}
 }
 
@@ -177,6 +181,22 @@ int OOBase::Buffer::reset(size_t align)
 		if (err == 0)
 			align_rd_ptr(align);
 	}
+	return err;
+}
+
+int OOBase::Buffer::compact(size_t align)
+{
+	char* orig_rd = m_rd_ptr;
+	ptrdiff_t len = (m_wr_ptr - m_rd_ptr);
+
+	int err = reset(align);
+	if (err == 0 && len > 0)
+	{
+		// We know there is space...
+		memmove(m_rd_ptr,orig_rd,static_cast<size_t>(len));
+		m_wr_ptr = m_rd_ptr + len;
+	}
+	
 	return err;
 }
 

@@ -43,16 +43,20 @@ namespace OOSvrBase
 		virtual void on_closed(AsyncSocket* pSocket) = 0;
 	};
 
-	class AsyncSocket : public OOBase::Socket
+	class AsyncSocket
 	{
 	public:
+		virtual ~AsyncSocket() {}
+
 		virtual void bind_handler(IOHandler* handler) = 0;
 		
 		virtual int async_recv(OOBase::Buffer* buffer, size_t len = 0) = 0;
 		virtual int async_send(OOBase::Buffer* buffer) = 0;
 
-		// A more efficient non-const version...
-		virtual int send_buffer(OOBase::Buffer* buffer, const OOBase::timeval_t* timeout = 0) = 0;
+		virtual int recv(OOBase::Buffer* buffer, size_t len = 0, const OOBase::timeval_t* timeout = 0) = 0;
+		virtual int send(OOBase::Buffer* buffer, const OOBase::timeval_t* timeout = 0) = 0;
+
+		virtual void shutdown(bool bSend, bool bRecv) = 0;
 	};
 
 	class AsyncLocalSocket : public AsyncSocket
@@ -89,6 +93,15 @@ namespace OOSvrBase
 
 		virtual OOBase::Socket* accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa = 0);
 		virtual OOBase::Socket* accept_remote(Acceptor<AsyncSocket>* handler, const std::string& address, const std::string& port, int* perr);
+
+		virtual AsyncSocket* attach_socket(OOBase::Socket::socket_t sock, int* perr);
+		virtual AsyncLocalSocket* attach_local_socket(OOBase::Socket::socket_t sock, int* perr);
+
+		//virtual AsyncLocalSocket* connect_socket(const std::string& address, const std::string& port, int* perr, const OOBase::timeval_t* wait = 0);
+		virtual AsyncLocalSocket* connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait = 0);
+
+	protected:
+		explicit Proactor(bool);
 
 	private:
 		Proactor(const Proactor&);

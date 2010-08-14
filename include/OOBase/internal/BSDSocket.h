@@ -28,17 +28,9 @@ namespace OOBase
 {
 	namespace BSD
 	{
-		// Try to align winsock and BSD ;)
-#if defined(_WIN32)
-		typedef SOCKET socket_t;
-#else
-		typedef int socket_t;
-		#define INVALID_SOCKET (-1)
-#endif
-
-		socket_t create_socket(int family, int socktype, int protocol, int* perr);
-		int set_non_blocking(socket_t sock, bool set);
-		int set_close_on_exec(socket_t sock, bool set);
+		Socket::socket_t create_socket(int family, int socktype, int protocol, int* perr);
+		int set_non_blocking(Socket::socket_t sock, bool set);
+		int set_close_on_exec(Socket::socket_t sock, bool set);
 	}
 }
 

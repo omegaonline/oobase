@@ -34,30 +34,29 @@ namespace
 
 		size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* wait = 0);
 		int send(const void* buf, size_t len, const OOBase::timeval_t* wait = 0);
-		void close();
+		void shutdown(bool bSend, bool bRecv);
 		
 	private:
-		bool                       m_shutdown;
 		OOBase::Win32::SmartHandle m_handle;
 		OOBase::Win32::SmartHandle m_hReadEvent;
 		OOBase::Win32::SmartHandle m_hWriteEvent;
+		const bool                 m_bRealSocket;
 	};
 
 	Socket::Socket(SOCKET hSocket) :
-			m_shutdown(true),
-			m_handle((HANDLE)hSocket)
+			m_handle((HANDLE)hSocket),
+			m_bRealSocket(true)
 	{
 	}
 
 	Socket::Socket(HANDLE hPipe) :
-			m_shutdown(false),
-			m_handle(hPipe)
+			m_handle(hPipe),
+			m_bRealSocket(false)
 	{
 	}
 
 	Socket::~Socket()
 	{
-		close();
 	}
 
 	int Socket::send(const void* buf, size_t len, const OOBase::timeval_t* timeout)
@@ -195,12 +194,21 @@ namespace
 		return len;
 	}
 
-	void Socket::close()
+	void Socket::shutdown(bool bSend, bool bRecv)
 	{
-		if (m_shutdown)
-			shutdown((SOCKET)(HANDLE)m_handle,SD_BOTH);
+		if (m_bRealSocket)
+		{
+			int how = -1;
+			if (bSend)
+				how = (bRecv ? SD_BOTH : SD_SEND);
+			else if (bRecv)
+				how = SD_RECEIVE;
 
-		m_handle.close();
+			if (how != -1)
+				::shutdown((SOCKET)(HANDLE)m_handle,how);
+		}
+		else
+			m_handle.close();
 	}
 }
 
@@ -211,8 +219,11 @@ OOBase::Socket* OOBase::Socket::connect_local(const std::string& path, int* perr
 
 	std::string pipe_name = "\\\\.\\pipe\\" + path;
 
+	timeval_t wait2 = (wait ? *wait : timeval_t::MaxTime);
+	Countdown countdown(&wait2);
+
 	Win32::SmartHandle hPipe;
-	for (;;)
+	while (wait2 != timeval_t::Zero)
 	{
 		hPipe = CreateFileA(pipe_name.c_str(),
 							PIPE_ACCESS_DUPLEX,
@@ -234,7 +245,11 @@ OOBase::Socket* OOBase::Socket::connect_local(const std::string& path, int* perr
 
 		DWORD dwWait = NMPWAIT_USE_DEFAULT_WAIT;
 		if (wait)
-			dwWait = wait->msec();
+		{
+			countdown.update();
+
+			dwWait = wait2.msec();
+		}
 
 		if (!WaitNamedPipeA(pipe_name.c_str(),dwWait))
 		{

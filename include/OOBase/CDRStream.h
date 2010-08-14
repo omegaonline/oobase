@@ -41,11 +41,9 @@ namespace OOBase
 #endif
 				m_last_error(0)
 		{
-			OOBASE_NEW(m_buffer,Buffer(len + MaxAlignment));
+			OOBASE_NEW(m_buffer,Buffer(len,MaxAlignment));
 			if (!m_buffer)
 				OOBase_OutOfMemory();
-
-			reset();
 		}
 
 		CDRStream(Buffer* buffer) :
@@ -98,6 +96,12 @@ namespace OOBase
 		int reset()
 		{
 			m_last_error = m_buffer->reset(MaxAlignment);
+			return m_last_error;
+		}
+
+		int compact()
+		{
+			m_last_error = m_buffer->compact(MaxAlignment);
 			return m_last_error;
 		}
 

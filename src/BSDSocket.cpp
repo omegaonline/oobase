@@ -41,6 +41,8 @@
 #include <ws2tcpip.h>
 
 #define SHUT_RDWR SD_BOTH
+#define SHUT_RD   SD_RECEIVE
+#define SHUT_WR   SD_SEND
 #define ETIMEDOUT WSAETIMEDOUT
 #define EINPROGRESS WSAEWOULDBLOCK
 #define ssize_t int
@@ -60,25 +62,25 @@ namespace
 	class Socket : public OOBase::Socket
 	{
 	public:
-		Socket(OOBase::BSD::socket_t sock);
+		Socket(OOBase::Socket::socket_t sock);
 		virtual ~Socket();
 		
 		int send(const void* buf, size_t len, const OOBase::timeval_t* timeout = 0);
 		size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout = 0);
-		void close();
+		void shutdown(bool bSend, bool bRecv);
 		
 	private:
-		OOBase::BSD::socket_t  m_sock;
+		OOBase::Socket::socket_t  m_sock;
 	};
 
-	Socket::Socket(OOBase::BSD::socket_t sock) :
+	Socket::Socket(OOBase::Socket::socket_t sock) :
 			m_sock(sock)
 	{
 	}
 
 	Socket::~Socket()
 	{
-		close();
+		closesocket(m_sock);
 	}
 
 	int Socket::send(const void* buf, size_t len, const OOBase::timeval_t* wait)
@@ -205,18 +207,19 @@ namespace
 		}
 	}
 
-	void Socket::close()
+	void Socket::shutdown(bool bSend, bool bRecv)
 	{
-		if (m_sock != INVALID_SOCKET)
-		{
-			shutdown(m_sock,SHUT_RDWR);
+		int how = -1;
+		if (bSend)
+			how = (bRecv ? SHUT_RDWR : SHUT_WR);
+		else if (bRecv)
+			how = SHUT_RD;
 
-			closesocket(m_sock);
-			m_sock = INVALID_SOCKET;
-		}
+		if (how != -1)
+			::shutdown(m_sock,how);
 	}
 
-	int connect_i(OOBase::BSD::socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* wait)
+	int connect_i(OOBase::Socket::socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* wait)
 	{
 		// Do the connect
 		if (::connect(sock,addr,addrlen) != -1)
@@ -266,7 +269,7 @@ namespace
 		}
 	}
 
-	OOBase::BSD::socket_t connect_i(const std::string& address, const std::string& port, int* perr, const OOBase::timeval_t* wait)
+	OOBase::Socket::socket_t connect_i(const std::string& address, const std::string& port, int* perr, const OOBase::timeval_t* wait)
 	{
 		// Start a countdown
 		OOBase::timeval_t wait2 = (wait ? *wait : OOBase::timeval_t::MaxTime);
@@ -290,7 +293,7 @@ namespace
 			return ETIMEDOUT;
 
 		// Loop trying to connect on each address until one succeeds
-		OOBase::BSD::socket_t sock = INVALID_SOCKET;
+		OOBase::Socket::socket_t sock = INVALID_SOCKET;
 		for (addrinfo* pAddr = pResults; pAddr != 0; pAddr = pAddr->ai_next)
 		{
 			if ((sock = OOBase::BSD::create_socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,perr)) != INVALID_SOCKET)
@@ -317,11 +320,11 @@ namespace
 	}
 }
 
-OOBase::BSD::socket_t OOBase::BSD::create_socket(int family, int socktype, int protocol, int* perr)
+OOBase::Socket::socket_t OOBase::BSD::create_socket(int family, int socktype, int protocol, int* perr)
 {
 	*perr = 0;
 
-	OOBase::BSD::socket_t sock = ::socket(family,socktype,protocol);
+	OOBase::Socket::socket_t sock = ::socket(family,socktype,protocol);
 	if (sock == INVALID_SOCKET)
 	{
 		*perr = socket_errno;
@@ -367,7 +370,7 @@ int OOBase::BSD::set_non_blocking(SOCKET sock, bool set)
 
 int OOBase::BSD::set_close_on_exec(SOCKET sock, bool set)
 {
-#if defined(HAVE_FCNTL_H) || defined(HAVE_SYS_FCNTL_H)
+#if (defined(HAVE_FCNTL_H) || defined(HAVE_SYS_FCNTL_H)) && defined(HAVE_UNISTD_H)
 	int flags = fcntl(sock,F_GETFD);
 	if (flags == -1)
 		return errno;
@@ -386,7 +389,7 @@ int OOBase::BSD::set_close_on_exec(SOCKET sock, bool set)
 //#if !defined(_WIN32)
 OOBase::Socket* OOBase::Socket::connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait)
 {
-	BSD::socket_t sock = connect_i(address,port,perr,wait);
+	Socket::socket_t sock = connect_i(address,port,perr,wait);
 	if (sock == INVALID_SOCKET)
 		return 0;
 

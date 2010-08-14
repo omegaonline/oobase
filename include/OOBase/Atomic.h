@@ -123,15 +123,8 @@ namespace OOBase
 		class AtomicValImpl_Raw
 		{
 		public:
-			explicit AtomicValImpl_Raw(T v) : m_val(v) {}
+			AtomicValImpl_Raw(T v) : m_val(v) {}
 			AtomicValImpl_Raw(const AtomicValImpl_Raw& rhs) : m_val(rhs.value()) {}
-
-			AtomicValImpl_Raw& operator = (T v)
-			{
-				Guard<SpinLock> guard(m_lock);
-				m_val = v;
-				return *this;
-			}
 
 			AtomicValImpl_Raw& operator = (const AtomicValImpl_Raw& rhs)
 			{
@@ -144,34 +137,26 @@ namespace OOBase
 				return *this;
 			}
 
-			bool operator == (const AtomicValImpl_Raw& rhs) const
+			AtomicValImpl_Raw& operator = (T rhs)
 			{
-				return (value() == rhs.value());
+				Guard<SpinLock> guard(m_lock);
+				m_val = rhs;
+				return *this;
 			}
 
-			bool operator != (const AtomicValImpl_Raw& rhs) const
+			operator T () const
 			{
-				return (value() != rhs.value());
+				return value();
 			}
 
-			bool operator == (T v) const
-			{
-				return (value() == v);
-			}
-
-			bool operator != (T v) const
-			{
-				return (value() != v);
-			}
+		protected:
+			AtomicValImpl_Raw() {}
 
 			T value() const
 			{
 				Guard<SpinLock> guard(m_lock);
 				return m_val;
 			}
-
-		protected:
-			AtomicValImpl_Raw() {}
 
 			mutable SpinLock m_lock;
 			T                m_val;
@@ -181,14 +166,20 @@ namespace OOBase
 		class AtomicValImpl : public AtomicValImpl_Raw<T>
 		{
 		public:
-			explicit AtomicValImpl(T v) : AtomicValImpl_Raw<T>(v) {}
+			AtomicValImpl(T v) : AtomicValImpl_Raw<T>(v) {}
 			AtomicValImpl(const AtomicValImpl& rhs) : AtomicValImpl_Raw<T>(rhs.value()) {}
 
 			AtomicValImpl& operator = (const AtomicValImpl& rhs)
 			{
 				if (this != &rhs)
-					AtomicValImpl_Raw<T>::operator = (rhs.value());
+					AtomicValImpl_Raw<T>::operator = (rhs);
 
+				return *this;
+			}
+
+			AtomicValImpl& operator = (T rhs)
+			{
+				AtomicValImpl_Raw<T>::operator = (rhs);
 				return *this;
 			}
 
@@ -201,14 +192,20 @@ namespace OOBase
 		{
 		public:
 			AtomicIntImpl() : AtomicValImpl_Raw<T>(T(0)) {}
-			explicit AtomicIntImpl(T v) : AtomicValImpl_Raw<T>(v) {}
+			AtomicIntImpl(T v) : AtomicValImpl_Raw<T>(v) {}
 			AtomicIntImpl(const AtomicIntImpl& rhs) : AtomicValImpl_Raw<T>(rhs.value()) {}
 
 			AtomicIntImpl& operator = (const AtomicIntImpl& rhs)
 			{
 				if (this != &rhs)
-					AtomicValImpl_Raw<T>::operator = (rhs.value());
+					AtomicValImpl_Raw<T>::operator = (rhs);
 
+				return *this;
+			}
+
+			AtomicIntImpl& operator = (T rhs)
+			{
+				AtomicValImpl_Raw<T>::operator = (rhs);
 				return *this;
 			}
 
@@ -244,14 +241,20 @@ namespace OOBase
 	class AtomicVal : public detail::AtomicValImpl<T,sizeof(T)>
 	{
 	public:
-		explicit AtomicVal(T v) : detail::AtomicValImpl<T,sizeof(T)>(v) {}
+		AtomicVal(T v) : detail::AtomicValImpl<T,sizeof(T)>(v) {}
 		AtomicVal(const AtomicVal& rhs) : detail::AtomicValImpl<T,sizeof(T)>(rhs.value()) {}
 
 		AtomicVal& operator = (const AtomicVal& rhs)
 		{
 			if (this != &rhs)
-				detail::AtomicValImpl<T,sizeof(T)>::operator = (rhs.value());
+				detail::AtomicValImpl<T,sizeof(T)>::operator = (rhs);
 
+			return *this;
+		}
+
+		AtomicVal& operator = (T rhs)
+		{
+			detail::AtomicValImpl<T,sizeof(T)>::operator = (rhs);
 			return *this;
 		}
 
@@ -264,7 +267,7 @@ namespace OOBase
 	{
 	public:
 		AtomicInt() : detail::AtomicIntImpl<T,sizeof(T)>() {}
-		explicit AtomicInt(T v) : detail::AtomicIntImpl<T,sizeof(T)>(v) {}
+		AtomicInt(T v) : detail::AtomicIntImpl<T,sizeof(T)>(v) {}
 		AtomicInt(const AtomicVal<T>& rhs) : detail::AtomicIntImpl<T,sizeof(T)>(rhs.value()) {}
 		AtomicInt(const AtomicInt& rhs) : detail::AtomicIntImpl<T,sizeof(T)>(rhs.value()) {}
 
@@ -273,6 +276,12 @@ namespace OOBase
 			if (this != &rhs)
 				detail::AtomicIntImpl<T,sizeof(T)>::operator = (rhs.value());
 
+			return *this;
+		}
+
+		AtomicInt& operator = (T rhs)
+		{
+			detail::AtomicIntImpl<T,sizeof(T)>::operator = (rhs);
 			return *this;
 		}
 
@@ -304,7 +313,7 @@ namespace OOBase
 		class AtomicValImpl<T,4>
 		{
 		public:
-			explicit AtomicValImpl(T v) : m_val(v) {}
+			AtomicValImpl(T v) : m_val(v) {}
 			AtomicValImpl(const AtomicValImpl& rhs) : m_val(rhs.value()) {}
 
 			AtomicValImpl& operator = (T v)
@@ -321,33 +330,18 @@ namespace OOBase
 				return *this;
 			}
 
-			bool operator == (const AtomicValImpl& rhs) const
+			operator T () const
 			{
-				return (m_val == rhs.m_val);
+				return value();
 			}
 
-			bool operator != (const AtomicValImpl& rhs) const
-			{
-				return (m_val != rhs.m_val);
-			}
-
-			bool operator == (T v) const
-			{
-				return (m_val == v);
-			}
-
-			bool operator != (T v) const
-			{
-				return (m_val != v);
-			}
+		protected:
+			AtomicValImpl() {}
 
 			T value() const
 			{
 				return m_val;
 			}
-
-		protected:
-			AtomicValImpl() {}
 
 			volatile T m_val;
 		};
@@ -361,7 +355,7 @@ namespace OOBase
 		class AtomicValImpl<T,8>
 		{
 		public:
-			explicit AtomicValImpl(T v) : m_val(v) {}
+			AtomicValImpl(T v) : m_val(v) {}
 			AtomicValImpl(const AtomicValImpl& rhs) : m_val(rhs.value()) {}
 
 			AtomicValImpl& operator = (T v)
@@ -378,33 +372,18 @@ namespace OOBase
 				return *this;
 			}
 
-			bool operator == (const AtomicValImpl& rhs) const
+			operator T () const
 			{
-				return (m_val == rhs.m_val);
+				return value();
 			}
 
-			bool operator != (const AtomicValImpl& rhs) const
-			{
-				return (m_val != rhs.m_val);
-			}
-
-			bool operator == (T v) const
-			{
-				return (m_val == v);
-			}
-
-			bool operator != (T v) const
-			{
-				return (m_val != v);
-			}
+		protected:
+			AtomicValImpl();
 
 			T value() const
 			{
 				return m_val;
 			}
-
-		protected:
-			AtomicValImpl();
 
 			volatile T m_val;
 		};
@@ -419,7 +398,7 @@ namespace OOBase
 		{
 		public:
 			AtomicIntImpl() : AtomicValImpl<T,4>(0) {}
-			explicit AtomicIntImpl(T v) : AtomicValImpl<T,4>(v) {}
+			AtomicIntImpl(T v) : AtomicValImpl<T,4>(v) {}
 			AtomicIntImpl(const AtomicIntImpl& rhs) : AtomicValImpl<T,4>(rhs.value()) {}
 
 			AtomicIntImpl& operator = (const AtomicIntImpl& rhs)
@@ -463,7 +442,7 @@ namespace OOBase
 		{
 		public:
 			AtomicIntImpl() : AtomicValImpl<T,8>(0) {}
-			explicit AtomicIntImpl(T v) : AtomicValImpl<T,8>(v) {}
+			AtomicIntImpl(T v) : AtomicValImpl<T,8>(v) {}
 			AtomicIntImpl(const AtomicIntImpl& rhs) : AtomicValImpl<T,8>(rhs.value()) {}
 
 			AtomicIntImpl& operator = (const AtomicIntImpl& rhs)

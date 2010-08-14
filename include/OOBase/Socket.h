@@ -32,14 +32,29 @@
 #include <winsock2.h>
 #endif
 
+// Try to align winsock and BSD ;)
+#if !defined(_WIN32)
+#define INVALID_SOCKET (-1)
+#endif
+
 namespace OOBase
 {
 	class Socket
 	{
 	public:
+		/** \typedef socket_t
+		 *  The platform specific socket type.
+		 */
+#if defined(_WIN32)
+		typedef SOCKET socket_t;
+#else
+		typedef int socket_t;
+#endif
+
+	public:
 		virtual size_t recv(void* buf, size_t len, int* perr, const timeval_t* timeout = 0) = 0;
 		virtual int send(const void* buf, size_t len, const timeval_t* timeout = 0) = 0;
-		virtual void close() = 0;
+		virtual void shutdown(bool bSend, bool bRecv) = 0;
 				
 		static Socket* connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait = 0);
 		static Socket* connect_local(const std::string& path, int* perr, const timeval_t* wait = 0);
@@ -51,7 +66,7 @@ namespace OOBase
 			return send(&val,sizeof(T),timeout);
 		}
 
-		virtual int send_buffer(const Buffer* buffer, const timeval_t* timeout = 0)
+		int send_buffer(const Buffer* buffer, const timeval_t* timeout = 0)
 		{
 			return send(buffer->rd_ptr(),buffer->length(),timeout);
 		}
@@ -64,7 +79,12 @@ namespace OOBase
 			return err;
 		}
 
-		virtual int recv_buffer(Buffer* buffer, size_t len, const timeval_t* timeout = 0)
+		int recv_buffer(Buffer* buffer, const timeval_t* timeout = 0)
+		{
+			return recv(buffer,0,timeout);
+		}
+
+		virtual int recv(Buffer* buffer, size_t len, const timeval_t* timeout = 0)
 		{
 			int err = buffer->space(len);
 			if (err == 0)
@@ -75,6 +95,8 @@ namespace OOBase
 			}
 			return err;
 		}
+
+		virtual ~Socket() {};
 
 	protected:
 		Socket() {}
