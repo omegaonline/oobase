@@ -46,7 +46,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="C:\sqlite3;..\..\libev-3.9"
+				AdditionalIncludeDirectories="C:\Work\sqlite;C:\Work\libev-3.9"
 				PreprocessorDefinitions="HAVE_EV_H;HAVE_SQLITE3_AMALGAMATION"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
@@ -66,7 +66,7 @@
 				Name="VCLibrarianTool"
 				AdditionalDependencies="libev.lib"
 				OutputFile="$(OutDir)\$(ProjectName)d.lib"
-				AdditionalLibraryDirectories="..\..\OOHttp\Debug"
+				AdditionalLibraryDirectories="C:\Work\omegaonline\oohttp\Debug"
 			/>
 			<Tool
 				Name="VCALinkTool"
