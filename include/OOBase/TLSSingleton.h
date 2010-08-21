@@ -28,10 +28,8 @@ namespace OOBase
 {
 	namespace TLS
 	{
-		void Add(const void* key, void (*destructor)(void*));
 		bool Get(const void* key, void** val);
-		void Set(const void* key, void* val);
-		void Remove(const void* key);
+		void Set(const void* key, void* val, void (*destructor)(void*) = 0);
 
 		void ThreadStart();
 		void ThreadExit();
@@ -66,8 +64,7 @@ namespace OOBase
 			if (!pThis)
 				OOBase_OutOfMemory();
 
-			TLS::Add(&s_sentinal,&destroy);
-			TLS::Set(&s_sentinal,pThis);
+			TLS::Set(&s_sentinal,pThis,&destroy);
 
 			return pThis;
 		}

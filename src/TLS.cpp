@@ -189,33 +189,6 @@ namespace
 	}
 }
 
-void OOBase::TLS::Add(const void* key, void (*destructor)(void*))
-{
-	TLSMap* inst = TLSMap::instance();
-
-	try
-	{
-		std::map<const void*,TLSMap::tls_val>::iterator i=inst->m_mapVals.find(key);
-		if (i != inst->m_mapVals.end())
-		{
-			i->second.m_val = 0;
-			i->second.m_destructor = destructor;
-		}
-		else
-		{
-			TLSMap::tls_val v;
-			v.m_val = 0;
-			v.m_destructor = destructor;
-
-			inst->m_mapVals.insert(std::map<const void*,TLSMap::tls_val>::value_type(key,v));
-		}
-	}
-	catch (std::exception& e)
-	{
-		OOBase_CallCriticalFailure(e.what());
-	}
-}
-
 bool OOBase::TLS::Get(const void* key, void** val)
 {
 	TLSMap* inst = TLSMap::instance();
@@ -236,35 +209,21 @@ bool OOBase::TLS::Get(const void* key, void** val)
 	return true;
 }
 
-void OOBase::TLS::Set(const void* key, void* val)
+void OOBase::TLS::Set(const void* key, void* val, void (*destructor)(void*))
 {
 	TLSMap* inst = TLSMap::instance();
 
 	try
 	{
-		std::map<const void*,TLSMap::tls_val>::iterator i=inst->m_mapVals.find(key);
-		if (i != inst->m_mapVals.end())
-			i->second.m_val = val;
-		else
+		TLSMap::tls_val v;
+		v.m_val = val;
+		v.m_destructor = destructor;
+
+		std::pair<std::map<const void*,TLSMap::tls_val>::iterator,bool> p = inst->m_mapVals.insert(std::map<const void*,TLSMap::tls_val>::value_type(key,v));
+		if (!p.second)
 		{
-			TLSMap::tls_val v;
-			v.m_val = val;
-			v.m_destructor = 0;
-
-			inst->m_mapVals.insert(std::map<const void*,TLSMap::tls_val>::value_type(key,v));
+			p.first->second.m_val = val;
 		}
-	}
-	catch (std::exception& e)
-	{
-		OOBase_CallCriticalFailure(e.what());
-	}
-}
-
-void OOBase::TLS::Remove(const void* key)
-{
-	try
-	{
-		TLSMap::instance()->m_mapVals.erase(key);
 	}
 	catch (std::exception& e)
 	{
