@@ -48,7 +48,7 @@ namespace OOBase
 
 		virtual void run(Thread* /*pThread*/, bool /*bAutodelete*/, int (* /*thread_fn*/)(void*), void* /*param*/) { assert(false); };
 
-		static const size_t s_sentinal = 0;
+		static const size_t s_sentinal;
 
 	private:
 		Thread(const Thread&);

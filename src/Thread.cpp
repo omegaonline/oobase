@@ -473,3 +473,5 @@ OOBase::Thread* OOBase::Thread::self()
 
 	return 0;
 }
+
+const size_t OOBase::Thread::s_sentinal = 0;
