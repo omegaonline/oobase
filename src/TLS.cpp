@@ -231,11 +231,6 @@ void OOBase::TLS::Set(const void* key, void* val, void (*destructor)(void*))
 	}
 }
 
-void OOBase::TLS::ThreadStart()
-{
-	TLSMap::instance(false);
-}
-
 void OOBase::TLS::ThreadExit()
 {
 	TLSMap* inst = TLSMap::instance(false);

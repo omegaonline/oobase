@@ -30,8 +30,7 @@ namespace OOBase
 	{
 		bool Get(const void* key, void** val);
 		void Set(const void* key, void* val, void (*destructor)(void*) = 0);
-
-		void ThreadStart();
+		
 		void ThreadExit();
 	}
 

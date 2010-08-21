@@ -29,10 +29,11 @@ namespace OOBase
 	class Thread
 	{
 	public:
-		Thread();
+		Thread(bool bAutodelete);
 		virtual ~Thread();
 
-		virtual void run(int (*thread_fn)(void*), void* param);
+		void run(int (*thread_fn)(void*), void* param);
+
 		virtual bool join(const timeval_t* wait = 0);
 		virtual void abort();
 		virtual bool is_running();
@@ -40,14 +41,21 @@ namespace OOBase
 		static void sleep(const timeval_t& wait);
 		static void yield();
 
+		static Thread* self();
+
 	protected:
-		explicit Thread(bool);
+		explicit Thread(bool,bool);
+
+		virtual void run(Thread* /*pThread*/, bool /*bAutodelete*/, int (* /*thread_fn*/)(void*), void* /*param*/) { assert(false); };
+
+		static const size_t s_sentinal = 0;
 
 	private:
 		Thread(const Thread&);
 		Thread& operator = (const Thread&);
 
-		Thread* m_impl;
+		Thread*    m_impl;
+		const bool m_bAutodelete;
 	};
 }
 

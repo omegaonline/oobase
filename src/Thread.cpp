@@ -39,7 +39,8 @@ namespace
 		Win32Thread();
 		virtual ~Win32Thread();
 
-		virtual void run(int (*thread_fn)(void*), void* param);
+		void run(Thread* pThread, bool bAutodelete, int (*thread_fn)(void*), void* param);
+
 		virtual bool join(const OOBase::timeval_t* wait = 0);
 		virtual void abort();
 		virtual bool is_running();
@@ -50,6 +51,8 @@ namespace
 			OOBase::Win32::SmartHandle m_hEvent;
 			int (*m_thread_fn)(void*);
 			void*                      m_param;
+			Thread*                    m_pThread;
+			bool                       m_bAutodelete;
 		};
 
 		OOBase::Mutex              m_lock;
@@ -59,7 +62,7 @@ namespace
 	};
 
 	Win32Thread::Win32Thread() :
-			OOBase::Thread(false),
+			OOBase::Thread(false,false),
 			m_hThread(0)
 	{
 	}
@@ -88,11 +91,9 @@ namespace
 		return false;
 	}
 
-	void Win32Thread::run(int (*thread_fn)(void*), void* param)
+	void Win32Thread::run(Thread* pThread, bool bAutodelete, int (*thread_fn)(void*), void* param)
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
-
-		assert(!is_running());
 
 		// Close any open handles, this allows restarting
 		m_hThread.close();
@@ -101,6 +102,8 @@ namespace
 		wrap.m_thread_fn = thread_fn;
 		wrap.m_param = param;
 		wrap.m_hEvent = CreateEventW(NULL,TRUE,FALSE,NULL);
+		wrap.m_pThread = pThread;
+		wrap.m_bAutodelete = bAutodelete;
 		if (!wrap.m_hEvent)
 			OOBase_CallCriticalFailure(GetLastError());
 
@@ -152,18 +155,23 @@ namespace
 	{
 		wrapper* wrap = static_cast<wrapper*>(param);
 
-		// Make sure we init any thread-local storage support
-		OOBase::TLS::ThreadStart();
-
 		// Copy the values out before we signal
+		Thread* pThread = wrap->m_pThread;
 		int (*thread_fn)(void*) = wrap->m_thread_fn;
 		void* p = wrap->m_param;
+		bool bAutodelete = wrap->m_bAutodelete;
+
+		// Set our self pointer in TLS
+		OOBase::TLS::Set(&s_sentinal,pThread);
 
 		// Set the event, meaning we have started
 		if (!SetEvent(wrap->m_hEvent))
 			OOBase_CallCriticalFailure(GetLastError());
 
 		unsigned int ret = static_cast<unsigned int>((*thread_fn)(p));
+
+		if (bAutodelete)
+			delete pThread;
 
 		// Make sure we clean up any thread-local storage
 		OOBase::TLS::ThreadExit();
@@ -181,7 +189,7 @@ namespace
 		PthreadThread();
 		virtual ~PthreadThread();
 
-		virtual void run(int (*thread_fn)(void*), void* param);
+		virtual void run(Thread* pThread, bool bAutodelete, int (*thread_fn)(void*), void* param);
 		virtual bool join(const OOBase::timeval_t* wait = 0);
 		virtual void abort();
 		virtual bool is_running();
@@ -192,6 +200,7 @@ namespace
 			PthreadThread*     m_pThis;
 			int (*m_thread_fn)(void*);
 			void*              m_param;
+			bool               m_bAutodelete;
 		};
 
 		OOBase::Mutex  m_lock;
@@ -203,7 +212,7 @@ namespace
 	};
 
 	PthreadThread::PthreadThread() :
-			OOBase::Thread(false),
+			OOBase::Thread(false,false),
 			m_running(false)
 	{
 		int err = pthread_cond_init(&m_condition,NULL);
@@ -225,7 +234,7 @@ namespace
 		return m_running;
 	}
 
-	void PthreadThread::run(int (*thread_fn)(void*), void* param)
+	void PthreadThread::run(Thread* pThread, bool bAutodelete, int (*thread_fn)(void*), void* param)
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
@@ -233,8 +242,10 @@ namespace
 
 		wrapper wrap;
 		wrap.m_pThis = this;
+		wrap.m_pThread = pThread;
 		wrap.m_thread_fn = thread_fn;
 		wrap.m_param = param;
+		wrap.m_bAutodelete = bAutodelete;
 
 		pthread_attr_t attr;
 		int err = pthread_attr_init(&attr);
@@ -326,9 +337,14 @@ namespace
 		wrapper* wrap = static_cast<wrapper*>(param);
 
 		// Copy the values out before we signal
+		Thread* pThread = wrap->m_pThread;
 		PthreadThread* pThis = wrap->m_pThis;
 		int (*thread_fn)(void*) = wrap->m_thread_fn;
 		void* p = wrap->m_param;
+		bool bAutodelete = wrap->m_bAutodelete;
+
+		// Set our self pointer in TLS
+		OOBase::TLS::Set(&s_sentinal,pThread);
 
 		pThis->m_running = true;
 
@@ -345,6 +361,9 @@ namespace
 		if (err)
 			OOBase_CallCriticalFailure(err);
 
+		if (bAutodelete)
+			delete pThread;
+
 		return (void*)ret;
 	}
 
@@ -352,8 +371,9 @@ namespace
 
 }
 
-OOBase::Thread::Thread() :
-		m_impl(0)
+OOBase::Thread::Thread(bool bAutodelete) :
+		m_impl(0),
+		m_bAutodelete(bAutodelete)
 {
 #if defined(_WIN32)
 	OOBASE_NEW(m_impl,Win32Thread());
@@ -367,8 +387,9 @@ OOBase::Thread::Thread() :
 		OOBase_OutOfMemory();
 }
 
-OOBase::Thread::Thread(bool) :
-		m_impl(0)
+OOBase::Thread::Thread(bool,bool) :
+		m_impl(0),
+		m_bAutodelete(false)
 {
 }
 
@@ -379,21 +400,30 @@ OOBase::Thread::~Thread()
 
 void OOBase::Thread::run(int (*thread_fn)(void*), void* param)
 {
-	return m_impl->run(thread_fn,param);
+	assert(this != self());
+	assert(!is_running());
+
+	return m_impl->run(this,m_bAutodelete,thread_fn,param);
 }
 
 bool OOBase::Thread::join(const timeval_t* wait)
 {
+	assert(this != self());
+
 	return m_impl->join(wait);
 }
 
 void OOBase::Thread::abort()
 {
+	assert(this != self());
+
 	return m_impl->abort();
 }
 
 bool OOBase::Thread::is_running()
 {
+	assert(this != self());
+
 	return m_impl->is_running();
 }
 
@@ -432,4 +462,14 @@ void OOBase::Thread::sleep(const timeval_t& wait)
 #else
 #error Fix me!
 #endif
+}
+
+OOBase::Thread* OOBase::Thread::self()
+{
+	void* v = 0;
+	OOBase::TLS::Get(&s_sentinal,&v);
+	if (v)
+		return static_cast<OOBase::Thread*>(v);
+
+	return 0;
 }
