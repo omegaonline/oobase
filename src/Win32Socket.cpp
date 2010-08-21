@@ -19,72 +19,133 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Socket.h"
+#include "../include/OOBase/internal/Win32Socket.h"
 
 #if defined(_WIN32)
 
 namespace
 {
-	class Socket : public OOBase::Socket
+	class Socket : public OOBase::Win32::Socket
 	{
 	public:
-		explicit Socket(SOCKET hSocket);
-		explicit Socket(HANDLE hPipe);
-		virtual ~Socket();
+		Socket(HANDLE hPipe) : OOBase::Win32::Socket(hPipe)
+		{}
 
-		size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* wait = 0);
-		int send(const void* buf, size_t len, const OOBase::timeval_t* wait = 0);
-		void shutdown(bool bSend, bool bRecv);
-		
-	private:
-		OOBase::Win32::SmartHandle m_handle;
-		OOBase::Win32::SmartHandle m_hReadEvent;
-		OOBase::Win32::SmartHandle m_hWriteEvent;
-		const bool                 m_bRealSocket;
-	};
-
-	Socket::Socket(SOCKET hSocket) :
-			m_handle((HANDLE)hSocket),
-			m_bRealSocket(true)
-	{
-	}
-
-	Socket::Socket(HANDLE hPipe) :
-			m_handle(hPipe),
-			m_bRealSocket(false)
-	{
-	}
-
-	Socket::~Socket()
-	{
-	}
-
-	int Socket::send(const void* buf, size_t len, const OOBase::timeval_t* timeout)
-	{
-		if (!m_hWriteEvent.is_valid())
+		void shutdown(bool, bool)
 		{
-			m_hWriteEvent = CreateEventW(NULL,TRUE,FALSE,NULL);
-			if (!m_hWriteEvent.is_valid())
+			m_handle.close();
+		}
+	};
+}
+
+OOBase::Win32::Socket::Socket(HANDLE handle) :
+		m_handle(handle)
+{
+}
+
+OOBase::Win32::Socket::~Socket()
+{
+}
+
+int OOBase::Win32::Socket::send(const void* buf, size_t len, const OOBase::timeval_t* timeout)
+{
+	if (!m_hWriteEvent.is_valid())
+	{
+		m_hWriteEvent = CreateEventW(NULL,TRUE,FALSE,NULL);
+		if (!m_hWriteEvent.is_valid())
+			return GetLastError();
+	}
+
+	OVERLAPPED ov = {0};
+	ov.hEvent = m_hWriteEvent;
+
+	const char* cbuf = reinterpret_cast<const char*>(buf);
+	while (len > 0)
+	{
+		DWORD dwWritten = 0;
+		if (WriteFile(m_handle,cbuf,static_cast<DWORD>(len),&dwWritten,&ov))
+		{
+			if (!SetEvent(m_hWriteEvent))
 				return GetLastError();
 		}
-
-		OVERLAPPED ov = {0};
-		ov.hEvent = m_hWriteEvent;
-
-		const char* cbuf = reinterpret_cast<const char*>(buf);
-		while (len > 0)
+		else
 		{
-			DWORD dwWritten = 0;
-			if (WriteFile(m_handle,cbuf,static_cast<DWORD>(len),&dwWritten,&ov))
+			DWORD ret = GetLastError();
+			if (ret != ERROR_IO_PENDING)
+				return ret;
+
+			// Wait...
+			if (timeout)
 			{
-				if (!SetEvent(m_hWriteEvent))
-					return GetLastError();
+				DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout->msec());
+				if (dwWait == WAIT_TIMEOUT)
+				{
+					CancelIo(m_handle);
+					return WAIT_TIMEOUT;
+				}
+				else if (dwWait != WAIT_OBJECT_0)
+				{
+					ret = GetLastError();
+					CancelIo(m_handle);
+					return ret;
+				}
 			}
+		}
+
+		if (!GetOverlappedResult(m_handle,&ov,&dwWritten,TRUE))
+		{
+			DWORD ret = GetLastError();
+			CancelIo(m_handle);
+			return ret;
+		}
+
+		cbuf += dwWritten;
+		len -= dwWritten;
+	}
+
+	return 0;
+}
+
+size_t OOBase::Win32::Socket::recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout)
+{
+	assert(perr);
+	*perr = 0;
+
+	if (!m_hReadEvent.is_valid())
+	{
+		m_hReadEvent = CreateEventW(NULL,TRUE,FALSE,NULL);
+		if (!m_hReadEvent.is_valid())
+		{
+			*perr = GetLastError();
+			return 0;
+		}
+	}
+
+	OVERLAPPED ov = {0};
+	ov.hEvent = m_hReadEvent;
+
+	char* cbuf = reinterpret_cast<char*>(buf);
+	size_t total = len;
+	while (total > 0)
+	{
+		DWORD dwRead = 0;
+		if (ReadFile(m_handle,cbuf,static_cast<DWORD>(total),&dwRead,&ov))
+		{
+			if (!SetEvent(m_hReadEvent))
+			{
+				*perr = GetLastError();
+				return 0;
+			}
+		}
+		else
+		{
+			*perr = GetLastError();
+			if (*perr == ERROR_MORE_DATA)
+				dwRead = static_cast<DWORD>(total);
 			else
 			{
-				DWORD ret = GetLastError();
-				if (ret != ERROR_IO_PENDING)
-					return ret;
+				if (*perr != ERROR_IO_PENDING)
+					return (len - total);
 
 				// Wait...
 				if (timeout)
@@ -93,123 +154,32 @@ namespace
 					if (dwWait == WAIT_TIMEOUT)
 					{
 						CancelIo(m_handle);
-						return WAIT_TIMEOUT;
+						*perr = WAIT_TIMEOUT;
+						return (len - total);
 					}
 					else if (dwWait != WAIT_OBJECT_0)
 					{
-						ret = GetLastError();
+						*perr = GetLastError();
 						CancelIo(m_handle);
-						return ret;
-					}
-				}
-			}
-
-			if (!GetOverlappedResult(m_handle,&ov,&dwWritten,TRUE))
-			{
-				DWORD ret = GetLastError();
-				CancelIo(m_handle);
-				return ret;
-			}
-
-			cbuf += dwWritten;
-			len -= dwWritten;
-		}
-
-		return 0;
-	}
-
-	size_t Socket::recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout)
-	{
-		assert(perr);
-		*perr = 0;
-
-		if (!m_hReadEvent.is_valid())
-		{
-			m_hReadEvent = CreateEventW(NULL,TRUE,FALSE,NULL);
-			if (!m_hReadEvent.is_valid())
-			{
-				*perr = GetLastError();
-				return 0;
-			}
-		}
-
-		OVERLAPPED ov = {0};
-		ov.hEvent = m_hReadEvent;
-
-		char* cbuf = reinterpret_cast<char*>(buf);
-		size_t total = len;
-		while (total > 0)
-		{
-			DWORD dwRead = 0;
-			if (ReadFile(m_handle,cbuf,static_cast<DWORD>(total),&dwRead,&ov))
-			{
-				if (!SetEvent(m_hReadEvent))
-				{
-					*perr = GetLastError();
-					return 0;
-				}
-			}
-			else
-			{
-				*perr = GetLastError();
-				if (*perr == ERROR_MORE_DATA)
-					dwRead = static_cast<DWORD>(total);
-				else
-				{
-					if (*perr != ERROR_IO_PENDING)
 						return (len - total);
-
-					// Wait...
-					if (timeout)
-					{
-						DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout->msec());
-						if (dwWait == WAIT_TIMEOUT)
-						{
-							CancelIo(m_handle);
-							*perr = WAIT_TIMEOUT;
-							return (len - total);
-						}
-						else if (dwWait != WAIT_OBJECT_0)
-						{
-							*perr = GetLastError();
-							CancelIo(m_handle);
-							return (len - total);
-						}
 					}
 				}
 			}
-
-			if (!GetOverlappedResult(m_handle,&ov,&dwRead,TRUE))
-			{
-				*perr = GetLastError();
-				CancelIo(m_handle);
-				return (len - total);
-			}
-
-			cbuf += dwRead;
-			total -= dwRead;
 		}
 
-		*perr = 0;
-		return len;
-	}
-
-	void Socket::shutdown(bool bSend, bool bRecv)
-	{
-		if (m_bRealSocket)
+		if (!GetOverlappedResult(m_handle,&ov,&dwRead,TRUE))
 		{
-			int how = -1;
-			if (bSend)
-				how = (bRecv ? SD_BOTH : SD_SEND);
-			else if (bRecv)
-				how = SD_RECEIVE;
-
-			if (how != -1)
-				::shutdown((SOCKET)(HANDLE)m_handle,how);
+			*perr = GetLastError();
+			CancelIo(m_handle);
+			return (len - total);
 		}
-		else
-			m_handle.close();
+
+		cbuf += dwRead;
+		total -= dwRead;
 	}
+
+	*perr = 0;
+	return len;
 }
 
 OOBase::Socket* OOBase::Socket::connect_local(const std::string& path, int* perr, const timeval_t* wait)
@@ -270,28 +240,5 @@ OOBase::Socket* OOBase::Socket::connect_local(const std::string& path, int* perr
 
 	return pSocket;
 }
-
-#if 0
-OOBase::Socket* OOBase::Socket::connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait)
-{
-	// Ensure we have winsock loaded
-	Win32::WSAStartup();
-
-	OOBase::SOCKET sock = OOBase::connect(address,port,perr,wait);
-	if (sock == INVALID_SOCKET)
-		return 0;
-
-	OOBase::Win32::Socket* pSocket = 0;
-	OOBASE_NEW(pSocket,OOBase::Win32::Socket(sock));
-	if (!pSocket)
-	{
-		*perr = ERROR_OUTOFMEMORY;
-		closesocket(sock);
-		return 0;
-	}
-
-	return pSocket;
-}
-#endif
 
 #endif // _WIN32

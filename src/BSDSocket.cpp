@@ -21,6 +21,16 @@
 
 #include "../include/OOBase/internal/BSDSocket.h"
 
+#if defined(_WIN32)
+namespace OOBase
+{
+	namespace Win32
+	{
+		void WSAStartup();
+	}
+}
+#endif
+
 #if defined(_MSC_VER)
 #pragma warning(disable: 4127)
 #endif
@@ -322,6 +332,10 @@ namespace
 
 OOBase::Socket::socket_t OOBase::BSD::create_socket(int family, int socktype, int protocol, int* perr)
 {
+#if defined(_WIN32)
+	Win32::WSAStartup();
+#endif
+
 	*perr = 0;
 
 	OOBase::Socket::socket_t sock = ::socket(family,socktype,protocol);
@@ -389,6 +403,11 @@ int OOBase::BSD::set_close_on_exec(SOCKET sock, bool set)
 //#if !defined(_WIN32)
 OOBase::Socket* OOBase::Socket::connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait)
 {
+#if defined(_WIN32)
+	// Ensure we have winsock loaded
+	Win32::WSAStartup();
+#endif
+
 	Socket::socket_t sock = connect_i(address,port,perr,wait);
 	if (sock == INVALID_SOCKET)
 		return 0;

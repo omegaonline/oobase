@@ -55,6 +55,14 @@ typedef BOOL (PASCAL* LPFN_ACCEPTEX)(
 
 #endif // !defined(WSAID_ACCEPTEX)
 
+namespace OOBase
+{
+	namespace Win32
+	{
+		void WSAStartup();
+	}
+}
+
 namespace
 {
 	SOCKET create_socket(int family, int socktype, int protocol, int* perr)
@@ -806,6 +814,7 @@ namespace
 OOSvrBase::Win32::ProactorImpl::ProactorImpl() :
 		OOSvrBase::Proactor(false)
 {
+	OOBase::Win32::WSAStartup();
 }
 
 OOSvrBase::Win32::ProactorImpl::~ProactorImpl()

@@ -24,16 +24,13 @@
 
 #if defined(_WIN32)
 
-#include <winsock2.h>
-
 namespace
 {
 	class Win32Thunk
 	{
 	public:
 		Win32Thunk();
-		~Win32Thunk();
-
+		
 		static Win32Thunk& instance()
 		{
 			static INIT_ONCE key = {0};
@@ -151,20 +148,6 @@ namespace
 		m_BindIoCompletionCallback = (pfn_BindIoCompletionCallback)(GetProcAddress(m_hKernel32,"BindIoCompletionCallback"));
 
 		init_low_frag_heap();
-
-		// Start Winsock
-		WSADATA wsa;
-		int err = WSAStartup(MAKEWORD(2,2),&wsa);
-		if (err != 0)
-			OOBase_CallCriticalFailure(WSAGetLastError());
-		
-		if (LOBYTE(wsa.wVersion) != 2 || HIBYTE(wsa.wVersion) != 2)
-			OOBase_CallCriticalFailure("Very old Winsock dll");
-	}
-
-	Win32Thunk::~Win32Thunk()
-	{
-		WSACleanup();
 	}
 
 	void Win32Thunk::init_low_frag_heap()

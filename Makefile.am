@@ -54,10 +54,6 @@ liboobase_la_CFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
 liboobase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
 liboobase_la_LDFLAGS = $(PTHREAD_LIBS) $(LIBLTDL)
 
-if WIN32
-liboobase_la_LDFLAGS += -lws2_32
-endif
-
 liboobase_la_SOURCES = \
 	include/config-base.h \
 	include/config-msvc.h \
@@ -82,6 +78,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/Win32.h \
 	include/OOBase/internal/BSDSocket.h \
 	include/OOBase/internal/Win32Impl.h \
+	include/OOBase/internal/Win32Socket.h \
 	src/BSDSocket.cpp \
 	src/Buffer.cpp \
 	src/Condition.cpp \
@@ -95,15 +92,12 @@ liboobase_la_SOURCES = \
 	src/tr24731.cpp \
 	src/utf8.cpp \
 	src/Win32.cpp \
-	src/Win32Socket.cpp	
+	src/Win32Socket.cpp	\
+	src/Win32Socket2.cpp	
 
 liboosvrbase_la_CFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
 liboosvrbase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
 liboosvrbase_la_LDFLAGS = $(PTHREAD_LIBS) $(EV_LIBS)
-
-if WIN32
-liboosvrbase_la_LDFLAGS += -lnetapi32 -luserenv -lshlwapi
-endif
 
 liboosvrbase_la_SOURCES = \
 	include/OOSvrBase/CmdArgs.h \

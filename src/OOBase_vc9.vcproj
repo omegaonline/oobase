@@ -326,6 +326,10 @@
 				RelativePath=".\Win32Socket.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\Win32Socket2.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -422,6 +426,10 @@
 			</File>
 			<File
 				RelativePath="..\include\OOBase\internal\Win32Impl.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\internal\Win32Socket.h"
 				>
 			</File>
 		</Filter>
