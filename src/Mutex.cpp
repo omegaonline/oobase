@@ -171,7 +171,7 @@ bool OOBase::Mutex::acquire(const timeval_t* wait)
 	else
 	{
 		timespec ts;
-		OOBase::timeval_t now = OOBase::gettimeofday();
+		OOBase::timeval_t now = OOBase::timeval_t::gettimeofday();
 		now += *wait;
 		ts.tv_sec = now.tv_sec();
 		ts.tv_nsec = now.tv_usec() * 1000;

@@ -74,11 +74,11 @@ namespace
 	public:
 		Socket(OOBase::Socket::socket_t sock);
 		virtual ~Socket();
-		
+
 		int send(const void* buf, size_t len, const OOBase::timeval_t* timeout = 0);
 		size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout = 0);
 		void shutdown(bool bSend, bool bRecv);
-		
+
 	private:
 		OOBase::Socket::socket_t  m_sock;
 	};
@@ -362,7 +362,7 @@ OOBase::Socket::socket_t OOBase::BSD::create_socket(int family, int socktype, in
 	return sock;
 }
 
-int OOBase::BSD::set_non_blocking(SOCKET sock, bool set)
+int OOBase::BSD::set_non_blocking(Socket::socket_t sock, bool set)
 {
 #if defined (_WIN32)
 	u_long v = (set ? 1 : 0);
@@ -374,7 +374,7 @@ int OOBase::BSD::set_non_blocking(SOCKET sock, bool set)
 	if (flags == -1)
 		return errno;
 
-	flags = (set ? flags | O_NONBLOCK : flags & ~O_NONBLOCK);		
+	flags = (set ? flags | O_NONBLOCK : flags & ~O_NONBLOCK);
 	if (fcntl(sock,F_SETFL,flags) == -1)
 		return errno;
 #endif
@@ -382,7 +382,7 @@ int OOBase::BSD::set_non_blocking(SOCKET sock, bool set)
 	return 0;
 }
 
-int OOBase::BSD::set_close_on_exec(SOCKET sock, bool set)
+int OOBase::BSD::set_close_on_exec(Socket::socket_t sock, bool set)
 {
 #if (defined(HAVE_FCNTL_H) || defined(HAVE_SYS_FCNTL_H)) && defined(HAVE_UNISTD_H)
 	int flags = fcntl(sock,F_GETFD);
@@ -395,8 +395,9 @@ int OOBase::BSD::set_close_on_exec(SOCKET sock, bool set)
 #else
 	(void)set;
 	(void)sock;
-	return 0;
 #endif
+
+	return 0;
 }
 
 // Win32 native sockets are probably faster...
@@ -428,121 +429,9 @@ OOBase::Socket* OOBase::Socket::connect(const std::string& address, const std::s
 #if defined(HAVE_SYS_UN_H)
 #include <sys/un.h>
 
-#if 0
-OOBase::LocalSocket::uid_t OOBase::POSIX::LocalSocket::get_uid()
-{
-#if defined(HAVE_GETPEEREID)
-	/* OpenBSD style:  */
-	uid_t uid;
-	gid_t gid;
-	if (getpeereid(m_fd, &uid, &gid) != 0)
-	{
-		/* We didn't get a valid credentials struct. */
-		OOBase_CallCriticalFailure(errno);
-		return -1;
-	}
-	return uid;
-
-#elif defined(HAVE_SO_PEERCRED)
-	/* Linux style: use getsockopt(SO_PEERCRED) */
-	ucred peercred;
-	socklen_t so_len = sizeof(peercred);
-
-	if (getsockopt(m_fd, SOL_SOCKET, SO_PEERCRED, &peercred, &so_len) != 0 || so_len != sizeof(peercred))
-	{
-		/* We didn't get a valid credentials struct. */
-		OOBase_CallCriticalFailure(errno);
-		return -1;
-	}
-	return peercred.uid;
-
-#elif defined(HAVE_GETPEERUCRED)
-	/* Solaris > 10 */
-	ucred_t* ucred = NULL; /* must be initialized to NULL */
-	if (getpeerucred(m_fd, &ucred) != 0)
-	{
-		OOBase_CallCriticalFailure(errno);
-		return -1;
-	}
-
-	uid_t uid;
-	if ((uid = ucred_geteuid(ucred)) == -1)
-	{
-		int err = errno;
-		ucred_free(ucred);
-		OOBase_CallCriticalFailure(err);
-		return -1;
-	}
-	return uid;
-
-#elif (defined(HAVE_STRUCT_CMSGCRED) || defined(HAVE_STRUCT_FCRED) || defined(HAVE_STRUCT_SOCKCRED)) && defined(HAVE_LOCAL_CREDS)
-
-	/*
-	* Receive credentials on next message receipt, BSD/OS,
-	* NetBSD. We need to set this before the client sends the
-	* next packet.
-	*/
-	int on = 1;
-	if (setsockopt(m_fd, 0, LOCAL_CREDS, &on, sizeof(on)) != 0)
-	{
-		OOBase_CallCriticalFailure(errno);
-		return -1;
-	}
-
-	/* Credentials structure */
-#if defined(HAVE_STRUCT_CMSGCRED)
-	typedef cmsgcred Cred;
-	#define cruid cmcred_uid
-#elif defined(HAVE_STRUCT_FCRED)
-	typedef fcred Cred;
-	#define cruid fc_uid
-#elif defined(HAVE_STRUCT_SOCKCRED)
-	typedef sockcred Cred;
-	#define cruid sc_uid
-#endif
-	/* Compute size without padding */
-	char cmsgmem[ALIGN(sizeof(struct cmsghdr)) + ALIGN(sizeof(Cred))];   /* for NetBSD */
-
-	/* Point to start of first structure */
-	struct cmsghdr* cmsg = (struct cmsghdr*)cmsgmem;
-	struct iovec iov;
-
-	msghdr msg;
-	memset(&msg, 0, sizeof(msg));
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-	msg.msg_control = (char *) cmsg;
-	msg.msg_controllen = sizeof(cmsgmem);
-	memset(cmsg, 0, sizeof(cmsgmem));
-
-	/*
-	 * The one character which is received here is not meaningful; its
-	 * purposes is only to make sure that recvmsg() blocks long enough for the
-	 * other side to send its credentials.
-	 */
-	char buf;
-	iov.iov_base = &buf;
-	iov.iov_len = 1;
-
-	if (recvmsg(m_fd, &msg, 0) < 0 || cmsg->cmsg_len < sizeof(cmsgmem) || cmsg->cmsg_type != SCM_CREDS)
-	{
-		OOBase_CallCriticalFailure(errno);
-		return -1;
-	}
-
-	Cred* cred = (Cred*)CMSG_DATA(cmsg);
-	return cred->cruid;
-#else
-	// We can't handle this situation
-	#error Fix me!
-	return -1;
-#endif
-}
-#endif 
-
 OOBase::Socket* OOBase::Socket::connect_local(const std::string& path, int* perr, const timeval_t* wait)
 {
-	OOBase::socket_t sock = create_socket(AF_UNIX,SOCK_STREAM,0,perr);
+	OOBase::Socket::socket_t sock = OOBase::BSD::create_socket(AF_UNIX,SOCK_STREAM,0,perr);
 	if (sock == -1)
 		return 0;
 

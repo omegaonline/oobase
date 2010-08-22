@@ -20,11 +20,11 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/Thread.h"
+#include "../include/OOBase/TLSSingleton.h"
 
 #if defined(_WIN32)
 
 #include <process.h>
-#include "../include/OOBase/TLSSingleton.h"
 
 #endif
 
@@ -201,6 +201,7 @@ namespace
 			int (*m_thread_fn)(void*);
 			void*              m_param;
 			bool               m_bAutodelete;
+			Thread*            m_pThread;
 		};
 
 		OOBase::Mutex  m_lock;
@@ -288,7 +289,7 @@ namespace
 			while (m_running)
 			{
 				timespec wt;
-				OOBase::timeval_t now = OOBase::gettimeofday();
+				OOBase::timeval_t now = OOBase::timeval_t::gettimeofday();
 				now += *wait;
 				wt.tv_sec = now.tv_sec();
 				wt.tv_nsec = now.tv_usec() * 1000;

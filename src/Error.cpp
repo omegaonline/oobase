@@ -69,7 +69,7 @@ void OOBase::CallCriticalFailureMem(const char* pszFile, unsigned int nLine)
 
 void OOBase::CallCriticalFailureMem(const char* pszFile, unsigned int nLine)
 {
-	CallCriticalFailureE(pszFile,nLine,ENOMEM);
+	CallCriticalFailure(pszFile,nLine,ENOMEM);
 }
 
 #else

@@ -31,6 +31,10 @@
 #include <sys/un.h>
 #endif /* HAVE_SYS_UN_H */
 
+#if defined(HAVE_NETDB_H)
+#include <netdb.h>
+#endif
+
 #if defined(_WIN32)
 #include <ws2tcpip.h>
 
@@ -58,17 +62,67 @@
 
 namespace
 {
+	int connect_i(OOBase::Socket::socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* wait)
+	{
+		// Do the connect
+		if (::connect(sock,addr,addrlen) != -1)
+			return 0;
+
+		// Check to see if we actually have an error
+		int err = socket_errno;
+		if (err != EINPROGRESS)
+			return err;
+
+		// Wait for the connect to go ahead - by select()ing on write
+		::timeval tv;
+		if (wait)
+		{
+			tv.tv_sec = static_cast<long>(wait->tv_sec());
+			tv.tv_usec = wait->tv_usec();
+		}
+
+		fd_set wfds;
+		fd_set efds; // Annoyingly Winsock uses the exceptions not just the writes
+
+		for (;;)
+		{
+			FD_ZERO(&wfds);
+			FD_ZERO(&efds);
+			FD_SET(sock,&wfds);
+			FD_SET(sock,&efds);
+
+			int count = select(sock+1,0,&wfds,&efds,wait ? &tv : 0);
+			if (count == -1)
+			{
+				err = socket_errno;
+				if (err != EINTR)
+					return err;
+			}
+			else if (count == 1)
+			{
+				// If connect() did something...
+				socklen_t len = sizeof(err);
+				if (getsockopt(sock,SOL_SOCKET,SO_ERROR,(char*)&err,&len) == -1)
+					return socket_errno;
+
+				return err;
+			}
+			else
+				return ETIMEDOUT;
+		}
+	}
+
 	class IOHelper : public OOSvrBase::detail::AsyncIOHelper
 	{
 	public:
 		IOHelper(OOSvrBase::Ev::ProactorImpl* pProactor, int fd);
 		virtual ~IOHelper();
-		
+
 		void recv(AsyncOp* recv_op);
 		void send(AsyncOp* send_op);
 		void close();
 		void shutdown(bool bSend, bool bRecv);
-				
+
 	private:
 		void do_read();
 		void handle_read(int err, size_t have_read);
@@ -89,7 +143,7 @@ namespace
 		static void read_ready(OOSvrBase::Ev::ProactorImpl::io_watcher* watcher);
 		static void write_ready(OOSvrBase::Ev::ProactorImpl::io_watcher* watcher);
 	};
-	
+
 	IOHelper::IOHelper(OOSvrBase::Ev::ProactorImpl* pProactor, int fd) :
 			m_proactor(pProactor)
 	{
@@ -132,7 +186,7 @@ namespace
 
 		// Reset the completion info
 		m_read_complete.m_op = recv_op;
-				
+
 		do_read();
 	}
 
@@ -142,15 +196,15 @@ namespace
 
 		// Reset the completion info
 		m_write_complete.m_op = send_op;
-				
+
 		do_write();
 	}
 
 	void IOHelper::do_read()
 	{
-		size_t to_read = static_cast<DWORD>(m_read_complete.m_op->len);
+		size_t to_read = m_read_complete.m_op->len;
 		if (to_read == 0)
-			to_read = static_cast<DWORD>(m_read_complete.m_op->buffer->space());
+			to_read = m_read_complete.m_op->buffer->space();
 
 		ssize_t have_read = ::recv(m_read_complete.fd,m_read_complete.m_op->buffer->wr_ptr(),to_read,0);
 		if (have_read > 0)
@@ -184,7 +238,7 @@ namespace
 			// More to read
 			return do_read();
 		}
-		
+
 		// Stash op... another op may be about to occur...
 		AsyncOp* op = m_read_complete.m_op;
 		m_read_complete.m_op = 0;
@@ -192,7 +246,7 @@ namespace
 		// Call handlers
 		m_handler->on_recv(op,err);
 	}
-	
+
 	void IOHelper::do_write()
 	{
 		ssize_t have_sent = ::send(m_write_complete.fd,m_write_complete.m_op->buffer->rd_ptr(),m_write_complete.m_op->buffer->length(),0);
@@ -220,7 +274,7 @@ namespace
 			// More to send
 			return do_write();
 		}
-		
+
 		// Stash op... another op may be about to occur...
 		AsyncOp* op = m_write_complete.m_op;
 		m_write_complete.m_op = 0;
@@ -286,12 +340,13 @@ namespace
 	class AsyncLocalSocket : public OOSvrBase::detail::AsyncSocketTempl<OOSvrBase::AsyncLocalSocket>
 	{
 	public:
-		AsyncLocalSocket(IOHelper* helper, OOSvrBase::IOHandler<OOSvrBase::AsyncLocalSocket>* handler) :
-				OOSvrBase::detail::AsyncSocketTempl<OOSvrBase::AsyncLocalSocket>(helper,handler)
+		AsyncLocalSocket(IOHelper* helper, OOBase::Socket::socket_t sock) :
+				OOSvrBase::detail::AsyncSocketTempl<OOSvrBase::AsyncLocalSocket>(helper),
+				m_fd(sock)
 		{
 		}
 
-		static AsyncLocalSocket* Create(OOSvrBase::Ev::ProactorImpl* proactor, OOSvrBase::IOHandler<OOSvrBase::AsyncLocalSocket>* handler, OOBase::Socket::socket_t sock)
+		static AsyncLocalSocket* Create(OOSvrBase::Ev::ProactorImpl* proactor, OOBase::Socket::socket_t sock)
 		{
 			IOHelper* helper = 0;
 			OOBASE_NEW(helper,IOHelper(proactor,sock));
@@ -299,10 +354,10 @@ namespace
 				return 0;
 
 			AsyncLocalSocket* pSock = 0;
-			OOBASE_NEW(pSock,AsyncLocalSocket(helper,handler));
+			OOBASE_NEW(pSock,AsyncLocalSocket(helper,sock));
 			if (!pSock)
 			{
-				helper->release();
+				delete helper;
 				return 0;
 			}
 
@@ -310,11 +365,126 @@ namespace
 		}
 
 	private:
+		OOBase::Socket::socket_t m_fd;
+
 		bool is_close(int err) const
 		{
 			return false;
 		}
+
+		int get_uid(OOSvrBase::AsyncLocalSocket::uid_t& uid);
 	};
+
+	int AsyncLocalSocket::get_uid(OOSvrBase::AsyncLocalSocket::uid_t& uid)
+	{
+#if defined(HAVE_GETPEEREID)
+		/* OpenBSD style:  */
+		uid_t uid;
+		gid_t gid;
+		if (getpeereid(m_fd, &uid, &gid) != 0)
+		{
+			/* We didn't get a valid credentials struct. */
+			OOBase_CallCriticalFailure(errno);
+			return -1;
+		}
+		return uid;
+
+#elif defined(HAVE_SO_PEERCRED)
+		/* Linux style: use getsockopt(SO_PEERCRED) */
+		ucred peercred;
+		socklen_t so_len = sizeof(peercred);
+
+		if (getsockopt(m_fd, SOL_SOCKET, SO_PEERCRED, &peercred, &so_len) != 0 || so_len != sizeof(peercred))
+		{
+			/* We didn't get a valid credentials struct. */
+			OOBase_CallCriticalFailure(errno);
+			return -1;
+		}
+		return peercred.uid;
+
+#elif defined(HAVE_GETPEERUCRED)
+		/* Solaris > 10 */
+		ucred_t* ucred = NULL; /* must be initialized to NULL */
+		if (getpeerucred(m_fd, &ucred) != 0)
+		{
+			OOBase_CallCriticalFailure(errno);
+			return -1;
+		}
+
+		uid_t uid;
+		if ((uid = ucred_geteuid(ucred)) == -1)
+		{
+			int err = errno;
+			ucred_free(ucred);
+			OOBase_CallCriticalFailure(err);
+			return -1;
+		}
+		return uid;
+
+#elif (defined(HAVE_STRUCT_CMSGCRED) || defined(HAVE_STRUCT_FCRED) || defined(HAVE_STRUCT_SOCKCRED)) && defined(HAVE_LOCAL_CREDS)
+
+		/*
+		* Receive credentials on next message receipt, BSD/OS,
+		* NetBSD. We need to set this before the client sends the
+		* next packet.
+		*/
+		int on = 1;
+		if (setsockopt(m_fd, 0, LOCAL_CREDS, &on, sizeof(on)) != 0)
+		{
+			OOBase_CallCriticalFailure(errno);
+			return -1;
+		}
+
+		/* Credentials structure */
+#if defined(HAVE_STRUCT_CMSGCRED)
+		typedef cmsgcred Cred;
+		#define cruid cmcred_uid
+#elif defined(HAVE_STRUCT_FCRED)
+		typedef fcred Cred;
+		#define cruid fc_uid
+#elif defined(HAVE_STRUCT_SOCKCRED)
+		typedef sockcred Cred;
+		#define cruid sc_uid
+#endif
+		/* Compute size without padding */
+		char cmsgmem[ALIGN(sizeof(struct cmsghdr)) + ALIGN(sizeof(Cred))];   /* for NetBSD */
+
+		/* Point to start of first structure */
+		struct cmsghdr* cmsg = (struct cmsghdr*)cmsgmem;
+		struct iovec iov;
+
+		msghdr msg;
+		memset(&msg, 0, sizeof(msg));
+		msg.msg_iov = &iov;
+		msg.msg_iovlen = 1;
+		msg.msg_control = (char *) cmsg;
+		msg.msg_controllen = sizeof(cmsgmem);
+		memset(cmsg, 0, sizeof(cmsgmem));
+
+		/*
+		 * The one character which is received here is not meaningful; its
+		 * purposes is only to make sure that recvmsg() blocks long enough for the
+		 * other side to send its credentials.
+		 */
+		char buf;
+		iov.iov_base = &buf;
+		iov.iov_len = 1;
+
+		if (recvmsg(m_fd, &msg, 0) < 0 || cmsg->cmsg_len < sizeof(cmsgmem) || cmsg->cmsg_type != SCM_CREDS)
+		{
+			OOBase_CallCriticalFailure(errno);
+			return -1;
+		}
+
+		Cred* cred = (Cred*)CMSG_DATA(cmsg);
+		return cred->cruid;
+#else
+		// We can't handle this situation
+		#error Fix me!
+		return -1;
+#endif
+	}
+
 #endif
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
@@ -353,7 +523,7 @@ namespace
 		size_t                                   m_async_count;
 		bool                                     m_closed;
 
-		static void on_accept(OOSvrBase::Ev::ProactorImpl::io_watcher* watcher);	
+		static void on_accept(OOSvrBase::Ev::ProactorImpl::io_watcher* watcher);
 		void do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard);
 	};
 
@@ -403,7 +573,7 @@ namespace
 		OOBase::Guard<OOBase::Condition::Mutex> guard(pThis->m_lock);
 
 		--pThis->m_async_count;
-		
+
 		if (pThis->m_closed)
 		{
 			guard.release();
@@ -429,7 +599,7 @@ namespace
 				return;
 			}
 		}
-		
+
 		// Prepare socket if okay
 		if (!err && new_fd != INVALID_SOCKET)
 		{
@@ -477,8 +647,8 @@ namespace
 	class LocalSocketAcceptor : public SocketAcceptor<OOSvrBase::AsyncLocalSocket,AsyncLocalSocket>
 	{
 	public:
-		LocalSocketAcceptor(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::Socket::socket_t sock, OOSvrBase::IOHandler<SOCKET_TYPE>* sock_handler, OOSvrBase::Acceptor<SOCKET_TYPE>* handler, const std::string& path) :
-				SocketAcceptor<OOSvrBase::AsyncLocalSocket,AsyncLocalSocket>(pProactor,sock,sock_handler,handler),
+		LocalSocketAcceptor(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::Socket::socket_t sock, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler, const std::string& path) :
+				SocketAcceptor<OOSvrBase::AsyncLocalSocket,AsyncLocalSocket>(pProactor,sock,handler),
 				m_path(path)
 		{}
 
@@ -487,7 +657,10 @@ namespace
 			if (!m_path.empty())
 				unlink(m_path.c_str());
 		}
-	}
+
+	private:
+		const std::string m_path;
+	};
 #endif
 }
 
@@ -516,7 +689,7 @@ OOSvrBase::Ev::ProactorImpl::ProactorImpl() :
 	for (int i=0; i<num_procs; ++i)
 	{
 		OOBase::SmartPtr<OOBase::Thread> ptrThread;
-		OOBASE_NEW(ptrThread,OOBase::Thread());
+		OOBASE_NEW(ptrThread,OOBase::Thread(false));
 
 		ptrThread->run(&worker,this);
 
@@ -602,7 +775,7 @@ int OOSvrBase::Ev::ProactorImpl::worker_i()
 		{
 			io_watcher* i = io_queue.front();
 			io_queue.pop();
-		
+
 			if (i->callback)
 				i->callback(i);
 		}
@@ -677,10 +850,10 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor<AsyncLocalSoc
 	// path is a UNIX pipe name - e.g. /tmp/ooserverd
 
 	*perr = 0;
-	int fd = OOBase::socket(PF_UNIX,SOCK_STREAM,0,perr);
+	int fd = OOBase::BSD::create_socket(PF_UNIX,SOCK_STREAM,0,perr);
 	if (fd == -1)
 		return 0;
-	
+
 	// Compose filename
 	sockaddr_un addr;
 	addr.sun_family = AF_UNIX;
@@ -721,11 +894,11 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor<AsyncLocalSoc
 
 	// Wrap up in a controlling socket class
 	OOBase::SmartPtr<LocalSocketAcceptor> pAccept = 0;
-	OOBASE_NEW(pAccept,LocalSocketAcceptor(this,sock,sock_handler,handler,path));
+	OOBASE_NEW(pAccept,LocalSocketAcceptor(this,fd,handler,path));
 	if (!pAccept)
 	{
 		*perr = ENOMEM;
-		closesocket(sock);
+		closesocket(fd);
 		return 0;
 	}
 
@@ -743,15 +916,20 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor<OOSvrBase::A
 	{
 		sockaddr_in addr = {0};
 		addr.sin_family = AF_INET;
+
+#if defined(_WIN32)
 		addr.sin_addr.S_un.S_addr = ADDR_ANY;
+#else
+		addr.sin_addr.s_addr = INADDR_ANY;
+#endif
 
 		if (!port.empty())
 			addr.sin_port = htons((u_short)atoi(port.c_str()));
 
 		if ((sock = OOBase::BSD::create_socket(AF_INET,SOCK_STREAM,IPPROTO_TCP,perr)) == INVALID_SOCKET)
 			return 0;
-		
-		if (bind(sock,(sockaddr*)&addr,sizeof(sockaddr_in)) == SOCKET_ERROR)
+
+		if (bind(sock,(sockaddr*)&addr,sizeof(sockaddr_in)) == -1)
 		{
 			*perr = socket_errno;
 			closesocket(sock);
@@ -774,12 +952,12 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor<OOSvrBase::A
 			return 0;
 		}
 
-		// Loop trying to connect on each address until one succeeds
+		// Loop trying to bind on each address until one succeeds
 		for (addrinfo* pAddr = pResults; pAddr != 0; pAddr = pAddr->ai_next)
 		{
 			if ((sock = OOBase::BSD::create_socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,perr)) != INVALID_SOCKET)
 			{
-				if (bind(sock,pAddr->ai_addr,pAddr->ai_addrlen) == SOCKET_ERROR)
+				if (bind(sock,pAddr->ai_addr,pAddr->ai_addrlen) == -1)
 				{
 					*perr = socket_errno;
 					closesocket(sock);
@@ -798,7 +976,7 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor<OOSvrBase::A
 	}
 
 	// Now start the socket listening...
-	if (listen(sock,SOMAXCONN) == SOCKET_ERROR)
+	if (listen(sock,SOMAXCONN) == -1)
 	{
 		*perr = socket_errno;
 		closesocket(sock);
@@ -831,7 +1009,7 @@ OOSvrBase::AsyncSocket* OOSvrBase::Ev::ProactorImpl::attach_socket(OOBase::Socke
 	OOSvrBase::AsyncSocket* pSocket = ::AsyncSocket::Create(this,sock);
 	if (!pSocket)
 		*perr = ENOMEM;
-	
+
 	return pSocket;
 }
 
@@ -842,9 +1020,24 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::Ev::ProactorImpl::connect_local_socket(c
 	*perr = ENOENT;
 
 	(void)sock;
-	
+
 	return 0;
 #else
+
+	OOBase::Socket::socket_t sock = OOBase::BSD::create_socket(AF_UNIX,SOCK_STREAM,0,perr);
+	if (sock == -1)
+		return 0;
+
+	sockaddr_un addr;
+	addr.sun_family = AF_UNIX;
+	memset(addr.sun_path,0,sizeof(addr.sun_path));
+	path.copy(addr.sun_path,sizeof(addr.sun_path)-1);
+
+	if ((*perr = connect_i(sock,(sockaddr*)(&addr),sizeof(addr),wait)) != 0)
+	{
+		::close(sock);
+		return 0;
+	}
 
 	// Set non-blocking...
 	*perr = OOBase::BSD::set_non_blocking(sock,true);
@@ -855,14 +1048,16 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::Ev::ProactorImpl::connect_local_socket(c
 	OOSvrBase::AsyncLocalSocket* pSocket = ::AsyncLocalSocket::Create(this,sock);
 	if (!pSocket)
 		*perr = ENOMEM;
-	
+
 	return pSocket;
 #endif
 }
 
 OOSvrBase::AsyncLocalSocket* OOSvrBase::Ev::ProactorImpl::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)
 {
-	FIX ME!
+	// FIX ME!
+	void* FIX_ME;
+	return 0;
 }
 
 #if defined(_MSC_VER)

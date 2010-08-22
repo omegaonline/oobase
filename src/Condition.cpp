@@ -60,12 +60,12 @@ OOBase::Condition::Condition()
 		err = pthread_condattr_setpshared(&attr,PTHREAD_PROCESS_PRIVATE);
 		if (!err)
 			err = pthread_cond_init(&m_var,&attr);
-			
-		pthread_condattr_destory(&attr);
+
+		pthread_condattr_destroy(&attr);
 	}
 
 	if (err)
-		OOBase_CallCriticalFailure(err);	
+		OOBase_CallCriticalFailure(err);
 }
 
 OOBase::Condition::~Condition()
@@ -81,7 +81,7 @@ bool OOBase::Condition::wait(Condition::Mutex& mutex, const timeval_t* wait)
 	else
 	{
 		timespec wt;
-		timeval_t now = OOBase::gettimeofday();
+		timeval_t now = OOBase::timeval_t::gettimeofday();
 		now += *wait;
 		wt.tv_sec = now.tv_sec();
 		wt.tv_nsec = now.tv_usec() * 1000;
@@ -209,6 +209,8 @@ bool OOBase::Event::wait(const timeval_t* wait)
 	// Reset if we are an auto event
 	if (m_bAuto)
 		m_bSet = false;
+
+	return true;
 }
 
 void OOBase::Event::reset()

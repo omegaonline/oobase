@@ -23,6 +23,10 @@
 #include "../include/OOSvrBase/Logger.h"
 #include "../include/OOBase/Singleton.h"
 
+#if defined(HAVE_SIGNAL_H)
+#include <signal.h>
+#endif
+
 namespace
 {
 	struct QuitData
@@ -102,7 +106,7 @@ namespace
 		while (m_result == -1)
 		{
 			m_condition.wait(m_lock);
-		} 
+		}
 
 		return m_result;
 	}
@@ -117,7 +121,7 @@ namespace
 
 void OOSvrBase::Server::signal(int how)
 {
-	QUIT::instance()->signal(how);	
+	QUIT::instance()->signal(how);
 }
 
 int OOSvrBase::Server::wait_for_quit()
@@ -211,7 +215,7 @@ int OOSvrBase::Service::wait_for_quit()
 	{
 		{L"", &ServiceMain },
 		{NULL, NULL}
-	};	
+	};
 
 	// Because it can take a while to determine if we are a service or not,
 	// install the Ctrl+C handlers first
