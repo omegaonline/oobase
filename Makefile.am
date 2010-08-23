@@ -54,6 +54,10 @@ liboobase_la_CFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
 liboobase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
 liboobase_la_LDFLAGS = $(PTHREAD_LIBS) $(LIBLTDL)
 
+if WIN32
+liboobase_la_LDFLAGS += -lws2_32
+endif 
+
 liboobase_la_SOURCES = \
 	include/config-base.h \
 	include/config-msvc.h \
@@ -98,6 +102,10 @@ liboobase_la_SOURCES = \
 liboosvrbase_la_CFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
 liboosvrbase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
 liboosvrbase_la_LDFLAGS = $(PTHREAD_LIBS) $(EV_LIBS)
+
+if WIN32
+liboosvrbase_la_LDFLAGS += -lnetapi32 -luserenv -lshlwapi
+endif
 
 liboosvrbase_la_SOURCES = \
 	include/OOSvrBase/CmdArgs.h \
