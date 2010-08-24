@@ -71,7 +71,7 @@ namespace OOSvrBase
 		class AsyncHandlerRaw
 		{
 		public:
-			virtual void on_recv(AsyncIOHelper::AsyncOp* recv_op, int err) = 0;
+			virtual void on_recv(AsyncIOHelper::AsyncOp* recv_op, int err, bool bLast) = 0;
 			virtual void on_sent(AsyncIOHelper::AsyncOp* send_op, int err) = 0;
 		};
 
@@ -81,7 +81,6 @@ namespace OOSvrBase
 			virtual void on_recv(OOBase::Buffer* buffer, int err) = 0;
 			virtual void on_sent(OOBase::Buffer* buffer, int err) = 0;
 			virtual void on_closed() = 0;
-			virtual bool is_close(int err) const = 0;
 		};
 
 		class AsyncQueued
@@ -92,7 +91,7 @@ namespace OOSvrBase
 
 			int async_op(OOBase::Buffer* buffer, size_t len);
 			int sync_op(OOBase::Buffer* buffer, size_t len, const OOBase::timeval_t* timeout);
-			bool notify_async(AsyncIOHelper::AsyncOp* op, int err);
+			bool notify_async(AsyncIOHelper::AsyncOp* op, int err, bool bLast);
 			void shutdown();
 
 			void dispose();
@@ -144,7 +143,7 @@ namespace OOSvrBase
 			AsyncQueued               m_sender;
 			OOBase::AtomicInt<size_t> m_refcount;
 			
-			void on_recv(AsyncIOHelper::AsyncOp* recv_op, int err);
+			void on_recv(AsyncIOHelper::AsyncOp* recv_op, int err, bool bLast);
 			void on_sent(AsyncIOHelper::AsyncOp* send_op, int err);
 		};
 

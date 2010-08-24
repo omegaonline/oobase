@@ -263,20 +263,13 @@ void OOSvrBase::detail::AsyncQueued::issue_next(OOBase::Guard<OOBase::SpinLock>&
 	}
 }
 
-bool OOSvrBase::detail::AsyncQueued::notify_async(AsyncIOHelper::AsyncOp* op, int err)
+bool OOSvrBase::detail::AsyncQueued::notify_async(AsyncIOHelper::AsyncOp* op, int err, bool bLast)
 {
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock,false);
+	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-	bool bClose = true;
 	bool bRelease = true;
 	if (op->param)
 	{
-		// Acquire the lock... because block_info may be manipulated...
-		guard.acquire();
-
-		if (m_handler)
-			bClose = m_handler->is_close(err);
-
 		BlockingInfo* block_info = static_cast<BlockingInfo*>(op->param);
 
 		// Block recv complete
@@ -297,38 +290,20 @@ bool OOSvrBase::detail::AsyncQueued::notify_async(AsyncIOHelper::AsyncOp* op, in
 		// This is a sync op, caller need not release() us
 		bRelease = false;
 	}
-	else
+	else if (m_handler)
 	{
+		guard.release();
+
+		// Be aware that the handler can delete itself in the notification... 
+		// so don't use m_handler again after the callback without re-aquiring the lock
+
+		if (m_sender)
+			m_handler->on_sent(op->buffer,err);
+		else if (!bLast || op->buffer->length())
+			m_handler->on_recv(op->buffer,err);
+		
+		// Acquire lock... we need it for issue_next
 		guard.acquire();
-
-		// Call handler
-		if (m_handler)
-			bClose = m_handler->is_close(err);
-
-		if (m_handler)
-		{
-			guard.release();
-
-			// Be aware that the handler can delete itself in the notification... 
-			// so don't use m_handler again after the callback without re-aquiring the lock
-
-			if (m_sender)
-				m_handler->on_sent(op->buffer,err);
-			else
-			{
-				if (bClose)
-				{
-					// Report if we have recv'd something
-					if (op->buffer->length())
-						m_handler->on_recv(op->buffer,0);
-				}
-				else
-					m_handler->on_recv(op->buffer,err);
-			}
-
-			// Acquire lock... we need it for issue_next
-			guard.acquire();
-		}
 	}
 
 	// Done with our copy of the op
@@ -348,7 +323,7 @@ bool OOSvrBase::detail::AsyncQueued::notify_async(AsyncIOHelper::AsyncOp* op, in
 	else
 		delete op;
 	
-	if (bClose)
+	if (bLast)
 		m_closed = true;
 
 	// Pop the op we just performed
@@ -460,9 +435,9 @@ int OOSvrBase::detail::AsyncSocketImpl::async_recv(OOBase::Buffer* buffer, size_
 	return err;
 }
 
-void OOSvrBase::detail::AsyncSocketImpl::on_recv(AsyncIOHelper::AsyncOp* recv_op, int err)
+void OOSvrBase::detail::AsyncSocketImpl::on_recv(AsyncIOHelper::AsyncOp* recv_op, int err, bool bLast)
 {
-	if (m_receiver.notify_async(recv_op,err))
+	if (m_receiver.notify_async(recv_op,err,bLast))
 		release();
 }
 
@@ -483,7 +458,7 @@ int OOSvrBase::detail::AsyncSocketImpl::async_send(OOBase::Buffer* buffer)
 
 void OOSvrBase::detail::AsyncSocketImpl::on_sent(AsyncIOHelper::AsyncOp* send_op, int err)
 {
-	if (m_sender.notify_async(send_op,err))
+	if (m_sender.notify_async(send_op,err,false))
 		release();
 }
 			

@@ -44,7 +44,8 @@
 #define SHUT_WR   SD_SEND
 #define socket_errno WSAGetLastError()
 #define SOCKET_WOULD_BLOCK WSAEWOULDBLOCK
-#define ECONNRESET WSAECONNRESET
+#define EINPROGRESS WSAEWOULDBLOCK
+#define ETIMEDOUT WSAETIMEDOUT
 
 #else
 
@@ -134,6 +135,7 @@ namespace
 		{
 			AsyncOp*        m_op;
 			IOHelper*       m_this_ptr;
+			bool            m_last;
 		};
 
 		OOSvrBase::Ev::ProactorImpl* m_proactor;
@@ -150,6 +152,7 @@ namespace
 		m_read_complete.m_this_ptr = this;
 		m_read_complete.callback = &read_ready;
 		m_read_complete.m_op = 0;
+		m_read_complete.m_last = false;
 		m_proactor->init_watcher(&m_read_complete,fd,EV_READ);
 
 		m_write_complete.m_this_ptr = this;
@@ -186,6 +189,7 @@ namespace
 
 		// Reset the completion info
 		m_read_complete.m_op = recv_op;
+		m_read_complete.m_last = false;
 
 		do_read();
 	}
@@ -207,13 +211,9 @@ namespace
 			to_read = m_read_complete.m_op->buffer->space();
 
 		ssize_t have_read = ::recv(m_read_complete.fd,m_read_complete.m_op->buffer->wr_ptr(),to_read,0);
-		if (have_read > 0)
+		if (have_read >= 0)
 		{
 			handle_read(0,have_read);
-		}
-		else if (have_read == 0)
-		{
-			handle_read(ECONNRESET,have_read);
 		}
 		else if (have_read < 0)
 		{
@@ -233,7 +233,9 @@ namespace
 		if (m_read_complete.m_op->len)
 			m_read_complete.m_op->len -= have_read;
 
-		if (err == 0 && m_read_complete.m_op->len > 0)
+		m_read_complete.m_last = (have_read == 0);
+
+		if (err == 0 && m_read_complete.m_op->len > 0 && !m_read_complete.m_last)
 		{
 			// More to read
 			return do_read();
@@ -244,7 +246,7 @@ namespace
 		m_read_complete.m_op = 0;
 
 		// Call handlers
-		m_handler->on_recv(op,err);
+		m_handler->on_recv(op,err,m_read_complete.m_last);
 	}
 
 	void IOHelper::do_write()
@@ -318,22 +320,6 @@ namespace
 
 			return pSock;
 		}
-
-	private:
-		bool is_close(int err) const
-		{
-			switch (err)
-			{
-#if defined(_WIN32)
-			case WSAECONNABORTED:
-			case WSAECONNRESET:
-				return true;
-#else
-#endif
-			default:
-				return false;
-			}
-		}
 	};
 
 #if defined(HAVE_SYS_UN_H)
@@ -366,11 +352,6 @@ namespace
 
 	private:
 		OOBase::Socket::socket_t m_fd;
-
-		bool is_close(int err) const
-		{
-			return false;
-		}
 
 		int get_uid(OOSvrBase::AsyncLocalSocket::uid_t& uid);
 	};
@@ -1019,7 +1000,8 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::Ev::ProactorImpl::connect_local_socket(c
 	// If we don't have unix sockets, we can't do much, use Win32 Proactor instead
 	*perr = ENOENT;
 
-	(void)sock;
+	(void)path;
+	(void)wait;
 
 	return 0;
 #else
@@ -1055,9 +1037,28 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::Ev::ProactorImpl::connect_local_socket(c
 
 OOSvrBase::AsyncLocalSocket* OOSvrBase::Ev::ProactorImpl::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)
 {
-	// FIX ME!
-	void* FIX_ME;
+#if !defined(HAVE_SYS_UN_H)
+	// If we don't have unix sockets, we can't do much, use Win32 Proactor instead
+	*perr = ENOENT;
+
+	(void)sock;
+	
 	return 0;
+#else
+
+	// Set non-blocking...
+	*perr = OOBase::BSD::set_non_blocking(sock,true);
+	if (*perr)
+		return 0;
+
+	// Wrap socket
+	OOSvrBase::AsyncLocalSocket* pSocket = ::AsyncLocalSocket::Create(this,sock);
+	if (!pSocket)
+		*perr = ENOMEM;
+
+	return pSocket;
+
+#endif
 }
 
 #if defined(_MSC_VER)

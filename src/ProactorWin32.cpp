@@ -108,6 +108,7 @@ namespace
 			bool            m_is_reading;
 			IOHelper*       m_this_ptr;
 			DWORD           m_err;
+			bool            m_last;
 		};
 
 		Completion m_read_complete;
@@ -181,6 +182,7 @@ namespace
 		memset(&m_read_complete.m_ov,0,sizeof(OVERLAPPED));
 		m_read_complete.m_err = 0;
 		m_read_complete.m_op = recv_op;
+		m_read_complete.m_last = false;
 				
 		do_read();
 	}
@@ -201,9 +203,6 @@ namespace
 	{
 		Completion* pInfo = CONTAINING_RECORD(lpOverlapped,Completion,m_ov);
 
-		// Stash error code
-		pInfo->m_err = dwErrorCode;
-
 		if (pInfo->m_is_reading)
 		{
 			// Update wr_ptr
@@ -211,12 +210,29 @@ namespace
 
 			if (pInfo->m_op->len)
 				pInfo->m_op->len -= dwNumberOfBytesTransfered;
+
+			pInfo->m_last = (dwNumberOfBytesTransfered == 0);
+
+			if (dwErrorCode == 0 && pInfo->m_op->len > 0 && !pInfo->m_last)
+			{
+				// More to read
+				return pInfo->m_this_ptr->do_read();
+			}
 		}
 		else
 		{
 			// Update rd_ptr
 			pInfo->m_op->buffer->rd_ptr(dwNumberOfBytesTransfered);
+
+			if (dwErrorCode == 0 && pInfo->m_op->buffer->length() > 0)
+			{
+				// More to send
+				return pInfo->m_this_ptr->do_write();
+			}
 		}
+
+		// Stash error code
+		pInfo->m_err = dwErrorCode;
 
 		// Now forward the completion into the worker pool again as a 'long function'
 		if (!QueueUserWorkItem(completion_fn2,pInfo,WT_EXECUTELONGFUNCTION))
@@ -250,18 +266,12 @@ namespace
 
 	void IOHelper::handle_read(DWORD dwErrorCode)
 	{
-		if (dwErrorCode == 0 && m_read_complete.m_op->len > 0)
-		{
-			// More to read
-			return do_read();
-		}
-		
 		// Stash op... another op may be about to occur...
 		AsyncOp* op = m_read_complete.m_op;
 		m_read_complete.m_op = 0;
 
 		// Call handlers
-		m_handler->on_recv(op,dwErrorCode);
+		m_handler->on_recv(op,dwErrorCode,m_read_complete.m_last);
 	}
 
 	void IOHelper::do_write()
@@ -277,12 +287,6 @@ namespace
 
 	void IOHelper::handle_write(DWORD dwErrorCode)
 	{
-		if (dwErrorCode == 0 && m_write_complete.m_op->buffer->length() > 0)
-		{
-			// More to send
-			return do_write();
-		}
-		
 		// Stash op... another op may be about to occur...
 		AsyncOp* op = m_write_complete.m_op;
 		m_write_complete.m_op = 0;
@@ -326,22 +330,6 @@ namespace
 			}
 
 			return pSock;
-		}
-
-	private:
-		bool is_close(int err) const
-		{
-			switch (err)
-			{
-			case ERROR_INVALID_HANDLE:
-			case ERROR_NETNAME_DELETED:
-			case WSAECONNABORTED:
-			case WSAECONNRESET:
-				return true;
-
-			default:
-				return false;
-			}
 		}
 	};
 
@@ -590,11 +578,6 @@ namespace
 		}
 
 	private:
-		bool is_close(int err) const
-		{
-			return  (err == (int)STATUS_PIPE_BROKEN);
-		}
-
 		HANDLE m_hPipe;
 
 		int get_uid(OOSvrBase::AsyncLocalSocket::uid_t& uid);
