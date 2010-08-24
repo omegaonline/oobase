@@ -96,14 +96,19 @@ OOSvrBase::detail::AsyncQueued::AsyncQueued(bool sender, AsyncIOHelper* helper, 
 
 OOSvrBase::detail::AsyncQueued::~AsyncQueued()
 {
-	assert(m_ops.empty());
-
-	while (!m_vecAsyncs.empty())
+	try
 	{
-		delete m_vecAsyncs.back();
-		m_vecAsyncs.pop_back();
-	}
+		assert(m_ops.empty());
 
+		while (!m_vecAsyncs.empty())
+		{
+			delete m_vecAsyncs.back();
+			m_vecAsyncs.pop_back();
+		}
+	}
+	catch (std::exception&)
+	{}
+	
 	if (!m_sender)
 		delete m_helper;
 }

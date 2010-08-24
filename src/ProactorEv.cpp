@@ -690,11 +690,16 @@ OOSvrBase::Ev::ProactorImpl::~ProactorImpl()
 
 	guard.release();
 
-	// Wait for all the threads to finish
-	for (std::vector<OOBase::SmartPtr<OOBase::Thread> >::iterator i=m_workers.begin(); i!=m_workers.end(); ++i)
+	try
 	{
-		(*i)->join();
+		// Wait for all the threads to finish
+		for (std::vector<OOBase::SmartPtr<OOBase::Thread> >::iterator i=m_workers.begin(); i!=m_workers.end(); ++i)
+		{
+			(*i)->join();
+		}
 	}
+	catch (std::exception&)
+	{}
 
 	// Done with the loop
 	ev_loop_destroy(m_pLoop);
