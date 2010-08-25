@@ -221,14 +221,14 @@ int OOSvrBase::Service::wait_for_quit()
 	// install the Ctrl+C handlers first
 	QUIT::instance();
 
-	LOG_DEBUG(("Attempting Win32 service start..."));
+	OOSvrBase::Logger::log(OOSvrBase::Logger::Debug,"Attempting Win32 service start...");
 
 	if (!StartServiceCtrlDispatcherW(ste))
 	{
 		DWORD err = GetLastError();
 		if (err == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT)
 		{
-			LOG_DEBUG(("Not a Win32 service"));
+			OOSvrBase::Logger::log(OOSvrBase::Logger::Debug,"Not a Win32 service");
 
 			// We are running from the shell...
 			return Server::wait_for_quit();
