@@ -55,6 +55,23 @@ typedef BOOL (PASCAL* LPFN_ACCEPTEX)(
 
 #endif // !defined(WSAID_ACCEPTEX)
 
+#if !defined(WSAID_GETACCEPTEXSOCKADDRS)
+
+typedef VOID (PASCAL* LPFN_GETACCEPTEXSOCKADDRS)(
+    PVOID lpOutputBuffer,
+    DWORD dwReceiveDataLength,
+    DWORD dwLocalAddressLength,
+    DWORD dwRemoteAddressLength,
+    struct sockaddr **LocalSockaddr,
+    LPINT LocalSockaddrLength,
+    struct sockaddr **RemoteSockaddr,
+    LPINT RemoteSockaddrLength
+    );
+
+#define WSAID_GETACCEPTEXSOCKADDRS {0xb5367df2,0xcbac,0x11cf,{0x95,0xca,0x00,0x80,0x5f,0x48,0xa1,0x92}}
+
+#endif // !defined(WSAID_GETACCEPTEXSOCKADDRS)
+
 namespace OOBase
 {
 	namespace Win32
@@ -376,6 +393,7 @@ namespace
 		size_t                                        m_async_count;
 		int                                           m_address_family;
 		LPFN_ACCEPTEX                                 m_lpfnAcceptEx;
+		LPFN_GETACCEPTEXSOCKADDRS                     m_lpfnGetAcceptExSockAddrs;
 				
 		void do_accept(DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
 		void next_accept();
@@ -420,6 +438,7 @@ namespace
 		// so that we can call the AcceptEx function directly, rather
 		// than refer to the Mswsock.lib library.
 		static const GUID guid_AcceptEx = WSAID_ACCEPTEX;
+		static const GUID guid_GetAcceptExSockAddrss = WSAID_GETACCEPTEXSOCKADDRS;
 
 		DWORD dwBytes;
 		if (WSAIoctl(m_socket, 
@@ -428,6 +447,21 @@ namespace
 			sizeof(guid_AcceptEx),
 			&m_lpfnAcceptEx, 
 			sizeof(m_lpfnAcceptEx), 
+			&dwBytes, 
+			NULL, 
+			NULL) != 0)
+		{
+			int err = WSAGetLastError();
+			closesocket(m_socket);
+			return err;
+		}
+
+		if (WSAIoctl(m_socket, 
+			SIO_GET_EXTENSION_FUNCTION_POINTER, 
+			(void*)&guid_GetAcceptExSockAddrss, 
+			sizeof(guid_GetAcceptExSockAddrss),
+			&m_lpfnGetAcceptExSockAddrs, 
+			sizeof(m_lpfnGetAcceptExSockAddrs), 
 			&dwBytes, 
 			NULL, 
 			NULL) != 0)
@@ -519,6 +553,8 @@ namespace
 			m_condition.signal();
 			return;
 		}
+
+		std::string strAddress;
 		
 		AsyncSocket* pSocket = 0;
 		if (dwErr == 0)
@@ -526,12 +562,21 @@ namespace
 			pSocket = AsyncSocket::Create(m_completion.m_socket,dwErr);
 			if (!pSocket && m_completion.m_socket != INVALID_SOCKET)
 				closesocket(m_completion.m_socket);
+
+			sockaddr* pLocal = 0;
+			sockaddr* pRemote = 0;
+			int len1,len2;
+
+			(*m_lpfnGetAcceptExSockAddrs)(m_completion.m_addresses,0,sizeof(m_completion.m_addresses)/2,sizeof(m_completion.m_addresses)/2,&pLocal,&len1,&pRemote,&len2);
+			
+			if (pRemote->sa_family == AF_INET)
+				strAddress = inet_ntoa(reinterpret_cast<sockaddr_in*>(pRemote)->sin_addr);
 		}
 
 		guard.release();
 
 		// Call the acceptor
-		if (m_handler->on_accept(pSocket,dwErr))
+		if (m_handler->on_accept(pSocket,strAddress,dwErr))
 			next_accept();
 	}
 
@@ -785,7 +830,7 @@ namespace
 		guard.release();
 
 		// Call the acceptor
-		if (m_handler->on_accept(pSocket,dwErr))
+		if (m_handler->on_accept(pSocket,m_pipe_name,dwErr))
 			next_accept(false);
 	}
 

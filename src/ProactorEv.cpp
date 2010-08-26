@@ -610,7 +610,7 @@ namespace
 		guard.release();
 
 		// Call the handler...
-		if (m_handler->on_accept(pSocket,err))
+		if (m_handler->on_accept(pSocket,strAddress,err))
 		{
 			guard.acquire();
 

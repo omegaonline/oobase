@@ -82,7 +82,7 @@ namespace OOSvrBase
 	class Acceptor
 	{
 	public:
-		virtual bool on_accept(SOCKET_TYPE* pSocket, int err) = 0;
+		virtual bool on_accept(SOCKET_TYPE* pSocket, const std::string& strAddress, int err) = 0;
 	};
 
 	class Proactor
