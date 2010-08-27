@@ -47,6 +47,12 @@ namespace OOSvrBase
 			AsyncLocalSocket* attach_local_socket(OOBase::Socket::socket_t sock, int* perr);
 
 			AsyncLocalSocket* connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait);
+
+			void addref();
+			void release();
+
+		private:
+			OOBase::AtomicInt<size_t> m_refcount;
 		};
 	}
 }

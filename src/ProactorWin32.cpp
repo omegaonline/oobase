@@ -28,6 +28,7 @@
 #endif
 
 #include "../include/OOBase/SmartPtr.h"
+#include "../include/OOBase/Thread.h"
 #include "../include/OOSvrBase/internal/ProactorImpl.h"
 #include "../include/OOSvrBase/internal/ProactorWin32.h"
 
@@ -95,7 +96,7 @@ namespace
 	class IOHelper : public OOSvrBase::detail::AsyncIOHelper
 	{
 	public:
-		IOHelper(HANDLE handle);
+		IOHelper(OOSvrBase::Win32::ProactorImpl* pProactor, HANDLE handle);
 		virtual ~IOHelper();
 
 		int bind();
@@ -130,12 +131,14 @@ namespace
 
 		Completion m_read_complete;
 		Completion m_write_complete;
+
+		OOSvrBase::Win32::ProactorImpl* const m_pProactor;
 	};
 
 	class PipeIOHelper : public IOHelper
 	{
 	public:
-		PipeIOHelper(HANDLE handle) : IOHelper(handle)
+		PipeIOHelper(OOSvrBase::Win32::ProactorImpl* pProactor, HANDLE handle) : IOHelper(pProactor,handle)
 		{}
 
 		virtual void shutdown(bool /*bSend*/, bool /*bRecv*/)
@@ -147,7 +150,7 @@ namespace
 	class SocketIOHelper : public IOHelper
 	{
 	public:
-		SocketIOHelper(HANDLE handle) : IOHelper(handle)
+		SocketIOHelper(OOSvrBase::Win32::ProactorImpl* pProactor, HANDLE handle) : IOHelper(pProactor,handle)
 		{}
 
 		void shutdown(bool bSend, bool bRecv)
@@ -163,8 +166,9 @@ namespace
 		}
 	};
 
-	IOHelper::IOHelper(HANDLE handle) :
-			m_handle(handle)
+	IOHelper::IOHelper(OOSvrBase::Win32::ProactorImpl* pProactor, HANDLE handle) :
+			m_handle(handle),
+			m_pProactor(pProactor)
 	{
 		m_read_complete.m_is_reading = true;
 		m_read_complete.m_op = 0;
@@ -233,7 +237,10 @@ namespace
 			if (dwErrorCode == 0 && pInfo->m_op->len > 0 && !pInfo->m_last)
 			{
 				// More to read
-				return pInfo->m_this_ptr->do_read();
+				pInfo->m_this_ptr->do_read();
+
+				pInfo->m_this_ptr->m_pProactor->release();
+				return;
 			}
 		}
 		else
@@ -244,7 +251,10 @@ namespace
 			if (dwErrorCode == 0 && pInfo->m_op->buffer->length() > 0)
 			{
 				// More to send
-				return pInfo->m_this_ptr->do_write();
+				pInfo->m_this_ptr->do_write();
+
+				pInfo->m_this_ptr->m_pProactor->release();
+				return;
 			}
 		}
 
@@ -259,10 +269,15 @@ namespace
 	DWORD IOHelper::completion_fn2(LPVOID lpThreadParameter)
 	{
 		Completion* pInfo = static_cast<Completion*>(lpThreadParameter);
+
+		OOSvrBase::Win32::ProactorImpl* pProactor = pInfo->m_this_ptr->m_pProactor;
+
 		if (pInfo->m_is_reading)
 			pInfo->m_this_ptr->handle_read(pInfo->m_err);
 		else
 			pInfo->m_this_ptr->handle_write(pInfo->m_err);	
+
+		pProactor->release();
 		return 0;
 	}
 
@@ -271,6 +286,8 @@ namespace
 		DWORD dwToRead = static_cast<DWORD>(m_read_complete.m_op->len);
 		if (dwToRead == 0)
 			dwToRead = static_cast<DWORD>(m_read_complete.m_op->buffer->space());
+
+		m_pProactor->addref();
 
 		DWORD dwRead = 0;
 		if (!ReadFile(m_handle,m_read_complete.m_op->buffer->wr_ptr(),dwToRead,&dwRead,&m_read_complete.m_ov))
@@ -293,6 +310,8 @@ namespace
 
 	void IOHelper::do_write()
 	{
+		m_pProactor->addref();
+
 		DWORD dwWritten = 0;
 		if (!WriteFile(m_handle,m_write_complete.m_op->buffer->rd_ptr(),static_cast<DWORD>(m_write_complete.m_op->buffer->length()),&dwWritten,&m_write_complete.m_ov))
 		{
@@ -320,10 +339,10 @@ namespace
 		{
 		}
 
-		static AsyncSocket* Create(SOCKET sock, DWORD& dwErr)
+		static AsyncSocket* Create(OOSvrBase::Win32::ProactorImpl* pProactor, SOCKET sock, DWORD& dwErr)
 		{
 			IOHelper* helper = 0;
-			OOBASE_NEW(helper,SocketIOHelper((HANDLE)sock));
+			OOBASE_NEW(helper,SocketIOHelper(pProactor,(HANDLE)sock));
 			if (!helper)
 			{
 				dwErr = ERROR_OUTOFMEMORY;
@@ -353,7 +372,7 @@ namespace
 	class SocketAcceptor : public OOBase::Socket
 	{
 	public:
-		SocketAcceptor(SOCKET sock, OOSvrBase::Acceptor<OOSvrBase::AsyncSocket>* handler, int address_family);
+		SocketAcceptor(OOSvrBase::Win32::ProactorImpl* pProactor, SOCKET sock, OOSvrBase::Acceptor<OOSvrBase::AsyncSocket>* handler, int address_family);
 		virtual ~SocketAcceptor();
 
 		int send(const void* /*buf*/, size_t /*len*/, const OOBase::timeval_t* /*timeout*/ = 0)
@@ -384,6 +403,7 @@ namespace
 			char                       m_addresses[(sizeof(sockaddr_in6) + 16)*2];
 		};
 
+		OOSvrBase::Win32::ProactorImpl* const         m_pProactor;
 		OOBase::Condition::Mutex                      m_lock;
 		OOBase::Condition                             m_condition;
 		bool                                          m_closed;
@@ -399,7 +419,8 @@ namespace
 		void next_accept();
 	};
 
-	SocketAcceptor::SocketAcceptor(SOCKET sock, OOSvrBase::Acceptor<OOSvrBase::AsyncSocket>* handler, int address_family) :
+	SocketAcceptor::SocketAcceptor(OOSvrBase::Win32::ProactorImpl* pProactor, SOCKET sock, OOSvrBase::Acceptor<OOSvrBase::AsyncSocket>* handler, int address_family) :
+			m_pProactor(pProactor),
 			m_closed(false),
 			m_socket(sock),
 			m_handler(handler),
@@ -498,6 +519,7 @@ namespace
 		m_completion.m_socket = create_socket(m_address_family,SOCK_STREAM,IPPROTO_TCP,&err);
 		if (!err)
 		{
+			m_pProactor->addref();
 			++m_async_count;
 
 			DWORD dwBytes = 0;
@@ -512,6 +534,7 @@ namespace
 			}
 
 			--m_async_count;
+			m_pProactor->release();
 		}
 
 		do_accept(err,guard);
@@ -532,6 +555,8 @@ namespace
 	DWORD SocketAcceptor::completion_fn2(LPVOID lpThreadParameter)
 	{
 		Completion* pInfo = static_cast<Completion*>(lpThreadParameter);
+
+		OOSvrBase::Win32::ProactorImpl* pProactor = pInfo->m_this_ptr->m_pProactor;
 		
 		OOBase::Guard<OOBase::Condition::Mutex> guard(pInfo->m_this_ptr->m_lock);
 
@@ -539,6 +564,7 @@ namespace
 
 		pInfo->m_this_ptr->do_accept(pInfo->m_err,guard);
 
+		pProactor->release();
 		return 0;
 	}
 
@@ -559,7 +585,7 @@ namespace
 		AsyncSocket* pSocket = 0;
 		if (dwErr == 0)
 		{
-			pSocket = AsyncSocket::Create(m_completion.m_socket,dwErr);
+			pSocket = AsyncSocket::Create(m_pProactor,m_completion.m_socket,dwErr);
 			if (!pSocket && m_completion.m_socket != INVALID_SOCKET)
 				closesocket(m_completion.m_socket);
 
@@ -593,10 +619,10 @@ namespace
 		{
 		}
 
-		static AsyncLocalSocket* Create(HANDLE hPipe, DWORD& dwErr)
+		static AsyncLocalSocket* Create(OOSvrBase::Win32::ProactorImpl* pProactor, HANDLE hPipe, DWORD& dwErr)
 		{
 			PipeIOHelper* helper = 0;
-			OOBASE_NEW(helper,PipeIOHelper(hPipe));
+			OOBASE_NEW(helper,PipeIOHelper(pProactor,hPipe));
 			if (!helper)
 			{
 				dwErr = ERROR_OUTOFMEMORY;
@@ -652,7 +678,7 @@ namespace
 	class PipeAcceptor : public OOBase::Socket
 	{
 	public:
-		PipeAcceptor(const std::string& pipe_name, LPSECURITY_ATTRIBUTES psa, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler);
+		PipeAcceptor(OOSvrBase::Win32::ProactorImpl* pProactor, const std::string& pipe_name, LPSECURITY_ATTRIBUTES psa, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler);
 		virtual ~PipeAcceptor();
 
 		int send(const void* /*buf*/, size_t /*len*/, const OOBase::timeval_t* /*timeout*/ = 0)
@@ -681,6 +707,7 @@ namespace
 			PipeAcceptor*              m_this_ptr;
 		};
 
+		OOSvrBase::Win32::ProactorImpl* const              m_pProactor;
 		OOBase::Condition::Mutex                           m_lock;
 		OOBase::Condition                                  m_condition;
 		bool                                               m_closed;
@@ -694,7 +721,8 @@ namespace
 		void do_accept(DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
 	};
 
-	PipeAcceptor::PipeAcceptor(const std::string& pipe_name, LPSECURITY_ATTRIBUTES psa, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler) :
+	PipeAcceptor::PipeAcceptor(OOSvrBase::Win32::ProactorImpl* pProactor, const std::string& pipe_name, LPSECURITY_ATTRIBUTES psa, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler) :
+			m_pProactor(pProactor),
 			m_closed(false),
 			m_handler(handler),
 			m_pipe_name(pipe_name),
@@ -760,6 +788,7 @@ namespace
 		if (dwErr == 0)
 		{
 			++m_async_count;
+			m_pProactor->addref();
 
 			if (!ConnectNamedPipe(m_completion.m_hPipe,&m_completion.m_ov))
 			{
@@ -782,6 +811,7 @@ namespace
 					dwErr = 0;
 			}
 
+			m_pProactor->release();
 			--m_async_count;
 		}
 
@@ -791,6 +821,8 @@ namespace
 	VOID PipeAcceptor::completion_fn(PVOID lpParameter, BOOLEAN /*TimerOrWaitFired*/)
 	{
 		Completion* pInfo = static_cast<Completion*>(lpParameter);
+
+		OOSvrBase::Win32::ProactorImpl* pProactor = pInfo->m_this_ptr->m_pProactor;
 
 		DWORD dwErrorCode = 0;
 		DWORD dwBytes = 0;
@@ -806,6 +838,8 @@ namespace
 		--pInfo->m_this_ptr->m_async_count;
 
 		pInfo->m_this_ptr->do_accept(dwErrorCode,guard);
+
+		pProactor->release();
 	}
 
 	void PipeAcceptor::do_accept(DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard)
@@ -820,7 +854,7 @@ namespace
 		AsyncLocalSocket* pSocket = 0;
 		if (dwErr == 0)
 		{
-			pSocket = AsyncLocalSocket::Create(m_completion.m_hPipe,dwErr);
+			pSocket = AsyncLocalSocket::Create(m_pProactor,m_completion.m_hPipe,dwErr);
 			if (pSocket)
 				m_completion.m_hPipe.detach();
 			else
@@ -840,19 +874,32 @@ namespace
 }
 
 OOSvrBase::Win32::ProactorImpl::ProactorImpl() :
-		OOSvrBase::Proactor(false)
+		OOSvrBase::Proactor(false),
+		m_refcount(0)
 {
 	OOBase::Win32::WSAStartup();
 }
 
 OOSvrBase::Win32::ProactorImpl::~ProactorImpl()
 {
+	while (m_refcount > 0)
+		OOBase::Thread::yield();
+}
+
+void OOSvrBase::Win32::ProactorImpl::addref()
+{
+	++m_refcount;
+}
+
+void OOSvrBase::Win32::ProactorImpl::release()
+{
+	--m_refcount;
 }
 
 OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa)
 {
 	OOBase::SmartPtr<PipeAcceptor> pAcceptor = 0;
-	OOBASE_NEW(pAcceptor,PipeAcceptor("\\\\.\\pipe\\" + path,psa,handler));
+	OOBASE_NEW(pAcceptor,PipeAcceptor(this,"\\\\.\\pipe\\" + path,psa,handler));
 	if (!pAcceptor)
 	{
 		*perr = ERROR_OUTOFMEMORY;
@@ -940,7 +987,7 @@ OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_remote(Acceptor<AsyncSock
 
 	// Wrap up in a controlling socket class
 	OOBase::SmartPtr<SocketAcceptor> pAccept = 0;
-	OOBASE_NEW(pAccept,SocketAcceptor(sock,handler,af_family));
+	OOBASE_NEW(pAccept,SocketAcceptor(this,sock,handler,af_family));
 	if (!pAccept)
 	{
 		*perr = ENOMEM;
@@ -960,7 +1007,7 @@ OOSvrBase::AsyncSocket* OOSvrBase::Win32::ProactorImpl::attach_socket(OOBase::So
 	// The socket must have been opened as WSA_FLAG_OVERLAPPED!!!
 
 	DWORD dwErr = 0;
-	OOSvrBase::AsyncSocket* pSocket = ::AsyncSocket::Create(sock,dwErr);
+	OOSvrBase::AsyncSocket* pSocket = ::AsyncSocket::Create(this,sock,dwErr);
 	*perr = dwErr;	
 	return pSocket;
 }
@@ -969,7 +1016,7 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::Win32::ProactorImpl::attach_local_socket
 {
 	// Wrap socket
 	DWORD dwErr = 0;
-	OOSvrBase::AsyncLocalSocket* pSocket = ::AsyncLocalSocket::Create((HANDLE)sock,dwErr);
+	OOSvrBase::AsyncLocalSocket* pSocket = ::AsyncLocalSocket::Create(this,(HANDLE)sock,dwErr);
 	*perr = dwErr;	
 	return pSocket;
 }
@@ -1022,7 +1069,7 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::Win32::ProactorImpl::connect_local_socke
 
 	// Wrap socket
 	DWORD dwErr = 0;
-	OOSvrBase::AsyncLocalSocket* pSocket = ::AsyncLocalSocket::Create(hPipe,dwErr);
+	OOSvrBase::AsyncLocalSocket* pSocket = ::AsyncLocalSocket::Create(this,hPipe,dwErr);
 	*perr = dwErr;
 
 	if (pSocket)
