@@ -190,19 +190,18 @@ DWORD OOSvrBase::Win32::SetTokenDefaultDACL(HANDLE hToken)
 	if (dwRes != ERROR_SUCCESS)
 		return dwRes;
 
-	const int NUM_ACES = 1;
-	EXPLICIT_ACCESSW ea[NUM_ACES] = {0};
+	EXPLICIT_ACCESSW ea = {0};
 
 	// Set maximum access for the logon SID
-	ea[0].grfAccessPermissions = GENERIC_ALL;
-	ea[0].grfAccessMode = GRANT_ACCESS;
-	ea[0].grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
-	ea[0].Trustee.TrusteeForm = TRUSTEE_IS_SID;
-	ea[0].Trustee.TrusteeType = TRUSTEE_IS_USER;
-	ea[0].Trustee.ptstrName = (LPWSTR)ptrSIDLogon;
+	ea.grfAccessPermissions = GENERIC_ALL;
+	ea.grfAccessMode = GRANT_ACCESS;
+	ea.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
+	ea.Trustee.TrusteeForm = TRUSTEE_IS_SID;
+	ea.Trustee.TrusteeType = TRUSTEE_IS_USER;
+	ea.Trustee.ptstrName = (LPWSTR)ptrSIDLogon;
 
 	TOKEN_DEFAULT_DACL def_dacl = {0};
-	dwRes = SetEntriesInAclW(NUM_ACES,ea,ptrDef_dacl->DefaultDacl,&def_dacl.DefaultDacl);
+	dwRes = SetEntriesInAclW(1,&ea,ptrDef_dacl->DefaultDacl,&def_dacl.DefaultDacl);
 	if (dwRes != ERROR_SUCCESS)
 		return dwRes;
 
@@ -229,19 +228,18 @@ DWORD OOSvrBase::Win32::EnableUserAccessToDir(const wchar_t* pszPath, const TOKE
 
 	OOBase::SmartPtr<void,OOBase::Win32::LocalAllocDestructor<void> > ptrSD = pSD;
 
-	static const int NUM_ACES = 1;
-	EXPLICIT_ACCESSW ea[NUM_ACES] = {0};
+	EXPLICIT_ACCESSW ea = {0};
 
 	// Set maximum access for the logon SID
-	ea[0].grfAccessPermissions = GENERIC_ALL;
-	ea[0].grfAccessMode = GRANT_ACCESS;
-	ea[0].grfInheritance = OBJECT_INHERIT_ACE;
-	ea[0].Trustee.TrusteeForm = TRUSTEE_IS_SID;
-	ea[0].Trustee.TrusteeType = TRUSTEE_IS_USER;
-	ea[0].Trustee.ptstrName = (LPWSTR)pUser->User.Sid;
+	ea.grfAccessPermissions = GENERIC_ALL;
+	ea.grfAccessMode = GRANT_ACCESS;
+	ea.grfInheritance = OBJECT_INHERIT_ACE;
+	ea.Trustee.TrusteeForm = TRUSTEE_IS_SID;
+	ea.Trustee.TrusteeType = TRUSTEE_IS_USER;
+	ea.Trustee.ptstrName = (LPWSTR)pUser->User.Sid;
 
 	PACL pACLNew;
-	dwRes = SetEntriesInAclW(NUM_ACES,ea,pACL,&pACLNew);
+	dwRes = SetEntriesInAclW(1,&ea,pACL,&pACLNew);
 	if (dwRes != ERROR_SUCCESS)
 		return dwRes;
 

@@ -211,9 +211,10 @@ namespace
 
 int OOSvrBase::Service::wait_for_quit()
 {
+	static wchar_t sn[] = L"";
 	static SERVICE_TABLE_ENTRYW ste[] =
 	{
-		{L"", &ServiceMain },
+		{sn, &ServiceMain },
 		{NULL, NULL}
 	};
 
