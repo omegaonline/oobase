@@ -44,30 +44,6 @@
 #define ATOMIC_ADD_64(t,v)
 #define ATOMIC_SUB_64(t,v)
 
-#elif defined(HAVE___SYNC_TEST_AND_SET)
-
-/* Define to if you have atomic exchange for 32bit values */
-#define ATOMIC_EXCH_32(t,v) __sync_lock_test_and_set((int volatile*)(t),v)
-
-/* Define to if you have atomic exchange for 64bit values */
-#define ATOMIC_EXCH_64(t,v) __sync_lock_test_and_set((long long volatile*)(t),v)
-
-#if defined(HAVE___SYNC_ADD_AND_FETCH)
-
-/* Define to if you have atomic inc and dec for 32bit values */
-#define ATOMIC_INC_32(t) __sync_add_and_fetch((int*)(t),1)
-#define ATOMIC_DEC_32(t) __sync_sub_and_fetch((int*)(t),1)
-#define ATOMIC_ADD_32(t,v) __sync_add_and_fetch((int volatile*)(t),v)
-#define ATOMIC_SUB_32(t,v) __sync_sub_and_fetch((int volatile*)(t),v)
-
-/* Define to if you have atomic exchange for 64bit values */
-#define ATOMIC_INC_64(t) __sync_add_and_fetch((long long volatile*)(t),1)
-#define ATOMIC_DEC_64(t) __sync_sub_and_fetch((long long volatile*)(t),1)
-#define ATOMIC_ADD_64(t,v) __sync_add_and_fetch((long long volatile*)(t),v)
-#define ATOMIC_SUB_64(t,v) __sync_sub_and_fetch((long long volatile*)(t),v)
-
-#endif // defined(HAVE___SYNC_ADD_AND_FETCH)
-
 #elif defined(_MSC_VER)
 
 #include <intrin.h>
@@ -113,8 +89,31 @@
 
 #endif // WINVER >= 0x0502
 
-#endif // _WIN32
+#elif defined(HAVE___SYNC_TEST_AND_SET)
 
+/* Define to if you have atomic exchange for 32bit values */
+#define ATOMIC_EXCH_32(t,v) __sync_lock_test_and_set((int volatile*)(t),v)
+
+/* Define to if you have atomic exchange for 64bit values */
+#define ATOMIC_EXCH_64(t,v) __sync_lock_test_and_set((long long volatile*)(t),v)
+
+#if defined(HAVE___SYNC_ADD_AND_FETCH)
+
+/* Define to if you have atomic inc and dec for 32bit values */
+#define ATOMIC_INC_32(t) __sync_add_and_fetch((int*)(t),1)
+#define ATOMIC_DEC_32(t) __sync_sub_and_fetch((int*)(t),1)
+#define ATOMIC_ADD_32(t,v) __sync_add_and_fetch((int volatile*)(t),v)
+#define ATOMIC_SUB_32(t,v) __sync_sub_and_fetch((int volatile*)(t),v)
+
+/* Define to if you have atomic exchange for 64bit values */
+#define ATOMIC_INC_64(t) __sync_add_and_fetch((long long volatile*)(t),1)
+#define ATOMIC_DEC_64(t) __sync_sub_and_fetch((long long volatile*)(t),1)
+#define ATOMIC_ADD_64(t,v) __sync_add_and_fetch((long long volatile*)(t),v)
+#define ATOMIC_SUB_64(t,v) __sync_sub_and_fetch((long long volatile*)(t),v)
+
+#endif // defined(HAVE___SYNC_ADD_AND_FETCH)
+
+#endif
 namespace OOBase
 {
 	namespace detail
