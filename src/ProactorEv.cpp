@@ -609,6 +609,8 @@ namespace
 
 		guard.release();
 
+		std::string strAddress;
+
 		// Call the handler...
 		if (m_handler->on_accept(pSocket,strAddress,err))
 		{
@@ -1047,7 +1049,7 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::Ev::ProactorImpl::attach_local_socket(OO
 	*perr = ENOENT;
 
 	(void)sock;
-	
+
 	return 0;
 #else
 

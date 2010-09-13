@@ -26,13 +26,6 @@
 
 namespace OOBase
 {
-	namespace BSD
-	{
-		Socket::socket_t create_socket(int family, int socktype, int protocol, int* perr);
-
-		int set_non_blocking(Socket::socket_t sock, bool set);
-		int set_close_on_exec(Socket::socket_t sock, bool set);
-	}
 }
 
 #endif // OOBASE_BSD_SOCKET_H_INCLUDED_

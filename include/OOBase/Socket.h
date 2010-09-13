@@ -55,7 +55,7 @@ namespace OOBase
 		virtual size_t recv(void* buf, size_t len, int* perr, const timeval_t* timeout = 0) = 0;
 		virtual int send(const void* buf, size_t len, const timeval_t* timeout = 0) = 0;
 		virtual void shutdown(bool bSend, bool bRecv) = 0;
-				
+
 		static Socket* connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait = 0);
 		static Socket* connect_local(const std::string& path, int* perr, const timeval_t* wait = 0);
 
@@ -100,11 +100,19 @@ namespace OOBase
 
 	protected:
 		Socket() {}
-		
+
 	private:
 		Socket(const Socket&);
 		Socket& operator = (const Socket&);
 	};
+
+	namespace BSD
+	{
+		Socket::socket_t create_socket(int family, int socktype, int protocol, int* perr);
+
+		int set_non_blocking(Socket::socket_t sock, bool set);
+		int set_close_on_exec(Socket::socket_t sock, bool set);
+	}
 }
 
 #endif // OOBASE_SOCKET_H_INCLUDED_
