@@ -360,15 +360,13 @@ namespace
 	{
 #if defined(HAVE_GETPEEREID)
 		/* OpenBSD style:  */
-		uid_t uid;
 		gid_t gid;
 		if (getpeereid(m_fd, &uid, &gid) != 0)
 		{
 			/* We didn't get a valid credentials struct. */
-			OOBase_CallCriticalFailure(errno);
-			return -1;
+			return errno;
 		}
-		return uid;
+		return 0;
 
 #elif defined(HAVE_SO_PEERCRED)
 		/* Linux style: use getsockopt(SO_PEERCRED) */
@@ -378,29 +376,27 @@ namespace
 		if (getsockopt(m_fd, SOL_SOCKET, SO_PEERCRED, &peercred, &so_len) != 0 || so_len != sizeof(peercred))
 		{
 			/* We didn't get a valid credentials struct. */
-			OOBase_CallCriticalFailure(errno);
-			return -1;
+			return errno;
 		}
-		return peercred.uid;
+		uid = peercred.uid;
+		return 0;
 
 #elif defined(HAVE_GETPEERUCRED)
 		/* Solaris > 10 */
 		ucred_t* ucred = NULL; /* must be initialized to NULL */
 		if (getpeerucred(m_fd, &ucred) != 0)
 		{
-			OOBase_CallCriticalFailure(errno);
-			return -1;
+			/* We didn't get a valid credentials struct. */
+			return errno;
 		}
 
-		uid_t uid;
 		if ((uid = ucred_geteuid(ucred)) == -1)
 		{
 			int err = errno;
 			ucred_free(ucred);
-			OOBase_CallCriticalFailure(err);
-			return -1;
+			return err;
 		}
-		return uid;
+		return 0;
 
 #elif (defined(HAVE_STRUCT_CMSGCRED) || defined(HAVE_STRUCT_FCRED) || defined(HAVE_STRUCT_SOCKCRED)) && defined(HAVE_LOCAL_CREDS)
 
@@ -411,10 +407,7 @@ namespace
 		*/
 		int on = 1;
 		if (setsockopt(m_fd, 0, LOCAL_CREDS, &on, sizeof(on)) != 0)
-		{
-			OOBase_CallCriticalFailure(errno);
-			return -1;
-		}
+			return errno;
 
 		/* Credentials structure */
 #if defined(HAVE_STRUCT_CMSGCRED)
@@ -452,17 +445,15 @@ namespace
 		iov.iov_len = 1;
 
 		if (recvmsg(m_fd, &msg, 0) < 0 || cmsg->cmsg_len < sizeof(cmsgmem) || cmsg->cmsg_type != SCM_CREDS)
-		{
-			OOBase_CallCriticalFailure(errno);
-			return -1;
-		}
+			return errno;
 
 		Cred* cred = (Cred*)CMSG_DATA(cmsg);
-		return cred->cruid;
+		uid = cred->cruid;
+		return 0;
+
 #else
 		// We can't handle this situation
 		#error Fix me!
-		return -1;
 #endif
 	}
 
