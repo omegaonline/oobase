@@ -173,10 +173,11 @@ namespace
 			ssize_t recvd = ::recv(m_sock,cbuf,len,0);
 			if (recvd != -1)
 			{
+				*perr = 0;
 				total_recv += recvd;
 				cbuf += recvd;
 				len -= recvd;
-				if (len == 0)
+				if (len == 0 || recvd == 0)
 					return total_recv;
 			}
 			else
