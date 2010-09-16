@@ -79,21 +79,15 @@ namespace OOBase
 			return err;
 		}
 
-		int recv_buffer(Buffer* buffer, const timeval_t* timeout = 0)
+		size_t recv(Buffer* buffer, size_t len, int* perr, const timeval_t* timeout = 0)
 		{
-			return recv(buffer,0,timeout);
-		}
+			*perr = buffer->space(len);
+			if (*perr != 0)
+				return 0;
 
-		virtual int recv(Buffer* buffer, size_t len, const timeval_t* timeout = 0)
-		{
-			int err = buffer->space(len);
-			if (err == 0)
-			{
-				len = recv(buffer->wr_ptr(),len,&err,timeout);
-				if (err == 0)
-					buffer->wr_ptr(len);
-			}
-			return err;
+			len = recv(buffer->wr_ptr(),len,perr,timeout);
+			buffer->wr_ptr(len);
+			return len;
 		}
 
 		virtual ~Socket() {};
