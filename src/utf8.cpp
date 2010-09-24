@@ -608,7 +608,7 @@ size_t OOBase::to_utf8(char* sz, size_t len, const wchar_t* wsz, size_t wlen)
 		}
 	}
 
-	if (len == size_t(-1))
+	if (wlen == size_t(-1))
 	{
 		++required_len;
 		if (required_len < len)
