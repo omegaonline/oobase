@@ -240,6 +240,11 @@ namespace
 			fputs("Warning: ",out_file);
 			break;
 
+#if !defined(_DEBUG)
+		case OOSvrBase::Logger::Debug:
+			return;
+#endif
+
 		default:
 			break;
 		}
@@ -301,8 +306,13 @@ namespace
 			fputs("Warning: ",out_file);
 			break;
 
-		default:
+#if !defined(_DEBUG)
+		case OOSvrBase::Logger::Debug:
 			return;
+#endif
+
+		default:
+			break;
 		}
 
 		fputs(string_printf(fmt,args).c_str(),out_file);
