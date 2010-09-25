@@ -766,19 +766,20 @@ size_t OOBase::to_native(char* sz, size_t len, const wchar_t* wsz, size_t wlen)
 		required_len += count;
 
 		// Check for overrun - don't write partial sequences...
-		if (wlen == size_t(-1))
-		{
-			if (size_t(p-sz) + count >= len)
-			{
-				*p = '\0';
-				break;
-			}
-		}
-		else if (size_t(p-sz) + count > len)
+		if (size_t(p-sz) + count > len)
 			break;
-				
+		else if (wlen == size_t(-1) && size_t(p-sz) + count == len)
+			break;
+							
 		memcpy(p,c,count);
 		p += count;
+	}
+
+	if (wlen == size_t(-1))
+	{
+		++required_len;
+		if (required_len < len)
+			*p = '\0';
 	}
 
 	return required_len;
