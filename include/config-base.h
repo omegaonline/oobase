@@ -130,6 +130,10 @@
 #include <string.h>
 #endif
 
+#if defined(HAVE_MATH_H)
+#include <math.h>
+#endif
+
 // Byte-order (endian-ness) determination.
 # if defined(BYTE_ORDER)
 #   if (BYTE_ORDER == LITTLE_ENDIAN)
@@ -178,8 +182,6 @@
 # endif /* ! BYTE_ORDER && ! __BYTE_ORDER */
 
 #ifdef __cplusplus
-
-#include <math.h>
 
 #include <string>
 #include <sstream>

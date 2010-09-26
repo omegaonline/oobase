@@ -22,11 +22,11 @@
 #include "../include/OOBase/TimeVal.h"
 #include "../include/OOBase/tr24731.h"
 
-#if defined(HAVE_TIME_H) && (HAVE_TIME_H == 1)
+#if defined(HAVE_TIME_H)
 #include <time.h>
 #endif
 
-#if defined(HAVE_SYS_TIME_H) && (HAVE_SYS_TIME_H == 1)
+#if defined(HAVE_SYS_TIME_H)
 #include <sys/time.h>
 #endif
 
