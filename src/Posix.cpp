@@ -19,19 +19,34 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#ifndef OOBASE_BSD_SOCKET_H_INCLUDED_
-#define OOBASE_BSD_SOCKET_H_INCLUDED_
+#include "../include/OOBase/Posix.h"
 
-#include "../Socket.h"
+#if defined (HAVE_UNISTD_H)
 
-namespace OOBase
+#if defined(HAVE_FCNTL_H)
+#include <fcntl.h>
+#endif /* HAVE_FCNTL_H */
+
+#if defined(HAVE_SYS_FCNTL_H)
+#include <sys/fcntl.h>
+#endif /* HAVE_SYS_FCNTL_H */
+
+int OOBase::POSIX::set_close_on_exec(int sock, bool set)
 {
-	namespace BSD
-	{
-		Socket::socket_t create_socket(int family, int socktype, int protocol, int* perr);
+#if (defined(HAVE_FCNTL_H) || defined(HAVE_SYS_FCNTL_H))
+	int flags = fcntl(sock,F_GETFD);
+	if (flags == -1)
+		return errno;
 
-		int set_non_blocking(Socket::socket_t sock, bool set);
-	}
+	flags = (set ? flags | FD_CLOEXEC : flags & ~FD_CLOEXEC);
+	if (fcntl(sock,F_GETFD,flags) == -1)
+		return errno;
+#else
+	(void)set;
+	(void)sock;
+#endif
+
+	return 0;
 }
 
-#endif // OOBASE_BSD_SOCKET_H_INCLUDED_
+#endif

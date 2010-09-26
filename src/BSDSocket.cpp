@@ -20,6 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/internal/BSDSocket.h"
+#include "../include/OOBase/Posix.h"
 
 #if defined(_WIN32)
 namespace OOBase
@@ -353,12 +354,14 @@ OOBase::Socket::socket_t OOBase::BSD::create_socket(int family, int socktype, in
 		return INVALID_SOCKET;
 	}
 
-	*perr = OOBase::BSD::set_close_on_exec(sock,true);
+#if defined (HAVE_UNISTD_H)
+	*perr = OOBase::POSIX::set_close_on_exec(sock,true);
 	if (*perr != 0)
 	{
 		closesocket(sock);
 		return INVALID_SOCKET;
 	}
+#endif
 
 	return sock;
 }
@@ -378,24 +381,6 @@ int OOBase::BSD::set_non_blocking(Socket::socket_t sock, bool set)
 	flags = (set ? flags | O_NONBLOCK : flags & ~O_NONBLOCK);
 	if (fcntl(sock,F_SETFL,flags) == -1)
 		return errno;
-#endif
-
-	return 0;
-}
-
-int OOBase::BSD::set_close_on_exec(Socket::socket_t sock, bool set)
-{
-#if (defined(HAVE_FCNTL_H) || defined(HAVE_SYS_FCNTL_H)) && defined(HAVE_UNISTD_H)
-	int flags = fcntl(sock,F_GETFD);
-	if (flags == -1)
-		return errno;
-
-	flags = (set ? flags | FD_CLOEXEC : flags & ~FD_CLOEXEC);
-	if (fcntl(sock,F_GETFD,flags) == -1)
-		return errno;
-#else
-	(void)set;
-	(void)sock;
 #endif
 
 	return 0;

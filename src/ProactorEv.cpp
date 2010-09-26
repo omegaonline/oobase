@@ -24,6 +24,7 @@
 #if defined(HAVE_EV_H)
 
 #include "../include/OOBase/internal/BSDSocket.h"
+#include "../include/OOBase/Posix.h"
 #include "../include/OOSvrBase/internal/ProactorImpl.h"
 #include "../include/OOSvrBase/internal/ProactorEv.h"
 
@@ -575,10 +576,12 @@ namespace
 		// Prepare socket if okay
 		if (!err && new_fd != INVALID_SOCKET)
 		{
-			err = OOBase::BSD::set_close_on_exec(new_fd,true);
-			if (!err)
-				err = OOBase::BSD::set_non_blocking(new_fd,true);
+			err = OOBase::BSD::set_non_blocking(new_fd,true);
 
+#if defined (HAVE_UNISTD_H)
+			if (!err)
+				err = OOBase::POSIX::set_close_on_exec(new_fd,true);				
+#endif
 			if (err)
 			{
 				closesocket(new_fd);

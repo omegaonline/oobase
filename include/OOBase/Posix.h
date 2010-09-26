@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2009 Rick Taylor
+// Copyright (C) 2010 Rick Taylor
 //
 // This file is part of OOBase, the Omega Online Base library.
 //
@@ -19,19 +19,21 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#ifndef OOBASE_BSD_SOCKET_H_INCLUDED_
-#define OOBASE_BSD_SOCKET_H_INCLUDED_
+#ifndef OOBASE_POSIX_H_INCLUDED_
+#define OOBASE_POSIX_H_INCLUDED_
 
-#include "../Socket.h"
+#include "../config-base.h"
+
+#if defined (HAVE_UNISTD_H)
 
 namespace OOBase
 {
-	namespace BSD
+	namespace POSIX
 	{
-		Socket::socket_t create_socket(int family, int socktype, int protocol, int* perr);
-
-		int set_non_blocking(Socket::socket_t sock, bool set);
+		int set_close_on_exec(int fd, bool set);
 	}
 }
 
-#endif // OOBASE_BSD_SOCKET_H_INCLUDED_
+#endif
+
+#endif // OOBASE_POSIX_H_INCLUDED_

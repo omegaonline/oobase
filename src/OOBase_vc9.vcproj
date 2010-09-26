@@ -303,6 +303,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Posix.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Thread.cpp"
 				>
 			</File>
@@ -382,6 +386,10 @@
 			</File>
 			<File
 				RelativePath="..\include\oobase-msvc.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\Posix.h"
 				>
 			</File>
 			<File

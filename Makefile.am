@@ -70,6 +70,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/DLL.h \
 	include/OOBase/Mutex.h \
 	include/OOBase/Once.h \
+	include/OOBase/Posix.h \
 	include/OOBase/Queue.h \
 	include/OOBase/Singleton.h \
 	include/OOBase/SmartPtr.h \
@@ -90,6 +91,7 @@ liboobase_la_SOURCES = \
 	src/Error.cpp \
 	src/Mutex.cpp \
 	src/Once.cpp \
+	src/Posix.cpp \
 	src/Thread.cpp \
 	src/TimeVal.cpp \
 	src/TLS.cpp \
