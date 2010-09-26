@@ -30,8 +30,6 @@ namespace OOBase
 {
 	namespace Win32
 	{
-		std::string FormatMessage(DWORD dwErr = GetLastError());
-
 		template <typename T>
 		class LocalAllocDestructor
 		{

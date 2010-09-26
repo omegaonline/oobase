@@ -30,6 +30,8 @@ namespace OOBase
 {
 	namespace Win32
 	{
+		std::string FormatMessage(DWORD dwErr = GetLastError());
+
 		class rwmutex_t
 		{
 		public:
