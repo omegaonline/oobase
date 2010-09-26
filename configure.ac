@@ -38,7 +38,7 @@ OO_C_BUILTINS
 OO_NEW_NOTHROW
 
 # Check for the headers we use
-AC_CHECK_HEADERS([windows.h wchar.h math.h sys/time.h asl.h syslog.h assert.h time.h errno.h sys/socket.h pwd.h unistd.h ev.h fcntl.h sys/fcntl.h sys/un.h netdb.h signal.h])
+AC_CHECK_HEADERS([windows.h sys/time.h asl.h syslog.h sys/socket.h pwd.h unistd.h ev.h fcntl.h sys/fcntl.h sys/un.h netdb.h])
 
 # Add the correct libs to LIBS
 AC_CHECK_LIB([ev],[ev_loop_new],AC_SUBST([EV_LIBS],["-lev"]))

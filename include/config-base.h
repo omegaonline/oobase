@@ -29,18 +29,30 @@
 	#include <oobase-autoconf.h>
 #endif
 
-#if defined(HAVE_STDLIB_H)
+////////////////////////////////////////
+// Bring in C standard libraries
+//
+#define __STDC_WANT_LIB_EXT1__ 1
+#define __STDC_WANT_SECURE_LIB__ 1
+#include <string.h>
+
 #include <stdlib.h>
-#endif
-
-#if defined(HAVE_WCHAR_H)
 #include <wchar.h>
-#endif
-
-#if defined(HAVE_ERRNO_H)
 #include <errno.h>
+#include <assert.h>
+#include <math.h>
+
+////////////////////////////////////////
+// Bring in C++ standard libraries
+//
+#ifdef __cplusplus
+#include <string>
+#include <sstream>
+#include <iomanip>
+#include <locale>
 #endif
 
+////////////////////////////////////////
 // Detect the correct use of new(no_throw)
 #if defined(DOXYGEN)
 /// Macro that wraps a non-throwing call to new
@@ -58,82 +70,72 @@
 #endif // !defined OOBASE_NEW
 #endif // __cplusplus
 
-#if defined(HAVE_ASSERT_H)
-#include <assert.h>
-#else
-#define assert(x) ((void)0)
-#endif
+////////////////////////////////////////
+// Try to work out what's going on with MS Windows
 
 #if defined(HAVE_WINDOWS_H)
-#if (HAVE_WINDOWS_H != 1)
-#error What are you doing?
-#endif
+	#if (HAVE_WINDOWS_H != 1)
+	#error What are you doing?
+	#endif
 
-// Prevent inclusion of old winsock
-#define _WINSOCKAPI_
+	// Prevent inclusion of old winsock
+	#define _WINSOCKAPI_
 
-// Reduce the amount of windows we include
-#define WIN32_LEAN_AND_MEAN
-#define STRICT
+	// Reduce the amount of windows we include
+	#define WIN32_LEAN_AND_MEAN
+	#define STRICT
 
-// We support Vista API's
-#if !defined(_WIN32_WINNT)
-#define _WIN32_WINNT 0x0600
-#elif _WIN32_WINNT < 0x0500
-#error OOBase requires _WIN32_WINNT >= 0x0500!
-#endif
+	// We support Vista API's
+	#if !defined(_WIN32_WINNT)
+	#define _WIN32_WINNT 0x0600
+	#elif _WIN32_WINNT < 0x0500
+	#error OOBase requires _WIN32_WINNT >= 0x0500!
+	#endif
 
-// We require IE 5 or later
-#if !defined(_WIN32_IE)
-#define _WIN32_IE 0x0500
-#elif _WIN32_IE < 0x0500
-#error OOBase requires _WIN32_IE >= 0x0500!
-#endif
+	// We require IE 5 or later
+	#if !defined(_WIN32_IE)
+	#define _WIN32_IE 0x0500
+	#elif _WIN32_IE < 0x0500
+	#error OOBase requires _WIN32_IE >= 0x0500!
+	#endif
 
-#include <windows.h>
+	#include <windows.h>
 
-#if !defined(WINVER)
-#error No WINVER?!?
-#elif (WINVER < 0x0500)
-#if defined(__MINGW32__)
-// MinGW gets WINVER wrong...
-#undef WINVER
-#define WINVER 0x0500
-#else
-#error OOBase requires WINVER >= 0x0500!
-#endif
-#endif
+	#if !defined(WINVER)
+	#error No WINVER?!?
+	#elif (WINVER < 0x0500)
+	#if defined(__MINGW32__)
+	// MinGW gets WINVER wrong...
+	#undef WINVER
+	#define WINVER 0x0500
+	#else
+	#error OOBase requires WINVER >= 0x0500!
+	#endif
+	#endif
 
-#if !defined(_WIN32)
-#error No _WIN32?!?
-#endif
+	#if !defined(_WIN32)
+	#error No _WIN32?!?
+	#endif
 
-// Check for obsolete windows versions
-#if defined(_WIN32_WINDOWS)
-#error You cannot build Omega Online for Windows 95/98/Me!
-#endif
+	// Check for obsolete windows versions
+	#if defined(_WIN32_WINDOWS)
+	#error You cannot build Omega Online for Windows 95/98/Me!
+	#endif
 
-// Remove the unistd include - we are windows
-#if defined(HAVE_UNISTD_H)
-#undef HAVE_UNISTD_H
-#endif
+	// Remove the unistd include - we are windows
+	#if defined(HAVE_UNISTD_H)
+	#undef HAVE_UNISTD_H
+	#endif
 
 #endif // HAVE_WINDOWS_H
 
+////////////////////////////////////////
+// Bring in POSIX if possible
 #if defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
 
-#if defined(HAVE_STRING_H)
-#define __STDC_WANT_LIB_EXT1__ 1
-#define __STDC_WANT_SECURE_LIB__ 1
-#include <string.h>
-#endif
-
-#if defined(HAVE_MATH_H)
-#include <math.h>
-#endif
-
+////////////////////////////////////////
 // Byte-order (endian-ness) determination.
 # if defined(BYTE_ORDER)
 #   if (BYTE_ORDER == LITTLE_ENDIAN)
@@ -182,11 +184,6 @@
 # endif /* ! BYTE_ORDER && ! __BYTE_ORDER */
 
 #ifdef __cplusplus
-
-#include <string>
-#include <sstream>
-#include <iomanip>
-#include <locale>
 
 namespace OOBase
 {

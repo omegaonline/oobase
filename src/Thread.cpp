@@ -447,7 +447,7 @@ void OOBase::Thread::sleep(const timeval_t& wait)
 
 #if defined(_WIN32)
 	::Sleep(wait.msec());
-#elif defined(HAVE_TIME_H)
+#else
 	timespec wt;
 	wt.tv_sec = wait.tv_sec();
 	wt.tv_nsec = wait.tv_usec() * 1000;
@@ -460,8 +460,6 @@ void OOBase::Thread::sleep(const timeval_t& wait)
 		if (errno != EINTR)
 			OOBase_CallCriticalFailure(errno);
 	}
-#else
-#error Fix me!
 #endif
 }
 

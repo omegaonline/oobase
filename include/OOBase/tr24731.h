@@ -22,10 +22,6 @@
 #ifndef OOBASE_TR24731_H_INCLUDED_
 #define OOBASE_TR24731_H_INCLUDED_
 
-#if !defined(HAVE_STRING_H)
-#error No <string.h>?
-#endif
-
 #include <stdarg.h>
 
 #ifndef HAVE_TR_24731

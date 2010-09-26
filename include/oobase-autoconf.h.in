@@ -3,12 +3,6 @@
 /* Define to 1 if you have the <asl.h> header file. */
 #undef HAVE_ASL_H
 
-/* Define to 1 if you have the <assert.h> header file. */
-#undef HAVE_ASSERT_H
-
-/* Define to 1 if you have the <errno.h> header file. */
-#undef HAVE_ERRNO_H
-
 /* Define to 1 if you have the <ev.h> header file. */
 #undef HAVE_EV_H
 
@@ -27,9 +21,6 @@
 /* Define to 1 if you have the LOCAL_CREDS socket option */
 #undef HAVE_LOCAL_CREDS
 
-/* Define to 1 if you have the <math.h> header file. */
-#undef HAVE_MATH_H
-
 /* Define to 1 if you have the <netdb.h> header file. */
 #undef HAVE_NETDB_H
 
@@ -42,9 +33,6 @@
 /* Define to 1 if you have the <pwd.h> header file. */
 #undef HAVE_PWD_H
 
-/* Define to 1 if you have the <signal.h> header file. */
-#undef HAVE_SIGNAL_H
-
 /* Define to 1 if you have the SO_PEERCRED socket option */
 #undef HAVE_SO_PEERCRED
 
@@ -56,12 +44,6 @@
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
-
-/* Define to 1 if you have the <stdlib.h> header file. */
-#undef HAVE_STDLIB_H
-
-/* Define to 1 if you have the <string.h> header file. */
-#undef HAVE_STRING_H
 
 /* Define to 1 if the system has the type `struct cmsgcred'. */
 #undef HAVE_STRUCT_CMSGCRED
@@ -87,14 +69,8 @@
 /* Define to 1 if you have the <sys/un.h> header file. */
 #undef HAVE_SYS_UN_H
 
-/* Define to 1 if you have the <time.h> header file. */
-#undef HAVE_TIME_H
-
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
-
-/* Define to 1 if you have the <wchar.h> header file. */
-#undef HAVE_WCHAR_H
 
 /* Define to 1 if you have the <windows.h> header file. */
 #undef HAVE_WINDOWS_H
@@ -114,4 +90,3 @@
 /* Define to necessary symbol if this constant uses a non-standard name on
    your system. */
 #undef PTHREAD_CREATE_JOINABLE
-

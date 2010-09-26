@@ -23,9 +23,7 @@
 #include "../include/OOSvrBase/Logger.h"
 #include "../include/OOBase/Singleton.h"
 
-#if defined(HAVE_SIGNAL_H)
 #include <signal.h>
-#endif
 
 namespace
 {
@@ -58,7 +56,7 @@ namespace
 			LOG_ERROR(("SetConsoleCtrlHandler failed: %s",OOBase::Win32::FormatMessage().c_str()));
 	}
 
-#elif defined(HAVE_SIGNAL_H)
+#else
 
 	void on_signal(int sig)
 	{
@@ -75,10 +73,6 @@ namespace
 		if (signal(SIGHUP,&on_signal) == SIG_ERR)
 			LOG_ERROR(("signal(SIGHUP) failed: %s",OOBase::strerror(errno).c_str()));
 	}
-
-#else
-
-#error Fix me!
 
 #endif
 
