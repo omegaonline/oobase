@@ -28,35 +28,23 @@
 
 #include <stdio.h>
 
-#if !defined(HAVE_UNISTD_H)
-	#if defined(_WIN32)
-		#define getpid GetCurrentProcessId
-	#else
-		#error Fix me!
-	#endif
-#endif
-
 #if defined(_WIN32)
 #include <io.h>
+#define getpid GetCurrentProcessId
 #endif // _WIN32
 
-#if defined(HAVE_FCNTL_H)
+#if defined(HAVE_UNISTD_H)
 #include <fcntl.h>
-#endif // HAVE_FCNTL_H
+#endif
 
 #if defined(HAVE_ASL_H)
 #include <asl.h>
-
-#error Fix me!
-#endif // HAVE_ASL_H
-
-#if defined(HAVE_SYSLOG_H)
+#elif defined(HAVE_SYSLOG_H)
 // Syslog reuses these
 #undef LOG_WARNING
 #undef LOG_DEBUG
-
 #include <syslog.h>
-#endif // HAVE_SYSLOG_H
+#endif // HAVE_ASL_H/HAVE_SYSLOG_H
 
 namespace
 {
@@ -77,13 +65,14 @@ namespace
 #endif
 
 #if defined(HAVE_ASL_H)
+	
 	class ASLLogger
 	{
 #error Fix me!
 	};
-#endif
 
-#if defined(HAVE_SYSLOG_H)
+#elif defined(HAVE_SYSLOG_H)
+
 	class SysLogLogger
 	{
 	public:
@@ -255,7 +244,11 @@ namespace
 
 #endif // _WIN32
 
-#if defined(HAVE_SYSLOG_H)
+#if defined(HAVE_ASL_H)
+
+#error Implementation here!
+
+#elif defined(HAVE_SYSLOG_H)
 
 	SysLogLogger::~SysLogLogger()
 	{

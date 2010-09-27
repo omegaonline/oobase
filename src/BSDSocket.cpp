@@ -36,16 +36,10 @@ namespace OOBase
 #pragma warning(disable: 4127)
 #endif
 
-#if defined(HAVE_FCNTL_H)
+#if defined(HAVE_UNISTD_H)
 #include <fcntl.h>
-#endif /* HAVE_FCNTL_H */
-
-#if defined(HAVE_SYS_FCNTL_H)
-#include <sys/fcntl.h>
-#endif /* HAVE_SYS_FCNTL_H */
-
-#if defined(HAVE_NETDB_H)
 #include <netdb.h>
+#include <sys/un.h>
 #endif
 
 #if defined(_WIN32)
@@ -373,7 +367,7 @@ int OOBase::BSD::set_non_blocking(Socket::socket_t sock, bool set)
 	if (ioctlsocket(sock,FIONBIO,&v) == -1)
 		return socket_errno;
 
-#elif defined(HAVE_FCNTL_H) || defined(HAVE_SYS_FCNTL_H)
+#elif defined(HAVE_UNISTD_H)
 	int flags = fcntl(sock,F_GETFL);
 	if (flags == -1)
 		return errno;
@@ -412,8 +406,7 @@ OOBase::Socket* OOBase::Socket::connect(const std::string& address, const std::s
 }
 //#endif
 
-#if defined(HAVE_SYS_UN_H)
-#include <sys/un.h>
+#if defined(HAVE_UNISTD_H)
 
 OOBase::Socket* OOBase::Socket::connect_local(const std::string& path, int* perr, const timeval_t* wait)
 {
@@ -444,4 +437,4 @@ OOBase::Socket* OOBase::Socket::connect_local(const std::string& path, int* perr
 	return pSocket;
 }
 
-#endif // defined(HAVE_SYS_UN_H)
+#endif // defined(HAVE_UNISTD_H)

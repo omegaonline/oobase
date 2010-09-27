@@ -24,7 +24,7 @@
 
 #include "../OOBase/SmartPtr.h"
 
-#if defined(HAVE_PWD_H)
+#if defined(HAVE_UNISTD_H)
 
 #include <pwd.h>
 

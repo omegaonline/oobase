@@ -21,7 +21,7 @@
 
 #include "../include/OOSvrBase/pw_info.h"
 
-#if defined(HAVE_PWD_H)
+#if defined(HAVE_UNISTD_H)
 
 OOSvrBase::pw_info::pw_info(uid_t uid) :
 		m_pwd(0), m_buf_len(1024)

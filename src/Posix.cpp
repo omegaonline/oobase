@@ -23,17 +23,10 @@
 
 #if defined (HAVE_UNISTD_H)
 
-#if defined(HAVE_FCNTL_H)
 #include <fcntl.h>
-#endif /* HAVE_FCNTL_H */
-
-#if defined(HAVE_SYS_FCNTL_H)
-#include <sys/fcntl.h>
-#endif /* HAVE_SYS_FCNTL_H */
 
 int OOBase::POSIX::set_close_on_exec(int sock, bool set)
 {
-#if (defined(HAVE_FCNTL_H) || defined(HAVE_SYS_FCNTL_H))
 	int flags = fcntl(sock,F_GETFD);
 	if (flags == -1)
 		return errno;
@@ -41,10 +34,6 @@ int OOBase::POSIX::set_close_on_exec(int sock, bool set)
 	flags = (set ? flags | FD_CLOEXEC : flags & ~FD_CLOEXEC);
 	if (fcntl(sock,F_GETFD,flags) == -1)
 		return errno;
-#else
-	(void)set;
-	(void)sock;
-#endif
 
 	return 0;
 }

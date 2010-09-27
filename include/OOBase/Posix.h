@@ -24,7 +24,7 @@
 
 #include "../config-base.h"
 
-#if defined (HAVE_UNISTD_H)
+#if defined(HAVE_UNISTD_H)
 
 namespace OOBase
 {

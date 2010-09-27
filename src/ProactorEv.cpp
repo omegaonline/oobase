@@ -28,11 +28,8 @@
 #include "../include/OOSvrBase/internal/ProactorImpl.h"
 #include "../include/OOSvrBase/internal/ProactorEv.h"
 
-#if defined(HAVE_SYS_UN_H)
+#if defined(HAVE_UNISTD_H)
 #include <sys/un.h>
-#endif /* HAVE_SYS_UN_H */
-
-#if defined(HAVE_NETDB_H)
 #include <netdb.h>
 #endif
 
@@ -323,7 +320,7 @@ namespace
 		}
 	};
 
-#if defined(HAVE_SYS_UN_H)
+#if defined(HAVE_UNISTD_H)
 	class AsyncLocalSocket : public OOSvrBase::detail::AsyncSocketTempl<OOSvrBase::AsyncLocalSocket>
 	{
 	public:
@@ -620,7 +617,7 @@ namespace
 	{
 	}
 
-#if defined(HAVE_SYS_UN_H)
+#if defined(HAVE_UNISTD_H)
 	class LocalSocketAcceptor : public SocketAcceptor<OOSvrBase::AsyncLocalSocket,AsyncLocalSocket>
 	{
 	public:
@@ -818,7 +815,7 @@ void OOSvrBase::Ev::ProactorImpl::on_io_i(io_watcher* watcher, int /*events*/)
 
 OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa)
 {
-#if !defined(HAVE_SYS_UN_H)
+#if !defined(HAVE_UNISTD_H)
 	// If we don't have unix sockets, we can't do much, use Win32 Proactor instead
 	*perr = ENOENT;
 
@@ -997,7 +994,7 @@ OOSvrBase::AsyncSocket* OOSvrBase::Ev::ProactorImpl::attach_socket(OOBase::Socke
 
 OOSvrBase::AsyncLocalSocket* OOSvrBase::Ev::ProactorImpl::connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait)
 {
-#if !defined(HAVE_SYS_UN_H)
+#if !defined(HAVE_UNISTD_H)
 	// If we don't have unix sockets, we can't do much, use Win32 Proactor instead
 	*perr = ENOENT;
 
@@ -1038,7 +1035,7 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::Ev::ProactorImpl::connect_local_socket(c
 
 OOSvrBase::AsyncLocalSocket* OOSvrBase::Ev::ProactorImpl::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)
 {
-#if !defined(HAVE_SYS_UN_H)
+#if !defined(HAVE_UNISTD_H)
 	// If we don't have unix sockets, we can't do much, use Win32 Proactor instead
 	*perr = ENOENT;
 

@@ -24,12 +24,12 @@
 
 #include "Buffer.h"
 
-#if defined(HAVE_SYS_SOCKET_H)
-#include <sys/socket.h>
-#endif
-
 #if defined(_WIN32)
 #include <winsock2.h>
+#endif
+
+#if defined(HAVE_UNISTD_H)
+#include <sys/socket.h>
 #endif
 
 // Try to align winsock and BSD ;)
