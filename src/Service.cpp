@@ -23,7 +23,7 @@
 #include "../include/OOSvrBase/Logger.h"
 #include "../include/OOBase/Singleton.h"
 
-#include <signal.h>
+#if defined(_WIN32)
 
 namespace
 {
@@ -42,43 +42,16 @@ namespace
 	};
 	typedef OOBase::Singleton<QuitData> QUIT;
 
-#if defined(_WIN32)
-
 	BOOL WINAPI control_c(DWORD evt)
 	{
 		QUIT::instance()->signal(evt);
 		return TRUE;
 	}
 
-	void init_sig_handler()
+	QuitData::QuitData() : m_result(-1)
 	{
 		if (!SetConsoleCtrlHandler(control_c,TRUE))
 			LOG_ERROR(("SetConsoleCtrlHandler failed: %s",OOBase::Win32::FormatMessage().c_str()));
-	}
-
-#else
-
-	void on_signal(int sig)
-	{
-		QUIT::instance()->signal(sig);
-	}
-
-	void init_sig_handler()
-	{
-		// Catch SIGTERM
-		if (signal(SIGTERM,&on_signal) == SIG_ERR)
-			LOG_ERROR(("signal(SIGTERM) failed: %s",OOBase::strerror(errno).c_str()));
-
-		// Catch SIGHUP
-		if (signal(SIGHUP,&on_signal) == SIG_ERR)
-			LOG_ERROR(("signal(SIGHUP) failed: %s",OOBase::strerror(errno).c_str()));
-	}
-
-#endif
-
-	QuitData::QuitData() : m_result(-1)
-	{
-		init_sig_handler();
 	}
 
 	void QuitData::signal(int how)
@@ -113,6 +86,11 @@ namespace
 	}
 }
 
+OOSvrBase::Server::Server()
+{
+	QUIT::instance();
+}
+
 void OOSvrBase::Server::signal(int how)
 {
 	QUIT::instance()->signal(how);
@@ -122,8 +100,6 @@ int OOSvrBase::Server::wait_for_quit()
 {
 	return QUIT::instance()->wait();
 }
-
-#if defined(_WIN32)
 
 void OOSvrBase::Server::quit()
 {
@@ -236,11 +212,40 @@ int OOSvrBase::Service::wait_for_quit()
 	return QUIT::instance()->get_result();
 }
 
-#else
+#elif defined(HAVE_UNISTD_H)
+
+OOSvrBase::Server::Server()
+{
+	sigemptyset(&m_set);
+	sigaddset(&m_set, SIGQUIT);
+	sigaddset(&m_set, SIGTERM);
+	sigaddset(&m_set, SIGHUP);
+
+	int err = pthread_sigmask(SIG_BLOCK, &m_set, NULL);
+	if (err != 0)
+		LOG_ERROR(("pthread_sigmask failed: %s",OOBase::strerror(err).c_str()));
+}
+
+int OOSvrBase::Server::wait_for_quit()
+{
+	int ret = 0;
+	sigwait(&m_set,&ret);
+
+	LOG_DEBUG(("Signal %s caught",strsignal(ret)));
+
+	return ret;
+}
+
+void OOSvrBase::Server::signal(int sig)
+{
+	kill(getpid(),sig);
+}
 
 void OOSvrBase::Server::quit()
 {
 	signal(SIGTERM);
 }
 
+#else
+#error Fix me!
 #endif

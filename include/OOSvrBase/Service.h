@@ -24,14 +24,25 @@
 
 #include "../OOBase/Condition.h"
 
+#if defined(HAVE_UNISTD_H)
+#include <signal.h>
+#endif
+
 namespace OOSvrBase
 {
 	class Server
 	{
 	public:
+		Server();
+
 		virtual int wait_for_quit();
 		void signal(int how);
 		void quit();
+
+	private:
+#if defined(HAVE_UNISTD_H)
+		sigset_t m_set;
+#endif
 	};
 
 #if defined(_WIN32)
