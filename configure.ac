@@ -46,9 +46,6 @@ AC_CHECK_LIB([ev],[ev_loop_new],AC_SUBST([EV_LIBS],["-lev"]))
 # Check for socket options
 OO_CHECK_SOCKOPT([SO_PEERCRED LOCAL_CREDS])
 
-# Check for password functions
-AC_CHECK_FUNCS([getpwuid_r])
-
 # Check for specifics of Unix cred passing
 AC_CHECK_FUNCS([getpeereid getpeerucred])
 AC_CHECK_TYPES([struct cmsgcred])

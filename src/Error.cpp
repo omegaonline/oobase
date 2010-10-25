@@ -34,7 +34,11 @@ std::string OOBase::strerror(int err)
 	std::ostringstream out;
 	out << "(" << err << ") ";
 
-#if defined(HAVE_TR_24731)
+#if defined(HAVE_PTHREADS_H)
+	char szBuf[256] = {0};
+	strerror_r(szBuf,sizeof(szBuf),err);
+	out << szBuf;
+#elif defined(HAVE_TR_24731)
 	char szBuf[256] = {0};
 	strerror_s(szBuf,sizeof(szBuf),err);
 	out << szBuf;

@@ -12,9 +12,6 @@
 /* Define to 1 if you have the `getpeerucred' function. */
 #undef HAVE_GETPEERUCRED
 
-/* Define to 1 if you have the `getpwuid_r' function. */
-#undef HAVE_GETPWUID_R
-
 /* Define to 1 if you have the LOCAL_CREDS socket option */
 #undef HAVE_LOCAL_CREDS
 
