@@ -21,6 +21,8 @@
 
 #include "../include/OOSvrBase/Proactor.h"
 
+#include <algorithm>
+
 #if defined(HAVE_EV_H)
 
 #include "../include/OOBase/internal/BSDSocket.h"
@@ -31,6 +33,7 @@
 #if defined(HAVE_UNISTD_H)
 #include <sys/un.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 #endif
 
 #if defined(_WIN32)
@@ -519,12 +522,15 @@ namespace
 
 		m_closed = true;
 
-		closesocket(m_watcher.fd);
-
-		while (m_async_count)
+		if (m_async_count)
 		{
-			m_condition.wait(m_lock);
+			m_proactor->stop_watcher(&m_watcher);
+
+			while (m_async_count)
+				m_condition.wait(m_lock);
 		}
+		
+		closesocket(m_watcher.fd);
 	}
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
@@ -544,72 +550,95 @@ namespace
 
 		--pThis->m_async_count;
 
-		if (pThis->m_closed)
-		{
-			guard.release();
-			pThis->m_condition.signal();
-		}
-		else
-			pThis->do_accept(guard);
+		pThis->do_accept(guard);
 	}
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
 	void SocketAcceptor<SOCKET_TYPE,SOCKET_IMPL>::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 	{
-		// Call accept on the fd...
-		int err = 0;
-		OOBase::Socket::socket_t new_fd = ::accept(m_watcher.fd,0,0);
-		if (new_fd == INVALID_SOCKET)
+		while (!m_closed)
 		{
-			err = socket_errno;
-			if (err == SOCKET_WOULD_BLOCK)
+			// Call accept on the fd...
+			int err = 0;
+			OOBase::Socket::socket_t new_fd = ::accept(m_watcher.fd,0,0);
+			if (new_fd == INVALID_SOCKET)
 			{
-				++m_async_count;
-				m_proactor->start_watcher(&m_watcher);
-				return;
+				err = socket_errno;
+				if (err == SOCKET_WOULD_BLOCK)
+				{
+					++m_async_count;
+					m_proactor->start_watcher(&m_watcher);
+					return;
+				}
 			}
-		}
 
-		// Prepare socket if okay
-		if (!err && new_fd != INVALID_SOCKET)
-		{
-			err = OOBase::BSD::set_non_blocking(new_fd,true);
+			guard.release();
 
-#if defined (HAVE_UNISTD_H)
-			if (!err)
-				err = OOBase::POSIX::set_close_on_exec(new_fd,true);				
-#endif
-			if (err)
+			// Prepare socket if okay
+			if (!err && new_fd != INVALID_SOCKET)
 			{
-				closesocket(new_fd);
-				new_fd = INVALID_SOCKET;
-			}
-		}
+				err = OOBase::BSD::set_non_blocking(new_fd,true);
 
-		// Wrap socket
-		SOCKET_TYPE* pSocket = 0;
-		if (!err && new_fd != INVALID_SOCKET)
-		{
-			pSocket = SOCKET_IMPL::Create(m_proactor,new_fd);
-			if (!pSocket)
+	#if defined (HAVE_UNISTD_H)
+				if (!err)
+					err = OOBase::POSIX::set_close_on_exec(new_fd,true);				
+	#endif
+				if (err)
+				{
+					closesocket(new_fd);
+					new_fd = INVALID_SOCKET;
+				}
+			}
+
+			std::string strAddress;
+			if (!err && new_fd != INVALID_SOCKET)
 			{
-				err = ENOMEM;
-				closesocket(new_fd);
+				// Get the address...
+				union
+				{
+					sockaddr m_addr;
+					char     m_buf[1024];
+				} address;
+
+				socklen_t len = sizeof(address);
+				if (getpeername(new_fd,&address.m_addr,&len) != 0)
+				{
+					err = errno;
+					closesocket(new_fd);
+					new_fd = INVALID_SOCKET;
+				}
+
+				if (address.m_addr.sa_family == AF_INET ||
+					address.m_addr.sa_family == AF_INET6)
+				{
+					char szBuf[INET6_ADDRSTRLEN+1] = {0};
+					strAddress = inet_ntop(address.m_addr.sa_family,&address.m_addr,szBuf,INET6_ADDRSTRLEN);
+				}
 			}
-		}
 
-		guard.release();
+			// Wrap socket
+			SOCKET_TYPE* pSocket = 0;
+			if (!err && new_fd != INVALID_SOCKET)
+			{
+				pSocket = SOCKET_IMPL::Create(m_proactor,new_fd);
+				if (!pSocket)
+				{
+					err = ENOMEM;
+					closesocket(new_fd);
+				}
+			}
 
-		std::string strAddress;
+			// Call the handler...
+			bool bAgain = m_handler->on_accept(pSocket,strAddress,err);
 
-		// Call the handler...
-		if (m_handler->on_accept(pSocket,strAddress,err))
-		{
 			guard.acquire();
 
-			if (!m_closed)
-				do_accept(guard);
-		}
+			if (!bAgain)
+				break;
+		} 
+
+		if (m_closed)
+			m_condition.signal();		
 	}
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
@@ -655,9 +684,6 @@ OOSvrBase::Ev::ProactorImpl::ProactorImpl() :
 
 	ev_async_start(m_pLoop,&m_alert);
 
-	// Get number of processors in a better way...
-	void* POSIX_TODO;
-
 	// Create the worker pool
 	int num_procs = 2;
 	for (int i=0; i<num_procs; ++i)
@@ -686,10 +712,8 @@ OOSvrBase::Ev::ProactorImpl::~ProactorImpl()
 	try
 	{
 		// Wait for all the threads to finish
-		for (std::vector<OOBase::SmartPtr<OOBase::Thread> >::iterator i=m_workers.begin(); i!=m_workers.end(); ++i)
-		{
+		for (std::deque<OOBase::SmartPtr<OOBase::Thread> >::iterator i=m_workers.begin(); i!=m_workers.end(); ++i)
 			(*i)->join();
-		}
 	}
 	catch (std::exception&)
 	{}
@@ -712,7 +736,7 @@ int OOSvrBase::Ev::ProactorImpl::worker(void* param)
 
 int OOSvrBase::Ev::ProactorImpl::worker_i()
 {
-	for (std::queue<io_watcher*> io_queue;!m_bStop;)
+	for (std::deque<io_watcher*> io_queue;!m_bStop;)
 	{
 		// Make this a condition variable and spawn more threads on demand...
 		void* TODO;
@@ -738,11 +762,41 @@ int OOSvrBase::Ev::ProactorImpl::worker_i()
 				while (!m_start_queue.empty())
 				{
 					io_watcher* i = m_start_queue.front();
-					m_start_queue.pop();
+					m_start_queue.pop_front();
 
 					// Add to the loop
 					ev_io_start(m_pLoop,i);
 				}
+
+				// Check for stop of watchers
+				while (!m_stop_queue.empty())
+				{
+					io_watcher* i = m_stop_queue.front();
+					m_stop_queue.pop_front();
+
+					// Stop it
+					ev_io_stop(m_pLoop,i);
+
+					// And add to the io_queue
+					io_queue.push_back(i);
+				}
+			}
+		}
+
+		// Make sure we have stops for non-pendings...
+		while (!m_stop_queue.empty())
+		{
+			io_watcher* i = m_stop_queue.front();
+			m_stop_queue.pop_front();
+
+			std::deque<io_watcher*>::iterator j = std::find(io_queue.begin(),io_queue.end(),i);
+			if (j == io_queue.end())
+			{
+				// Stop it
+				ev_io_stop(m_pLoop,i);
+
+				// And add to the io_queue
+				io_queue.push_back(i);
 			}
 		}
 
@@ -753,7 +807,7 @@ int OOSvrBase::Ev::ProactorImpl::worker_i()
 		while (!io_queue.empty())
 		{
 			io_watcher* i = io_queue.front();
-			io_queue.pop();
+			io_queue.pop_front();
 
 			if (i->callback)
 				i->callback(i);
@@ -776,7 +830,25 @@ void OOSvrBase::Ev::ProactorImpl::start_watcher(io_watcher* watcher)
 		// Add to the queue
 		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-		m_start_queue.push(watcher);
+		m_start_queue.push_back(watcher);
+
+		// Alert the loop
+		ev_async_send(m_pLoop,&m_alert);
+	}
+	catch (std::exception& e)
+	{
+		OOBase_CallCriticalFailure(e.what());
+	}
+}
+
+void OOSvrBase::Ev::ProactorImpl::stop_watcher(io_watcher* watcher)
+{
+	try
+	{
+		// Add to the queue
+		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+
+		m_stop_queue.push_back(watcher);
 
 		// Alert the loop
 		ev_async_send(m_pLoop,&m_alert);
@@ -802,7 +874,7 @@ void OOSvrBase::Ev::ProactorImpl::on_io_i(io_watcher* watcher, int /*events*/)
 	try
 	{
 		// Add ourselves to the pending io queue
-		m_pIOQueue->push(watcher);
+		m_pIOQueue->push_back(watcher);
 
 		// Stop the watcher - we can do something
 		ev_io_stop(m_pLoop,watcher);
@@ -843,10 +915,6 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor<AsyncLocalSoc
 	if (bind(fd,reinterpret_cast<sockaddr*>(&addr),sizeof(addr)) != 0)
 	{
 		*perr = errno;
-
-		// Unlink any existing inode
-		unlink(path.c_str());
-
 		close(fd);
 		return 0;
 	}

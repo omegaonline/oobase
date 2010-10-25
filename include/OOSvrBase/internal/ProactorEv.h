@@ -33,7 +33,6 @@
 #include <ev.h>
 
 #include <deque>
-#include <vector>
 
 #include "../../OOBase/Thread.h"
 #include "../../OOBase/Condition.h"
@@ -66,21 +65,23 @@ namespace OOSvrBase
 
 			void init_watcher(io_watcher* watcher, int fd, int events);
 			void start_watcher(io_watcher* watcher);
+			void stop_watcher(io_watcher* watcher);
 						
 		private:
 			// The following vars all use this lock
-			OOBase::Mutex            m_ev_lock;
-			ev_loop_t*               m_pLoop;
-			std::queue<io_watcher*>* m_pIOQueue;
-			bool                     m_bAsyncTriggered;
+			OOBase::Mutex             m_ev_lock;
+			ev_loop_t*                m_pLoop;
+			std::deque<io_watcher*>*  m_pIOQueue;
+			bool                      m_bAsyncTriggered;
 
 			// The following vars all use this lock
-			OOBase::SpinLock        m_lock;
-			bool                    m_bStop;
-			std::queue<io_watcher*> m_start_queue;
+			OOBase::SpinLock         m_lock;
+			bool                     m_bStop;
+			std::deque<io_watcher*>  m_start_queue;
+			std::deque<io_watcher*>  m_stop_queue;
 
 			// The following vars don't...
-			std::vector<OOBase::SmartPtr<OOBase::Thread> > m_workers;
+			std::deque<OOBase::SmartPtr<OOBase::Thread> > m_workers;
 			ev_async                                       m_alert;
 
 			static int worker(void* param);
