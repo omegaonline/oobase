@@ -22,6 +22,11 @@
 #include "../include/OOSvrBase/Service.h"
 #include "../include/OOSvrBase/Logger.h"
 #include "../include/OOBase/Singleton.h"
+#include "../include/OOBase/Posix.h"
+
+#if defined(HAVE_UNISTD_H)
+#include <fcntl.h>
+#endif
 
 #if defined(_WIN32)
 
@@ -249,3 +254,47 @@ void OOSvrBase::Server::quit()
 #else
 #error Fix me!
 #endif
+
+bool OOSvrBase::Service::pid_file(const char* pszPidFile)
+{
+#if !defined(HAVE_UNISTD_H)
+	(void)pszPidFile;
+	return true;
+#else
+
+	int fd = open(pszPidFile, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+	if (fd < 0)
+		LOG_ERROR_RETURN(("Failed to open %s: %s",pszPidFile,OOBase::system_error_text(errno).c_str()),false);
+
+	int err = OOBase::POSIX::set_close_on_exec(fd,true);
+	if (err != 0)
+		LOG_ERROR_RETURN(("Failed to set close_on_exec %s: %s",pszPidFile,OOBase::system_error_text(err).c_str()),false);
+
+	struct flock fl = {0};
+	fl.l_type = F_WRLCK;
+	fl.l_start = 0;
+	fl.l_whence = SEEK_SET;
+	fl.l_len = 0;
+	if (fcntl(fd,F_SETLK,&fl) < 0)
+	{
+		if (errno == EACCES || errno == EAGAIN)
+		{
+			close(fd);
+			OOSvrBase::Logger::log(OOSvrBase::Logger::Warning,"Service instance already running");
+			return false;
+		}
+		else
+			LOG_ERROR_RETURN(("Failed to lock %s: %s",pszPidFile,OOBase::system_error_text(errno).c_str()),false);
+	}
+
+	ftruncate(fd,0);
+
+	std::ostringstream os;
+	os << getpid();
+	std::string str = os.str();
+	write(fd,str.c_str(),str.size()+1);
+
+	return true;
+#endif
+}
+

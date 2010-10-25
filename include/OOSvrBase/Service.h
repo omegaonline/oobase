@@ -45,15 +45,15 @@ namespace OOSvrBase
 #endif
 	};
 
-#if defined(_WIN32)
 	class Service : public Server
 	{
 	public:
+#if defined(_WIN32)
 		virtual int wait_for_quit();
-	};
-#else
-	typedef Server Service;
 #endif
+
+		bool pid_file(const char* pszPidFile);
+	};
 }
 
 #endif // OOSVRBASE_SERVICE_H_INCLUDED_
