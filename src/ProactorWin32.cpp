@@ -450,53 +450,56 @@ namespace
 
 	int SocketAcceptor::accept()
 	{
-		//----------------------------------------
-		// Load the AcceptEx function into memory using WSAIoctl.
-		// The WSAIoctl function is an extension of the ioctlsocket()
-		// function that can use overlapped I/O. The function's 3rd
-		// through 6th parameters are input and output buffers where
-		// we pass the pointer to our AcceptEx function. This is used
-		// so that we can call the AcceptEx function directly, rather
-		// than refer to the Mswsock.lib library.
-		static const GUID guid_AcceptEx = WSAID_ACCEPTEX;
-		static const GUID guid_GetAcceptExSockAddrss = WSAID_GETACCEPTEXSOCKADDRS;
-
-		DWORD dwBytes;
-		if (WSAIoctl(m_socket, 
-			SIO_GET_EXTENSION_FUNCTION_POINTER, 
-			(void*)&guid_AcceptEx, 
-			sizeof(guid_AcceptEx),
-			&m_lpfnAcceptEx, 
-			sizeof(m_lpfnAcceptEx), 
-			&dwBytes, 
-			NULL, 
-			NULL) != 0)
+		if (!m_lpfnAcceptEx)
 		{
-			int err = WSAGetLastError();
-			closesocket(m_socket);
-			return err;
-		}
+			//----------------------------------------
+			// Load the AcceptEx function into memory using WSAIoctl.
+			// The WSAIoctl function is an extension of the ioctlsocket()
+			// function that can use overlapped I/O. The function's 3rd
+			// through 6th parameters are input and output buffers where
+			// we pass the pointer to our AcceptEx function. This is used
+			// so that we can call the AcceptEx function directly, rather
+			// than refer to the Mswsock.lib library.
+			static const GUID guid_AcceptEx = WSAID_ACCEPTEX;
+			static const GUID guid_GetAcceptExSockAddrss = WSAID_GETACCEPTEXSOCKADDRS;
 
-		if (WSAIoctl(m_socket, 
-			SIO_GET_EXTENSION_FUNCTION_POINTER, 
-			(void*)&guid_GetAcceptExSockAddrss, 
-			sizeof(guid_GetAcceptExSockAddrss),
-			&m_lpfnGetAcceptExSockAddrs, 
-			sizeof(m_lpfnGetAcceptExSockAddrs), 
-			&dwBytes, 
-			NULL, 
-			NULL) != 0)
-		{
-			int err = WSAGetLastError();
-			closesocket(m_socket);
-			return err;
-		}
+			DWORD dwBytes;
+			if (WSAIoctl(m_socket, 
+				SIO_GET_EXTENSION_FUNCTION_POINTER, 
+				(void*)&guid_AcceptEx, 
+				sizeof(guid_AcceptEx),
+				&m_lpfnAcceptEx, 
+				sizeof(m_lpfnAcceptEx), 
+				&dwBytes, 
+				NULL, 
+				NULL) != 0)
+			{
+				int err = WSAGetLastError();
+				closesocket(m_socket);
+				return err;
+			}
 
-		if (!OOBase::Win32::BindIoCompletionCallback((HANDLE)m_socket,&completion_fn,0))
-		{
-			int err = GetLastError();
-			closesocket(m_socket);
-			return err;
+			if (WSAIoctl(m_socket, 
+				SIO_GET_EXTENSION_FUNCTION_POINTER, 
+				(void*)&guid_GetAcceptExSockAddrss, 
+				sizeof(guid_GetAcceptExSockAddrss),
+				&m_lpfnGetAcceptExSockAddrs, 
+				sizeof(m_lpfnGetAcceptExSockAddrs), 
+				&dwBytes, 
+				NULL, 
+				NULL) != 0)
+			{
+				int err = WSAGetLastError();
+				closesocket(m_socket);
+				return err;
+			}
+
+			if (!OOBase::Win32::BindIoCompletionCallback((HANDLE)m_socket,&completion_fn,0))
+			{
+				int err = GetLastError();
+				closesocket(m_socket);
+				return err;
+			}
 		}
 
 		// Just accept the next one...
