@@ -141,7 +141,7 @@ namespace
 		switch (dwControl)
 		{
 		case SERVICE_CONTROL_STOP:
-			QUIT::instance()->signal(CTRL_C_EVENT);
+			QUIT::instance()->signal(CTRL_CLOSE_EVENT);
 			break;
 
 		case SERVICE_CONTROL_SHUTDOWN:
@@ -228,16 +228,13 @@ OOSvrBase::Server::Server()
 
 	int err = pthread_sigmask(SIG_BLOCK, &m_set, NULL);
 	if (err != 0)
-		LOG_ERROR(("pthread_sigmask failed: %s",OOBase::strerror(err).c_str()));
+		LOG_ERROR(("pthread_sigmask failed: %s",OOBase::system_error_text(err).c_str()));
 }
 
 int OOSvrBase::Server::wait_for_quit()
 {
 	int ret = 0;
 	sigwait(&m_set,&ret);
-
-	LOG_DEBUG(("Signal %s caught",strsignal(ret)));
-
 	return ret;
 }
 
