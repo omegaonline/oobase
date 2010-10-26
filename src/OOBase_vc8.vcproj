@@ -270,6 +270,10 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\BSDSocket.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Buffer.cpp"
 				>
 			</File>
@@ -294,7 +298,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\PosixSocket.cpp"
+				RelativePath=".\Posix.cpp"
 				>
 			</File>
 			<File
@@ -321,6 +325,10 @@
 				RelativePath=".\Win32Socket.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\Win32Socket2.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -329,6 +337,10 @@
 			>
 			<File
 				RelativePath="..\include\OOBase\Atomic.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\internal\BSDSocket.h"
 				>
 			</File>
 			<File
@@ -352,10 +364,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\config-msvc.h"
-				>
-			</File>
-			<File
 				RelativePath="..\include\OOBase\Destructor.h"
 				>
 			</File>
@@ -372,7 +380,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\PosixSocket.h"
+				RelativePath="..\include\oobase-msvc.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\Posix.h"
 				>
 			</File>
 			<File
@@ -416,7 +428,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\Win32Socket.h"
+				RelativePath="..\include\OOBase\internal\Win32Impl.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\internal\Win32Socket.h"
 				>
 			</File>
 		</Filter>
