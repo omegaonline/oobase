@@ -55,6 +55,9 @@ AC_CHECK_TYPES([struct sockcred])
 # Set sensible default CFLAGS if necessary
 AS_IF([test "x$oo_test_CFLAGS" != "xset"],
 [
+  # Always try to hide symbols
+  AX_CFLAGS_GCC_OPTION([-fvisibility=hidden])
+  
   AS_IF([test "x$debug" = "xtrue"],
   [
     AX_CFLAGS_GCC_OPTION([-ggdb])
@@ -68,6 +71,9 @@ AS_IF([test "x$oo_test_CFLAGS" != "xset"],
 # Set sensible default CXXFLAGS if necessary
 AS_IF([test "x$oo_test_CXXFLAGS" != "xset"],
 [
+  # Always try to hide symbols
+  AX_CXXFLAGS_GCC_OPTION([-fvisibility=hidden])
+  
   # Always add full warnings
   AX_CXXFLAGS_WARN_ALL
 
