@@ -25,9 +25,6 @@ AM_CONDITIONAL([DEBUG], [test "x$debug" = "xtrue"])
 OO_PROG_CC
 OO_PROG_CXX
 
-# Check for pkg-config
-PKG_PROG_PKG_CONFIG
-
 # Check the multi-threading flags
 OO_MULTI_THREAD
 
