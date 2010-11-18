@@ -224,6 +224,9 @@ OOBase::Socket* OOBase::Socket::connect_local(const std::string& path, int* perr
 		if (!WaitNamedPipeA(pipe_name.c_str(),dwWait))
 		{
 			*perr = GetLastError();
+			if (*perr == ERROR_SEM_TIMEOUT)
+				*perr = WSAETIMEDOUT;
+
 			return 0;
 		}
 	}
