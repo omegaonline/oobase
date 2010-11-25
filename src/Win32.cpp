@@ -179,48 +179,59 @@ namespace
 	{
 		static_assert(sizeof(LONG) <= sizeof(INIT_ONCE),"Refer to maintainters");
 
+		// *check == 0  <- Start state
+		// *check == 1  <- Init being called...
+		// *check == 2  <- Init failed...
+		// *check == 3  <- Init succeeded...
+
 		LONG* check = reinterpret_cast<LONG*>(InitOnce);
-
-		LONG checked = InterlockedCompareExchange(check,-1,0);
-		if (checked != 1)
+		switch (InterlockedCompareExchange(check,1,0))
 		{
-			// Get lock...
-			OOBase::Win32::SmartHandle mutex(get_mutex(check));
+		case 2:
+			return FALSE;
 
-			do
-			{
-				if (WaitForSingleObject(mutex,INFINITE) != WAIT_OBJECT_0)
-					OOBase_CallCriticalFailure(GetLastError());
+		case 3:
+			return TRUE;
 
-				if (checked == 0)
-				{
-					// First in...
-					try
-					{
-						if ((*InitFn)(InitOnce,Parameter,Context))
-							InterlockedExchange(check,1);
-						else
-							InterlockedExchange(check,0);
-					}
-					catch (...)
-					{
-						InterlockedExchange(check,0);
-						ReleaseMutex(mutex);
-						return FALSE;
-					}
-				}
-
-				checked = *check;
-
-				// And release
-				if (!ReleaseMutex(mutex))
-					OOBase_CallCriticalFailure(GetLastError());
-
-			}
-			while (checked != 1);
+		default:
+			break;
 		}
 
-		return TRUE;
+		BOOL bReturn = TRUE;
+		
+		// Acquire mutex
+		OOBase::Win32::SmartHandle mutex(get_mutex(check));
+		if (WaitForSingleObject(mutex,INFINITE) != WAIT_OBJECT_0)
+			OOBase_CallCriticalFailure(GetLastError());
+
+		if (*check == 1)
+		{
+			// First in...
+			try
+			{
+				if (!(*InitFn)(InitOnce,Parameter,Context))
+					InterlockedExchange(check,2);
+				else
+					InterlockedExchange(check,3);
+			}
+			catch (...)
+			{
+				InterlockedExchange(check,2);
+				ReleaseMutex(mutex);
+				throw;
+			}
+		}
+		else
+		{
+			// If we get here then we are not the first thread in, and the first thread failed!
+			bReturn = (*check == 3);
+		}
+									
+		// And release
+		if (!ReleaseMutex(mutex))
+			OOBase_CallCriticalFailure(GetLastError());
+		
+		return bReturn;
 	}
 
 	void Win32Thunk::impl_InitializeSRWLock(SRWLOCK* SRWLock)
