@@ -445,7 +445,7 @@ OOBase::Win32::condition_mutex_t::condition_mutex_t()
 
 OOBase::Win32::condition_mutex_t::~condition_mutex_t()
 {
-	if (Win32Thunk::instance().m_InitializeConditionVariable != Win32Thunk::impl_InitializeConditionVariable)
+	if (Win32Thunk::instance().m_InitializeConditionVariable == Win32Thunk::impl_InitializeConditionVariable)
 		CloseHandle(u.m_mutex);
 	else
 		DeleteCriticalSection(&u.m_cs);
