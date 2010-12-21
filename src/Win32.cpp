@@ -33,8 +33,8 @@ namespace
 		
 		static Win32Thunk& instance()
 		{
-			static INIT_ONCE key = {0};
-			if (!impl_InitOnceExecuteOnce(&key,&init,0,0))
+			static LONG key = 0;
+			if (!impl_InitOnceExecuteOnce((INIT_ONCE*)&key,&init,0,0))
 				OOBase_CallCriticalFailure(GetLastError());
 
 			return *s_instance;
