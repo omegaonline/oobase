@@ -31,14 +31,7 @@ namespace
 	public:
 		Win32Thunk();
 		
-		static Win32Thunk& instance()
-		{
-			static LONG key = 0;
-			if (!impl_InitOnceExecuteOnce((INIT_ONCE*)&key,&init,0,0))
-				OOBase_CallCriticalFailure(GetLastError());
-
-			return *s_instance;
-		}
+		static Win32Thunk& instance();
 
 		typedef BOOL (__stdcall *pfn_InitOnceExecuteOnce)(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context);
 		pfn_InitOnceExecuteOnce m_InitOnceExecuteOnce;
@@ -89,12 +82,7 @@ namespace
 
 		static Win32Thunk* s_instance;
 
-		static BOOL __stdcall init(INIT_ONCE*,void*,void**)
-		{
-			static Win32Thunk inst;
-			s_instance = &inst;
-			return TRUE;
-		}
+		static BOOL __stdcall init(INIT_ONCE*,void*,void**);
 	};
 
 	Win32Thunk* Win32Thunk::s_instance = 0;
@@ -148,6 +136,32 @@ namespace
 		m_BindIoCompletionCallback = (pfn_BindIoCompletionCallback)(GetProcAddress(m_hKernel32,"BindIoCompletionCallback"));
 
 		init_low_frag_heap();
+	}
+
+	Win32Thunk& Win32Thunk::instance()
+	{
+		if (!s_instance)
+		{
+			static INIT_ONCE key = {0};
+			static pfn_InitOnceExecuteOnce fn = (pfn_InitOnceExecuteOnce)(GetProcAddress(GetModuleHandleW(L"Kernel32.dll"),"InitOnceExecuteOnce"));
+
+			BOOL bRet;
+			if (fn)
+				bRet = (*fn)(&key,&init,0,0);
+			else
+				bRet = impl_InitOnceExecuteOnce(&key,&init,0,0);
+
+			if (!bRet)
+				OOBase_CallCriticalFailure(GetLastError());
+		}
+		return *s_instance;
+	}
+
+	BOOL Win32Thunk::init(INIT_ONCE*,void*,void**)
+	{
+		static Win32Thunk inst;
+		s_instance = &inst;
+		return TRUE;
 	}
 
 	void Win32Thunk::init_low_frag_heap()
