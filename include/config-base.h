@@ -188,23 +188,31 @@
 #   endif
 # endif /* ! BYTE_ORDER && ! __BYTE_ORDER */
 
+////////////////////////////////////////
+// Forward declare custom error handling
+
 #ifdef __cplusplus
+extern "C" {
+#endif
+
+void OOBase_CallCriticalFailureMem(const char* pszFile, unsigned int nLine);
+void OOBase_CallCriticalFailure_i(const char* pszFile, unsigned int nLine, const char*);
+
+#define OOBase_OutOfMemory() \
+	OOBase_CallCriticalFailureMem(__FILE__,__LINE__)
+
+#define OOBase_CallCriticalFailure(expr) \
+	OOBase_CallCriticalFailure_i(__FILE__,__LINE__,expr)
+
+#ifdef __cplusplus
+}
+void OOBase_CallCriticalFailure_i(const char* pszFile, unsigned int nLine, int);
 
 namespace OOBase
 {
-	void CallCriticalFailureMem(const char* pszFile, unsigned int nLine);
-	void CallCriticalFailure(const char* pszFile, unsigned int nLine, int);
-	void CallCriticalFailure(const char* pszFile, unsigned int nLine, const char*);
-
 	std::string strerror(int err);
 	std::string system_error_text(int err);
 }
-
-#define OOBase_CallCriticalFailure(expr) \
-	OOBase::CallCriticalFailure(__FILE__,__LINE__,expr)
-
-#define OOBase_OutOfMemory() \
-	OOBase::CallCriticalFailureMem(__FILE__,__LINE__)
 
 #if !defined(HAVE_STATIC_ASSERT)
 #define static_assert(expr,msg) \

@@ -58,33 +58,33 @@ std::string OOBase::system_error_text(int err)
 #endif
 }
 
-void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, int err)
+void OOBase_CallCriticalFailure_i(const char* pszFile, unsigned int nLine, int err)
 {
-	CallCriticalFailure(pszFile,nLine,system_error_text(err).c_str());
+	OOBase_CallCriticalFailure_i(pszFile,nLine,OOBase::system_error_text(err).c_str());
 }
 
 #if defined(_WIN32)
 
-void OOBase::CallCriticalFailureMem(const char* pszFile, unsigned int nLine)
+void OOBase_CallCriticalFailureMem(const char* pszFile, unsigned int nLine)
 {
-	CallCriticalFailure(pszFile,nLine,ERROR_OUTOFMEMORY);
+	OOBase_CallCriticalFailure_i(pszFile,nLine,ERROR_OUTOFMEMORY);
 }
 
 #elif defined(HAVE_UNISTD_H)
 
-void OOBase::CallCriticalFailureMem(const char* pszFile, unsigned int nLine)
+void OOBase_CallCriticalFailureMem(const char* pszFile, unsigned int nLine)
 {
-	CallCriticalFailure(pszFile,nLine,ENOMEM);
+	OOBase_CallCriticalFailure_i(pszFile,nLine,ENOMEM);
 }
 
 #else
 #error Fix me!
 #endif
 
-void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, const char* msg)
+void OOBase_CallCriticalFailure_i(const char* pszFile, unsigned int nLine, const char* msg)
 {
 	std::ostringstream out;
 	out << pszFile << "(" << nLine << "): " << msg;
-	CriticalFailure(out.str().c_str());
+	OOBase::CriticalFailure(out.str().c_str());
 	abort();
 }
