@@ -339,7 +339,7 @@ namespace
 		{
 		}
 
-		static AsyncSocket* Create(OOSvrBase::Win32::ProactorImpl* pProactor, SOCKET sock, DWORD& dwErr)
+		static AsyncSocket* Create(OOSvrBase::Win32::ProactorImpl* pProactor, SOCKET sock, int& dwErr)
 		{
 			IOHelper* helper = 0;
 			OOBASE_NEW(helper,SocketIOHelper(pProactor,(HANDLE)sock));
@@ -397,7 +397,7 @@ namespace
 		struct Completion
 		{
 			OVERLAPPED                 m_ov;
-			DWORD                      m_err;
+			int                        m_err;
 			SOCKET                     m_socket;
 			SocketAcceptor*            m_this_ptr;
 			char                       m_addresses[(sizeof(sockaddr_in6) + 16)*2];
@@ -415,8 +415,8 @@ namespace
 		LPFN_ACCEPTEX                                 m_lpfnAcceptEx;
 		LPFN_GETACCEPTEXSOCKADDRS                     m_lpfnGetAcceptExSockAddrs;
 				
-		void do_accept(DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
-		void next_accept();
+		void do_accept(int& dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
+		int next_accept();
 	};
 
 	SocketAcceptor::SocketAcceptor(OOSvrBase::Win32::ProactorImpl* pProactor, SOCKET sock, OOSvrBase::Acceptor<OOSvrBase::AsyncSocket>* handler, int address_family) :
@@ -503,17 +503,15 @@ namespace
 		}
 
 		// Just accept the next one...
-		next_accept();
-
-		return 0;
+		return next_accept();
 	}
 
-	void SocketAcceptor::next_accept()
+	int SocketAcceptor::next_accept()
 	{
 		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 
 		if (m_closed)
-			return;
+			return WSAESHUTDOWN;
 
 		memset(&m_completion.m_ov,0,sizeof(OVERLAPPED));
 		m_completion.m_err = 0;
@@ -532,7 +530,7 @@ namespace
 				if (err == ERROR_IO_PENDING)
 				{
 					// Async - finish later...
-					return;
+					return 0;
 				}
 			}
 
@@ -541,6 +539,7 @@ namespace
 		}
 
 		do_accept(err,guard);
+		return err;
 	}
 
 	VOID SocketAcceptor::completion_fn(DWORD dwErrorCode, DWORD, LPOVERLAPPED lpOverlapped)
@@ -571,7 +570,7 @@ namespace
 		return 0;
 	}
 
-	void SocketAcceptor::do_accept(DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard)
+	void SocketAcceptor::do_accept(int& dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard)
 	{
 		if (m_closed)
 		{
@@ -606,7 +605,10 @@ namespace
 
 		// Call the acceptor
 		if (m_handler->on_accept(pSocket,strAddress,dwErr))
+		{
+			dwErr = 0;
 			next_accept();
+		}
 	}
 
 	void SocketAcceptor::shutdown(bool /*bSend*/, bool /*bRecv*/)
@@ -697,7 +699,7 @@ namespace
 
 		void shutdown(bool bSend, bool bRecv);
 
-		void accept();
+		int accept();
 
 	private:
 		static VOID CALLBACK completion_fn(PVOID lpParameter, BOOLEAN TimerOrWaitFired);
@@ -720,8 +722,8 @@ namespace
 		LPSECURITY_ATTRIBUTES                              m_psa;
 		size_t                                             m_async_count;
 		
-		void next_accept(bool bExclusive);
-		void do_accept(DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
+		int next_accept(bool bExclusive);
+		void do_accept(DWORD& dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
 	};
 
 	PipeAcceptor::PipeAcceptor(OOSvrBase::Win32::ProactorImpl* pProactor, const std::string& pipe_name, LPSECURITY_ATTRIBUTES psa, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler) :
@@ -749,19 +751,19 @@ namespace
 		}
 	}
 
-	void PipeAcceptor::accept()
+	int PipeAcceptor::accept()
 	{
-		next_accept(true);
+		return next_accept(true);
 	}
 
-	void PipeAcceptor::next_accept(bool bExclusive)
+	int PipeAcceptor::next_accept(bool bExclusive)
 	{
 		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 
 		assert(!m_completion.m_hPipe.is_valid());
 
 		if (m_closed)
-			return;
+			return ERROR_PIPE_NOT_CONNECTED;
 
 		DWORD dwOpenMode = PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED;
 
@@ -801,7 +803,7 @@ namespace
 					if (RegisterWaitForSingleObject(&m_completion.m_hWait,m_completion.m_ov.hEvent,&completion_fn,&m_completion,INFINITE,WT_EXECUTELONGFUNCTION | WT_EXECUTEONLYONCE))
 					{
 						// Will complete later...
-						return;
+						return 0;
 					}
 					else
 						dwErr = GetLastError();
@@ -819,6 +821,7 @@ namespace
 		}
 
 		do_accept(dwErr,guard);
+		return dwErr;
 	}
 
 	VOID PipeAcceptor::completion_fn(PVOID lpParameter, BOOLEAN /*TimerOrWaitFired*/)
@@ -845,7 +848,7 @@ namespace
 		pProactor->release();
 	}
 
-	void PipeAcceptor::do_accept(DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard)
+	void PipeAcceptor::do_accept(DWORD& dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard)
 	{
 		if (m_closed)
 		{
@@ -868,7 +871,10 @@ namespace
 
 		// Call the acceptor
 		if (m_handler->on_accept(pSocket,m_pipe_name,dwErr))
+		{
+			dwErr = 0;
 			next_accept(false);
+		}
 	}
 
 	void PipeAcceptor::shutdown(bool /*bSend*/, bool /*bRecv*/)
@@ -909,7 +915,10 @@ OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_local(Acceptor<AsyncLocal
 		return 0;
 	}
 		
-	pAcceptor->accept();
+	*perr = pAcceptor->accept();
+	if (*perr != 0)
+		return 0;
+
 	return pAcceptor.detach();
 }
 
@@ -989,30 +998,26 @@ OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_remote(Acceptor<AsyncSock
 	}
 
 	// Wrap up in a controlling socket class
-	OOBase::SmartPtr<SocketAcceptor> pAccept = 0;
-	OOBASE_NEW(pAccept,SocketAcceptor(this,sock,handler,af_family));
-	if (!pAccept)
+	OOBase::SmartPtr<SocketAcceptor> pAcceptor = 0;
+	OOBASE_NEW(pAcceptor,SocketAcceptor(this,sock,handler,af_family));
+	if (!pAcceptor)
 	{
 		*perr = ENOMEM;
 		closesocket(sock);
 		return 0;
 	}
 
-	*perr = pAccept->accept();
-	if (*perr)
+	*perr = pAcceptor->accept();
+	if (*perr != 0)
 		return 0;
 
-	return pAccept.detach();
+	return pAcceptor.detach();
 }
 
 OOSvrBase::AsyncSocket* OOSvrBase::Win32::ProactorImpl::attach_socket(OOBase::Socket::socket_t sock, int* perr)
 {
 	// The socket must have been opened as WSA_FLAG_OVERLAPPED!!!
-
-	DWORD dwErr = 0;
-	OOSvrBase::AsyncSocket* pSocket = ::AsyncSocket::Create(this,sock,dwErr);
-	*perr = dwErr;	
-	return pSocket;
+	return ::AsyncSocket::Create(this,sock,*perr);
 }
 
 OOSvrBase::AsyncLocalSocket* OOSvrBase::Win32::ProactorImpl::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)

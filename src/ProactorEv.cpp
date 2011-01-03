@@ -480,7 +480,7 @@ namespace
 
 		void shutdown(bool bSend, bool bRecv);
 
-		void accept();
+		int accept();
 
 	private:
 		struct Completion : public OOSvrBase::Ev::ProactorImpl::io_watcher
@@ -497,7 +497,7 @@ namespace
 		bool                                     m_closed;
 
 		static void on_accept(OOSvrBase::Ev::ProactorImpl::io_watcher* watcher);
-		void do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard);
+		int do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard);
 	};
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
@@ -534,11 +534,11 @@ namespace
 	}
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
-	void SocketAcceptor<SOCKET_TYPE,SOCKET_IMPL>::accept()
+	int SocketAcceptor<SOCKET_TYPE,SOCKET_IMPL>::accept()
 	{
 		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 
-		do_accept(guard);
+		return do_accept(guard);
 	}
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
@@ -554,12 +554,12 @@ namespace
 	}
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
-	void SocketAcceptor<SOCKET_TYPE,SOCKET_IMPL>::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
+	int SocketAcceptor<SOCKET_TYPE,SOCKET_IMPL>::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 	{
+		int err = 0;
 		while (!m_closed)
 		{
 			// Call accept on the fd...
-			int err = 0;
 			OOBase::Socket::socket_t new_fd = ::accept(m_watcher.fd,0,0);
 			if (new_fd == INVALID_SOCKET)
 			{
@@ -568,7 +568,7 @@ namespace
 				{
 					++m_async_count;
 					m_proactor->start_watcher(&m_watcher);
-					return;
+					return 0;
 				}
 			}
 
@@ -635,10 +635,14 @@ namespace
 
 			if (!bAgain)
 				break;
+
+			err = 0;
 		} 
 
 		if (m_closed)
-			m_condition.signal();		
+			m_condition.signal();
+
+		return err;
 	}
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
@@ -949,8 +953,11 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor<AsyncLocalSoc
 		return 0;
 	}
 
-	pAccept->accept();
-	return pAccept.detach();
+	*perr = pAcceptor->accept();
+	if (*perr != 0)
+		return 0;
+
+	return pAcceptor.detach();
 
 #endif
 }
@@ -1041,8 +1048,11 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor<OOSvrBase::A
 		return 0;
 	}
 
-	pAccept->accept();
-	return pAccept.detach();
+	*perr = pAcceptor->accept();
+	if (*perr != 0)
+		return 0;
+
+	return pAcceptor.detach();
 }
 
 OOSvrBase::AsyncSocket* OOSvrBase::Ev::ProactorImpl::attach_socket(OOBase::Socket::socket_t sock, int* perr)
