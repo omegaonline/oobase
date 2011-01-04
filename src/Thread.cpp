@@ -171,7 +171,7 @@ namespace
 		unsigned int ret = static_cast<unsigned int>((*thread_fn)(p));
 
 		if (bAutodelete)
-			delete pThread;
+			OOBASE_DELETE(Thread,pThread);
 
 		// Make sure we clean up any thread-local storage
 		OOBase::TLS::ThreadExit();
@@ -363,7 +363,7 @@ namespace
 			OOBase_CallCriticalFailure(err);
 
 		if (bAutodelete)
-			delete pThread;
+			OOBASE_DELETE(Thread,pThread);
 
 		return (void*)ret;
 	}
@@ -377,15 +377,12 @@ OOBase::Thread::Thread(bool bAutodelete) :
 		m_bAutodelete(bAutodelete)
 {
 #if defined(_WIN32)
-	OOBASE_NEW(m_impl,Win32Thread());
+	OOBASE_NEW_T_CRITICAL(Win32Thread,m_impl,Win32Thread());
 #elif defined(HAVE_PTHREAD)
-	OOBASE_NEW(m_impl,PthreadThread());
+	OOBASE_NEW_T_CRITICAL(PthreadThread,m_impl,PthreadThread());
 #else
 #error Fix me!
 #endif
-
-	if (!m_impl)
-		OOBase_OutOfMemory();
 }
 
 OOBase::Thread::Thread(bool,bool) :
@@ -396,7 +393,7 @@ OOBase::Thread::Thread(bool,bool) :
 
 OOBase::Thread::~Thread()
 {
-	delete m_impl;
+	OOBASE_DELETE(Thread,m_impl);
 }
 
 void OOBase::Thread::run(int (*thread_fn)(void*), void* param)

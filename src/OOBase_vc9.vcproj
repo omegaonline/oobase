@@ -297,6 +297,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Memory.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Mutex.cpp"
 				>
 			</File>

@@ -22,6 +22,7 @@
 #ifndef OOSVRBASE_PROACTOR_H_INCLUDED_
 #define OOSVRBASE_PROACTOR_H_INCLUDED_
 
+#include "../OOBase/SmartPtr.h"
 #include "../OOBase/Socket.h"
 
 #if !defined(_WIN32)
@@ -38,16 +39,15 @@ namespace OOSvrBase
 	class IOHandler
 	{
 	public:
-		virtual void on_recv(AsyncSocket* pSocket, OOBase::Buffer* buffer, int err) = 0;
-		virtual void on_sent(AsyncSocket* pSocket, OOBase::Buffer* buffer, int err) = 0;
-		virtual void on_closed(AsyncSocket* pSocket) = 0;
+		virtual void on_recv(OOBase::Buffer* buffer, int err) = 0;
+		virtual void on_sent(OOBase::Buffer* buffer, int err) = 0;
+		virtual void on_closed() = 0;
 	};
 
 	class AsyncSocket
 	{
 	public:
-		virtual ~AsyncSocket() {}
-
+		virtual void close() = 0;
 		virtual void bind_handler(IOHandler* handler) = 0;
 		
 		virtual int async_recv(OOBase::Buffer* buffer, size_t len = 0) = 0;
@@ -57,7 +57,26 @@ namespace OOSvrBase
 		virtual int send(OOBase::Buffer* buffer, const OOBase::timeval_t* timeout = 0) = 0;
 
 		virtual void shutdown(bool bSend, bool bRecv) = 0;
+
+	protected:
+		virtual ~AsyncSocket() {}
 	};
+
+	class SocketDestructor
+	{
+	public:
+		static void destroy(AsyncSocket* ptr)
+		{
+			ptr->close();
+		}
+
+		static void destroy_void(void* ptr)
+		{
+			destroy(static_cast<AsyncSocket*>(ptr));
+		}
+	};
+
+	typedef OOBase::SmartPtr<AsyncSocket,SocketDestructor> AsyncSocketPtr;
 
 	class AsyncLocalSocket : public AsyncSocket
 	{
@@ -73,16 +92,15 @@ namespace OOSvrBase
 #error Fix me!
 #endif
 		virtual int get_uid(uid_t& uid) = 0;
-
-	protected:
-		AsyncLocalSocket() {}
 	};
+
+	typedef OOBase::SmartPtr<AsyncLocalSocket,SocketDestructor> AsyncLocalSocketPtr;
 
 	template <typename SOCKET_TYPE>
 	class Acceptor
 	{
 	public:
-		virtual bool on_accept(SOCKET_TYPE* pSocket, const std::string& strAddress, int err) = 0;
+		virtual bool on_accept(OOBase::SmartPtr<SOCKET_TYPE,SocketDestructor> ptrSocket, const std::string& strAddress, int err) = 0;
 	};
 
 	class Proactor
@@ -94,11 +112,11 @@ namespace OOSvrBase
 		virtual OOBase::Socket* accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa = 0);
 		virtual OOBase::Socket* accept_remote(Acceptor<AsyncSocket>* handler, const std::string& address, const std::string& port, int* perr);
 
-		virtual AsyncSocket* attach_socket(OOBase::Socket::socket_t sock, int* perr);
-		virtual AsyncLocalSocket* attach_local_socket(OOBase::Socket::socket_t sock, int* perr);
+		virtual AsyncSocketPtr attach_socket(OOBase::Socket::socket_t sock, int* perr);
+		virtual AsyncLocalSocketPtr attach_local_socket(OOBase::Socket::socket_t sock, int* perr);
 
-		//virtual AsyncLocalSocket* connect_socket(const std::string& address, const std::string& port, int* perr, const OOBase::timeval_t* wait = 0);
-		virtual AsyncLocalSocket* connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait = 0);
+		//virtual AsyncLocalSocketPtr connect_socket(const std::string& address, const std::string& port, int* perr, const OOBase::timeval_t* wait = 0);
+		virtual AsyncLocalSocketPtr connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait = 0);
 
 	protected:
 		explicit Proactor(bool);

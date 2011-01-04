@@ -50,7 +50,4 @@
 	#error What else can MSVC compile?
 #endif
 
-/* Define to 1 if you have new (std::nothrow) support */
-#define HAVE_NEW_NOTHROW 1
-
 #endif // OOBASE_CONFIG_MSVC_H_INCLUDED_

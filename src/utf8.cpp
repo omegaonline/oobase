@@ -34,10 +34,9 @@ std::wstring OOBase::from_utf8(const char* sz, size_t len)
 		return std::wstring(szBuf,actual_len);
 	}
 
-	SmartPtr<wchar_t,ArrayDestructor<wchar_t> > ptrBuf;
-	OOBASE_NEW(ptrBuf,wchar_t[actual_len]);
+	SmartPtr<wchar_t,FreeDestructor<2> > ptrBuf = static_cast<wchar_t*>(Allocate(actual_len*sizeof(wchar_t),2,__FILE__,__LINE__));
 	if (!ptrBuf)
-		OOBase_OutOfMemory();
+		CallCriticalFailureMem(__FILE__,__LINE__-2);
 
 	from_utf8(ptrBuf,actual_len,sz,len);
 
@@ -59,10 +58,9 @@ std::wstring OOBase::from_native(const char* sz, size_t len)
 		return std::wstring(szBuf,actual_len);
 	}
 
-	SmartPtr<wchar_t,ArrayDestructor<wchar_t> > ptrBuf;
-	OOBASE_NEW(ptrBuf,wchar_t[actual_len]);
+	SmartPtr<wchar_t,FreeDestructor<2> > ptrBuf = static_cast<wchar_t*>(Allocate(actual_len*sizeof(wchar_t),2,__FILE__,__LINE__));
 	if (!ptrBuf)
-		OOBase_OutOfMemory();
+		CallCriticalFailureMem(__FILE__,__LINE__-2);
 
 	from_native(ptrBuf,actual_len,sz,len);
 
@@ -84,10 +82,9 @@ std::string OOBase::to_utf8(const wchar_t* wsz, size_t len)
 		return std::string(szBuf,actual_len);
 	}
 
-	SmartPtr<char,ArrayDestructor<char> > ptrBuf;
-	OOBASE_NEW(ptrBuf,char[actual_len]);
+	SmartPtr<char,FreeDestructor<2> > ptrBuf = static_cast<char*>(Allocate(actual_len,2,__FILE__,__LINE__));
 	if (!ptrBuf)
-		OOBase_OutOfMemory();
+		CallCriticalFailureMem(__FILE__,__LINE__-2);
 
 	to_utf8(ptrBuf,actual_len,wsz,len);
 
@@ -109,10 +106,9 @@ std::string OOBase::to_native(const wchar_t* wsz, size_t len)
 		return std::string(szBuf,actual_len);
 	}
 
-	SmartPtr<char,ArrayDestructor<char> > ptrBuf;
-	OOBASE_NEW(ptrBuf,char[actual_len]);
+	SmartPtr<char,FreeDestructor<2> > ptrBuf = static_cast<char*>(Allocate(actual_len,2,__FILE__,__LINE__));
 	if (!ptrBuf)
-		OOBase_OutOfMemory();
+		CallCriticalFailureMem(__FILE__,__LINE__-2);
 
 	to_native(ptrBuf,actual_len,wsz,len);
 

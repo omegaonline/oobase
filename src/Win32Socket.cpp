@@ -231,8 +231,8 @@ OOBase::Socket* OOBase::Socket::connect_local(const std::string& path, int* perr
 		}
 	}
 
-	::Socket* pSocket = 0;
-	OOBASE_NEW(pSocket,::Socket(hPipe));
+	::Socket* pSocket;
+	OOBASE_NEW_T(::Socket,pSocket,::Socket(hPipe));
 	if (!pSocket)
 	{
 		*perr = ERROR_OUTOFMEMORY;

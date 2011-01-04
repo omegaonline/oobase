@@ -164,7 +164,7 @@ int OOSvrBase::Db::Database::begin_transaction(OOBase::SmartPtr<Transaction>& pt
 	if (err != SQLITE_OK)
 		return err;
 
-	OOBASE_NEW(ptrTrans,Transaction(m_db));
+	OOBASE_NEW_T(Transaction,ptrTrans,Transaction(m_db));
 	if (!ptrTrans)
 	{
 		sqlite3_exec(m_db,"ROLLBACK;",NULL,0,NULL);
@@ -191,7 +191,7 @@ int OOSvrBase::Db::Database::prepare_statement(OOBase::SmartPtr<OOSvrBase::Db::S
 	if (err != SQLITE_OK)
 		LOG_ERROR_RETURN(("sqlite3_prepare_v2 failed: %s",sqlite3_errmsg(m_db)),err);
 
-	OOBASE_NEW(ptrStmt,Statement(pStmt));
+	OOBASE_NEW_T(Statement,ptrStmt,Statement(pStmt));
 	if (!ptrStmt)
 	{
 		sqlite3_finalize(pStmt);

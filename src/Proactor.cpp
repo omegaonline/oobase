@@ -42,13 +42,12 @@ OOSvrBase::Proactor::Proactor() :
 		m_impl(0)
 {
 #if defined(HAVE_EV_H)
-	OOBASE_NEW(m_impl,Ev::ProactorImpl());
+	OOBASE_NEW_T_CRITICAL(Ev::ProactorImpl,m_impl,Ev::ProactorImpl());
 #elif defined(_WIN32)
-	OOBASE_NEW(m_impl,Win32::ProactorImpl());
+	OOBASE_NEW_T_CRITICAL(Win32::ProactorImpl,m_impl,Win32::ProactorImpl());
+#else
+#error Fix me!
 #endif
-
-	if (!m_impl)
-		OOBase_OutOfMemory();
 }
 
 OOSvrBase::Proactor::Proactor(bool) :
@@ -58,7 +57,7 @@ OOSvrBase::Proactor::Proactor(bool) :
 
 OOSvrBase::Proactor::~Proactor()
 {
-	delete m_impl;
+	OOBASE_DELETE(Proactor,m_impl);
 }
 
 OOBase::Socket* OOSvrBase::Proactor::accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa)
@@ -71,17 +70,17 @@ OOBase::Socket* OOSvrBase::Proactor::accept_remote(Acceptor<AsyncSocket>* handle
 	return m_impl->accept_remote(handler,address,port,perr);
 }
 
-OOSvrBase::AsyncSocket* OOSvrBase::Proactor::attach_socket(OOBase::Socket::socket_t sock, int* perr)
+OOSvrBase::AsyncSocketPtr OOSvrBase::Proactor::attach_socket(OOBase::Socket::socket_t sock, int* perr)
 {
 	return m_impl->attach_socket(sock,perr);
 }
 
-OOSvrBase::AsyncLocalSocket* OOSvrBase::Proactor::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)
+OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Proactor::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)
 {
 	return m_impl->attach_local_socket(sock,perr);
 }
 
-OOSvrBase::AsyncLocalSocket* OOSvrBase::Proactor::connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait)
+OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Proactor::connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait)
 {
 	return m_impl->connect_local_socket(path,perr,wait);
 }
@@ -102,7 +101,8 @@ OOSvrBase::detail::AsyncQueued::~AsyncQueued()
 
 		while (!m_vecAsyncs.empty())
 		{
-			delete m_vecAsyncs.back();
+			AsyncIOHelper::AsyncOp* p = m_vecAsyncs.back();
+			OOBASE_DELETE(AsyncOp,p);
 			m_vecAsyncs.pop_back();
 		}
 	}
@@ -110,7 +110,7 @@ OOSvrBase::detail::AsyncQueued::~AsyncQueued()
 	{}
 	
 	if (!m_sender)
-		delete m_helper;
+		OOBASE_DELETE(AsyncIOHelper,m_helper);
 }
 
 void OOSvrBase::detail::AsyncQueued::dispose()
@@ -187,7 +187,7 @@ int OOSvrBase::detail::AsyncQueued::async_op(OOBase::Buffer* buffer, size_t len,
 	}
 	else
 	{
-		OOBASE_NEW(op,AsyncIOHelper::AsyncOp);
+		OOBASE_NEW_T2(AsyncIOHelper::AsyncOp,op,AsyncIOHelper::AsyncOp);
 		if (!op)
 			return ERROR_OUTOFMEMORY;
 	}
@@ -283,7 +283,7 @@ bool OOSvrBase::detail::AsyncQueued::notify_async(AsyncIOHelper::AsyncOp* op, in
 			// But was cancelled...
 
 			// It's our responsibility to delete param, as the waiter has gone...
-			delete block_info;
+			OOBASE_DELETE(BlockingInfo,block_info);
 		}
 		else
 		{
@@ -322,11 +322,11 @@ bool OOSvrBase::detail::AsyncQueued::notify_async(AsyncIOHelper::AsyncOp* op, in
 		}
 		catch (std::exception&)
 		{
-			delete op;
+			OOBASE_DELETE(AsyncOp,op);
 		}
 	}
 	else
-		delete op;
+		OOBASE_DELETE(AsyncOp,op);
 	
 	if (bLast)
 		m_closed = true;
@@ -349,8 +349,8 @@ bool OOSvrBase::detail::AsyncQueued::notify_async(AsyncIOHelper::AsyncOp* op, in
 
 int OOSvrBase::detail::AsyncQueued::sync_op(OOBase::Buffer* buffer, size_t len, const OOBase::timeval_t* timeout)
 {
-	BlockingInfo* block_info = 0;
-	OOBASE_NEW(block_info,BlockingInfo);
+	BlockingInfo* block_info;
+	OOBASE_NEW_T(BlockingInfo,block_info,BlockingInfo());
 	if (!block_info)
 		return ERROR_OUTOFMEMORY;
 
@@ -360,7 +360,7 @@ int OOSvrBase::detail::AsyncQueued::sync_op(OOBase::Buffer* buffer, size_t len, 
 	int err = async_op(buffer,len,block_info);
 	if (err)
 	{
-		delete block_info;
+		OOBASE_DELETE(BlockingInfo,block_info);
 	}
 	else
 	{
@@ -383,7 +383,7 @@ int OOSvrBase::detail::AsyncQueued::sync_op(OOBase::Buffer* buffer, size_t len, 
 		err = block_info->err;
 
 		// Done with param...
-		delete block_info;
+		OOBASE_DELETE(BlockingInfo,block_info);
 	}
 
 	return err;
@@ -427,7 +427,7 @@ void OOSvrBase::detail::AsyncSocketImpl::addref()
 void OOSvrBase::detail::AsyncSocketImpl::release()
 {
 	if (--m_refcount == 0)
-		delete this;
+		OOBASE_DELETE(AsyncSocketImpl,this);
 }
 
 int OOSvrBase::detail::AsyncSocketImpl::async_recv(OOBase::Buffer* buffer, size_t len)

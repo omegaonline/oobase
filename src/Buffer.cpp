@@ -87,7 +87,7 @@ OOBase::Buffer* OOBase::Buffer::duplicate()
 void OOBase::Buffer::release()
 {
 	if (--m_refcount == 0)
-		delete this;
+		OOBASE_DELETE(Buffer,this);
 }
 
 OOBase::Buffer::~Buffer()

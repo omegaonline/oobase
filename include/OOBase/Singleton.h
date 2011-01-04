@@ -50,10 +50,8 @@ namespace OOBase
 
 		static void init()
 		{
-			OOBASE_NEW(s_instance,T());
-			if (!s_instance)
-				OOBase_OutOfMemory();
-
+			OOBASE_NEW_T_CRITICAL(T,s_instance,T());
+			
 			DLLDestructor<DLL>::add_destructor(&destroy,0);
 		}
 
@@ -61,7 +59,7 @@ namespace OOBase
 		{
 			assert(s_instance != reinterpret_cast<T*>((uintptr_t)0xdeadbeef));
 
-			delete s_instance;
+			OOBASE_DELETE(T,s_instance);
 			s_instance = reinterpret_cast<T*>((uintptr_t)0xdeadbeef);
 		}
 	};

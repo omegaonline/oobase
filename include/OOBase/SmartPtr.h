@@ -26,41 +26,6 @@
 
 namespace OOBase
 {
-	template <typename T>
-	class DeleteDestructor
-	{
-	public:
-		static void destroy(T* ptr)
-		{
-			delete ptr;
-		}
-
-		static void destroy_void(void* ptr)
-		{
-			delete static_cast<T*>(ptr);
-		}
-	};
-
-	template <typename T>
-	class ArrayDestructor
-	{
-	public:
-		static void destroy(T* ptr)
-		{
-			delete [] ptr;
-		}
-	};
-
-	template <typename T>
-	class FreeDestructor
-	{
-	public:
-		static void destroy(T* ptr)
-		{
-			::free(ptr);
-		}
-	};
-
 	namespace detail
 	{
 		template <typename T, typename Destructor>
@@ -82,7 +47,7 @@ namespace OOBase
 				void release()
 				{
 					if (--m_refcount == 0)
-						delete this;
+						OOBASE_DELETE(SmartPtrNode,this);
 				}
 
 				T* value()
@@ -116,11 +81,7 @@ namespace OOBase
 			SmartPtrImpl(T* ptr = 0) : m_node(0)
 			{
 				if (ptr)
-				{
-					OOBASE_NEW(m_node,SmartPtrNode(ptr));
-					if (!m_node)
-						OOBase_OutOfMemory();
-				}
+					OOBASE_NEW_T_CRITICAL(SmartPtrNode,m_node,SmartPtrNode(ptr));
 			}
 
 			SmartPtrImpl(const SmartPtrImpl& rhs) : m_node(rhs.m_node)
@@ -138,12 +99,8 @@ namespace OOBase
 				}
 
 				if (ptr)
-				{
-					OOBASE_NEW(m_node,SmartPtrNode(ptr));
-					if (!m_node)
-						OOBase_OutOfMemory();
-				}
-
+					OOBASE_NEW_T_CRITICAL(SmartPtrNode,m_node,SmartPtrNode(ptr));
+				
 				return *this;
 			}
 

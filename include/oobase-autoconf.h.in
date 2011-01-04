@@ -15,9 +15,6 @@
 /* Define to 1 if you have the LOCAL_CREDS socket option */
 #undef HAVE_LOCAL_CREDS
 
-/* Define to 1 if you have new (std::nothrow) support */
-#undef HAVE_NEW_NOTHROW
-
 /* Define if you have POSIX threads libraries and header files. */
 #undef HAVE_PTHREAD
 

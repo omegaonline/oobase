@@ -53,24 +53,6 @@
 #endif
 
 ////////////////////////////////////////
-// Detect the correct use of new(no_throw)
-#if defined(DOXYGEN)
-/// Macro that wraps a non-throwing call to new
-#define OOBASE_NEW(POINTER,CONSTRUCTOR)
-#elif defined(__cplusplus)
-#if !defined(OOBASE_NEW)
-#include <new>
-#if defined(HAVE_NEW_NOTHROW)
-	#define OOBASE_NEW(POINTER,CONSTRUCTOR) \
-		POINTER = new (std::nothrow) CONSTRUCTOR
-#else
-	#define OOBASE_NEW(POINTER,CONSTRUCTOR) \
-		POINTER = new CONSTRUCTOR
-#endif // HAVE_NEW_NOTHROW
-#endif // !defined OOBASE_NEW
-#endif // __cplusplus
-
-////////////////////////////////////////
 // Try to work out what's going on with MS Windows
 #if defined(HAVE_WINDOWS_H)
 	#if !defined(_WIN32)
@@ -192,26 +174,81 @@
 // Forward declare custom error handling
 
 #ifdef __cplusplus
-extern "C" {
-#endif
-
-void OOBase_CallCriticalFailureMem(const char* pszFile, unsigned int nLine);
-void OOBase_CallCriticalFailure_i(const char* pszFile, unsigned int nLine, const char*);
-
-#define OOBase_OutOfMemory() \
-	OOBase_CallCriticalFailureMem(__FILE__,__LINE__)
 
 #define OOBase_CallCriticalFailure(expr) \
-	OOBase_CallCriticalFailure_i(__FILE__,__LINE__,expr)
+	OOBase::CallCriticalFailure(__FILE__,__LINE__,expr)
 
-#ifdef __cplusplus
-}
-void OOBase_CallCriticalFailure_i(const char* pszFile, unsigned int nLine, int);
+#define OOBASE_NEW_T_CRITICAL(TYPE,POINTER,CONSTRUCTOR) \
+	do { \
+		void* OOBASE_NEW_ptr = ::OOBase::Allocate(sizeof(TYPE),0,__FILE__,__LINE__); \
+		if (!OOBASE_NEW_ptr) { ::OOBase::CallCriticalFailureMem(__FILE__,__LINE__); } \
+		try { POINTER = new (OOBASE_NEW_ptr) CONSTRUCTOR; } catch (...) { ::OOBase::Free(OOBASE_NEW_ptr,0); throw; } \
+	} while ((void)0,false)
+
+#define OOBASE_NEW_T2(TYPE,POINTER,CONSTRUCTOR) \
+	POINTER = new (::OOBase::Allocate(sizeof(TYPE),0,__FILE__,__LINE__)) CONSTRUCTOR
+
+#define OOBASE_NEW_T(TYPE,POINTER,CONSTRUCTOR) \
+	do { \
+		void* OOBASE_NEW_ptr = ::OOBase::Allocate(sizeof(TYPE),0,__FILE__,__LINE__); \
+		try { POINTER = new (OOBASE_NEW_ptr) CONSTRUCTOR; } catch (...) { ::OOBase::Free(OOBASE_NEW_ptr,0); throw; } \
+	} while ((void)0,false)
+
+#define OOBASE_NEW_T_RETURN(TYPE,CONSTRUCTOR) \
+	do { \
+		void* OOBASE_NEW_ptr = ::OOBase::Allocate(sizeof(TYPE),0,__FILE__,__LINE__); \
+		try { return new (OOBASE_NEW_ptr) CONSTRUCTOR; } catch (...) { ::OOBase::Free(OOBASE_NEW_ptr,0); throw; } \
+	} while ((void)0,false)
+
+#define OOBASE_DELETE(TYPE,POINTER) \
+	do { \
+		if (POINTER) \
+		{ \
+			POINTER->~TYPE(); \
+			::OOBase::Free(POINTER,0); \
+		} \
+	} while ((void)0,false)
 
 namespace OOBase
 {
+	void CallCriticalFailure(const char* pszFile, unsigned int nLine, const char*);
+	void CallCriticalFailure(const char* pszFile, unsigned int nLine, int);
+
 	std::string strerror(int err);
 	std::string system_error_text(int err);
+
+	// flags: 0 - C++ object - align to size, no reallocation
+	//        1 - Buffer - align 32, reallocation
+	//        2 - Stack-local buffer - align 32, no reallocation
+	void* Allocate(size_t len, int flags, const char* file = 0, unsigned int line = 0);
+	void Free(void* mem, int flags);
+
+	void CallCriticalFailureMem(const char* pszFile, unsigned int nLine);
+
+	template <typename T>
+	class DeleteDestructor
+	{
+	public:
+		static void destroy(T* ptr)
+		{
+			OOBASE_DELETE(T,ptr);
+		}
+
+		static void destroy_void(void* ptr)
+		{
+			destroy(static_cast<T*>(ptr));
+		}
+	};
+
+	template <int T>
+	class FreeDestructor
+	{
+	public:
+		static void destroy(void* ptr)
+		{
+			::OOBase::Free(ptr,T);
+		}
+	};
 }
 
 #if !defined(HAVE_STATIC_ASSERT)

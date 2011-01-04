@@ -89,6 +89,7 @@ liboobase_la_SOURCES = \
 	src/Condition.cpp \
 	src/DLL.cpp \
 	src/Error.cpp \
+	src/Memory.cpp \
 	src/Mutex.cpp \
 	src/Once.cpp \
 	src/Posix.cpp \

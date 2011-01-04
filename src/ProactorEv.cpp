@@ -306,16 +306,16 @@ namespace
 
 		static AsyncSocket* Create(OOSvrBase::Ev::ProactorImpl* proactor, OOBase::Socket::socket_t sock)
 		{
-			IOHelper* helper = 0;
-			OOBASE_NEW(helper,IOHelper(proactor,sock));
+			IOHelper* helper;
+			OOBASE_NEW_T(IOHelper,helper,IOHelper(proactor,sock));
 			if (!helper)
 				return 0;
 
-			AsyncSocket* pSock = 0;
-			OOBASE_NEW(pSock,AsyncSocket(helper));
+			AsyncSocket* pSock;
+			OOBASE_NEW_T(AsyncSocket,pSock,AsyncSocket(helper));
 			if (!pSock)
 			{
-				delete helper;
+				OOBASE_DELETE(IOHelper,helper);
 				return 0;
 			}
 
@@ -335,16 +335,16 @@ namespace
 
 		static AsyncLocalSocket* Create(OOSvrBase::Ev::ProactorImpl* proactor, OOBase::Socket::socket_t sock)
 		{
-			IOHelper* helper = 0;
-			OOBASE_NEW(helper,IOHelper(proactor,sock));
+			IOHelper* helper;
+			OOBASE_NEW_T(IOHelper,helper,IOHelper(proactor,sock));
 			if (!helper)
 				return 0;
 
-			AsyncLocalSocket* pSock = 0;
-			OOBASE_NEW(pSock,AsyncLocalSocket(helper,sock));
+			AsyncLocalSocket* pSock;
+			OOBASE_NEW_T(AsyncLocalSocket,pSock,AsyncLocalSocket(helper,sock));
 			if (!pSock)
 			{
-				delete helper;
+				OOBASE_DELETE(IOHelper,helper);
 				return 0;
 			}
 
@@ -617,11 +617,11 @@ namespace
 			}
 
 			// Wrap socket
-			SOCKET_TYPE* pSocket = 0;
+			OOBase::SmartPtr<SOCKET_TYPE,OOSvrBase::SocketDestructor> ptrSocket;
 			if (!err && new_fd != INVALID_SOCKET)
 			{
-				pSocket = SOCKET_IMPL::Create(m_proactor,new_fd);
-				if (!pSocket)
+				ptrSocket = SOCKET_IMPL::Create(m_proactor,new_fd);
+				if (!ptrSocket)
 				{
 					err = ENOMEM;
 					closesocket(new_fd);
@@ -629,7 +629,7 @@ namespace
 			}
 
 			// Call the handler...
-			bool bAgain = m_handler->on_accept(pSocket,strAddress,err);
+			bool bAgain = m_handler->on_accept(ptrSocket,strAddress,err);
 
 			guard.acquire();
 
@@ -693,7 +693,7 @@ OOSvrBase::Ev::ProactorImpl::ProactorImpl() :
 	for (int i=0; i<num_procs; ++i)
 	{
 		OOBase::SmartPtr<OOBase::Thread> ptrThread;
-		OOBASE_NEW(ptrThread,OOBase::Thread(false));
+		OOBASE_NEW_T_CRITICAL(OOBase::Thread,ptrThread,OOBase::Thread(false));
 
 		ptrThread->run(&worker,this);
 
@@ -944,8 +944,8 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor<AsyncLocalSoc
 	}
 
 	// Wrap up in a controlling socket class
-	OOBase::SmartPtr<LocalSocketAcceptor> pAccept = 0;
-	OOBASE_NEW(pAccept,LocalSocketAcceptor(this,fd,handler,path));
+	OOBase::SmartPtr<LocalSocketAcceptor> pAccept;
+	OOBASE_NEW_T(LocalSocketAcceptor,pAccept,LocalSocketAcceptor(this,fd,handler,path));
 	if (!pAccept)
 	{
 		*perr = ENOMEM;
@@ -1039,8 +1039,8 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor<OOSvrBase::A
 
 	// Wrap up in a controlling socket class
 	typedef SocketAcceptor<OOSvrBase::AsyncSocket,::AsyncSocket> socket_templ_t;
-	OOBase::SmartPtr<socket_templ_t> pAccept = 0;
-	OOBASE_NEW(pAccept,socket_templ_t(this,sock,handler));
+	OOBase::SmartPtr<socket_templ_t> pAccept;
+	OOBASE_NEW_T(socket_templ_t,pAccept,socket_templ_t(this,sock,handler));
 	if (!pAccept)
 	{
 		*perr = ENOMEM;
@@ -1055,7 +1055,7 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor<OOSvrBase::A
 	return pAcceptor.detach();
 }
 
-OOSvrBase::AsyncSocket* OOSvrBase::Ev::ProactorImpl::attach_socket(OOBase::Socket::socket_t sock, int* perr)
+OOSvrBase::AsyncSocketPtr OOSvrBase::Ev::ProactorImpl::attach_socket(OOBase::Socket::socket_t sock, int* perr)
 {
 	// Set non-blocking...
 	*perr = OOBase::BSD::set_non_blocking(sock,true);
@@ -1063,14 +1063,14 @@ OOSvrBase::AsyncSocket* OOSvrBase::Ev::ProactorImpl::attach_socket(OOBase::Socke
 		return 0;
 
 	// Wrap socket
-	OOSvrBase::AsyncSocket* pSocket = ::AsyncSocket::Create(this,sock);
-	if (!pSocket)
+	OOSvrBase::AsyncSocketPtr ptrSocket = ::AsyncSocket::Create(this,sock);
+	if (!ptrSocket)
 		*perr = ENOMEM;
 
-	return pSocket;
+	return ptrSocket;
 }
 
-OOSvrBase::AsyncLocalSocket* OOSvrBase::Ev::ProactorImpl::connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait)
+OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Ev::ProactorImpl::connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait)
 {
 #if !defined(HAVE_UNISTD_H)
 	// If we don't have unix sockets, we can't do much, use Win32 Proactor instead
@@ -1103,15 +1103,15 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::Ev::ProactorImpl::connect_local_socket(c
 		return 0;
 
 	// Wrap socket
-	OOSvrBase::AsyncLocalSocket* pSocket = ::AsyncLocalSocket::Create(this,sock);
-	if (!pSocket)
+	OOSvrBase::AsyncLocalSocketPtr ptrSocket = ::AsyncLocalSocket::Create(this,sock);
+	if (!ptrSocket)
 		*perr = ENOMEM;
 
-	return pSocket;
+	return ptrSocket;
 #endif
 }
 
-OOSvrBase::AsyncLocalSocket* OOSvrBase::Ev::ProactorImpl::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)
+OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Ev::ProactorImpl::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)
 {
 #if !defined(HAVE_UNISTD_H)
 	// If we don't have unix sockets, we can't do much, use Win32 Proactor instead
@@ -1128,11 +1128,11 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::Ev::ProactorImpl::attach_local_socket(OO
 		return 0;
 
 	// Wrap socket
-	OOSvrBase::AsyncLocalSocket* pSocket = ::AsyncLocalSocket::Create(this,sock);
-	if (!pSocket)
+	OOSvrBase::AsyncLocalSocketPtr ptrSocket = ::AsyncLocalSocket::Create(this,sock);
+	if (!ptrSocket)
 		*perr = ENOMEM;
 
-	return pSocket;
+	return ptrSocket;
 
 #endif
 }

@@ -131,10 +131,8 @@ namespace
 #endif
 		if (!inst && create)
 		{
-			OOBASE_NEW(inst,TLSMap());
-			if (!inst)
-				OOBase_OutOfMemory();
-
+			OOBASE_NEW_T_CRITICAL(TLSMap,inst,TLSMap());
+			
 #if defined(_WIN32)
 			OOBase::DLLDestructor<Win32TLSGlobal>::add_destructor(destroy,inst);
 
@@ -172,7 +170,7 @@ namespace
 				OOBase_CallCriticalFailure(e.what());
 			}
 
-			delete inst;
+			OOBASE_DELETE(TLSMap,inst);
 		}
 
 #if defined(_WIN32)

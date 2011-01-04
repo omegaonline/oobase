@@ -31,9 +31,6 @@ OO_MULTI_THREAD
 # Check for the builtin intrinsics functions we use
 OO_C_BUILTINS
 
-# Check for C++ new functionality
-OO_NEW_NOTHROW
-
 # Check for the headers we use
 AC_CHECK_HEADERS([windows.h sys/time.h asl.h syslog.h unistd.h ev.h])
 

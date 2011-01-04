@@ -90,8 +90,9 @@ namespace
 	{
 		for (size_t len=256;;)
 		{
-			OOBase::SmartPtr<char,OOBase::ArrayDestructor<char> > buf = 0;
-			OOBASE_NEW(buf,char[len]);
+			OOBase::SmartPtr<char,OOBase::FreeDestructor<2> > buf = static_cast<char*>(OOBase::Allocate(len,2,__FILE__,__LINE__));
+			if (!buf)
+				OOBase::CallCriticalFailureMem(__FILE__,__LINE__-2);
 
 			int len2 = vsnprintf_s(buf,len,fmt,args);
 			if (len2 < 0)
@@ -198,11 +199,10 @@ namespace
 
 			PSID psid = NULL;
 			OOBase::Win32::SmartHandle hProcessToken;
-			OOBase::SmartPtr<TOKEN_USER,OOBase::FreeDestructor<TOKEN_USER> > ptrSIDProcess;
-
+			
 			if (OpenProcessToken(GetCurrentProcess(),TOKEN_QUERY,&hProcessToken))
 			{
-				ptrSIDProcess = static_cast<TOKEN_USER*>(OOSvrBase::Win32::GetTokenInfo(hProcessToken,TokenUser));
+				OOBase::SmartPtr<TOKEN_USER,OOBase::FreeDestructor<1> > ptrSIDProcess = static_cast<TOKEN_USER*>(OOSvrBase::Win32::GetTokenInfo(hProcessToken,TokenUser));
 				if (ptrSIDProcess)
 					psid = ptrSIDProcess->User.Sid;
 			}

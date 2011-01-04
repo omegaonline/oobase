@@ -157,14 +157,12 @@ namespace OOSvrBase
 					m_pImpl(0),
 					m_io_handler(0)
 			{ 
-				OOBASE_NEW(m_pImpl,AsyncSocketImpl(helper,this));
-				if (!m_pImpl)
-					OOBase_OutOfMemory();
+				OOBASE_NEW_T_CRITICAL(AsyncSocketImpl,m_pImpl,AsyncSocketImpl(helper,this));
 			}
 
-			virtual ~AsyncSocketTempl()
+			void close()
 			{
-				m_pImpl->dispose();
+				OOBASE_DELETE(AsyncSocketTempl,this);
 			}
 
 			void bind_handler(OOSvrBase::IOHandler* handler)
@@ -202,17 +200,23 @@ namespace OOSvrBase
 
 			void on_recv(OOBase::Buffer* buffer, int err)
 			{
-				m_io_handler->on_recv(this,buffer,err);
+				m_io_handler->on_recv(buffer,err);
 			}
 
 			void on_sent(OOBase::Buffer* buffer, int err)
 			{
-				m_io_handler->on_sent(this,buffer,err);
+				m_io_handler->on_sent(buffer,err);
 			}
 
 			void on_closed()
 			{
-				m_io_handler->on_closed(this);
+				m_io_handler->on_closed();
+			}
+
+		protected:
+			virtual ~AsyncSocketTempl()
+			{
+				m_pImpl->dispose();
 			}
 
 		private:

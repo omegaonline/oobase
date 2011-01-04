@@ -41,9 +41,9 @@ namespace OOBase
 #endif
 				m_last_error(0)
 		{
-			OOBASE_NEW(m_buffer,Buffer(len,MaxAlignment));
+			OOBASE_NEW_T(Buffer,m_buffer,Buffer(len,MaxAlignment));
 			if (!m_buffer)
-				OOBase_OutOfMemory();
+				OOBase::CallCriticalFailureMem(__FILE__,__LINE__-2);
 		}
 
 		CDRStream(Buffer* buffer) :

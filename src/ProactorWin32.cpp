@@ -341,8 +341,8 @@ namespace
 
 		static AsyncSocket* Create(OOSvrBase::Win32::ProactorImpl* pProactor, SOCKET sock, int& dwErr)
 		{
-			IOHelper* helper = 0;
-			OOBASE_NEW(helper,SocketIOHelper(pProactor,(HANDLE)sock));
+			IOHelper* helper;
+			OOBASE_NEW_T(SocketIOHelper,helper,SocketIOHelper(pProactor,(HANDLE)sock));
 			if (!helper)
 			{
 				dwErr = ERROR_OUTOFMEMORY;
@@ -352,16 +352,16 @@ namespace
 			dwErr = helper->bind();
 			if (dwErr)
 			{
-				delete helper;
+				OOBASE_DELETE(IOHelper,helper);
 				return 0;
 			}
 
-			AsyncSocket* pSock = 0;
-			OOBASE_NEW(pSock,AsyncSocket(helper));
+			AsyncSocket* pSock;
+			OOBASE_NEW_T(AsyncSocket,pSock,AsyncSocket(helper));
 			if (!pSock)
 			{
 				dwErr = ERROR_OUTOFMEMORY;
-				delete helper;
+				OOBASE_DELETE(IOHelper,helper);
 				return 0;
 			}
 
@@ -582,29 +582,34 @@ namespace
 			return;
 		}
 
+		OOSvrBase::AsyncSocketPtr ptrSocket;
 		std::string strAddress;
-		
-		AsyncSocket* pSocket = 0;
+
 		if (dwErr == 0)
 		{
-			pSocket = AsyncSocket::Create(m_pProactor,m_completion.m_socket,dwErr);
-			if (!pSocket && m_completion.m_socket != INVALID_SOCKET)
-				closesocket(m_completion.m_socket);
+			ptrSocket = AsyncSocket::Create(m_pProactor,m_completion.m_socket,dwErr);
+			if (!ptrSocket)
+			{
+				if (m_completion.m_socket != INVALID_SOCKET)
+					closesocket(m_completion.m_socket);
+			}
+			else
+			{
+				sockaddr* pLocal = 0;
+				sockaddr* pRemote = 0;
+				int len1,len2;
 
-			sockaddr* pLocal = 0;
-			sockaddr* pRemote = 0;
-			int len1,len2;
-
-			(*m_lpfnGetAcceptExSockAddrs)(m_completion.m_addresses,0,sizeof(m_completion.m_addresses)/2,sizeof(m_completion.m_addresses)/2,&pLocal,&len1,&pRemote,&len2);
-			
-			if (pRemote->sa_family == AF_INET)
-				strAddress = inet_ntoa(reinterpret_cast<sockaddr_in*>(pRemote)->sin_addr);
+				(*m_lpfnGetAcceptExSockAddrs)(m_completion.m_addresses,0,sizeof(m_completion.m_addresses)/2,sizeof(m_completion.m_addresses)/2,&pLocal,&len1,&pRemote,&len2);
+				
+				if (pRemote->sa_family == AF_INET)
+					strAddress = inet_ntoa(reinterpret_cast<sockaddr_in*>(pRemote)->sin_addr);
+			}
 		}
 
 		guard.release();
 
 		// Call the acceptor
-		if (m_handler->on_accept(pSocket,strAddress,dwErr))
+		if (m_handler->on_accept(ptrSocket,strAddress,dwErr))
 		{
 			dwErr = 0;
 			next_accept();
@@ -626,8 +631,8 @@ namespace
 
 		static AsyncLocalSocket* Create(OOSvrBase::Win32::ProactorImpl* pProactor, HANDLE hPipe, DWORD& dwErr)
 		{
-			PipeIOHelper* helper = 0;
-			OOBASE_NEW(helper,PipeIOHelper(pProactor,hPipe));
+			PipeIOHelper* helper;
+			OOBASE_NEW_T(PipeIOHelper,helper,PipeIOHelper(pProactor,hPipe));
 			if (!helper)
 			{
 				dwErr = ERROR_OUTOFMEMORY;
@@ -637,16 +642,16 @@ namespace
 			dwErr = helper->bind();
 			if (dwErr)
 			{
-				delete helper;
+				OOBASE_DELETE(PipeIOHelper,helper);
 				return 0;
 			}
 
-			AsyncLocalSocket* sock = 0;
-			OOBASE_NEW(sock,AsyncLocalSocket(hPipe,helper));
+			AsyncLocalSocket* sock;
+			OOBASE_NEW_T(AsyncLocalSocket,sock,AsyncLocalSocket(hPipe,helper));
 			if (!sock)
 			{
 				dwErr = ERROR_OUTOFMEMORY;
-				delete helper;
+				OOBASE_DELETE(PipeIOHelper,helper);
 				return 0;
 			}
 
@@ -857,11 +862,11 @@ namespace
 			return;
 		}
 
-		AsyncLocalSocket* pSocket = 0;
+		OOSvrBase::AsyncLocalSocketPtr ptrSocket;
 		if (dwErr == 0)
 		{
-			pSocket = AsyncLocalSocket::Create(m_pProactor,m_completion.m_hPipe,dwErr);
-			if (pSocket)
+			ptrSocket = AsyncLocalSocket::Create(m_pProactor,m_completion.m_hPipe,dwErr);
+			if (ptrSocket)
 				m_completion.m_hPipe.detach();
 			else
 				m_completion.m_hPipe.close();
@@ -870,7 +875,7 @@ namespace
 		guard.release();
 
 		// Call the acceptor
-		if (m_handler->on_accept(pSocket,m_pipe_name,dwErr))
+		if (m_handler->on_accept(ptrSocket,m_pipe_name,dwErr))
 		{
 			dwErr = 0;
 			next_accept(false);
@@ -907,8 +912,8 @@ void OOSvrBase::Win32::ProactorImpl::release()
 
 OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa)
 {
-	OOBase::SmartPtr<PipeAcceptor> pAcceptor = 0;
-	OOBASE_NEW(pAcceptor,PipeAcceptor(this,"\\\\.\\pipe\\" + path,psa,handler));
+	OOBase::SmartPtr<PipeAcceptor> pAcceptor;
+	OOBASE_NEW_T(PipeAcceptor,pAcceptor,PipeAcceptor(this,"\\\\.\\pipe\\" + path,psa,handler));
 	if (!pAcceptor)
 	{
 		*perr = ERROR_OUTOFMEMORY;
@@ -998,8 +1003,8 @@ OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_remote(Acceptor<AsyncSock
 	}
 
 	// Wrap up in a controlling socket class
-	OOBase::SmartPtr<SocketAcceptor> pAcceptor = 0;
-	OOBASE_NEW(pAcceptor,SocketAcceptor(this,sock,handler,af_family));
+	OOBase::SmartPtr<SocketAcceptor> pAcceptor;
+	OOBASE_NEW_T(SocketAcceptor,pAcceptor,SocketAcceptor(this,sock,handler,af_family));
 	if (!pAcceptor)
 	{
 		*perr = ENOMEM;
@@ -1014,22 +1019,22 @@ OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_remote(Acceptor<AsyncSock
 	return pAcceptor.detach();
 }
 
-OOSvrBase::AsyncSocket* OOSvrBase::Win32::ProactorImpl::attach_socket(OOBase::Socket::socket_t sock, int* perr)
+OOSvrBase::AsyncSocketPtr OOSvrBase::Win32::ProactorImpl::attach_socket(OOBase::Socket::socket_t sock, int* perr)
 {
 	// The socket must have been opened as WSA_FLAG_OVERLAPPED!!!
 	return ::AsyncSocket::Create(this,sock,*perr);
 }
 
-OOSvrBase::AsyncLocalSocket* OOSvrBase::Win32::ProactorImpl::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)
+OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Win32::ProactorImpl::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)
 {
 	// Wrap socket
 	DWORD dwErr = 0;
-	OOSvrBase::AsyncLocalSocket* pSocket = ::AsyncLocalSocket::Create(this,(HANDLE)sock,dwErr);
+	OOSvrBase::AsyncLocalSocketPtr ptrSocket = ::AsyncLocalSocket::Create(this,(HANDLE)sock,dwErr);
 	*perr = dwErr;	
-	return pSocket;
+	return ptrSocket;
 }
 
-OOSvrBase::AsyncLocalSocket* OOSvrBase::Win32::ProactorImpl::connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait)
+OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Win32::ProactorImpl::connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait)
 {
 	assert(perr);
 	*perr = 0;
@@ -1077,15 +1082,15 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::Win32::ProactorImpl::connect_local_socke
 
 	// Wrap socket
 	DWORD dwErr = 0;
-	OOSvrBase::AsyncLocalSocket* pSocket = ::AsyncLocalSocket::Create(this,hPipe,dwErr);
+	OOSvrBase::AsyncLocalSocketPtr ptrSocket = ::AsyncLocalSocket::Create(this,hPipe,dwErr);
 	*perr = dwErr;
 
-	if (pSocket)
+	if (ptrSocket)
 		hPipe.detach();
 	else
 		hPipe.close();
 	
-	return pSocket;
+	return ptrSocket;
 }
 
 #if defined(_MSC_VER)

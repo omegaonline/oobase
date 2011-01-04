@@ -58,11 +58,9 @@ namespace OOBase
 
 		static void* init()
 		{
-			T* pThis = 0;
-			OOBASE_NEW(pThis,T());
-			if (!pThis)
-				OOBase_OutOfMemory();
-
+			T* pThis;
+			OOBASE_NEW_T_CRITICAL(T,pThis,T());
+			
 			TLS::Set(&s_sentinal,pThis,&destroy);
 
 			return pThis;
@@ -70,7 +68,7 @@ namespace OOBase
 
 		static void destroy(void* p)
 		{
-			delete reinterpret_cast<T*>(p);
+			OOBASE_DELETE(T,reinterpret_cast<T*>(p));
 		}
 	};
 
