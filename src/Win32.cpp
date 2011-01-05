@@ -20,6 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/SmartPtr.h"
+#include "../include/OOBase/Destructor.h"
 #include "../include/OOBase/internal/Win32Impl.h"
 
 #if defined(_WIN32)
@@ -80,12 +81,13 @@ namespace
 	private:
 		void init_low_frag_heap();
 
-		static Win32Thunk* s_instance;
+		static volatile Win32Thunk* s_instance;
 
 		static BOOL __stdcall init(INIT_ONCE*,void*,void**);
+		static void destroy(void*);
 	};
 
-	Win32Thunk* Win32Thunk::s_instance = 0;
+	volatile Win32Thunk* Win32Thunk::s_instance = 0;
 
 	Win32Thunk::Win32Thunk() :
 			m_hKernel32(0)
@@ -154,14 +156,30 @@ namespace
 			if (!bRet)
 				OOBase_CallCriticalFailure(GetLastError());
 		}
-		return *s_instance;
+
+		return *const_cast<Win32Thunk*>(s_instance);
 	}
 
 	BOOL Win32Thunk::init(INIT_ONCE*,void*,void**)
 	{
-		static Win32Thunk inst;
-		s_instance = &inst;
+		// Ensure s_instance is fully constructed before assignment...
+		Win32Thunk* instance;
+		OOBASE_NEW_T_CRITICAL(Win32Thunk,instance,Win32Thunk());
+		s_instance = instance;
+		
+		OOBase::DLLDestructor<Win32Thunk>::add_destructor(&destroy,0);
 		return TRUE;
+	}
+
+	void Win32Thunk::destroy(void*)
+	{
+		assert(s_instance != reinterpret_cast<Win32Thunk*>((uintptr_t)0xdeadbeef));
+
+		Win32Thunk* instance = const_cast<Win32Thunk*>(s_instance);
+
+		s_instance = reinterpret_cast<Win32Thunk*>((uintptr_t)0xdeadbeef);
+
+		OOBASE_DELETE(Win32Thunk,instance);
 	}
 
 	void Win32Thunk::init_low_frag_heap()

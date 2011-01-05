@@ -49,7 +49,7 @@ namespace
 
 	BOOL WINAPI control_c(DWORD evt)
 	{
-		QUIT::instance()->signal(evt);
+		QUIT::instance().signal(evt);
 		return TRUE;
 	}
 
@@ -98,12 +98,12 @@ OOSvrBase::Server::Server()
 
 void OOSvrBase::Server::signal(int how)
 {
-	QUIT::instance()->signal(how);
+	QUIT::instance().signal(how);
 }
 
 int OOSvrBase::Server::wait_for_quit()
 {
-	return QUIT::instance()->wait();
+	return QUIT::instance().wait();
 }
 
 void OOSvrBase::Server::quit()
@@ -141,15 +141,15 @@ namespace
 		switch (dwControl)
 		{
 		case SERVICE_CONTROL_STOP:
-			QUIT::instance()->signal(CTRL_CLOSE_EVENT);
+			QUIT::instance().signal(CTRL_CLOSE_EVENT);
 			break;
 
 		case SERVICE_CONTROL_SHUTDOWN:
-			QUIT::instance()->signal(CTRL_SHUTDOWN_EVENT);
+			QUIT::instance().signal(CTRL_SHUTDOWN_EVENT);
 			break;
 
 		case SERVICE_CONTROL_PARAMCHANGE:
-			QUIT::instance()->signal(CTRL_BREAK_EVENT);
+			QUIT::instance().signal(CTRL_BREAK_EVENT);
 			break;
 
 		default:
@@ -174,7 +174,7 @@ namespace
 		}
 
 		// Wait for the event to be signalled
-		QUIT::instance()->wait();
+		QUIT::instance().wait();
 
 		if (s_ssh)
 		{
@@ -214,7 +214,7 @@ int OOSvrBase::Service::wait_for_quit()
 	}
 
 	// By the time we get here, it's all over
-	return QUIT::instance()->get_result();
+	return QUIT::instance().get_result();
 }
 
 #elif defined(HAVE_UNISTD_H)

@@ -104,7 +104,7 @@ OOBase::DLL::~DLL()
 
 int OOBase::DLL::load(const char* full_path)
 {
-	OOBase::Guard<OOBase::Mutex> guard(LT_HELPER::instance()->m_lock);
+	OOBase::Guard<OOBase::Mutex> guard(LT_HELPER::instance().m_lock);
 
 	lt_dladvise adv;
 	int err2 = 0;
@@ -140,7 +140,7 @@ bool OOBase::DLL::unload()
 	if (!m_module)
 		return true;
 
-	OOBase::Guard<OOBase::Mutex> guard(LT_HELPER::instance()->m_lock);
+	OOBase::Guard<OOBase::Mutex> guard(LT_HELPER::instance().m_lock);
 
 	if (lt_dlclose(m_module))
 		return false;
@@ -154,7 +154,7 @@ void* OOBase::DLL::symbol(const char* sym_name)
 	if (!m_module)
 		return 0;
 
-	OOBase::Guard<OOBase::Mutex> guard(LT_HELPER::instance()->m_lock);
+	OOBase::Guard<OOBase::Mutex> guard(LT_HELPER::instance().m_lock);
 
 	return lt_dlsym(m_module,sym_name);
 }

@@ -319,7 +319,7 @@ namespace
 
 void OOSvrBase::Logger::open(const char* name)
 {
-	LOGGER::instance()->open(name);
+	LOGGER::instance().open(name);
 }
 
 void OOSvrBase::Logger::log(Priority priority, const char* fmt, ...)
@@ -327,7 +327,7 @@ void OOSvrBase::Logger::log(Priority priority, const char* fmt, ...)
 	va_list args;
 	va_start(args,fmt);
 
-	LOGGER::instance()->log(priority,fmt,args);
+	LOGGER::instance().log(priority,fmt,args);
 
 	va_end(args);
 }
@@ -340,7 +340,7 @@ void OOSvrBase::Logger::filenum_t::log(const char* fmt, ...)
 	std::ostringstream out;
 	out << "[" << getpid() << "] " << m_pszFilename << "(" << m_nLine << "): " << fmt;
 
-	LOGGER::instance()->log(m_priority,out.str().c_str(),args);
+	LOGGER::instance().log(m_priority,out.str().c_str(),args);
 
 	va_end(args);
 }

@@ -123,9 +123,9 @@ namespace
 	{
 		TLSMap* inst = 0;
 #if defined(_WIN32)
-		inst = static_cast<TLSMap*>(TlsGetValue(TLS_GLOBAL::instance()->m_key));
+		inst = static_cast<TLSMap*>(TlsGetValue(TLS_GLOBAL::instance().m_key));
 #elif defined(HAVE_PTHREAD)
-		inst = static_cast<TLSMap*>(pthread_getspecific(TLS_GLOBAL::instance()->m_key));
+		inst = static_cast<TLSMap*>(pthread_getspecific(TLS_GLOBAL::instance().m_key));
 #else
 #error Fix me!
 #endif
@@ -136,12 +136,12 @@ namespace
 #if defined(_WIN32)
 			OOBase::DLLDestructor<Win32TLSGlobal>::add_destructor(destroy,inst);
 
-			if (!TlsSetValue(TLS_GLOBAL::instance()->m_key,inst))
+			if (!TlsSetValue(TLS_GLOBAL::instance().m_key,inst))
 				OOBase_CallCriticalFailure(GetLastError());
 
 #elif defined(HAVE_PTHREAD)
 
-			int err = pthread_setspecific(TLS_GLOBAL::instance()->m_key,inst);
+			int err = pthread_setspecific(TLS_GLOBAL::instance().m_key,inst);
 			if (err != 0)
 				OOBase_CallCriticalFailure(err);
 #else
@@ -175,10 +175,10 @@ namespace
 
 #if defined(_WIN32)
 		// Now set 0 back in place...
-		if (!TlsSetValue(TLS_GLOBAL::instance()->m_key,0))
+		if (!TlsSetValue(TLS_GLOBAL::instance().m_key,0))
 			OOBase_CallCriticalFailure(GetLastError());
 #elif defined(HAVE_PTHREAD)
-		int err = pthread_setspecific(TLS_GLOBAL::instance()->m_key,0);
+		int err = pthread_setspecific(TLS_GLOBAL::instance().m_key,0);
 		if (err != 0)
 			OOBase_CallCriticalFailure(err);
 #else
