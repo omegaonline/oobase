@@ -37,6 +37,7 @@ namespace
 		typedef BOOL (__stdcall *pfn_InitOnceExecuteOnce)(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context);
 		pfn_InitOnceExecuteOnce m_InitOnceExecuteOnce;
 		static BOOL __stdcall impl_InitOnceExecuteOnce(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context);
+		static BOOL InitOnceExecuteOnce_Internal(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn);
 
 		typedef void (__stdcall *pfn_InitializeSRWLock)(SRWLOCK* SRWLock);
 		pfn_InitializeSRWLock m_InitializeSRWLock;
@@ -140,20 +141,25 @@ namespace
 		init_low_frag_heap();
 	}
 
+	BOOL Win32Thunk::InitOnceExecuteOnce_Internal(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn)
+	{
+		pfn_InitOnceExecuteOnce fn = (pfn_InitOnceExecuteOnce)(GetProcAddress(GetModuleHandleW(L"Kernel32.dll"),"InitOnceExecuteOnce"));
+
+		BOOL bRet;
+		if (fn)
+			bRet = (*fn)(InitOnce,InitFn,0,0);
+		else
+			bRet = impl_InitOnceExecuteOnce(InitOnce,InitFn,0,0);
+
+		return bRet;
+	}
+
 	Win32Thunk& Win32Thunk::instance()
 	{
 		if (!s_instance)
 		{
 			static INIT_ONCE key = {0};
-			static pfn_InitOnceExecuteOnce fn = (pfn_InitOnceExecuteOnce)(GetProcAddress(GetModuleHandleW(L"Kernel32.dll"),"InitOnceExecuteOnce"));
-
-			BOOL bRet;
-			if (fn)
-				bRet = (*fn)(&key,&init,0,0);
-			else
-				bRet = impl_InitOnceExecuteOnce(&key,&init,0,0);
-
-			if (!bRet)
+			if (!InitOnceExecuteOnce_Internal(&key,&init))
 				OOBase_CallCriticalFailure(GetLastError());
 		}
 
@@ -309,6 +315,11 @@ namespace
 	{
 		(*reinterpret_cast<OOBase::Win32::condition_variable_t**>(ConditionVariable))->broadcast();
 	}
+}
+
+BOOL OOBase::Win32::InitOnceExecuteOnce_Internal(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn)
+{
+	return Win32Thunk::InitOnceExecuteOnce_Internal(InitOnce,InitFn);
 }
 
 BOOL OOBase::Win32::InitOnceExecuteOnce(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context)

@@ -24,6 +24,7 @@
 #if defined(_DEBUG)
 
 #include "../include/OOBase/Singleton.h"
+//#include "../include/OOBase/internal/Win32Impl.h"
 
 #include <set>
 #include <string>
@@ -49,18 +50,57 @@ namespace
 			assert(c == 1);
 		}
 
-		static MemWatcher& instance()
-		{
-			static MemWatcher* s = 0;
-			if (!s)
-				s = new MemWatcher();
-			return *s;
-		}
+		static MemWatcher& instance();
 
 	private:
 		OOBase::SpinLock   m_lock;
 		std::set<void*>    m_setEntries;
+
+		static volatile MemWatcher* s_instance;
+
+		static BOOL __stdcall init(INIT_ONCE*,void*,void**);
+		static void init2();
 	};
+}
+
+volatile MemWatcher* MemWatcher::s_instance = 0;
+
+MemWatcher& MemWatcher::instance()
+{
+	if (!s_instance)
+	{
+#if defined(_WIN32)
+		static INIT_ONCE key = {0};
+		if (!OOBase::Win32::InitOnceExecuteOnce_Internal(&key,&init))
+			OOBase_CallCriticalFailure(GetLastError());
+#elif defined(HAVE_PTHREAD)
+		static pthread_once_t key = PTHREAD_ONCE_INIT;
+		int err = pthread_once(key,&init2);
+		if (err != 0)
+			OOBase_CallCriticalFailure(err);
+#else
+#error Fix me!
+#endif
+	}
+
+	return *const_cast<MemWatcher*>(s_instance);
+}
+
+BOOL MemWatcher::init(INIT_ONCE*,void*,void**)
+{
+	init2();
+	return TRUE;
+}
+
+void MemWatcher::init2()
+{
+	// Use crt malloc here...
+	// This will leak...
+
+	void* TODO;
+
+	MemWatcher* instance = new (std::nothrow) MemWatcher();
+	s_instance = instance;
 }
 
 #endif // _DEBUG

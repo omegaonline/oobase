@@ -35,8 +35,7 @@ namespace
 
 void OOBase::Once::Run(once_t* key, pfn_once fn)
 {
-	void* p = 0;
-	if (!Win32::InitOnceExecuteOnce(key,&PINIT_ONCE_FN_impl,(void*)fn,&p))
+	if (!Win32::InitOnceExecuteOnce(key,&PINIT_ONCE_FN_impl,(void*)fn,0))
 		OOBase_CallCriticalFailure(GetLastError());
 }
 

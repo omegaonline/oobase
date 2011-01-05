@@ -110,7 +110,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="C:\sqlite3"
+				AdditionalIncludeDirectories="C:\Work\sqlite"
 				PreprocessorDefinitions="HAVE_SQLITE3_AMALGAMATION"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
