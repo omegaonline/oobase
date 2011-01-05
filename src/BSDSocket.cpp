@@ -103,7 +103,7 @@ namespace
 		fd_set efds;
 		for (;;)
 		{
-			ssize_t sent = ::send(m_sock,cbuf,len,0);
+			ssize_t sent = ::send(m_sock,cbuf,static_cast<int>(len),0);
 			if (sent != -1)
 			{
 				len -= sent;
@@ -124,7 +124,7 @@ namespace
 				FD_ZERO(&efds);
 				FD_SET(m_sock,&wfds);
 				FD_SET(m_sock,&efds);
-				int count = select(m_sock+1,0,&wfds,&efds,wait ? &tv : 0);
+				int count = select(static_cast<int>(m_sock+1),0,&wfds,&efds,wait ? &tv : 0);
 				if (count == -1)
 				{
 					err = socket_errno;
@@ -165,7 +165,7 @@ namespace
 		fd_set efds;
 		for (;;)
 		{
-			ssize_t recvd = ::recv(m_sock,cbuf,len,0);
+			ssize_t recvd = ::recv(m_sock,cbuf,static_cast<int>(len),0);
 			if (recvd != -1)
 			{
 				*perr = 0;
@@ -188,7 +188,7 @@ namespace
 				FD_ZERO(&efds);
 				FD_SET(m_sock,&rfds);
 				FD_SET(m_sock,&efds);
-				int count = select(m_sock+1,&rfds,0,&efds,wait ? &tv : 0);
+				int count = select(static_cast<int>(m_sock+1),&rfds,0,&efds,wait ? &tv : 0);
 				if (count == -1)
 				{
 					*perr = socket_errno;
@@ -228,7 +228,7 @@ namespace
 	int connect_i(OOBase::Socket::socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* wait)
 	{
 		// Do the connect
-		if (::connect(sock,addr,addrlen) != -1)
+		if (::connect(sock,addr,static_cast<int>(addrlen)) != -1)
 			return 0;
 
 		// Check to see if we actually have an error
@@ -254,7 +254,7 @@ namespace
 			FD_SET(sock,&wfds);
 			FD_SET(sock,&efds);
 
-			int count = select(sock+1,0,&wfds,&efds,wait ? &tv : 0);
+			int count = select(static_cast<int>(sock+1),0,&wfds,&efds,wait ? &tv : 0);
 			if (count == -1)
 			{
 				err = socket_errno;
