@@ -59,7 +59,7 @@ namespace OOBase
 	};
 
 #if defined(_WIN32)
-	/// A non-recursive mutex that spins in user-mode before aquiring the kernel mutex
+	/// A non-recursive mutex that spins in user-mode before acquiring the kernel mutex
 	class SpinLock
 	{
 	public:
