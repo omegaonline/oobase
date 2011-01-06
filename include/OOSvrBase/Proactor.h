@@ -69,11 +69,6 @@ namespace OOSvrBase
 		{
 			ptr->close();
 		}
-
-		static void destroy_void(void* ptr)
-		{
-			destroy(static_cast<AsyncSocket*>(ptr));
-		}
 	};
 
 	typedef OOBase::SmartPtr<AsyncSocket,SocketDestructor> AsyncSocketPtr;

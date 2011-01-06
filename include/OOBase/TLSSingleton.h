@@ -34,7 +34,7 @@ namespace OOBase
 		void ThreadExit();
 	}
 
-	template <typename T, typename DLL = T>
+	template <typename T, typename DLL = OOBase::Module>
 	class TLSSingleton
 	{
 	public:

@@ -134,7 +134,7 @@ namespace
 			OOBASE_NEW_T_CRITICAL(TLSMap,inst,TLSMap());
 			
 #if defined(_WIN32)
-			OOBase::DLLDestructor<Win32TLSGlobal>::add_destructor(destroy,inst);
+			OOBase::DLLDestructor<OOBase::Module>::add_destructor(destroy,inst);
 
 			if (!TlsSetValue(TLS_GLOBAL::instance().m_key,inst))
 				OOBase_CallCriticalFailure(GetLastError());
@@ -235,7 +235,7 @@ void OOBase::TLS::ThreadExit()
 	if (inst)
 	{
 #if defined(_WIN32)
-		OOBase::DLLDestructor<Win32TLSGlobal>::remove_destructor(TLSMap::destroy,inst);
+		OOBase::DLLDestructor<OOBase::Module>::remove_destructor(TLSMap::destroy,inst);
 #endif
 		TLSMap::destroy(inst);
 	}

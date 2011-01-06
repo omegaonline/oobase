@@ -20,137 +20,189 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/config-base.h"
+#include "../include/OOBase/Destructor.h"
+
+namespace
+{
+	class CrtAllocator
+	{
+	public:
+		static void* allocate(size_t len, int /*flags*/, const char* /*file*/, unsigned int /*line*/)
+		{
+			return ::malloc(len);
+		}
+
+		static void free(void* ptr, int /*flags*/)
+		{
+			::free(ptr);
+		}	
+	};
+
+	template <typename T>
+	class MemoryManager
+	{
+	public:
+		static void* allocate(size_t len, int flags, const char* file, unsigned int line)
+		{
+			Instance& i = instance();
+
+			void* p = i.inst.allocate(len,flags,file,line);
+			if (p)
+				++i.refcount;
+			return p;
+		}
+			
+		static void free(void* ptr, int flags)
+		{
+			if (ptr)
+			{
+				Instance& i = instance();
+
+				i.inst.free(ptr,flags);
+				if (--i.refcount == 0)
+					term(const_cast<Instance*>(s_instance));
+			}
+		}
+
+	private:
+		struct Instance
+		{
+			T                         inst;
+			OOBase::AtomicInt<size_t> refcount;
+		};
+
+		static volatile Instance* s_instance;
+
+		static Instance& instance()
+		{
+			if (!s_instance)
+			{
+				static OOBase::Once::once_t key = ONCE_T_INIT;
+				OOBase::Once::Run_Internal(&key,&init);
+			}
+
+			assert(s_instance != reinterpret_cast<Instance*>((uintptr_t)0xdeadbeef));
+			return *const_cast<Instance*>(s_instance);
+		}
+
+		static void init()
+		{
+			// Use crt malloc here...
+			Instance* instance = new (std::nothrow) Instance();
+			instance->refcount = 1;
+
+			s_instance = instance;
+
+			OOBase::DLLDestructor<OOBase::Module>::add_destructor(deref,0);
+		}
+
+		static void term(Instance* i)
+		{
+			s_instance = reinterpret_cast<Instance*>((uintptr_t)0xdeadbeef);
+			delete i;
+		}
+
+		static void deref(void*)
+		{
+			assert(s_instance != reinterpret_cast<Instance*>((uintptr_t)0xdeadbeef));
+
+			Instance* i = const_cast<Instance*>(s_instance);
+
+			if (i && --i->refcount == 0)
+				term(i);
+		}
+	};
+
+	template <typename T>
+	volatile typename MemoryManager<T>::Instance* MemoryManager<T>::s_instance = 0;
+}
+
 
 #if defined(_DEBUG)
-
-#include "../include/OOBase/Singleton.h"
-//#include "../include/OOBase/internal/Win32Impl.h"
 
 #include <set>
 #include <string>
 
 namespace
 {
+	// This class is temp!!
 	class MemWatcher
 	{
 	public:
-		void add(void* p)
+		void* allocate(size_t len, int flags, const char* file, unsigned int line)
 		{
+			/*if (flags == 2)
+			{
+		#if defined(_MSC_VER)
+				return _malloca(len);
+		#else
+				flags = 1;
+		#endif
+			}*/
+			
+			//std::ostringstream os;
+			//os << "Alloc(" << flags << ") " << p << " " << len << " " << file << " " << line << std::endl;
+			//OutputDebugString(os.str().c_str());
+
+			void* p = CrtAllocator::allocate(len,flags,file,line);
+
 			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 			m_setEntries.insert(p);
+
+			return p;
 		}
 
-		void remove(void* p)
+		void free(void* ptr, int flags)
 		{
+			//std::ostringstream os;
+			//os << "Free(" << flags << ")  " << mem << std::endl;
+			//OutputDebugString(os.str().c_str());
+			/*if (flags == 2)
+			{
+		#if defined(_MSC_VER)
+				_freea(mem);
+				return;
+		#else
+				flags = 1;
+		#endif
+			}*/
+
 			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-			size_t c = m_setEntries.erase(p);
-
+			size_t c = m_setEntries.erase(ptr);
 			assert(c == 1);
-		}
 
-		static MemWatcher& instance();
+			CrtAllocator::free(ptr,flags);
+		}
 
 	private:
 		OOBase::SpinLock   m_lock;
 		std::set<void*>    m_setEntries;
-
-		static volatile MemWatcher* s_instance;
-
-		static BOOL __stdcall init(INIT_ONCE*,void*,void**);
-		static void init2();
 	};
 }
 
-volatile MemWatcher* MemWatcher::s_instance = 0;
-
-MemWatcher& MemWatcher::instance()
-{
-	if (!s_instance)
-	{
-#if defined(_WIN32)
-		static INIT_ONCE key = {0};
-		if (!OOBase::Win32::InitOnceExecuteOnce_Internal(&key,&init))
-			OOBase_CallCriticalFailure(GetLastError());
-#elif defined(HAVE_PTHREAD)
-		static pthread_once_t key = PTHREAD_ONCE_INIT;
-		int err = pthread_once(key,&init2);
-		if (err != 0)
-			OOBase_CallCriticalFailure(err);
-#else
-#error Fix me!
-#endif
-	}
-
-	return *const_cast<MemWatcher*>(s_instance);
-}
-
-BOOL MemWatcher::init(INIT_ONCE*,void*,void**)
-{
-	init2();
-	return TRUE;
-}
-
-void MemWatcher::init2()
-{
-	// Use crt malloc here...
-	// This will leak...
-
-	void* TODO;
-
-	MemWatcher* instance = new (std::nothrow) MemWatcher();
-	s_instance = instance;
-}
-
 #endif // _DEBUG
+
+
 
 // flags: 0 - C++ object - align to size, no reallocation
 //        1 - Buffer - align 32, reallocation
 //        2 - Stack-local buffer - align 32, no reallocation
 void* OOBase::Allocate(size_t len, int flags, const char* file, unsigned int line)
 {
-	/*if (flags == 2)
-	{
-#if defined(_MSC_VER)
-		return _malloca(len);
-#else
-		flags = 1;
-#endif
-	}*/
-	
-	void* p = ::malloc(len);
-
-	//std::ostringstream os;
-	//os << "Alloc(" << flags << ") " << p << " " << len << " " << file << " " << line << std::endl;
-	//OutputDebugString(os.str().c_str());
-
 #if defined(_DEBUG)
-	MemWatcher::instance().add(p);
+	return MemoryManager<MemWatcher>::allocate(len,flags,file,line);
+#else
+	return MemoryManager<CrtAllocator>::allocate(len,flags,file,line);
 #endif
-
-	return p;
 }
 
-void OOBase::Free(void* mem, int flags)
+void OOBase::Free(void* ptr, int flags)
 {
-	//std::ostringstream os;
-	//os << "Free(" << flags << ")  " << mem << std::endl;
-	//OutputDebugString(os.str().c_str());
-
 #if defined(_DEBUG)
-	MemWatcher::instance().remove(mem);
-#endif
-	
-	/*if (flags == 2)
-	{
-#if defined(_MSC_VER)
-		_freea(mem);
-		return;
+	MemoryManager<MemWatcher>::free(ptr,flags);
 #else
-		flags = 1;
-#endif
-	}*/
-	
-	::free(mem);
+	MemoryManager<CrtAllocator>::free(ptr,flags);
+#endif	
 }

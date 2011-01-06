@@ -211,6 +211,12 @@
 
 namespace OOBase
 {
+	// The discrimination type for singleton scoping
+	struct Module
+	{
+		int unused;
+	};
+
 	void CallCriticalFailure(const char* pszFile, unsigned int nLine, const char*);
 	void CallCriticalFailure(const char* pszFile, unsigned int nLine, int);
 
@@ -232,11 +238,6 @@ namespace OOBase
 		static void destroy(T* ptr)
 		{
 			OOBASE_DELETE(T,ptr);
-		}
-
-		static void destroy_void(void* ptr)
-		{
-			destroy(static_cast<T*>(ptr));
 		}
 	};
 

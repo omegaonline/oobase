@@ -88,8 +88,7 @@ namespace OOBase
 	namespace Win32
 	{
 		BOOL InitOnceExecuteOnce(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context);
-		BOOL InitOnceExecuteOnce_Internal(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn);
-
+		
 		void InitializeSRWLock(SRWLOCK* SRWLock);
 		void AcquireSRWLockShared(SRWLOCK* SRWLock);
 		void AcquireSRWLockExclusive(SRWLOCK* SRWLock);

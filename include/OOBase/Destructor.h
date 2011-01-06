@@ -30,6 +30,11 @@
 
 namespace OOBase
 {
+	namespace Once
+	{
+		void Run_Internal(once_t* key, pfn_once fn);
+	}
+
 	template <typename DLL>
 	class DLLDestructor
 	{
@@ -50,12 +55,6 @@ namespace OOBase
 			}
 		}
 
-		template <typename T>
-		static void add_instance(T* p)
-		{
-			add_destructor(&DeleteDestructor<T>::destroy_void,p);
-		}
-
 		static void remove_destructor(pfn_destructor pfn, void* p)
 		{
 			try
@@ -70,23 +69,12 @@ namespace OOBase
 			}
 		}
 
-		template <typename T>
-		static void remove_instance(T* p)
-		{
-			remove_destructor(&DeleteDestructor<T>::destroy_void,p);
-		}
-
 	private:
 		DLLDestructor() {}
 		DLLDestructor(const DLLDestructor&);
 		DLLDestructor& operator = (const DLLDestructor&);
 
 		~DLLDestructor()
-		{
-			destruct();
-		}
-
-		void destruct()
 		{
 			try
 			{
@@ -109,10 +97,13 @@ namespace OOBase
 
 		static DLLDestructor& instance()
 		{
-			static Once::once_t key = ONCE_T_INIT;
-			Once::Run(&key,init);
+			if (!s_instance)
+			{
+				static Once::once_t key = ONCE_T_INIT;
+				Once::Run_Internal(&key,&init);
+			}
 
-			return *s_instance;
+			return *const_cast<DLLDestructor*>(s_instance);
 		}
 
 		static void init()
@@ -121,11 +112,11 @@ namespace OOBase
 			s_instance = &inst;
 		}
 
-		static DLLDestructor* s_instance;
+		static volatile DLLDestructor* s_instance;
 	};
 
 	template <typename DLL>
-	DLLDestructor<DLL>* DLLDestructor<DLL>::s_instance = 0;
+	volatile DLLDestructor<DLL>* DLLDestructor<DLL>::s_instance = 0;
 }
 
 #endif // OOBASE_DESTRUCTOR_H_INCLUDED_

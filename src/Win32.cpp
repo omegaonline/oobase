@@ -25,6 +25,14 @@
 
 #if defined(_WIN32)
 
+namespace OOBase
+{
+	namespace Win32
+	{
+		BOOL InitOnceExecuteOnce_Internal(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context);
+	}
+}
+
 namespace
 {
 	class Win32Thunk
@@ -37,7 +45,7 @@ namespace
 		typedef BOOL (__stdcall *pfn_InitOnceExecuteOnce)(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context);
 		pfn_InitOnceExecuteOnce m_InitOnceExecuteOnce;
 		static BOOL __stdcall impl_InitOnceExecuteOnce(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context);
-		static BOOL InitOnceExecuteOnce_Internal(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn);
+		static BOOL InitOnceExecuteOnce_Internal(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context);
 
 		typedef void (__stdcall *pfn_InitializeSRWLock)(SRWLOCK* SRWLock);
 		pfn_InitializeSRWLock m_InitializeSRWLock;
@@ -141,15 +149,15 @@ namespace
 		init_low_frag_heap();
 	}
 
-	BOOL Win32Thunk::InitOnceExecuteOnce_Internal(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn)
+	BOOL Win32Thunk::InitOnceExecuteOnce_Internal(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context)
 	{
-		pfn_InitOnceExecuteOnce fn = (pfn_InitOnceExecuteOnce)(GetProcAddress(GetModuleHandleW(L"Kernel32.dll"),"InitOnceExecuteOnce"));
+		static pfn_InitOnceExecuteOnce fn = (pfn_InitOnceExecuteOnce)(GetProcAddress(GetModuleHandleW(L"Kernel32.dll"),"InitOnceExecuteOnce"));
 
 		BOOL bRet;
 		if (fn)
-			bRet = (*fn)(InitOnce,InitFn,0,0);
+			bRet = (*fn)(InitOnce,InitFn,Parameter,Context);
 		else
-			bRet = impl_InitOnceExecuteOnce(InitOnce,InitFn,0,0);
+			bRet = impl_InitOnceExecuteOnce(InitOnce,InitFn,Parameter,Context);
 
 		return bRet;
 	}
@@ -159,10 +167,11 @@ namespace
 		if (!s_instance)
 		{
 			static INIT_ONCE key = {0};
-			if (!InitOnceExecuteOnce_Internal(&key,&init))
+			if (!InitOnceExecuteOnce_Internal(&key,&init,0,0))
 				OOBase_CallCriticalFailure(GetLastError());
 		}
 
+		assert(s_instance != reinterpret_cast<Win32Thunk*>((uintptr_t)0xdeadbeef));
 		return *const_cast<Win32Thunk*>(s_instance);
 	}
 
@@ -173,7 +182,7 @@ namespace
 		OOBASE_NEW_T_CRITICAL(Win32Thunk,instance,Win32Thunk());
 		s_instance = instance;
 		
-		OOBase::DLLDestructor<Win32Thunk>::add_destructor(&destroy,0);
+		OOBase::DLLDestructor<OOBase::Module>::add_destructor(&destroy,0);
 		return TRUE;
 	}
 
@@ -317,9 +326,9 @@ namespace
 	}
 }
 
-BOOL OOBase::Win32::InitOnceExecuteOnce_Internal(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn)
+BOOL OOBase::Win32::InitOnceExecuteOnce_Internal(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context)
 {
-	return Win32Thunk::InitOnceExecuteOnce_Internal(InitOnce,InitFn);
+	return Win32Thunk::InitOnceExecuteOnce_Internal(InitOnce,InitFn,Parameter,Context);
 }
 
 BOOL OOBase::Win32::InitOnceExecuteOnce(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context)
