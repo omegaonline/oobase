@@ -32,6 +32,11 @@ namespace
 			return ::malloc(len);
 		}
 
+		static void* reallocate(void* ptr, size_t len, const char* /*file*/, unsigned int /*line*/)
+		{
+			return ::realloc(ptr,len);
+		}
+
 		static void free(void* ptr, int /*flags*/)
 		{
 			::free(ptr);
@@ -50,6 +55,14 @@ namespace
 			if (p)
 				++i.refcount;
 			return p;
+		}
+
+		static void* reallocate(void* ptr, size_t len, const char* file, unsigned int line)
+		{
+			if (!ptr)
+				return allocate(len,1,file,line);
+			else
+				return instance().inst.reallocate(ptr,len,file,line);
 		}
 			
 		static void free(void* ptr, int flags)
@@ -153,6 +166,23 @@ namespace
 			return p;
 		}
 
+		void* reallocate(void* ptr, size_t len, const char* file, unsigned int line)
+		{
+			void* p = CrtAllocator::reallocate(ptr,len,file,line);
+
+			if (p != ptr)
+			{
+				OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+
+				size_t c = m_setEntries.erase(ptr);
+				assert(c == 1);
+
+				m_setEntries.insert(p);
+			}
+
+			return p;
+		}
+
 		void free(void* ptr, int flags)
 		{
 			//std::ostringstream os;
@@ -195,6 +225,16 @@ void* OOBase::Allocate(size_t len, int flags, const char* file, unsigned int lin
 	return MemoryManager<MemWatcher>::allocate(len,flags,file,line);
 #else
 	return MemoryManager<CrtAllocator>::allocate(len,flags,file,line);
+#endif
+}
+
+// ptr must be alloc'ed with flag = 1 or NULL causing alloc with type 1
+void* OOBase::Reallocate(void* ptr, size_t len, const char* file, unsigned int line)
+{
+#if defined(_DEBUG)
+	return MemoryManager<MemWatcher>::reallocate(ptr,len,file,line);
+#else
+	return MemoryManager<CrtAllocator>::reallocate(ptr,len,file,line);
 #endif
 }
 

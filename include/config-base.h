@@ -227,7 +227,11 @@ namespace OOBase
 	//        1 - Buffer - align 32, reallocation
 	//        2 - Stack-local buffer - align 32, no reallocation
 	void* Allocate(size_t len, int flags, const char* file = 0, unsigned int line = 0);
-	void Free(void* mem, int flags);
+
+	// ptr must be alloc'ed with flag = 1 or NULL causing alloc with type 1
+	void* Reallocate(void* ptr, size_t len, const char* file = 0, unsigned int line = 0);
+
+	void Free(void* ptr, int flags);
 
 	void CallCriticalFailureMem(const char* pszFile, unsigned int nLine);
 

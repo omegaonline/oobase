@@ -232,13 +232,13 @@ int OOBase::Buffer::space(size_t cbSpace)
 
 int OOBase::Buffer::priv_malloc(char*& ptr, size_t& bytes)
 {
-	ptr = (char*)malloc(bytes);
+	ptr = static_cast<char*>(OOBase::Allocate(bytes,1,__FILE__,__LINE__));
 	return (!ptr ? errno : 0);
 }
 
 int OOBase::Buffer::priv_realloc(char*& ptr, size_t& bytes)
 {
-	char* new_ptr = (char*)realloc(ptr,bytes);
+	char* new_ptr = static_cast<char*>(OOBase::Reallocate(ptr,bytes,__FILE__,__LINE__));
 	if (!new_ptr)
 		return errno;
 
@@ -248,5 +248,5 @@ int OOBase::Buffer::priv_realloc(char*& ptr, size_t& bytes)
 
 void OOBase::Buffer::priv_free(char* ptr)
 {
-	free(ptr);
+	OOBase::Free(ptr,1);
 }
