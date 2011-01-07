@@ -258,7 +258,7 @@ namespace OOBase
 			return true;
 		}
 
-		/// A specialization of write() for type \p std::string.
+		/// A specialization of write() for type \p const char*.
 		bool write(const char* pszText, size_t len = (size_t)-1)
 		{
 			if (m_last_error != 0)
