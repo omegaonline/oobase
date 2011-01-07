@@ -26,6 +26,26 @@
 
 namespace OOBase
 {
+	template <typename T>
+	class DeleteDestructor
+	{
+	public:
+		static void destroy(T* ptr)
+		{
+			OOBASE_DELETE(T,ptr);
+		}
+	};
+
+	template <int T>
+	class FreeDestructor
+	{
+	public:
+		static void destroy(void* ptr)
+		{
+			::OOBase::Free(ptr,T);
+		}
+	};
+
 	namespace detail
 	{
 		template <typename T, typename Destructor>

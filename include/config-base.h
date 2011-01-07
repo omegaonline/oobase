@@ -234,26 +234,6 @@ namespace OOBase
 	void Free(void* ptr, int flags);
 
 	void CallCriticalFailureMem(const char* pszFile, unsigned int nLine);
-
-	template <typename T>
-	class DeleteDestructor
-	{
-	public:
-		static void destroy(T* ptr)
-		{
-			OOBASE_DELETE(T,ptr);
-		}
-	};
-
-	template <int T>
-	class FreeDestructor
-	{
-	public:
-		static void destroy(void* ptr)
-		{
-			::OOBase::Free(ptr,T);
-		}
-	};
 }
 
 #if !defined(HAVE_STATIC_ASSERT)
