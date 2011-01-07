@@ -68,21 +68,24 @@ namespace OOSvrBase
 			void stop_watcher(io_watcher* watcher);
 						
 		private:
-			// The following vars all use this lock
-			OOBase::Mutex             m_ev_lock;
-			ev_loop_t*                m_pLoop;
-			std::deque<io_watcher*>*  m_pIOQueue;
-			bool                      m_bAsyncTriggered;
+			typedef std::deque<io_watcher*,OOBase::CriticalAllocator<io_watcher*> > dequeType;
 
 			// The following vars all use this lock
-			OOBase::SpinLock         m_lock;
-			bool                     m_bStop;
-			std::deque<io_watcher*>  m_start_queue;
-			std::deque<io_watcher*>  m_stop_queue;
+			OOBase::Mutex m_ev_lock;
+			ev_loop_t*    m_pLoop;
+			dequeType*    m_pIOQueue;
+			bool          m_bAsyncTriggered;
+
+			// The following vars all use this lock
+			OOBase::SpinLock m_lock;
+			bool             m_bStop;
+			dequeType        m_start_queue;
+			dequeType        m_stop_queue;
 
 			// The following vars don't...
-			std::deque<OOBase::SmartPtr<OOBase::Thread> > m_workers;
-			ev_async                                       m_alert;
+			typedef std::deque<OOBase::SmartPtr<OOBase::Thread>,OOBase::CriticalAllocator<OOBase::SmartPtr<OOBase::Thread> > > workerDeque;
+			workerDeque m_workers;
+			ev_async    m_alert;
 
 			static int worker(void* param);
 			int worker_i();

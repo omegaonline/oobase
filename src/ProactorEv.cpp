@@ -713,15 +713,10 @@ OOSvrBase::Ev::ProactorImpl::~ProactorImpl()
 
 	guard.release();
 
-	try
-	{
-		// Wait for all the threads to finish
-		for (std::deque<OOBase::SmartPtr<OOBase::Thread> >::iterator i=m_workers.begin(); i!=m_workers.end(); ++i)
-			(*i)->join();
-	}
-	catch (std::exception&)
-	{}
-
+	// Wait for all the threads to finish
+	for (workerDeque::iterator i=m_workers.begin(); i!=m_workers.end(); ++i)
+		(*i)->join();
+	
 	// Done with the loop
 	ev_loop_destroy(m_pLoop);
 }
@@ -740,7 +735,7 @@ int OOSvrBase::Ev::ProactorImpl::worker(void* param)
 
 int OOSvrBase::Ev::ProactorImpl::worker_i()
 {
-	for (std::deque<io_watcher*> io_queue;!m_bStop;)
+	for (dequeType io_queue;!m_bStop;)
 	{
 		// Make this a condition variable and spawn more threads on demand...
 		void* TODO;
@@ -793,7 +788,7 @@ int OOSvrBase::Ev::ProactorImpl::worker_i()
 			io_watcher* i = m_stop_queue.front();
 			m_stop_queue.pop_front();
 
-			std::deque<io_watcher*>::iterator j = std::find(io_queue.begin(),io_queue.end(),i);
+			dequeType::iterator j = std::find(io_queue.begin(),io_queue.end(),i);
 			if (j == io_queue.end())
 			{
 				// Stop it
@@ -829,38 +824,24 @@ void OOSvrBase::Ev::ProactorImpl::init_watcher(io_watcher* watcher, int fd, int 
 
 void OOSvrBase::Ev::ProactorImpl::start_watcher(io_watcher* watcher)
 {
-	try
-	{
-		// Add to the queue
-		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+	// Add to the queue
+	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-		m_start_queue.push_back(watcher);
+	m_start_queue.push_back(watcher);
 
-		// Alert the loop
-		ev_async_send(m_pLoop,&m_alert);
-	}
-	catch (std::exception& e)
-	{
-		OOBase_CallCriticalFailure(e.what());
-	}
+	// Alert the loop
+	ev_async_send(m_pLoop,&m_alert);
 }
 
 void OOSvrBase::Ev::ProactorImpl::stop_watcher(io_watcher* watcher)
 {
-	try
-	{
-		// Add to the queue
-		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+	// Add to the queue
+	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-		m_stop_queue.push_back(watcher);
+	m_stop_queue.push_back(watcher);
 
-		// Alert the loop
-		ev_async_send(m_pLoop,&m_alert);
-	}
-	catch (std::exception& e)
-	{
-		OOBase_CallCriticalFailure(e.what());
-	}
+	// Alert the loop
+	ev_async_send(m_pLoop,&m_alert);
 }
 
 void OOSvrBase::Ev::ProactorImpl::on_alert(ev_loop_t*, ev_async* w, int)
@@ -875,18 +856,11 @@ void OOSvrBase::Ev::ProactorImpl::on_io(ev_loop_t*, ev_io* w, int events)
 
 void OOSvrBase::Ev::ProactorImpl::on_io_i(io_watcher* watcher, int /*events*/)
 {
-	try
-	{
-		// Add ourselves to the pending io queue
-		m_pIOQueue->push_back(watcher);
+	// Add ourselves to the pending io queue
+	m_pIOQueue->push_back(watcher);
 
-		// Stop the watcher - we can do something
-		ev_io_stop(m_pLoop,watcher);
-	}
-	catch (std::exception& e)
-	{
-		OOBase_CallCriticalFailure(e.what());
-	}
+	// Stop the watcher - we can do something
+	ev_io_stop(m_pLoop,watcher);
 }
 
 OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa)
