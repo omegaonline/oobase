@@ -38,7 +38,9 @@ namespace
 			void* m_val;
 			void (*m_destructor)(void*);
 		};
-		std::map<const void*,tls_val> m_mapVals;
+
+		typedef std::map<const void*,tls_val,std::less<const void*>,OOBase::CriticalAllocator<std::pair<const void*,tls_val> > > mapType;
+		mapType m_mapVals;
 
 	private:
 		TLSMap() {}
@@ -156,20 +158,13 @@ namespace
 		TLSMap* inst = static_cast<TLSMap*>(pThis);
 		if (inst)
 		{
-			try
+			for (mapType::iterator i=inst->m_mapVals.begin(); i!=inst->m_mapVals.end(); ++i)
 			{
-				for (std::map<const void*,tls_val>::iterator i=inst->m_mapVals.begin(); i!=inst->m_mapVals.end(); ++i)
-				{
-					if (i->second.m_destructor)
-						(*(i->second.m_destructor))(i->second.m_val);
-				}
-				inst->m_mapVals.clear();
+				if (i->second.m_destructor)
+					(*(i->second.m_destructor))(i->second.m_val);
 			}
-			catch (std::exception& e)
-			{
-				OOBase_CallCriticalFailure(e.what());
-			}
-
+			inst->m_mapVals.clear();
+			
 			OOBASE_DELETE(TLSMap,inst);
 		}
 
@@ -191,41 +186,25 @@ bool OOBase::TLS::Get(const void* key, void** val)
 {
 	TLSMap* inst = TLSMap::instance();
 
-	try
-	{
-		std::map<const void*,TLSMap::tls_val>::iterator i=inst->m_mapVals.find(key);
-		if (i == inst->m_mapVals.end())
-			return false;
+	TLSMap::mapType::iterator i=inst->m_mapVals.find(key);
+	if (i == inst->m_mapVals.end())
+		return false;
 
-		*val = i->second.m_val;
-	}
-	catch (std::exception& e)
-	{
-		OOBase_CallCriticalFailure(e.what());
-	}
-
+	*val = i->second.m_val;
+	
 	return true;
 }
 
 void OOBase::TLS::Set(const void* key, void* val, void (*destructor)(void*))
 {
-	TLSMap* inst = TLSMap::instance();
+	TLSMap::tls_val v;
+	v.m_val = val;
+	v.m_destructor = destructor;
 
-	try
+	std::pair<TLSMap::mapType::iterator,bool> p = TLSMap::instance()->m_mapVals.insert(TLSMap::mapType::value_type(key,v));
+	if (!p.second)
 	{
-		TLSMap::tls_val v;
-		v.m_val = val;
-		v.m_destructor = destructor;
-
-		std::pair<std::map<const void*,TLSMap::tls_val>::iterator,bool> p = inst->m_mapVals.insert(std::map<const void*,TLSMap::tls_val>::value_type(key,v));
-		if (!p.second)
-		{
-			p.first->second.m_val = val;
-		}
-	}
-	catch (std::exception& e)
-	{
-		OOBase_CallCriticalFailure(e.what());
+		p.first->second.m_val = val;
 	}
 }
 

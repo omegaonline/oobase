@@ -24,6 +24,7 @@
 
 #include "Condition.h"
 #include "Thread.h"
+#include "Allocator.h"
 
 #include <queue>
 
@@ -66,15 +67,8 @@ namespace OOBase
 			if (m_closed)
 				return closed;
 
-			try
-			{
-				m_queue.push(val);
-			}
-			catch (std::exception& e)
-			{
-				OOBase_CallCriticalFailure(e.what());
-			}
-
+			m_queue.push(val);
+			
 			guard.release();
 
 			m_available.signal();
@@ -109,16 +103,9 @@ namespace OOBase
 
 			if (!m_queue.empty())
 			{
-				try
-				{
-					val = m_queue.front();
-					m_queue.pop();
-				}
-				catch (std::exception& e)
-				{
-					OOBase_CallCriticalFailure(e.what());
-				}
-
+				val = m_queue.front();
+				m_queue.pop();
+				
 				guard.release();
 
 				m_space.signal();
@@ -182,7 +169,8 @@ namespace OOBase
 		Condition::Mutex m_lock;
 		Condition        m_available;
 		Condition        m_space;
-		std::queue<T>    m_queue;
+
+		std::queue<T,std::deque<T,OOBase::CriticalAllocator<T> > > m_queue;
 	};
 }
 

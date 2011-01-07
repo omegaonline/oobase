@@ -95,20 +95,15 @@ OOSvrBase::detail::AsyncQueued::AsyncQueued(bool sender, AsyncIOHelper* helper, 
 
 OOSvrBase::detail::AsyncQueued::~AsyncQueued()
 {
-	try
-	{
-		assert(m_ops.empty());
+	assert(m_ops.empty());
 
-		while (!m_vecAsyncs.empty())
-		{
-			AsyncIOHelper::AsyncOp* p = m_vecAsyncs.back();
-			OOBASE_DELETE(AsyncOp,p);
-			m_vecAsyncs.pop_back();
-		}
+	while (!m_vecAsyncs.empty())
+	{
+		AsyncIOHelper::AsyncOp* p = m_vecAsyncs.back();
+		OOBASE_DELETE(AsyncOp,p);
+		m_vecAsyncs.pop_back();
 	}
-	catch (std::exception&)
-	{}
-	
+		
 	if (!m_sender)
 		OOBASE_DELETE(AsyncIOHelper,m_helper);
 }
@@ -136,15 +131,8 @@ void OOSvrBase::detail::AsyncQueued::shutdown()
 		bool bIssueNow = m_ops.empty();
 		
 		// Insert a NULL into queue
-		try
-		{
-			m_ops.push(0);
-		} 
-		catch (std::exception& e)
-		{
-			OOBase_CallCriticalFailure(e.what());
-		}
-
+		m_ops.push(0);
+		
 		if (bIssueNow)
 			issue_next(guard);
 	}
@@ -175,15 +163,8 @@ int OOSvrBase::detail::AsyncQueued::async_op(OOBase::Buffer* buffer, size_t len,
 	AsyncIOHelper::AsyncOp* op = 0;
 	if (!m_vecAsyncs.empty())
 	{
-		try
-		{
-			op = m_vecAsyncs.back();
-			m_vecAsyncs.pop_back();
-		}
-		catch (std::exception& e)
-		{
-			OOBase_CallCriticalFailure(e.what());
-		}
+		op = m_vecAsyncs.back();
+		m_vecAsyncs.pop_back();
 	}
 	else
 	{
@@ -200,15 +181,8 @@ int OOSvrBase::detail::AsyncQueued::async_op(OOBase::Buffer* buffer, size_t len,
 	bool bIssueNow = m_ops.empty();
 	
 	// Insert into queue
-	try
-	{
-		m_ops.push(op);
-	} 
-	catch (std::exception& e)
-	{
-		OOBase_CallCriticalFailure(e.what());
-	}
-
+	m_ops.push(op);
+	
 	if (bIssueNow)
 		issue_next(guard);
 
@@ -221,16 +195,8 @@ void OOSvrBase::detail::AsyncQueued::issue_next(OOBase::Guard<OOBase::SpinLock>&
 
 	while (!m_ops.empty())
 	{
-		AsyncIOHelper::AsyncOp* op = 0;
-		try
-		{
-			op = m_ops.front();
-		} 
-		catch (std::exception& e)
-		{
-			OOBase_CallCriticalFailure(e.what());
-		}
-
+		AsyncIOHelper::AsyncOp* op = m_ops.front();
+		
 		if (op)
 		{
 			// Release the lock, because errors will synchronously call the handler...
@@ -315,16 +281,7 @@ bool OOSvrBase::detail::AsyncQueued::notify_async(AsyncIOHelper::AsyncOp* op, in
 	op->buffer->release();
 
 	if (m_vecAsyncs.size() < 4)
-	{
-		try
-		{
-			m_vecAsyncs.push_back(op);
-		}
-		catch (std::exception&)
-		{
-			OOBASE_DELETE(AsyncOp,op);
-		}
-	}
+		m_vecAsyncs.push_back(op);
 	else
 		OOBASE_DELETE(AsyncOp,op);
 	
@@ -332,16 +289,10 @@ bool OOSvrBase::detail::AsyncQueued::notify_async(AsyncIOHelper::AsyncOp* op, in
 		m_closed = true;
 
 	// Pop the op we just performed
-	try
-	{
-		assert(m_ops.front() == op);
-		m_ops.pop();
-	}
-	catch (std::exception& e)
-	{
-		OOBase_CallCriticalFailure(e.what());
-	}
+	assert(m_ops.front() == op);
 
+	m_ops.pop();
+	
 	issue_next(guard);
 
 	return bRelease;

@@ -25,6 +25,7 @@
 #include "Mutex.h"
 #include "Once.h"
 #include "SmartPtr.h"
+#include "Allocator.h"
 
 #include <list>
 
@@ -43,30 +44,16 @@ namespace OOBase
 
 		static void add_destructor(pfn_destructor pfn, void* p)
 		{
-			try
-			{
-				DLLDestructor& inst = instance();
-				Guard<SpinLock> guard(inst.m_lock);
-				inst.m_list.push_front(std::pair<pfn_destructor,void*>(pfn,p));
-			}
-			catch (std::exception& e)
-			{
-				OOBase_CallCriticalFailure(e.what());
-			}
+			DLLDestructor& inst = instance();
+			Guard<SpinLock> guard(inst.m_lock);
+			inst.m_list.push_front(std::pair<pfn_destructor,void*>(pfn,p));
 		}
 
 		static void remove_destructor(pfn_destructor pfn, void* p)
 		{
-			try
-			{
-				DLLDestructor& inst = instance();
-				Guard<SpinLock> guard(inst.m_lock);
-				inst.m_list.remove(std::pair<pfn_destructor,void*>(pfn,p));
-			}
-			catch (std::exception& e)
-			{
-				OOBase_CallCriticalFailure(e.what());
-			}
+			DLLDestructor& inst = instance();
+			Guard<SpinLock> guard(inst.m_lock);
+			inst.m_list.remove(std::pair<pfn_destructor,void*>(pfn,p));
 		}
 
 	private:
@@ -76,24 +63,23 @@ namespace OOBase
 
 		~DLLDestructor()
 		{
-			try
-			{
-				Guard<SpinLock> guard(m_lock);
+			Guard<SpinLock> guard(m_lock);
 
-				for (std::list<std::pair<pfn_destructor,void*> >::iterator i=m_list.begin(); i!=m_list.end(); ++i)
+			for (listType::iterator i=m_list.begin(); i!=m_list.end(); ++i)
+			{
+				try
 				{
 					(*(i->first))(i->second);
 				}
-				m_list.clear();
-			}
-			catch (std::exception& e)
-			{
-				OOBase_CallCriticalFailure(e.what());
+				catch (...)
+				{}
 			}
 		}
 
 		SpinLock m_lock;
-		std::list<std::pair<pfn_destructor,void*> > m_list;
+
+		typedef std::list<std::pair<pfn_destructor,void*>,OOBase::CriticalAllocator<std::pair<pfn_destructor,void*> > > listType;
+		listType m_list;
 
 		static DLLDestructor& instance()
 		{
