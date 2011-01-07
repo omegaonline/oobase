@@ -583,7 +583,7 @@ namespace
 		}
 
 		OOSvrBase::AsyncSocketPtr ptrSocket;
-		OOBase::string strAddress;
+		OOBase::stack_string strAddress;
 
 		if (dwErr == 0)
 		{
@@ -1039,7 +1039,7 @@ OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Win32::ProactorImpl::connect_local_soc
 	assert(perr);
 	*perr = 0;
 
-	OOBase::string pipe_name("\\\\.\\pipe\\");
+	OOBase::stack_string pipe_name("\\\\.\\pipe\\");
 	pipe_name += path;
 
 	OOBase::timeval_t wait2 = (wait ? *wait : OOBase::timeval_t::MaxTime);

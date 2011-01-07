@@ -134,7 +134,6 @@ namespace
 #if defined(_DEBUG)
 
 #include <set>
-#include <string>
 
 namespace
 {

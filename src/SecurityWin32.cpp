@@ -107,7 +107,7 @@ DWORD OOSvrBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile
 		return err;
 
 	// Lookup a DC for pszDomain
-	OOBase::wstring strDCName;
+	OOBase::stack_wstring strDCName;
 	LPWSTR pszDCName = NULL;
 	if (NetGetAnyDCName(NULL,strDomainName.empty() ? NULL : strDomainName.c_str(),(LPBYTE*)&pszDCName) == NERR_Success)
 	{
@@ -116,7 +116,7 @@ DWORD OOSvrBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile
 	}
 
 	// Try to find the user's profile path...
-	OOBase::wstring strProfilePath;
+	OOBase::stack_wstring strProfilePath;
 	USER_INFO_3* pInfo = NULL;
 	if (NetUserGetInfo(strDCName.empty() ? NULL : strDCName.c_str(),strUserName.c_str(),3,(LPBYTE*)&pInfo) == NERR_Success)
 	{

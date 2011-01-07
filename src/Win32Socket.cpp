@@ -187,7 +187,7 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int* perr, const
 	assert(perr);
 	*perr = 0;
 
-	OOBase::string pipe_name("\\\\.\\pipe\\");
+	OOBase::stack_string pipe_name("\\\\.\\pipe\\");
 	pipe_name += path;
 
 	timeval_t wait2 = (wait ? *wait : timeval_t::MaxTime);

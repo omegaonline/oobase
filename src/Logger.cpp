@@ -148,7 +148,7 @@ namespace
 			return;
 
 		// Create the relevant registry keys if they don't already exist
-		OOBase::string strName = "SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\";
+		OOBase::stack_string strName = "SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\";
 		strName += name;
 
 		HKEY hk;

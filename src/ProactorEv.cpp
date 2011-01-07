@@ -590,7 +590,7 @@ namespace
 				}
 			}
 
-			OOBase::string strAddress;
+			OOBase::stack_string strAddress;
 			if (!err && new_fd != INVALID_SOCKET)
 			{
 				// Get the address...
@@ -654,7 +654,7 @@ namespace
 	class LocalSocketAcceptor : public SocketAcceptor<OOSvrBase::AsyncLocalSocket,AsyncLocalSocket>
 	{
 	public:
-		LocalSocketAcceptor(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::Socket::socket_t sock, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler, const OOBase::string& path) :
+		LocalSocketAcceptor(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::Socket::socket_t sock, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler, const char* path) :
 				SocketAcceptor<OOSvrBase::AsyncLocalSocket,AsyncLocalSocket>(pProactor,sock,handler),
 				m_path(path)
 		{}
