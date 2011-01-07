@@ -220,7 +220,6 @@ namespace OOBase
 	void CallCriticalFailure(const char* pszFile, unsigned int nLine, const char*);
 	void CallCriticalFailure(const char* pszFile, unsigned int nLine, int);
 
-	std::string strerror(int err);
 	std::string system_error_text(int err);
 
 	// flags: 0 - C++ object - align to size, no reallocation

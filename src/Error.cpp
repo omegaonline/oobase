@@ -29,8 +29,12 @@ namespace OOBase
 	void CriticalFailure(const char* msg);
 }
 
-std::string OOBase::strerror(int err)
+std::string OOBase::system_error_text(int err)
 {
+#if defined(_WIN32)
+	return Win32::FormatMessage(err);
+#endif
+
 	std::ostringstream out;
 	out << "(" << err << ") ";
 
@@ -47,15 +51,6 @@ std::string OOBase::strerror(int err)
 #endif
 
 	return out.str();
-}
-
-std::string OOBase::system_error_text(int err)
-{
-#if defined(_WIN32)
-	return Win32::FormatMessage(err);
-#else
-	return OOBase::strerror(err);
-#endif
 }
 
 void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, int err)
