@@ -275,7 +275,7 @@ namespace
 		}
 	}
 
-	OOBase::Socket::socket_t connect_i(const std::string& address, const std::string& port, int* perr, const OOBase::timeval_t* wait)
+	OOBase::Socket::socket_t connect_i(const char* address, const char* port, int* perr, const OOBase::timeval_t* wait)
 	{
 		// Start a countdown
 		OOBase::timeval_t wait2 = (wait ? *wait : OOBase::timeval_t::MaxTime);
@@ -287,7 +287,7 @@ namespace
 		hints.ai_socktype = SOCK_STREAM;
 
 		addrinfo* pResults = 0;
-		if (getaddrinfo(address.c_str(),port.c_str(),&hints,&pResults) != 0)
+		if (getaddrinfo(address,port,&hints,&pResults) != 0)
 		{
 			*perr = socket_errno;
 			return INVALID_SOCKET;
@@ -382,7 +382,7 @@ int OOBase::BSD::set_non_blocking(Socket::socket_t sock, bool set)
 
 // Win32 native sockets are probably faster...
 //#if !defined(_WIN32)
-OOBase::Socket* OOBase::Socket::connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait)
+OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, int* perr, const timeval_t* wait)
 {
 #if defined(_WIN32)
 	// Ensure we have winsock loaded
@@ -408,7 +408,7 @@ OOBase::Socket* OOBase::Socket::connect(const std::string& address, const std::s
 
 #if defined(HAVE_UNISTD_H)
 
-OOBase::Socket* OOBase::Socket::connect_local(const std::string& path, int* perr, const timeval_t* wait)
+OOBase::Socket* OOBase::Socket::connect_local(const char* path, int* perr, const timeval_t* wait)
 {
 	OOBase::Socket::socket_t sock = OOBase::BSD::create_socket(AF_UNIX,SOCK_STREAM,0,perr);
 	if (sock == -1)

@@ -23,6 +23,7 @@
 #define OOBASE_WIN32_INTERNAL_H_INCLUDED_
 
 #include "../Win32.h"
+#include "../Allocator.h"
 
 #if defined(_WIN32)
 
@@ -30,7 +31,7 @@ namespace OOBase
 {
 	namespace Win32
 	{
-		std::string FormatMessage(DWORD dwErr = GetLastError());
+		OOBase::string FormatMessage(DWORD dwErr = GetLastError());
 
 		class rwmutex_t
 		{

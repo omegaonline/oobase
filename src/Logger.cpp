@@ -86,7 +86,7 @@ namespace
 	};
 #endif
 
-	std::string string_printf(const char* fmt, va_list args)
+	OOBase::string string_printf(const char* fmt, va_list args)
 	{
 		for (size_t len=256;;)
 		{
@@ -99,7 +99,7 @@ namespace
 				OOBase_CallCriticalFailure("vsnprintf_s failed");
 
 			if (static_cast<size_t>(len2) < len)
-				return std::string(buf,len2);
+				return OOBase::string(buf,len2);
 
 			len = len2 + 1;
 		}
@@ -148,7 +148,7 @@ namespace
 			return;
 
 		// Create the relevant registry keys if they don't already exist
-		std::string strName = "SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\";
+		OOBase::string strName = "SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\";
 		strName += name;
 
 		HKEY hk;
@@ -190,7 +190,7 @@ namespace
 			break;
 		}
 
-		std::string msg = string_printf(fmt,args);
+		OOBase::string msg = string_printf(fmt,args);
 
 #if !defined(_DEBUG)
 		if (m_hLog && priority != OOSvrBase::Logger::Debug)
@@ -337,7 +337,7 @@ void OOSvrBase::Logger::filenum_t::log(const char* fmt, ...)
 	va_list args;
 	va_start(args,fmt);
 
-	std::ostringstream out;
+	OOBase::ostringstream out;
 	out << "[" << getpid() << "] " << m_pszFilename << "(" << m_nLine << "): " << fmt;
 
 	LOGGER::instance().log(m_priority,out.str().c_str(),args);

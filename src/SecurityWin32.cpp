@@ -61,7 +61,7 @@ DWORD OOSvrBase::Win32::sec_descript_t::SetEntriesInAcl(ULONG cCountOfExplicitEn
 	return ERROR_SUCCESS;
 }
 
-DWORD OOSvrBase::Win32::GetNameFromToken(HANDLE hToken, std::wstring& strUserName, std::wstring& strDomainName)
+DWORD OOSvrBase::Win32::GetNameFromToken(HANDLE hToken, OOBase::wstring& strUserName, OOBase::wstring& strDomainName)
 {
 	// Find out all about the user associated with hToken
 	OOBase::SmartPtr<TOKEN_USER,OOBase::FreeDestructor<1> > ptrUserInfo = static_cast<TOKEN_USER*>(GetTokenInfo(hToken,TokenUser));
@@ -99,15 +99,15 @@ DWORD OOSvrBase::Win32::GetNameFromToken(HANDLE hToken, std::wstring& strUserNam
 DWORD OOSvrBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile)
 {
 	// Get the names associated with the user SID
-	std::wstring strUserName;
-	std::wstring strDomainName;
+	OOBase::wstring strUserName;
+	OOBase::wstring strDomainName;
 
 	DWORD err = GetNameFromToken(hToken,strUserName,strDomainName);
 	if (err != ERROR_SUCCESS)
 		return err;
 
 	// Lookup a DC for pszDomain
-	std::wstring strDCName;
+	OOBase::wstring strDCName;
 	LPWSTR pszDCName = NULL;
 	if (NetGetAnyDCName(NULL,strDomainName.empty() ? NULL : strDomainName.c_str(),(LPBYTE*)&pszDCName) == NERR_Success)
 	{
@@ -116,7 +116,7 @@ DWORD OOSvrBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile
 	}
 
 	// Try to find the user's profile path...
-	std::wstring strProfilePath;
+	OOBase::wstring strProfilePath;
 	USER_INFO_3* pInfo = NULL;
 	if (NetUserGetInfo(strDCName.empty() ? NULL : strDCName.c_str(),strUserName.c_str(),3,(LPBYTE*)&pInfo) == NERR_Success)
 	{

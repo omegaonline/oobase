@@ -182,12 +182,13 @@ size_t OOBase::Win32::Socket::recv(void* buf, size_t len, int* perr, const OOBas
 	return len;
 }
 
-OOBase::Socket* OOBase::Socket::connect_local(const std::string& path, int* perr, const timeval_t* wait)
+OOBase::Socket* OOBase::Socket::connect_local(const char* path, int* perr, const timeval_t* wait)
 {
 	assert(perr);
 	*perr = 0;
 
-	std::string pipe_name = "\\\\.\\pipe\\" + path;
+	OOBase::string pipe_name("\\\\.\\pipe\\");
+	pipe_name += path;
 
 	timeval_t wait2 = (wait ? *wait : timeval_t::MaxTime);
 	Countdown countdown(&wait2);

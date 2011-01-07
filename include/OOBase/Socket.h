@@ -56,8 +56,8 @@ namespace OOBase
 		virtual int send(const void* buf, size_t len, const timeval_t* timeout = 0) = 0;
 		virtual void shutdown(bool bSend, bool bRecv) = 0;
 
-		static Socket* connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait = 0);
-		static Socket* connect_local(const std::string& path, int* perr, const timeval_t* wait = 0);
+		static Socket* connect(const char* address, const char* port, int* perr, const timeval_t* wait = 0);
+		static Socket* connect_local(const char* path, int* perr, const timeval_t* wait = 0);
 
 		// Helpers
 		template <typename T>

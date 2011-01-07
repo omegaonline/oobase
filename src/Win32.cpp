@@ -706,7 +706,7 @@ void OOBase::Win32::condition_variable_t::broadcast()
 
 namespace
 {
-	std::string format_msg(DWORD dwErr, HMODULE hModule)
+	OOBase::string format_msg(DWORD dwErr, HMODULE hModule)
 	{
 		DWORD dwFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK;
 		if (hModule)
@@ -724,7 +724,7 @@ namespace
 					0,  NULL))
 		{
 			OOBase::SmartPtr<char,OOBase::Win32::LocalAllocDestructor<char> > lpMsgBuf = static_cast<char*>(lpBuf);
-			std::string res((LPCSTR)lpMsgBuf);
+			OOBase::string res((LPCSTR)lpMsgBuf);
 			while (*res.rbegin() == '\r' || *res.rbegin() == '\n')
 				res = res.substr(0,res.size()-1);
 
@@ -737,9 +737,9 @@ namespace
 	}
 }
 
-std::string OOBase::Win32::FormatMessage(DWORD dwErr)
+OOBase::string OOBase::Win32::FormatMessage(DWORD dwErr)
 {
-	std::ostringstream ret;
+	ostringstream ret;
 	ret.setf(std::ios_base::hex,std::ios_base::basefield);
 	ret << "(0x" << dwErr << ") ";
 

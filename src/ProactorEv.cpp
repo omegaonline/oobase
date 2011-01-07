@@ -590,7 +590,7 @@ namespace
 				}
 			}
 
-			std::string strAddress;
+			OOBase::string strAddress;
 			if (!err && new_fd != INVALID_SOCKET)
 			{
 				// Get the address...
@@ -629,7 +629,7 @@ namespace
 			}
 
 			// Call the handler...
-			bool bAgain = m_handler->on_accept(ptrSocket,strAddress,err);
+			bool bAgain = m_handler->on_accept(ptrSocket,strAddress.c_str(),err);
 
 			guard.acquire();
 
@@ -654,7 +654,7 @@ namespace
 	class LocalSocketAcceptor : public SocketAcceptor<OOSvrBase::AsyncLocalSocket,AsyncLocalSocket>
 	{
 	public:
-		LocalSocketAcceptor(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::Socket::socket_t sock, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler, const std::string& path) :
+		LocalSocketAcceptor(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::Socket::socket_t sock, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler, const OOBase::string& path) :
 				SocketAcceptor<OOSvrBase::AsyncLocalSocket,AsyncLocalSocket>(pProactor,sock,handler),
 				m_path(path)
 		{}
@@ -666,7 +666,7 @@ namespace
 		}
 
 	private:
-		const std::string m_path;
+		const OOBase::string m_path;
 	};
 #endif
 }
@@ -863,7 +863,7 @@ void OOSvrBase::Ev::ProactorImpl::on_io_i(io_watcher* watcher, int /*events*/)
 	ev_io_stop(m_pLoop,watcher);
 }
 
-OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa)
+OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor<AsyncLocalSocket>* handler, const char* path, int* perr, SECURITY_ATTRIBUTES* psa)
 {
 #if !defined(HAVE_UNISTD_H)
 	// If we don't have unix sockets, we can't do much, use Win32 Proactor instead
@@ -936,7 +936,7 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor<AsyncLocalSoc
 #endif
 }
 
-OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor<OOSvrBase::AsyncSocket>* handler, const std::string& address, const std::string& port, int* perr)
+OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor<OOSvrBase::AsyncSocket>* handler, const char* address, const char* port, int* perr)
 {
 	*perr = 0;
 	OOBase::Socket::socket_t sock = INVALID_SOCKET;
@@ -1044,7 +1044,7 @@ OOSvrBase::AsyncSocketPtr OOSvrBase::Ev::ProactorImpl::attach_socket(OOBase::Soc
 	return ptrSocket;
 }
 
-OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Ev::ProactorImpl::connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait)
+OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Ev::ProactorImpl::connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* wait)
 {
 #if !defined(HAVE_UNISTD_H)
 	// If we don't have unix sockets, we can't do much, use Win32 Proactor instead

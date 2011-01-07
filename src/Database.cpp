@@ -76,9 +76,9 @@ int OOSvrBase::Db::Statement::bind_int64(int index, const sqlite3_int64& val)
 	return sqlite3_bind_int64(m_pStmt,index,val);
 }
 
-int OOSvrBase::Db::Statement::bind_string(int index, const std::string& val)
+int OOSvrBase::Db::Statement::bind_string(int index, const char* val, size_t len)
 {
-	return sqlite3_bind_text(m_pStmt,index,val.c_str(),static_cast<int>(val.length()),0);
+	return sqlite3_bind_text(m_pStmt,index,val,static_cast<int>(len),0);
 }
 
 sqlite3_stmt* OOSvrBase::Db::Statement::statement()

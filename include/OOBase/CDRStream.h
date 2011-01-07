@@ -158,9 +158,10 @@ namespace OOBase
 			return true;
 		}
 
-		/** A specialization of read() for type \p std::string.
+		/** A specialization of read() for type \p std::basic_string.
 		 */
-		bool read(std::string& val)
+		template <typename Alloc>
+		bool read(std::basic_string<char,std::char_traits<char>,Alloc>& val)
 		{
 			if (m_last_error != 0)
 				return false;
@@ -311,8 +312,9 @@ namespace OOBase
 			return true;
 		}
 
-		/// A specialization of write() for type \p std::string.
-		bool write(const std::string& strText)
+		/// A specialization of write() for type \p std::basic_string.
+		template <typename Alloc>
+		bool write(const std::basic_string<char,std::char_traits<char>,Alloc>& strText)
 		{
 			return write(strText.data(),strText.size());
 		}

@@ -286,9 +286,9 @@ bool OOSvrBase::Service::pid_file(const char* pszPidFile)
 
 	ftruncate(fd,0);
 
-	std::ostringstream os;
+	OOBase::ostringstream os;
 	os << getpid();
-	std::string str = os.str();
+	OOBase::string str = os.str();
 	write(fd,str.c_str(),str.size()+1);
 
 	return true;

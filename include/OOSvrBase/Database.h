@@ -51,7 +51,13 @@ namespace OOSvrBase
 			int column_bytes(int iCol);
 
 			int bind_int64(int index, const sqlite3_int64& val);
-			int bind_string(int index, const std::string& val);
+			int bind_string(int index, const char* val, size_t len);
+
+			template <typename Alloc>
+			int bind_string(int index, const std::basic_string<char,std::char_traits<char>,Alloc>& val)
+			{
+				return bind_string(index,val.c_str(),val.length());
+			}
 
 			sqlite3_stmt* statement();
 

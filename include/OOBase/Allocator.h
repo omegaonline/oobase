@@ -25,6 +25,7 @@
 #include "../config-base.h"
 
 #include <limits>
+#include <sstream>
 
 #if defined(max)
 #undef max
@@ -265,6 +266,15 @@ namespace OOBase
 	{
 		return false;
 	}
+
+	// Some useful typedefs
+	typedef std::basic_string<char, std::char_traits<char>, CriticalAllocator<char> > string;
+	typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, CriticalAllocator<wchar_t> > wstring;
+
+	typedef std::basic_ostringstream<char, std::char_traits<char>, CriticalAllocator<char> > ostringstream;
+
+	string system_error_text(int err);
+	
 }
 
 #endif // OOBASE_ALLOCATOR_H_INCLUDED_

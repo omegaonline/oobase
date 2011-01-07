@@ -583,7 +583,7 @@ namespace
 		}
 
 		OOSvrBase::AsyncSocketPtr ptrSocket;
-		std::string strAddress;
+		OOBase::string strAddress;
 
 		if (dwErr == 0)
 		{
@@ -609,7 +609,7 @@ namespace
 		guard.release();
 
 		// Call the acceptor
-		if (m_handler->on_accept(ptrSocket,strAddress,dwErr))
+		if (m_handler->on_accept(ptrSocket,strAddress.c_str(),dwErr))
 		{
 			dwErr = 0;
 			next_accept();
@@ -688,7 +688,7 @@ namespace
 	class PipeAcceptor : public OOBase::Socket
 	{
 	public:
-		PipeAcceptor(OOSvrBase::Win32::ProactorImpl* pProactor, const std::string& pipe_name, LPSECURITY_ATTRIBUTES psa, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler);
+		PipeAcceptor(OOSvrBase::Win32::ProactorImpl* pProactor, const OOBase::string& pipe_name, LPSECURITY_ATTRIBUTES psa, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler);
 		virtual ~PipeAcceptor();
 
 		int send(const void* /*buf*/, size_t /*len*/, const OOBase::timeval_t* /*timeout*/ = 0)
@@ -723,7 +723,7 @@ namespace
 		bool                                               m_closed;
 		Completion                                         m_completion;
 		OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>*  m_handler;
-		const std::string                                  m_pipe_name;
+		const OOBase::string                               m_pipe_name;
 		LPSECURITY_ATTRIBUTES                              m_psa;
 		size_t                                             m_async_count;
 		
@@ -731,7 +731,7 @@ namespace
 		void do_accept(DWORD& dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
 	};
 
-	PipeAcceptor::PipeAcceptor(OOSvrBase::Win32::ProactorImpl* pProactor, const std::string& pipe_name, LPSECURITY_ATTRIBUTES psa, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler) :
+	PipeAcceptor::PipeAcceptor(OOSvrBase::Win32::ProactorImpl* pProactor, const OOBase::string& pipe_name, LPSECURITY_ATTRIBUTES psa, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler) :
 			m_pProactor(pProactor),
 			m_closed(false),
 			m_handler(handler),
@@ -875,7 +875,7 @@ namespace
 		guard.release();
 
 		// Call the acceptor
-		if (m_handler->on_accept(ptrSocket,m_pipe_name,dwErr))
+		if (m_handler->on_accept(ptrSocket,m_pipe_name.c_str(),dwErr))
 		{
 			dwErr = 0;
 			next_accept(false);
@@ -910,10 +910,10 @@ void OOSvrBase::Win32::ProactorImpl::release()
 	--m_refcount;
 }
 
-OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa)
+OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_local(Acceptor<AsyncLocalSocket>* handler, const char* path, int* perr, SECURITY_ATTRIBUTES* psa)
 {
 	OOBase::SmartPtr<PipeAcceptor> pAcceptor;
-	OOBASE_NEW_T(PipeAcceptor,pAcceptor,PipeAcceptor(this,"\\\\.\\pipe\\" + path,psa,handler));
+	OOBASE_NEW_T(PipeAcceptor,pAcceptor,PipeAcceptor(this,OOBase::string("\\\\.\\pipe\\") + path,psa,handler));
 	if (!pAcceptor)
 	{
 		*perr = ERROR_OUTOFMEMORY;
@@ -927,20 +927,20 @@ OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_local(Acceptor<AsyncLocal
 	return pAcceptor.detach();
 }
 
-OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_remote(Acceptor<AsyncSocket>* handler, const std::string& address, const std::string& port, int* perr)
+OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_remote(Acceptor<AsyncSocket>* handler, const char* address, const char* port, int* perr)
 {
 	*perr = 0;
 
 	int af_family = AF_INET;
 	OOBase::Socket::socket_t sock = INVALID_SOCKET;
-	if (address.empty())
+	if (!address)
 	{
 		sockaddr_in addr = {0};
 		addr.sin_family = AF_INET;
 		addr.sin_addr.S_un.S_addr = ADDR_ANY;
 
-		if (!port.empty())
-			addr.sin_port = htons((u_short)atoi(port.c_str()));
+		if (port)
+			addr.sin_port = htons((u_short)atoi(port));
 
 		if ((sock = create_socket(AF_INET,SOCK_STREAM,IPPROTO_TCP,perr)) == INVALID_SOCKET)
 			return 0;
@@ -962,7 +962,7 @@ OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_remote(Acceptor<AsyncSock
 		hints.ai_protocol = IPPROTO_TCP;
 
 		addrinfo* pResults = 0;
-		if (getaddrinfo(address.c_str(),port.c_str(),&hints,&pResults) != 0)
+		if (getaddrinfo(address,port,&hints,&pResults) != 0)
 		{
 			*perr = WSAGetLastError();
 			return 0;
@@ -1034,12 +1034,13 @@ OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Win32::ProactorImpl::attach_local_sock
 	return ptrSocket;
 }
 
-OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Win32::ProactorImpl::connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait)
+OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Win32::ProactorImpl::connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* wait)
 {
 	assert(perr);
 	*perr = 0;
 
-	std::string pipe_name = "\\\\.\\pipe\\" + path;
+	OOBase::string pipe_name("\\\\.\\pipe\\");
+	pipe_name += path;
 
 	OOBase::timeval_t wait2 = (wait ? *wait : OOBase::timeval_t::MaxTime);
 	OOBase::Countdown countdown(&wait2);

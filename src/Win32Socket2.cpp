@@ -62,7 +62,7 @@ namespace
 }
 
 #if 0
-OOBase::Socket* OOBase::Socket::connect(const std::string& address, const std::string& port, int* perr, const timeval_t* wait)
+OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, int* perr, const timeval_t* wait)
 {
 	// Ensure we have winsock loaded
 	Win32::WSAStartup();

@@ -60,12 +60,12 @@ OOSvrBase::Proactor::~Proactor()
 	OOBASE_DELETE(Proactor,m_impl);
 }
 
-OOBase::Socket* OOSvrBase::Proactor::accept_local(Acceptor<AsyncLocalSocket>* handler, const std::string& path, int* perr, SECURITY_ATTRIBUTES* psa)
+OOBase::Socket* OOSvrBase::Proactor::accept_local(Acceptor<AsyncLocalSocket>* handler, const char* path, int* perr, SECURITY_ATTRIBUTES* psa)
 {
 	return m_impl->accept_local(handler,path,perr,psa);
 }
 
-OOBase::Socket* OOSvrBase::Proactor::accept_remote(Acceptor<AsyncSocket>* handler, const std::string& address, const std::string& port, int* perr)
+OOBase::Socket* OOSvrBase::Proactor::accept_remote(Acceptor<AsyncSocket>* handler, const char* address, const char* port, int* perr)
 {
 	return m_impl->accept_remote(handler,address,port,perr);
 }
@@ -80,7 +80,7 @@ OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Proactor::attach_local_socket(OOBase::
 	return m_impl->attach_local_socket(sock,perr);
 }
 
-OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Proactor::connect_local_socket(const std::string& path, int* perr, const OOBase::timeval_t* wait)
+OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Proactor::connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* wait)
 {
 	return m_impl->connect_local_socket(path,perr,wait);
 }

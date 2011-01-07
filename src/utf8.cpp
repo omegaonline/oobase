@@ -22,7 +22,7 @@
 #include "../include/OOBase/utf8.h"
 #include "../include/OOBase/SmartPtr.h"
 
-std::wstring OOBase::from_utf8(const char* sz, size_t len)
+OOBase::wstring OOBase::from_utf8(const char* sz, size_t len)
 {
 	wchar_t szBuf[256];
 	size_t actual_len = from_utf8(szBuf,sizeof(szBuf)/sizeof(szBuf[0]),sz,len);
@@ -31,7 +31,7 @@ std::wstring OOBase::from_utf8(const char* sz, size_t len)
 		if (len == size_t(-1))
 			--actual_len;
 
-		return std::wstring(szBuf,actual_len);
+		return wstring(szBuf,actual_len);
 	}
 
 	SmartPtr<wchar_t,FreeDestructor<2> > ptrBuf = static_cast<wchar_t*>(Allocate(actual_len*sizeof(wchar_t),2,__FILE__,__LINE__));
@@ -43,10 +43,10 @@ std::wstring OOBase::from_utf8(const char* sz, size_t len)
 	if (len == size_t(-1))
 		--actual_len;
 
-	return std::wstring(ptrBuf,actual_len);
+	return wstring(ptrBuf,actual_len);
 }
 
-std::wstring OOBase::from_native(const char* sz, size_t len)
+OOBase::wstring OOBase::from_native(const char* sz, size_t len)
 {
 	wchar_t szBuf[256];
 	size_t actual_len = from_native(szBuf,sizeof(szBuf)/sizeof(szBuf[0]),sz,len);
@@ -55,7 +55,7 @@ std::wstring OOBase::from_native(const char* sz, size_t len)
 		if (len == size_t(-1))
 			--actual_len;
 
-		return std::wstring(szBuf,actual_len);
+		return wstring(szBuf,actual_len);
 	}
 
 	SmartPtr<wchar_t,FreeDestructor<2> > ptrBuf = static_cast<wchar_t*>(Allocate(actual_len*sizeof(wchar_t),2,__FILE__,__LINE__));
@@ -67,10 +67,10 @@ std::wstring OOBase::from_native(const char* sz, size_t len)
 	if (len == size_t(-1))
 		--actual_len;
 
-	return std::wstring(ptrBuf,actual_len);
+	return wstring(ptrBuf,actual_len);
 }
 
-std::string OOBase::to_utf8(const wchar_t* wsz, size_t len)
+OOBase::string OOBase::to_utf8(const wchar_t* wsz, size_t len)
 {
 	char szBuf[256];
 	size_t actual_len = to_utf8(szBuf,sizeof(szBuf),wsz,len);
@@ -79,7 +79,7 @@ std::string OOBase::to_utf8(const wchar_t* wsz, size_t len)
 		if (len == size_t(-1))
 			--actual_len;
 
-		return std::string(szBuf,actual_len);
+		return string(szBuf,actual_len);
 	}
 
 	SmartPtr<char,FreeDestructor<2> > ptrBuf = static_cast<char*>(Allocate(actual_len,2,__FILE__,__LINE__));
@@ -91,10 +91,10 @@ std::string OOBase::to_utf8(const wchar_t* wsz, size_t len)
 	if (len == size_t(-1))
 		--actual_len;
 
-	return std::string(ptrBuf,actual_len);
+	return string(ptrBuf,actual_len);
 }
 
-std::string OOBase::to_native(const wchar_t* wsz, size_t len)
+OOBase::string OOBase::to_native(const wchar_t* wsz, size_t len)
 {
 	char szBuf[256];
 	size_t actual_len = to_native(szBuf,sizeof(szBuf),wsz,len);
@@ -103,7 +103,7 @@ std::string OOBase::to_native(const wchar_t* wsz, size_t len)
 		if (len == size_t(-1))
 			--actual_len;
 
-		return std::string(szBuf,actual_len);
+		return string(szBuf,actual_len);
 	}
 
 	SmartPtr<char,FreeDestructor<2> > ptrBuf = static_cast<char*>(Allocate(actual_len,2,__FILE__,__LINE__));
@@ -115,7 +115,7 @@ std::string OOBase::to_native(const wchar_t* wsz, size_t len)
 	if (len == size_t(-1))
 		--actual_len;
 
-	return std::string(ptrBuf,actual_len);
+	return string(ptrBuf,actual_len);
 }
 
 #if defined(_WIN32)
