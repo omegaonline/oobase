@@ -21,7 +21,7 @@
 
 #include "../include/OOSvrBase/CmdArgs.h"
 
-bool OOSvrBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, const char* long_opt)
+void OOSvrBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, const char* long_opt)
 {
 	assert(id);
 	assert(m_map_args.find(id) == m_map_args.end());
@@ -35,37 +35,19 @@ bool OOSvrBase::CmdArgs::add_option(const char* id, char short_opt, bool has_val
 
 	opt.m_has_value = has_value;
 
-	try
-	{
-		m_map_opts.insert(std::multimap<std::string,Option>::value_type(id,opt));;
-		return true;
-	}
-	catch (std::exception& e)
-	{
-		OOBase_CallCriticalFailure(e.what());
-		return false;
-	}
+	m_map_opts.insert(optsType::value_type(id,opt));;
 }
 
-bool OOSvrBase::CmdArgs::add_argument(const char* id, int position)
+void OOSvrBase::CmdArgs::add_argument(const char* id, int position)
 {
 	assert(id);
 	assert(m_map_opts.find(id) == m_map_opts.end());
 	assert(m_map_args.find(id) == m_map_args.end());
 
-	try
-	{
-		m_map_args[id] = position;
-		return true;
-	}
-	catch (std::exception& e)
-	{
-		OOBase_CallCriticalFailure(e.what());
-		return false;
-	}
+	m_map_args[id] = position;
 }
 
-bool OOSvrBase::CmdArgs::parse(int argc, char* argv[], std::map<std::string,std::string>& results, int skip) const
+bool OOSvrBase::CmdArgs::parse(int argc, char* argv[], resultsType& results, int skip) const
 {
 	m_name = argv[0];
 
@@ -106,11 +88,11 @@ bool OOSvrBase::CmdArgs::parse(int argc, char* argv[], std::map<std::string,std:
 	return true;
 }
 
-bool OOSvrBase::CmdArgs::parse_long_option(std::map<std::string,std::string>& results, char** argv, int& arg, int argc) const
+bool OOSvrBase::CmdArgs::parse_long_option(resultsType& results, char** argv, int& arg, int argc) const
 {
-	for (std::multimap<std::string,Option>::const_iterator i=m_map_opts.begin(); i!=m_map_opts.end(); ++i)
+	for (optsType::const_iterator i=m_map_opts.begin(); i!=m_map_opts.end(); ++i)
 	{
-		std::string value = "true";
+		OOBase::string value = "true";
 		if (i->second.m_long_opt == argv[arg]+2)
 		{
 			if (i->second.m_has_value)
@@ -141,18 +123,18 @@ bool OOSvrBase::CmdArgs::parse_long_option(std::map<std::string,std::string>& re
 	return false;
 }
 
-bool OOSvrBase::CmdArgs::parse_short_options(std::map<std::string,std::string>& results, char** argv, int& arg, int argc) const
+bool OOSvrBase::CmdArgs::parse_short_options(resultsType& results, char** argv, int& arg, int argc) const
 {
 	for (char* c = argv[arg]+1; *c!='\0'; ++c)
 	{
-		std::multimap<std::string,Option>::const_iterator i;
+		optsType::const_iterator i;
 		for (i=m_map_opts.begin(); i!=m_map_opts.end(); ++i)
 		{
 			if (i->second.m_short_opt == *c)
 			{
 				if (i->second.m_has_value)
 				{
-					std::string value;
+					OOBase::string value;
 					if (c[1] == '\0')
 					{
 						// Next arg is the value
@@ -188,9 +170,9 @@ bool OOSvrBase::CmdArgs::parse_short_options(std::map<std::string,std::string>& 
 	return true;
 }
 
-void OOSvrBase::CmdArgs::parse_arg(std::map<std::string,std::string>& results, const char* arg, int position) const
+void OOSvrBase::CmdArgs::parse_arg(resultsType& results, const char* arg, int position) const
 {
-	for (std::map<std::string,int>::const_iterator i=m_map_args.begin(); i!=m_map_args.end(); ++i)
+	for (argsType::const_iterator i=m_map_args.begin(); i!=m_map_args.end(); ++i)
 	{
 		if (position == i->second)
 		{
@@ -199,7 +181,7 @@ void OOSvrBase::CmdArgs::parse_arg(std::map<std::string,std::string>& results, c
 		}
 	}
 
-	std::ostringstream ss;
+	OOBase::ostringstream ss;
 	ss.imbue(std::locale::classic());
 	ss << "$" << position;
 	results[ss.str()] = arg;

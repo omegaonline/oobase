@@ -22,7 +22,7 @@
 #ifndef OOSVRBASE_CMDARGS_H_INCLUDED_
 #define OOSVRBASE_CMDARGS_H_INCLUDED_
 
-#include "../config-base.h"
+#include "../OOBase/Allocator.h"
 
 #include <map>
 #include <iostream>
@@ -32,26 +32,30 @@ namespace OOSvrBase
 	class CmdArgs
 	{
 	public:
-		bool add_option(const char* id, char short_opt = 0, bool has_value = false, const char* long_opt = 0);
-		bool add_argument(const char* id, int position);
+		void add_option(const char* id, char short_opt = 0, bool has_value = false, const char* long_opt = 0);
+		void add_argument(const char* id, int position);
 
-		bool parse(int argc, char* argv[], std::map<std::string,std::string>& results, int skip = 1) const;
+		typedef std::map<OOBase::string,OOBase::string,std::less<OOBase::string>,OOBase::CriticalAllocator<OOBase::string> > resultsType;
+		bool parse(int argc, char* argv[], resultsType& results, int skip = 1) const;
 
 	private:
 		struct Option
 		{
-			char        m_short_opt;
-			std::string m_long_opt;
-			bool        m_has_value;
+			char           m_short_opt;
+			OOBase::string m_long_opt;
+			bool           m_has_value;
 		};
 
-		mutable std::string               m_name;
-		std::multimap<std::string,Option> m_map_opts;
-		std::map<std::string,int>         m_map_args;
+		typedef std::multimap<OOBase::string,Option,std::less<OOBase::string>,OOBase::CriticalAllocator<OOBase::string> > optsType;
+		typedef std::map<OOBase::string,int,std::less<OOBase::string>,OOBase::CriticalAllocator<OOBase::string> > argsType;
 
-		bool parse_long_option(std::map<std::string,std::string>& results, char** argv, int& arg, int argc) const;
-		bool parse_short_options(std::map<std::string,std::string>& results, char** argv, int& arg, int argc) const;
-		void parse_arg(std::map<std::string,std::string>& results, const char* opt, int position) const;
+		mutable OOBase::string m_name;
+		optsType               m_map_opts;
+		argsType               m_map_args;
+
+		bool parse_long_option(resultsType& results, char** argv, int& arg, int argc) const;
+		bool parse_short_options(resultsType& results, char** argv, int& arg, int argc) const;
+		void parse_arg(resultsType& results, const char* opt, int position) const;
 	};
 }
 
