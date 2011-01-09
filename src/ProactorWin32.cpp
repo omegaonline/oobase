@@ -727,7 +727,7 @@ namespace
 		LPSECURITY_ATTRIBUTES                              m_psa;
 		size_t                                             m_async_count;
 		
-		int next_accept(bool bExclusive);
+		int next_accept(bool bFirstTime);
 		void do_accept(DWORD& dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
 	};
 
@@ -761,7 +761,7 @@ namespace
 		return next_accept(true);
 	}
 
-	int PipeAcceptor::next_accept(bool bExclusive)
+	int PipeAcceptor::next_accept(bool bFirstTime)
 	{
 		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 
@@ -770,35 +770,36 @@ namespace
 		if (m_closed)
 			return ERROR_PIPE_NOT_CONNECTED;
 
-		DWORD dwOpenMode = PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED;
+		bool bDoAccept = !bFirstTime;
 
-		if (bExclusive)
-			dwOpenMode |= FILE_FLAG_FIRST_PIPE_INSTANCE;
+		DWORD dwOpenFlags = PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED;
+		if (bFirstTime)
+			dwOpenFlags |= FILE_FLAG_FIRST_PIPE_INSTANCE;
 
 		DWORD dwErr = 0;
-		m_completion.m_hPipe = CreateNamedPipeA(m_pipe_name.c_str(),dwOpenMode,
+		HANDLE hPipe = CreateNamedPipeA(m_pipe_name.c_str(),dwOpenFlags,
 								   PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
 								   PIPE_UNLIMITED_INSTANCES,
-								   8192,8192,0,m_psa);
+								   0,0,0,m_psa);
 
-		if (!m_completion.m_hPipe.is_valid())
+		if (hPipe == INVALID_HANDLE_VALUE)
 			dwErr = GetLastError();
-
-		if (dwErr == 0)
+		else
 		{
 			memset(&m_completion.m_ov,0,sizeof(OVERLAPPED));
 			m_completion.m_ov.hEvent = ::CreateEvent(NULL,TRUE,FALSE,NULL);
 			if (!m_completion.m_ov.hEvent)
-			{
 				dwErr = GetLastError();
-				m_completion.m_hPipe.close();
-			}
+			else
+				m_completion.m_hPipe = hPipe;
 		}
 
 		if (dwErr == 0)
 		{
 			++m_async_count;
 			m_pProactor->addref();
+
+			bDoAccept = true;
 
 			if (!ConnectNamedPipe(m_completion.m_hPipe,&m_completion.m_ov))
 			{
@@ -811,21 +812,25 @@ namespace
 						return 0;
 					}
 					else
-						dwErr = GetLastError();
-					
-					m_completion.m_hPipe.close();
-					CloseHandle(m_completion.m_ov.hEvent);					
+						dwErr = GetLastError();			
 				}
 				
 				if (dwErr == ERROR_PIPE_CONNECTED)
 					dwErr = 0;
 			}
 
+			if (dwErr != 0)
+				m_completion.m_hPipe.close();
+
+			CloseHandle(m_completion.m_ov.hEvent);		
+
 			m_pProactor->release();
 			--m_async_count;
 		}
 
-		do_accept(dwErr,guard);
+		if (bDoAccept)
+			do_accept(dwErr,guard);
+
 		return dwErr;
 	}
 
