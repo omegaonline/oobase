@@ -590,7 +590,7 @@ namespace
 				}
 			}
 
-			OOBase::stack_string strAddress;
+			OOBase::local_string strAddress;
 			if (!err && new_fd != INVALID_SOCKET)
 			{
 				// Get the address...

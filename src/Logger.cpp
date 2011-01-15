@@ -86,7 +86,7 @@ namespace
 	};
 #endif
 
-	OOBase::string string_printf(const char* fmt, va_list args)
+	OOBase::local_string string_printf(const char* fmt, va_list args)
 	{
 		for (size_t len=256;;)
 		{
@@ -99,7 +99,7 @@ namespace
 				OOBase_CallCriticalFailure("vsnprintf_s failed");
 
 			if (static_cast<size_t>(len2) < len)
-				return OOBase::string(buf,len2);
+				return OOBase::local_string(buf,len2);
 
 			len = len2 + 1;
 		}
@@ -148,7 +148,7 @@ namespace
 			return;
 
 		// Create the relevant registry keys if they don't already exist
-		OOBase::stack_string strName = "SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\";
+		OOBase::local_string strName = "SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\";
 		strName += name;
 
 		HKEY hk;
@@ -190,7 +190,7 @@ namespace
 			break;
 		}
 
-		OOBase::string msg = string_printf(fmt,args);
+		OOBase::local_string msg = string_printf(fmt,args);
 
 #if !defined(_DEBUG)
 		if (m_hLog && priority != OOSvrBase::Logger::Debug)

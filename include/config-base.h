@@ -46,6 +46,12 @@
 // Bring in C++ standard libraries
 //
 #ifdef __cplusplus
+#include <limits>
+
+#if defined(max)
+#undef max
+#endif
+
 #include <string>
 #include <sstream>
 #include <iomanip>

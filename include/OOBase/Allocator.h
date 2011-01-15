@@ -24,9 +24,6 @@
 
 #include "../config-base.h"
 
-#include <limits>
-#include <sstream>
-
 #if defined(max)
 #undef max
 #endif
@@ -137,21 +134,8 @@ namespace OOBase
 		}
 	};
 
-	// return that all specializations of this allocator are interchangeable
-	template <typename T1, typename T2>
-	bool operator == (const CriticalAllocator<T1>&, const CriticalAllocator<T2>&) throw() 
-	{
-		return true;
-	}
-
-	template <typename T1, typename T2>
-	bool operator != (const CriticalAllocator<T1>&, const CriticalAllocator<T2>&) throw() 
-	{
-		return false;
-	}
-
 	template <typename T>
-	class StackAllocator
+	class LocalAllocator
 	{
 	public:
 		// type definitions
@@ -167,7 +151,7 @@ namespace OOBase
 		template <typename U>
 		struct rebind 
 		{
-			typedef StackAllocator<U> other;
+			typedef LocalAllocator<U> other;
 		};
 
 		// return address of values
@@ -183,23 +167,23 @@ namespace OOBase
 
 		// constructors and destructor
 		// - nothing to do because the allocator has no state
-		StackAllocator() throw() 
+		LocalAllocator() throw() 
 		{}
 
-		StackAllocator(const StackAllocator&) throw() 
+		LocalAllocator(const LocalAllocator&) throw() 
 		{}
 
 		template <typename U>
-		StackAllocator (const StackAllocator<U>&) throw() 
+		LocalAllocator (const LocalAllocator<U>&) throw() 
 		{}
 
 		template<typename U>
-		StackAllocator& operator = (const StackAllocator<U>&) throw()
+		LocalAllocator& operator = (const LocalAllocator<U>&) throw()
 		{
 			return *this;
 		}
 
-		~StackAllocator() throw() 
+		~LocalAllocator() throw() 
 		{}
 
 		// return maximum number of elements that can be allocated
@@ -229,9 +213,9 @@ namespace OOBase
 			if (!num)
 				return 0;
 
-			void* p = OOBase::Allocate(num*sizeof(T),2,"OOBase::StackAllocator::allocate()",0);
+			void* p = OOBase::Allocate(num*sizeof(T),2,"OOBase::LocalAllocator::allocate()",0);
 			if (!p)
-				::OOBase::CallCriticalFailureMem("OOBase::StackAllocator::allocate()",0);
+				::OOBase::CallCriticalFailureMem("OOBase::LocalAllocator::allocate()",0);
 
 			return static_cast<pointer>(p);
 		}
@@ -243,31 +227,49 @@ namespace OOBase
 				OOBase::Free(p,2);
 		}
 	};
+}
 
+namespace std
+{
 	// return that all specializations of this allocator are interchangeable
 	template <typename T1, typename T2>
-	bool operator == (const StackAllocator<T1>&, const StackAllocator<T2>&) throw() 
+	bool operator == (const OOBase::CriticalAllocator<T1>&, const OOBase::CriticalAllocator<T2>&) throw() 
 	{
 		return true;
 	}
 
 	template <typename T1, typename T2>
-	bool operator != (const StackAllocator<T1>&, const StackAllocator<T2>&) throw() 
+	bool operator != (const OOBase::CriticalAllocator<T1>&, const OOBase::CriticalAllocator<T2>&) throw() 
 	{
 		return false;
 	}
 
+	// return that all specializations of this allocator are interchangeable
+	template <typename T1, typename T2>
+	bool operator == (const OOBase::LocalAllocator<T1>&, const OOBase::LocalAllocator<T2>&) throw() 
+	{
+		return true;
+	}
+
+	template <typename T1, typename T2>
+	bool operator != (const OOBase::LocalAllocator<T1>&, const OOBase::LocalAllocator<T2>&) throw() 
+	{
+		return false;
+	}
+}
+
+namespace OOBase
+{
 	// Some useful typedefs
-	typedef std::basic_string<char, std::char_traits<char>, CriticalAllocator<char> > string;
-	typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, CriticalAllocator<wchar_t> > wstring;
+	typedef std::basic_string<char, std::char_traits<char>, OOBase::CriticalAllocator<char> > string;
+	typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, OOBase::CriticalAllocator<wchar_t> > wstring;
 
-	typedef std::basic_string<char, std::char_traits<char>, StackAllocator<char> > stack_string;
-	typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, StackAllocator<wchar_t> > stack_wstring;
+	typedef std::basic_ostringstream<char, std::char_traits<char>, OOBase::CriticalAllocator<char> > ostringstream;
 
-	typedef std::basic_ostringstream<char, std::char_traits<char>, CriticalAllocator<char> > ostringstream;
+	typedef std::basic_string<char, std::char_traits<char>, OOBase::LocalAllocator<char> > local_string;
+	typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, OOBase::LocalAllocator<wchar_t> > local_wstring;
 
 	string system_error_text(int err);
-	
 }
 
 #endif // OOBASE_ALLOCATOR_H_INCLUDED_
