@@ -26,19 +26,19 @@
 
 #if defined(DOXYGEN)
 
-/* Define to if you have atomic exchange for 32bit values */
+/* Define if you have atomic exchange for 32bit values */
 #define ATOMIC_EXCH_32(t,v)
 
-/* Define to if you have atomic inc and dec for 32bit values */
+/* Define if you have atomic inc and dec for 32bit values */
 #define ATOMIC_INC_32(t)
 #define ATOMIC_DEC_32(t)
 #define ATOMIC_ADD_32(t,v)
 #define ATOMIC_SUB_32(t,v)
 
-/* Define to if you have atomic exchange for 64bit values */
+/* Define if you have atomic exchange for 64bit values */
 #define ATOMIC_EXCH_64(t,v)
 
-/* Define to if you have atomic exchange for 64bit values */
+/* Define if you have atomic exchange for 64bit values */
 #define ATOMIC_INC_64(t)
 #define ATOMIC_DEC_64(t)
 #define ATOMIC_ADD_64(t,v)
@@ -48,19 +48,19 @@
 
 #include <intrin.h>
 
-/* Define to if you have atomic exchange for 32bit values */
+/* Define if you have atomic exchange for 32bit values */
 #define ATOMIC_EXCH_32(t,v) _InterlockedExchange((long volatile*)(t),(long)(v))
 
-/* Define to if you have atomic inc and dec for 32bit values */
+/* Define if you have atomic inc and dec for 32bit values */
 #define ATOMIC_INC_32(t) _InterlockedIncrement((long volatile*)(t))
 #define ATOMIC_DEC_32(t) _InterlockedDecrement((long volatile*)(t))
 #define ATOMIC_ADD_32(t,v) _InterlockedExchangeAdd((long volatile*)(t),(long)(v))
 #define ATOMIC_SUB_32(t,v) _InterlockedExchangeAdd((long volatile*)(t),-(long)(v))
 
-/* Define to if you have atomic exchange for 64bit values */
+/* Define if you have atomic exchange for 64bit values */
 #define ATOMIC_EXCH_64(t,v) _InterlockedExchange64((__int64 volatile*)(t),(__int64)(v))
 
-/* Define to if you have atomic exchange for 64bit values */
+/* Define if you have atomic exchange for 64bit values */
 #define ATOMIC_INC_64(t) _InterlockedIncrement64((__int64 volatile*)(t))
 #define ATOMIC_DEC_64(t) _InterlockedDecrement64((__int64 volatile*)(t))
 #define ATOMIC_ADD_64(t,v) _InterlockedExchangeAdd64((__int64 volatile*)(t),(__int64)(v))
@@ -68,20 +68,20 @@
 
 #elif defined(_WIN32)
 
-/* Define to if you have atomic exchange for 32bit values */
+/* Define if you have atomic exchange for 32bit values */
 #define ATOMIC_EXCH_32(t,v) InterlockedExchange((LONG volatile*)(t),(LONG)(v))
 
-/* Define to if you have atomic inc and dec for 32bit values */
+/* Define if you have atomic inc and dec for 32bit values */
 #define ATOMIC_INC_32(t) InterlockedIncrement((LONG volatile*)(t))
 #define ATOMIC_DEC_32(t) InterlockedDecrement((LONG volatile*)(t))
 #define ATOMIC_ADD_32(t,v) InterlockedExchangeAdd((LONG volatile*)(t),(LONG)(v))
 #define ATOMIC_SUB_32(t,v) InterlockedExchangeAdd((LONG volatile*)(t),-(LONG)(v))
 
 #if (WINVER >= 0x0501)
-/* Define to if you have atomic exchange for 64bit values */
+/* Define if you have atomic exchange for 64bit values */
 #define ATOMIC_EXCH_64(t,v) InterlockedExchange64((LONGLONG volatile*)(t),(LONGLONG)(v))
 
-/* Define to if you have atomic exchange for 64bit values */
+/* Define if you have atomic exchange for 64bit values */
 #define ATOMIC_INC_64(t) InterlockedIncrement64((LONGLONG volatile*)(t))
 #define ATOMIC_DEC_64(t) InterlockedDecrement64((LONGLONG volatile*)(t))
 #define ATOMIC_ADD_64(t,v) InterlockedExchangeAdd64((LONGLONG volatile*)(t),(LONGLONG)(v))
@@ -91,21 +91,21 @@
 
 #elif defined(HAVE___SYNC_TEST_AND_SET)
 
-/* Define to if you have atomic exchange for 32bit values */
+/* Define if you have atomic exchange for 32bit values */
 #define ATOMIC_EXCH_32(t,v) __sync_lock_test_and_set((int volatile*)(t),v)
 
-/* Define to if you have atomic exchange for 64bit values */
+/* Define if you have atomic exchange for 64bit values */
 #define ATOMIC_EXCH_64(t,v) __sync_lock_test_and_set((long long volatile*)(t),v)
 
 #if defined(HAVE___SYNC_ADD_AND_FETCH)
 
-/* Define to if you have atomic inc and dec for 32bit values */
+/* Define if you have atomic inc and dec for 32bit values */
 #define ATOMIC_INC_32(t) __sync_add_and_fetch((int*)(t),1)
 #define ATOMIC_DEC_32(t) __sync_sub_and_fetch((int*)(t),1)
 #define ATOMIC_ADD_32(t,v) __sync_add_and_fetch((int volatile*)(t),v)
 #define ATOMIC_SUB_32(t,v) __sync_sub_and_fetch((int volatile*)(t),v)
 
-/* Define to if you have atomic exchange for 64bit values */
+/* Define if you have atomic exchange for 64bit values */
 #define ATOMIC_INC_64(t) __sync_add_and_fetch((long long volatile*)(t),1)
 #define ATOMIC_DEC_64(t) __sync_sub_and_fetch((long long volatile*)(t),1)
 #define ATOMIC_ADD_64(t,v) __sync_add_and_fetch((long long volatile*)(t),v)
