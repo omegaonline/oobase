@@ -82,6 +82,19 @@ namespace OOBase
 		~CriticalAllocator() throw() 
 		{}
 
+		// return that all specializations of this allocator are interchangeable
+		template <typename U>
+		bool operator == (const CriticalAllocator<U>&) const throw() 
+		{
+			return true;
+		}
+
+		template <typename U>
+		bool operator != (const CriticalAllocator<U>&) const throw() 
+		{
+			return false;
+		}
+
 		// return maximum number of elements that can be allocated
 		size_type max_size() const throw() 
 		{
@@ -186,6 +199,19 @@ namespace OOBase
 		~LocalAllocator() throw() 
 		{}
 
+		// return that all specializations of this allocator are interchangeable
+		template <typename U>
+		bool operator == (const LocalAllocator<U>&) const throw() 
+		{
+			return true;
+		}
+
+		template <typename U>
+		bool operator != (const LocalAllocator<U>&) const throw() 
+		{
+			return false;
+		}
+
 		// return maximum number of elements that can be allocated
 		size_type max_size() const throw() 
 		{
@@ -227,39 +253,7 @@ namespace OOBase
 				OOBase::Free(p,2);
 		}
 	};
-}
 
-namespace std
-{
-	// return that all specializations of this allocator are interchangeable
-	template <typename T1, typename T2>
-	bool operator == (const OOBase::CriticalAllocator<T1>&, const OOBase::CriticalAllocator<T2>&) throw() 
-	{
-		return true;
-	}
-
-	template <typename T1, typename T2>
-	bool operator != (const OOBase::CriticalAllocator<T1>&, const OOBase::CriticalAllocator<T2>&) throw() 
-	{
-		return false;
-	}
-
-	// return that all specializations of this allocator are interchangeable
-	template <typename T1, typename T2>
-	bool operator == (const OOBase::LocalAllocator<T1>&, const OOBase::LocalAllocator<T2>&) throw() 
-	{
-		return true;
-	}
-
-	template <typename T1, typename T2>
-	bool operator != (const OOBase::LocalAllocator<T1>&, const OOBase::LocalAllocator<T2>&) throw() 
-	{
-		return false;
-	}
-}
-
-namespace OOBase
-{
 	// Some useful typedefs
 	typedef std::basic_string<char, std::char_traits<char>, OOBase::CriticalAllocator<char> > string;
 	typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, OOBase::CriticalAllocator<wchar_t> > wstring;
