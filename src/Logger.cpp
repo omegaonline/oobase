@@ -86,11 +86,20 @@ namespace
 	};
 #endif
 
-	OOBase::local_string string_printf(const char* fmt, va_list args)
+	class CrtFreeDestructor
+	{
+	public:
+		static void destroy(void* ptr)
+		{
+			::free(ptr);
+		}
+	};
+
+	std::string string_printf(const char* fmt, va_list args)
 	{
 		for (size_t len=256;;)
 		{
-			OOBase::SmartPtr<char,OOBase::FreeDestructor<2> > buf = static_cast<char*>(OOBase::Allocate(len,2,__FILE__,__LINE__));
+			OOBase::SmartPtr<char,CrtFreeDestructor> buf = static_cast<char*>(::malloc(len));
 			if (!buf)
 				OOBase::CallCriticalFailureMem(__FILE__,__LINE__-2);
 
@@ -98,8 +107,15 @@ namespace
 			if (len2 < 0)
 				OOBase_CallCriticalFailure("vsnprintf_s failed");
 
-			if (static_cast<size_t>(len2) < len)
-				return OOBase::local_string(buf,len2);
+			try
+			{
+				if (static_cast<size_t>(len2) < len)
+					return std::string(buf,len2);
+			}
+			catch (std::exception& e)
+			{
+				OOBase_CallCriticalFailure(e.what());
+			}
 
 			len = len2 + 1;
 		}
@@ -148,8 +164,16 @@ namespace
 			return;
 
 		// Create the relevant registry keys if they don't already exist
-		OOBase::local_string strName = "SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\";
-		strName += name;
+		std::string strName;
+		try
+		{
+			strName = "SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\";
+			strName += name;
+		}
+		catch (std::exception& e)
+		{
+			OOBase_CallCriticalFailure(e.what());
+		}
 
 		HKEY hk;
 		DWORD dwDisp;
@@ -190,7 +214,7 @@ namespace
 			break;
 		}
 
-		OOBase::local_string msg = string_printf(fmt,args);
+		std::string msg = string_printf(fmt,args);
 
 #if !defined(_DEBUG)
 		if (m_hLog && priority != OOSvrBase::Logger::Debug)
@@ -202,7 +226,26 @@ namespace
 			
 			if (OpenProcessToken(GetCurrentProcess(),TOKEN_QUERY,&hProcessToken))
 			{
-				OOBase::SmartPtr<TOKEN_USER,OOBase::FreeDestructor<1> > ptrSIDProcess = static_cast<TOKEN_USER*>(OOSvrBase::Win32::GetTokenInfo(hProcessToken,TokenUser));
+				OOBase::SmartPtr<TOKEN_USER,CrtFreeDestructor> ptrSIDProcess;
+				for (DWORD dwLen = 256;;)
+				{
+					ptrSIDProcess = static_cast<TOKEN_USER*>(::malloc(dwLen));
+					if (!ptrSIDProcess)
+						break;
+
+					if (GetTokenInformation(hProcessToken,TokenUser,ptrSIDProcess,dwLen,&dwLen))
+						break;
+
+					DWORD err = GetLastError();
+
+					ptrSIDProcess = 0;
+
+					SetLastError(err);
+						
+					if (err != ERROR_INSUFFICIENT_BUFFER)
+						break;
+				}
+
 				if (ptrSIDProcess)
 					psid = ptrSIDProcess->User.Sid;
 			}
@@ -337,10 +380,17 @@ void OOSvrBase::Logger::filenum_t::log(const char* fmt, ...)
 	va_list args;
 	va_start(args,fmt);
 
-	OOBase::ostringstream out;
-	out << "[" << getpid() << "] " << m_pszFilename << "(" << m_nLine << "): " << fmt;
+	try
+	{
+		std::ostringstream out;
+		out << "[" << getpid() << "] " << m_pszFilename << "(" << m_nLine << "): " << fmt;
 
-	LOGGER::instance().log(m_priority,out.str().c_str(),args);
+		LOGGER::instance().log(m_priority,out.str().c_str(),args);
+	}
+	catch (std::exception& e)
+	{
+		OOBase_CallCriticalFailure(e.what());
+	}
 
 	va_end(args);
 }
