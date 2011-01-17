@@ -26,8 +26,8 @@
 
 #if defined(DOXYGEN)
 
-/* Define if you have atomic exchange for 32bit values */
-#define ATOMIC_EXCH_32(t,v)
+/* Define if you have atomic compare-and-swap for 32bit values */
+#define ATOMIC_CAS_32(t,v)
 
 /* Define if you have atomic inc and dec for 32bit values */
 #define ATOMIC_INC_32(t)
@@ -35,10 +35,10 @@
 #define ATOMIC_ADD_32(t,v)
 #define ATOMIC_SUB_32(t,v)
 
-/* Define if you have atomic exchange for 64bit values */
-#define ATOMIC_EXCH_64(t,v)
+/* Define if you have atomic compare-and-swap for 64bit values */
+#define ATOMIC_CAS_64(t,v)
 
-/* Define if you have atomic exchange for 64bit values */
+/* Define if you have atomic compare-and-swap for 64bit values */
 #define ATOMIC_INC_64(t)
 #define ATOMIC_DEC_64(t)
 #define ATOMIC_ADD_64(t,v)
@@ -48,8 +48,8 @@
 
 #include <intrin.h>
 
-/* Define if you have atomic exchange for 32bit values */
-#define ATOMIC_EXCH_32(t,v) _InterlockedExchange((long volatile*)(t),(long)(v))
+/* Define if you have atomic compare-and-swap for 32bit values */
+#define ATOMIC_CAS_32(t,c,x) _InterlockedCompareExchange((long volatile*)(t),(long)(x),(long)(c))
 
 /* Define if you have atomic inc and dec for 32bit values */
 #define ATOMIC_INC_32(t) _InterlockedIncrement((long volatile*)(t))
@@ -57,19 +57,39 @@
 #define ATOMIC_ADD_32(t,v) _InterlockedExchangeAdd((long volatile*)(t),(long)(v))
 #define ATOMIC_SUB_32(t,v) _InterlockedExchangeAdd((long volatile*)(t),-(long)(v))
 
-/* Define if you have atomic exchange for 64bit values */
-#define ATOMIC_EXCH_64(t,v) _InterlockedExchange64((__int64 volatile*)(t),(__int64)(v))
+/* Define if you have atomic compare-and-swap for 64bit values */
+#define ATOMIC_CAS_64(t,c,x) _InterlockedCompareExchange64((__int64 volatile*)(t),(__int64)(x),(__int64)(c))
 
-/* Define if you have atomic exchange for 64bit values */
+/* Define if you have atomic compare-and-swap for 64bit values */
 #define ATOMIC_INC_64(t) _InterlockedIncrement64((__int64 volatile*)(t))
 #define ATOMIC_DEC_64(t) _InterlockedDecrement64((__int64 volatile*)(t))
 #define ATOMIC_ADD_64(t,v) _InterlockedExchangeAdd64((__int64 volatile*)(t),(__int64)(v))
 #define ATOMIC_SUB_64(t,v) _InterlockedExchangeAdd64((__int64 volatile*)(t),-(__int64)(v))
 
+#elif defined(HAVE___SYNC_VAL_COMPARE_AND_SWAP)
+
+/* Define if you have atomic compare-and-swap for 32bit values */
+#define ATOMIC_CAS_32(t,c,x) __sync_val_compare_and_swap((int volatile*)(t),c,x)
+
+/* Define if you have atomic compare-and-swap for 64bit values */
+#define ATOMIC_CAS_64(t,c,x)  __sync_val_compare_and_swap((long long*)(t),c,x)
+
+/* Define if you have atomic inc and dec for 32bit values */
+#define ATOMIC_INC_32(t) __sync_add_and_fetch((int*)(t),1)
+#define ATOMIC_DEC_32(t) __sync_sub_and_fetch((int*)(t),-1)
+#define ATOMIC_ADD_32(t,v) __sync_add_and_fetch((int volatile*)(t),v)
+#define ATOMIC_SUB_32(t,v) __sync_sub_and_fetch((int volatile*)(t),-v)
+
+/* Define if you have atomic inc and dec for 64bit values */
+#define ATOMIC_INC_64(t) __sync_add_and_fetch((long long volatile*)(t),1)
+#define ATOMIC_DEC_64(t) __sync_sub_and_fetch((long long volatile*)(t),1)
+#define ATOMIC_ADD_64(t,v) __sync_add_and_fetch((long long volatile*)(t),v)
+#define ATOMIC_SUB_64(t,v) __sync_sub_and_fetch((long long volatile*)(t),v)
+
 #elif defined(_WIN32)
 
-/* Define if you have atomic exchange for 32bit values */
-#define ATOMIC_EXCH_32(t,v) InterlockedExchange((LONG volatile*)(t),(LONG)(v))
+/* Define if you have atomic compare-and-swap for 32bit values */
+#define ATOMIC_CAS_32(t,c,x) InterlockedCompareExchange((long volatile*)(t),(long)(x),(long)(c))
 
 /* Define if you have atomic inc and dec for 32bit values */
 #define ATOMIC_INC_32(t) InterlockedIncrement((LONG volatile*)(t))
@@ -77,11 +97,11 @@
 #define ATOMIC_ADD_32(t,v) InterlockedExchangeAdd((LONG volatile*)(t),(LONG)(v))
 #define ATOMIC_SUB_32(t,v) InterlockedExchangeAdd((LONG volatile*)(t),-(LONG)(v))
 
-#if (WINVER >= 0x0501)
-/* Define if you have atomic exchange for 64bit values */
-#define ATOMIC_EXCH_64(t,v) InterlockedExchange64((LONGLONG volatile*)(t),(LONGLONG)(v))
+#if (WINVER >= 0x0502)
+/* Define if you have atomic compare-and-swap for 64bit values */
+#define ATOMIC_CAS_64(t,c,x) InterlockedCompareExchange64((LONGLONG volatile*)(t),(LONGLONG)(x),(LONGLONG)(c))
 
-/* Define if you have atomic exchange for 64bit values */
+/* Define if you have atomic compare-and-swap for 64bit values */
 #define ATOMIC_INC_64(t) InterlockedIncrement64((LONGLONG volatile*)(t))
 #define ATOMIC_DEC_64(t) InterlockedDecrement64((LONGLONG volatile*)(t))
 #define ATOMIC_ADD_64(t,v) InterlockedExchangeAdd64((LONGLONG volatile*)(t),(LONGLONG)(v))
@@ -89,35 +109,18 @@
 
 #endif // WINVER >= 0x0502
 
-#elif defined(HAVE___SYNC_TEST_AND_SET)
+#endif // defined(HAVE___SYNC_VAL_COMPARE_AND_SWAP)
 
-/* Define if you have atomic exchange for 32bit values */
-#define ATOMIC_EXCH_32(t,v) __sync_lock_test_and_set((int volatile*)(t),v)
-
-/* Define if you have atomic exchange for 64bit values */
-#define ATOMIC_EXCH_64(t,v) __sync_lock_test_and_set((long long volatile*)(t),v)
-
-#if defined(HAVE___SYNC_ADD_AND_FETCH)
-
-/* Define if you have atomic inc and dec for 32bit values */
-#define ATOMIC_INC_32(t) __sync_add_and_fetch((int*)(t),1)
-#define ATOMIC_DEC_32(t) __sync_sub_and_fetch((int*)(t),1)
-#define ATOMIC_ADD_32(t,v) __sync_add_and_fetch((int volatile*)(t),v)
-#define ATOMIC_SUB_32(t,v) __sync_sub_and_fetch((int volatile*)(t),v)
-
-/* Define if you have atomic exchange for 64bit values */
-#define ATOMIC_INC_64(t) __sync_add_and_fetch((long long volatile*)(t),1)
-#define ATOMIC_DEC_64(t) __sync_sub_and_fetch((long long volatile*)(t),1)
-#define ATOMIC_ADD_64(t,v) __sync_add_and_fetch((long long volatile*)(t),v)
-#define ATOMIC_SUB_64(t,v) __sync_sub_and_fetch((long long volatile*)(t),v)
-
-#endif // defined(HAVE___SYNC_ADD_AND_FETCH)
-
-#endif
 namespace OOBase
 {
 	namespace detail
 	{
+		template <typename T, const size_t S> 
+		struct CASImpl;
+
+		template <typename T, const size_t S> 
+		struct AtomicIncImpl;
+
 		template <typename T>
 		class AtomicValImpl_Raw
 		{
@@ -237,6 +240,24 @@ namespace OOBase
 	}
 
 	template <typename T>
+	inline T CompareAndSwap(T& val, T cmp, T exch)
+	{
+		return detail::CASImpl<T,sizeof(T)>::CAS(val,cmp,exch);
+	}
+
+	template <typename T> 
+	inline T AtomicIncrement(T& v)
+	{
+		return detail::AtomicIncImpl<T,sizeof(T)>::Inc(v);
+	}
+
+	template <typename T> 
+	inline T AtomicDecrement(T& v)
+	{
+		return detail::AtomicIncImpl<T,sizeof(T)>::Dec(v);
+	}
+
+	template <typename T>
 	class AtomicVal : public detail::AtomicValImpl<T,sizeof(T)>
 	{
 	public:
@@ -305,7 +326,8 @@ namespace OOBase
 		}
 	};
 
-#if defined(ATOMIC_EXCH_32)
+#if defined(ATOMIC_CAS_32)
+
 	namespace detail
 	{
 		template <typename T>
@@ -317,14 +339,19 @@ namespace OOBase
 
 			AtomicValImpl& operator = (T v)
 			{
-				ATOMIC_EXCH_32(&m_val,v);
+				for (T v1 = m_val;(v1 = ATOMIC_CAS_32(&m_val,v1,v)) != v;)
+					;
+
 				return *this;
 			}
 
 			AtomicValImpl& operator = (const AtomicValImpl& rhs)
 			{
 				if (this != &rhs)
-					ATOMIC_EXCH_32(&m_val,rhs.m_val);
+				{
+					for (T v1 = m_val;(v1 = ATOMIC_CAS_32(&m_val,v1,rhs.m_val)) != rhs.m_val;)
+						;
+				}
 
 				return *this;
 			}
@@ -344,10 +371,20 @@ namespace OOBase
 
 			volatile T m_val;
 		};
-	}
-#endif // ATOMIC_EXCH_32
 
-#if defined(ATOMIC_EXCH_64)
+		template <typename T> 
+		struct CASImpl<T,4>
+		{
+			static T CAS(T& v, T cmp, T exch)
+			{
+				return ATOMIC_CAS_32(&v,cmp,exch);
+			}
+		};
+	}
+
+#endif // ATOMIC_CAS_32
+
+#if defined(ATOMIC_CAS_64)
 	namespace detail
 	{
 		template <typename T>
@@ -359,14 +396,19 @@ namespace OOBase
 
 			AtomicValImpl& operator = (T v)
 			{
-				ATOMIC_EXCH_64(&m_val,v);
+				for (T v1 = m_val;(v1 = ATOMIC_CAS_64(&m_val,v1,v)) != v;)
+					;
+
 				return *this;
 			}
 
 			AtomicValImpl& operator = (const AtomicValImpl& rhs)
 			{
 				if (this != &rhs)
-					ATOMIC_EXCH_64(&m_val,rhs.m_val);
+				{
+					for (T v1 = m_val;(v1 = ATOMIC_CAS_64(&m_val,v1,rhs.m_val)) != rhs.m_val;)
+						;
+				}
 
 				return *this;
 			}
@@ -386,8 +428,18 @@ namespace OOBase
 
 			volatile T m_val;
 		};
+
+		template <typename T> 
+		struct CASImpl<T,8>
+		{
+			static T CAS(T& v, T cmp, T exch)
+			{
+				return ATOMIC_CAS_64(&v,cmp,exch);
+			}
+		};
 	}
-#endif // ATOMIC_EXCH_64
+
+#endif // ATOMIC_CAS_64
 
 #if defined(ATOMIC_INC_32)
 	namespace detail
@@ -428,6 +480,20 @@ namespace OOBase
 			T operator --()
 			{
 				return ATOMIC_DEC_32(&this->m_val);
+			}
+		};
+
+		template <typename T> 
+		struct AtomicIncImpl<T,4>
+		{
+			static T Inc(T& v)
+			{
+				return ATOMIC_INC_32(&v);
+			}
+
+			static T Dec(T& v)
+			{
+				return ATOMIC_DEC_32(&v);
 			}
 		};
 	}
@@ -472,6 +538,20 @@ namespace OOBase
 			T operator --()
 			{
 				return ATOMIC_DEC_64(&this->m_val);
+			}
+		};
+
+		template <typename T> 
+		struct AtomicIncImpl<T,8>
+		{
+			static T Inc(T& v)
+			{
+				return ATOMIC_INC_32(&v);
+			}
+
+			static T Dec(T& v)
+			{
+				return ATOMIC_DEC_32(&v);
 			}
 		};
 	}

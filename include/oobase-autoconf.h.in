@@ -57,11 +57,8 @@
 /* Define to 1 if you have the __builtin_bswap64 compiler intrinsic */
 #undef HAVE___BUILTIN_BSWAP64
 
-/* Define to 1 if you have the __sync_add_and_fetch compiler intrinsic */
-#undef HAVE___SYNC_ADD_AND_FETCH
-
-/* Define to 1 if you have the __sync_lock_test_and_set compiler intrinsic */
-#undef HAVE___SYNC_TEST_AND_SET
+/* Define to 1 if you have the __sync_val_compare_and_swap compiler intrinsic */
+#undef HAVE___SYNC_VAL_COMPARE_AND_SWAP
 
 /* Define to necessary symbol if this constant uses a non-standard name on
    your system. */
