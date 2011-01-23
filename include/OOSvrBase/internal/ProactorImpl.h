@@ -141,9 +141,9 @@ namespace OOSvrBase
 
 			virtual ~AsyncSocketImpl();
 
-			AsyncQueued               m_receiver;
-			AsyncQueued               m_sender;
-			OOBase::AtomicInt<size_t> m_refcount;
+			AsyncQueued            m_receiver;
+			AsyncQueued            m_sender;
+			OOBase::Atomic<size_t> m_refcount;
 			
 			void on_recv(AsyncIOHelper::AsyncOp* recv_op, int err, bool bLast);
 			void on_sent(AsyncIOHelper::AsyncOp* send_op, int err);

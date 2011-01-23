@@ -51,20 +51,24 @@
 /* Define if you have atomic compare-and-swap for 32bit values */
 #define ATOMIC_CAS_32(t,c,x) _InterlockedCompareExchange((long volatile*)(t),(long)(x),(long)(c))
 
+/* Define if you have atomic exchange for 32bit values */
+#define ATOMIC_EXCH_32(t,v) _InterlockedExchange((long volatile*)(t),(long)(v))
+
 /* Define if you have atomic inc and dec for 32bit values */
 #define ATOMIC_INC_32(t) _InterlockedIncrement((long volatile*)(t))
 #define ATOMIC_DEC_32(t) _InterlockedDecrement((long volatile*)(t))
 #define ATOMIC_ADD_32(t,v) _InterlockedExchangeAdd((long volatile*)(t),(long)(v))
-#define ATOMIC_SUB_32(t,v) _InterlockedExchangeAdd((long volatile*)(t),-(long)(v))
 
 /* Define if you have atomic compare-and-swap for 64bit values */
 #define ATOMIC_CAS_64(t,c,x) _InterlockedCompareExchange64((__int64 volatile*)(t),(__int64)(x),(__int64)(c))
+
+/* Define if you have atomic exchange for 64bit values */
+#define ATOMIC_EXCH_64(t,v) _InterlockedExchange64((__int64 volatile*)(t),(__int64)(v))
 
 /* Define if you have atomic compare-and-swap for 64bit values */
 #define ATOMIC_INC_64(t) _InterlockedIncrement64((__int64 volatile*)(t))
 #define ATOMIC_DEC_64(t) _InterlockedDecrement64((__int64 volatile*)(t))
 #define ATOMIC_ADD_64(t,v) _InterlockedExchangeAdd64((__int64 volatile*)(t),(__int64)(v))
-#define ATOMIC_SUB_64(t,v) _InterlockedExchangeAdd64((__int64 volatile*)(t),-(__int64)(v))
 
 #elif defined(HAVE___SYNC_VAL_COMPARE_AND_SWAP)
 
@@ -75,14 +79,10 @@
 #define ATOMIC_CAS_64(t,c,x)  __sync_val_compare_and_swap((long long*)(t),c,x)
 
 /* Define if you have atomic inc and dec for 32bit values */
-#define ATOMIC_INC_32(t) __sync_add_and_fetch((int*)(t),1)
-#define ATOMIC_DEC_32(t) __sync_sub_and_fetch((int*)(t),-1)
 #define ATOMIC_ADD_32(t,v) __sync_add_and_fetch((int volatile*)(t),v)
 #define ATOMIC_SUB_32(t,v) __sync_sub_and_fetch((int volatile*)(t),-v)
 
 /* Define if you have atomic inc and dec for 64bit values */
-#define ATOMIC_INC_64(t) __sync_add_and_fetch((long long volatile*)(t),1)
-#define ATOMIC_DEC_64(t) __sync_sub_and_fetch((long long volatile*)(t),1)
 #define ATOMIC_ADD_64(t,v) __sync_add_and_fetch((long long volatile*)(t),v)
 #define ATOMIC_SUB_64(t,v) __sync_sub_and_fetch((long long volatile*)(t),v)
 
@@ -91,21 +91,25 @@
 /* Define if you have atomic compare-and-swap for 32bit values */
 #define ATOMIC_CAS_32(t,c,x) InterlockedCompareExchange((long volatile*)(t),(long)(x),(long)(c))
 
+/* Define if you have atomic exchange for 32bit values */
+#define ATOMIC_EXCH_32(t,v) InterlockedExchange((long volatile*)(t),(long)(v))
+
 /* Define if you have atomic inc and dec for 32bit values */
 #define ATOMIC_INC_32(t) InterlockedIncrement((LONG volatile*)(t))
 #define ATOMIC_DEC_32(t) InterlockedDecrement((LONG volatile*)(t))
 #define ATOMIC_ADD_32(t,v) InterlockedExchangeAdd((LONG volatile*)(t),(LONG)(v))
-#define ATOMIC_SUB_32(t,v) InterlockedExchangeAdd((LONG volatile*)(t),-(LONG)(v))
 
 #if (WINVER >= 0x0502)
 /* Define if you have atomic compare-and-swap for 64bit values */
 #define ATOMIC_CAS_64(t,c,x) InterlockedCompareExchange64((LONGLONG volatile*)(t),(LONGLONG)(x),(LONGLONG)(c))
 
+/* Define if you have atomic exchange for 64bit values */
+#define ATOMIC_EXCH_64(t,v) InterlockedExchange64((LONGLONG volatile*)(t),(LONGLONG)(v))
+
 /* Define if you have atomic compare-and-swap for 64bit values */
 #define ATOMIC_INC_64(t) InterlockedIncrement64((LONGLONG volatile*)(t))
 #define ATOMIC_DEC_64(t) InterlockedDecrement64((LONGLONG volatile*)(t))
 #define ATOMIC_ADD_64(t,v) InterlockedExchangeAdd64((LONGLONG volatile*)(t),(LONGLONG)(v))
-#define ATOMIC_SUB_64(t,v) InterlockedExchangeAdd64((LONGLONG volatile*)(t),-(LONGLONG)(v))
 
 #endif // WINVER >= 0x0502
 
@@ -116,446 +120,241 @@ namespace OOBase
 	namespace detail
 	{
 		template <typename T, const size_t S> 
-		struct CASImpl;
-
-		template <typename T, const size_t S> 
-		struct AtomicIncImpl;
-
-		template <typename T>
-		class AtomicValImpl_Raw
-		{
-		public:
-			AtomicValImpl_Raw(T v) : m_val(v) {}
-			AtomicValImpl_Raw(const AtomicValImpl_Raw& rhs) : m_val(rhs.value()) {}
-
-			AtomicValImpl_Raw& operator = (const AtomicValImpl_Raw& rhs)
-			{
-				if (this != &rhs)
-				{
-					Guard<SpinLock> guard(m_lock);
-					m_val = rhs.value();
-				}
-
-				return *this;
-			}
-
-			AtomicValImpl_Raw& operator = (T rhs)
-			{
-				Guard<SpinLock> guard(m_lock);
-				m_val = rhs;
-				return *this;
-			}
-
-			operator T () const
-			{
-				return value();
-			}
-
-		protected:
-			AtomicValImpl_Raw() {}
-
-			T value() const
-			{
-				Guard<SpinLock> guard(m_lock);
-				return m_val;
-			}
-
-			mutable SpinLock m_lock;
-			T                m_val;
-		};
-
-		template <typename T, const size_t S>
-		class AtomicValImpl : public AtomicValImpl_Raw<T>
-		{
-		public:
-			AtomicValImpl(T v) : AtomicValImpl_Raw<T>(v) {}
-			AtomicValImpl(const AtomicValImpl& rhs) : AtomicValImpl_Raw<T>(rhs.value()) {}
-
-			AtomicValImpl& operator = (const AtomicValImpl& rhs)
-			{
-				if (this != &rhs)
-					AtomicValImpl_Raw<T>::operator = (rhs);
-
-				return *this;
-			}
-
-			AtomicValImpl& operator = (T rhs)
-			{
-				AtomicValImpl_Raw<T>::operator = (rhs);
-				return *this;
-			}
-
-		private:
-			AtomicValImpl();
-		};
-
-		template <typename T, const size_t S>
-		class AtomicIntImpl : public AtomicValImpl_Raw<T>
-		{
-		public:
-			AtomicIntImpl() : AtomicValImpl_Raw<T>(T(0)) {}
-			AtomicIntImpl(T v) : AtomicValImpl_Raw<T>(v) {}
-			AtomicIntImpl(const AtomicIntImpl& rhs) : AtomicValImpl_Raw<T>(rhs.value()) {}
-
-			AtomicIntImpl& operator = (const AtomicIntImpl& rhs)
-			{
-				if (this != &rhs)
-					AtomicValImpl_Raw<T>::operator = (rhs);
-
-				return *this;
-			}
-
-			AtomicIntImpl& operator = (T rhs)
-			{
-				AtomicValImpl_Raw<T>::operator = (rhs);
-				return *this;
-			}
-
-			AtomicIntImpl& operator += (T v)
-			{
-				Guard<SpinLock> guard(this->m_lock);
-				this->m_val += v;
-				return *this;
-			}
-
-			AtomicIntImpl& operator -= (T v)
-			{
-				Guard<SpinLock> guard(this->m_lock);
-				this->m_val -= v;
-				return *this;
-			}
-
-			T operator ++()
-			{
-				Guard<SpinLock> guard(this->m_lock);
-				return ++this->m_val;
-			}
-
-			T operator --()
-			{
-				Guard<SpinLock> guard(this->m_lock);
-				return --this->m_val;
-			}
-		};
+		struct AtomicImpl;
 	}
-
+		
 	template <typename T>
-	inline T CompareAndSwap(T& val, T cmp, T exch)
-	{
-		return detail::CASImpl<T,sizeof(T)>::CAS(val,cmp,exch);
-	}
-
-	template <typename T> 
-	inline T AtomicIncrement(T& v)
-	{
-		return detail::AtomicIncImpl<T,sizeof(T)>::Inc(v);
-	}
-
-	template <typename T> 
-	inline T AtomicDecrement(T& v)
-	{
-		return detail::AtomicIncImpl<T,sizeof(T)>::Dec(v);
-	}
-
-	template <typename T>
-	class AtomicVal : public detail::AtomicValImpl<T,sizeof(T)>
+	class Atomic
 	{
 	public:
-		AtomicVal(T v) : detail::AtomicValImpl<T,sizeof(T)>(v) {}
-		AtomicVal(const AtomicVal& rhs) : detail::AtomicValImpl<T,sizeof(T)>(rhs.value()) {}
+		Atomic()
+		{}
 
-		AtomicVal& operator = (const AtomicVal& rhs)
+		Atomic(const T& v) : m_val(v)
+		{}
+
+		Atomic(const Atomic& a) : m_val(a.m_val)
+		{}
+
+		~Atomic()
+		{}
+
+		Atomic& operator = (const Atomic& a)
 		{
-			if (this != &rhs)
-				detail::AtomicValImpl<T,sizeof(T)>::operator = (rhs);
-
+			if (&a != this)
+				Exchange(a.m_val);
 			return *this;
 		}
 
-		AtomicVal& operator = (T rhs)
+		static T Exchange(T& val, const T newVal)
 		{
-			detail::AtomicValImpl<T,sizeof(T)>::operator = (rhs);
-			return *this;
+			return detail::AtomicImpl<T,sizeof(T)>::Exchange(val,newVal);
 		}
 
-	private:
-		AtomicVal();
-	};
-
-	template <typename T>
-	class AtomicInt : public detail::AtomicIntImpl<T,sizeof(T)>
-	{
-	public:
-		AtomicInt() : detail::AtomicIntImpl<T,sizeof(T)>() {}
-		AtomicInt(T v) : detail::AtomicIntImpl<T,sizeof(T)>(v) {}
-		AtomicInt(const AtomicVal<T>& rhs) : detail::AtomicIntImpl<T,sizeof(T)>(rhs.value()) {}
-		AtomicInt(const AtomicInt& rhs) : detail::AtomicIntImpl<T,sizeof(T)>(rhs.value()) {}
-
-		AtomicInt& operator = (const AtomicInt& rhs)
+		T Exchange(const T newVal)
 		{
-			if (this != &rhs)
-				detail::AtomicIntImpl<T,sizeof(T)>::operator = (rhs.value());
-
-			return *this;
+			return Exchange(m_val,newVal);			
 		}
 
-		AtomicInt& operator = (T rhs)
+		static T CompareAndSwap(T& val, const T oldVal, const T newVal)
 		{
-			detail::AtomicIntImpl<T,sizeof(T)>::operator = (rhs);
-			return *this;
+			return detail::AtomicImpl<T,sizeof(T)>::CompareAndSwap(val,oldVal,newVal);
+		}
+
+		T CompareAndSwap(const T oldVal, const T newVal)
+		{
+			return CompareAndSwap(m_val,oldVal,newVal);
+		}
+
+		operator T () const
+		{
+			return m_val;
+		}
+
+		static T Increment(T& val)
+		{
+			return detail::AtomicImpl<T,sizeof(T)>::Increment(val);
 		}
 
 		T operator ++()
 		{
-			return detail::AtomicIntImpl<T,sizeof(T)>::operator ++();
+			return Increment(m_val);
+		}
+
+		static T Decrement(T& val)
+		{
+			return detail::AtomicImpl<T,sizeof(T)>::Decrement(val);
 		}
 
 		T operator --()
 		{
-			return detail::AtomicIntImpl<T,sizeof(T)>::operator --();
+			return Decrement(m_val);
 		}
 
 		T operator ++(int)
 		{
-			return ++*this - 1;
+			return Increment(m_val) - 1;
 		}
 
 		T operator --(int)
 		{
-			return --*this + 1;
+			return Decrement(m_val) + 1;
 		}
+
+		static T Add(T& val, const T add)
+		{
+			return detail::AtomicImpl<T,sizeof(T)>::Add(val,add);
+		}
+
+		Atomic& operator += (T val)
+		{
+			Add(m_val,val);
+			return *this;
+		}
+
+		static T Subtract(T& val, const T subtract)
+		{
+			return detail::AtomicImpl<T,sizeof(T)>::Subtract(val,subtract);
+		}
+
+		Atomic& operator -= (T val)
+		{
+			Subtract(m_val,val);
+			return *this;
+		}
+
+		Atomic& operator += (const Atomic& rhs)
+		{
+			return *this += rhs.m_val;
+		}
+
+		Atomic& operator -= (const Atomic& rhs)
+		{
+			return *this -= rhs.m_val;
+		}
+
+	private:
+		T m_val;
 	};
-
-#if defined(ATOMIC_CAS_32)
-
+	
 	namespace detail
 	{
 		template <typename T>
-		class AtomicValImpl<T,4>
+		struct AtomicImpl<T,4>
 		{
-		public:
-			AtomicValImpl(T v) : m_val(v) {}
-			AtomicValImpl(const AtomicValImpl& rhs) : m_val(rhs.value()) {}
-
-			AtomicValImpl& operator = (T v)
+		#if defined(ATOMIC_CAS_32)
+			static T CompareAndSwap(T& val, const T oldVal, const T newVal)
 			{
-				for (T v1 = m_val;(v1 = ATOMIC_CAS_32(&m_val,v1,v)) != v;)
-					;
+				return (T)ATOMIC_CAS_32(&val,oldVal,newVal);
+			}
+		#endif
 
-				return *this;
+			static T Exchange(T& val, const T newVal)
+			{
+			#if defined (ATOMIC_EXCH_32)
+				return (T)ATOMIC_EXCH_32(&val,newVal);
+			#else
+				T oldVal(val);
+				while (CompareAndSwap(val,oldVal,newVal)) != oldVal)
+					oldVal = val;
+			
+				return oldVal;
+			#endif
 			}
 
-			AtomicValImpl& operator = (const AtomicValImpl& rhs)
+		#if defined(ATOMIC_ADD_32)
+			static T Add(T& val, const T add)
 			{
-				if (this != &rhs)
-				{
-					for (T v1 = m_val;(v1 = ATOMIC_CAS_32(&m_val,v1,rhs.m_val)) != rhs.m_val;)
-						;
-				}
+				return (T)ATOMIC_ADD_32(&val,add);
+			}
+		#endif
 
-				return *this;
+			static T Increment(T& val)
+			{
+			#if defined(ATOMIC_INC_32)
+				return (T)ATOMIC_INC_32(&val);
+			#else
+				return Add(val,1);
+			#endif
 			}
 
-			operator T () const
+			static T Subtract(T& val, const T sub)
 			{
-				return value();
+			#if defined(ATOMIC_SUB_32)
+				return (T)ATOMIC_SUB_32(&val,sub);
+			#else
+				return Add(val,-sub);
+			#endif
 			}
 
-		protected:
-			AtomicValImpl() {}
-
-			T value() const
+			static T Decrement(T& val)
 			{
-				return m_val;
+			#if defined(ATOMIC_DEC_32)
+				return (T)ATOMIC_DEC_32(&val);
+			#else
+				return Subtract(val,1);
+			#endif
 			}
-
-			volatile T m_val;
 		};
 
-		template <typename T> 
-		struct CASImpl<T,4>
-		{
-			static T CAS(T& v, T cmp, T exch)
-			{
-				return ATOMIC_CAS_32(&v,cmp,exch);
-			}
-		};
-	}
-
-#endif // ATOMIC_CAS_32
-
-#if defined(ATOMIC_CAS_64)
-	namespace detail
-	{
 		template <typename T>
-		class AtomicValImpl<T,8>
+		struct AtomicImpl<T,8>
 		{
-		public:
-			AtomicValImpl(T v) : m_val(v) {}
-			AtomicValImpl(const AtomicValImpl& rhs) : m_val(rhs.value()) {}
-
-			AtomicValImpl& operator = (T v)
+		#if defined(ATOMIC_CAS_64)
+			static T CompareAndSwap(T& val, const T oldVal, const T newVal)
 			{
-				for (T v1 = m_val;(v1 = ATOMIC_CAS_64(&m_val,v1,v)) != v;)
-					;
+				return (T)ATOMIC_CAS_64(&val,oldVal,newVal);
+			}
+		#endif
 
-				return *this;
+			static T Exchange(T& val, const T newVal)
+			{
+			#if defined (ATOMIC_EXCH_64)
+				return (T)ATOMIC_EXCH_64(&val,newVal);
+			#else
+				T oldVal(val);
+				while (CompareAndSwap(val,oldVal,newVal) != oldVal)
+					oldVal = val;
+			
+				return oldVal;
+			#endif
 			}
 
-			AtomicValImpl& operator = (const AtomicValImpl& rhs)
+		#if defined(ATOMIC_ADD_64)
+			static T Add(T& val, const T add)
 			{
-				if (this != &rhs)
-				{
-					for (T v1 = m_val;(v1 = ATOMIC_CAS_64(&m_val,v1,rhs.m_val)) != rhs.m_val;)
-						;
-				}
+				return (T)ATOMIC_ADD_64(&val,add);
+			}
+		#endif
 
-				return *this;
+			static T Increment(T& val)
+			{
+			#if defined(ATOMIC_INC_64)
+				return (T)ATOMIC_INC_64(&val);
+			#else
+				return Add(val,1);
+			#endif
 			}
 
-			operator T () const
+			static T Subtract(T& val, const T sub)
 			{
-				return value();
+			#if defined(ATOMIC_SUB_64)
+				return (T)ATOMIC_SUB_64(&val,sub);
+			#else
+				return Add(val,-sub);
+			#endif
 			}
 
-		protected:
-			AtomicValImpl();
-
-			T value() const
+			static T Decrement(T& val)
 			{
-				return m_val;
-			}
-
-			volatile T m_val;
-		};
-
-		template <typename T> 
-		struct CASImpl<T,8>
-		{
-			static T CAS(T& v, T cmp, T exch)
-			{
-				return ATOMIC_CAS_64(&v,cmp,exch);
-			}
-		};
-	}
-
-#endif // ATOMIC_CAS_64
-
-#if defined(ATOMIC_INC_32)
-	namespace detail
-	{
-		template <typename T>
-		class AtomicIntImpl<T,4> : public AtomicValImpl<T,4>
-		{
-		public:
-			AtomicIntImpl() : AtomicValImpl<T,4>(0) {}
-			AtomicIntImpl(T v) : AtomicValImpl<T,4>(v) {}
-			AtomicIntImpl(const AtomicIntImpl& rhs) : AtomicValImpl<T,4>(rhs.value()) {}
-
-			AtomicIntImpl& operator = (const AtomicIntImpl& rhs)
-			{
-				if (this != &rhs)
-					AtomicValImpl<T,4>::operator = (rhs.value());
-
-				return *this;
-			}
-
-			AtomicIntImpl& operator += (T v)
-			{
-				ATOMIC_ADD_32(&this->m_val,v);
-				return *this;
-			}
-
-			AtomicIntImpl& operator -= (T v)
-			{
-				ATOMIC_SUB_32(&this->m_val,v);
-				return *this;
-			}
-
-			T operator ++()
-			{
-				return ATOMIC_INC_32(&this->m_val);
-			}
-
-			T operator --()
-			{
-				return ATOMIC_DEC_32(&this->m_val);
-			}
-		};
-
-		template <typename T> 
-		struct AtomicIncImpl<T,4>
-		{
-			static T Inc(T& v)
-			{
-				return ATOMIC_INC_32(&v);
-			}
-
-			static T Dec(T& v)
-			{
-				return ATOMIC_DEC_32(&v);
+			#if defined(ATOMIC_DEC_64)
+				return (T)ATOMIC_DEC_64(&val);
+			#else
+				return Subtract(val,1);
+			#endif
 			}
 		};
 	}
-#endif // defined(ATOMIC_INC_32)
-
-#if defined(ATOMIC_INC_64)
-	namespace detail
-	{
-		template <typename T>
-		class AtomicIntImpl<T,8> : public AtomicValImpl<T,8>
-		{
-		public:
-			AtomicIntImpl() : AtomicValImpl<T,8>(0) {}
-			AtomicIntImpl(T v) : AtomicValImpl<T,8>(v) {}
-			AtomicIntImpl(const AtomicIntImpl& rhs) : AtomicValImpl<T,8>(rhs.value()) {}
-
-			AtomicIntImpl& operator = (const AtomicIntImpl& rhs)
-			{
-				if (this != &rhs)
-					AtomicValImpl<T,8>::operator = (rhs.value());
-
-				return *this;
-			}
-
-			AtomicIntImpl& operator += (T v)
-			{
-				ATOMIC_ADD_64(&this->m_val,v);
-				return *this;
-			}
-
-			AtomicIntImpl& operator -= (T v)
-			{
-				ATOMIC_SUB_64(&this->m_val,v);
-				return *this;
-			}
-
-			T operator ++()
-			{
-				return ATOMIC_INC_64(&this->m_val);
-			}
-
-			T operator --()
-			{
-				return ATOMIC_DEC_64(&this->m_val);
-			}
-		};
-
-		template <typename T> 
-		struct AtomicIncImpl<T,8>
-		{
-			static T Inc(T& v)
-			{
-				return ATOMIC_INC_32(&v);
-			}
-
-			static T Dec(T& v)
-			{
-				return ATOMIC_DEC_32(&v);
-			}
-		};
-	}
-#endif // defined(ATOMIC_INC_64)
 }
 
 #endif // OOBASE_ATOMIC_H_INCLUDED_

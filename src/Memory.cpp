@@ -80,8 +80,8 @@ namespace
 	private:
 		struct Instance
 		{
-			T                         inst;
-			OOBase::AtomicInt<size_t> refcount;
+			T                      inst;
+			OOBase::Atomic<size_t> refcount;
 		};
 
 		static volatile Instance* s_instance;

@@ -52,7 +52,7 @@ namespace OOSvrBase
 			void release();
 
 		private:
-			OOBase::AtomicInt<size_t> m_refcount;
+			OOBase::Atomic<size_t> m_refcount;
 		};
 	}
 }

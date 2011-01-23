@@ -108,7 +108,7 @@ namespace OOBase
 
 		~Buffer();
 
-		AtomicInt<size_t> m_refcount; ///< The reference count.
+		Atomic<size_t> m_refcount; ///< The reference count.
 
 		size_t  m_capacity; ///< The total allocated bytes for \p m_buffer.
 		char*   m_buffer;   ///< The actual underlying buffer.
