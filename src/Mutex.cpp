@@ -25,6 +25,9 @@
 #if defined(_WIN32)
 
 OOBase::SpinLock::SpinLock(unsigned int max_spin)
+#if defined(_DEBUG)
+	: m_recursive(0)
+#endif
 {
 	InitializeCriticalSectionAndSpinCount(&m_cs,max_spin);
 }
@@ -36,16 +39,34 @@ OOBase::SpinLock::~SpinLock()
 
 void OOBase::SpinLock::acquire()
 {
+#if defined(_DEBUG)
+	if (tryacquire())
+		return;
+#endif
+
 	EnterCriticalSection(&m_cs);
+
+	assert(m_recursive++ == 0);
 }
 
 bool OOBase::SpinLock::tryacquire()
 {
+#if !defined(_DEBUG)
 	return (TryEnterCriticalSection(&m_cs) ? true : false);
+#else
+	if (!TryEnterCriticalSection(&m_cs))
+		return false;
+
+	assert(m_recursive++ == 0);
+
+	return true;
+#endif
 }
 
 void OOBase::SpinLock::release()
 {
+	assert(--m_recursive == 0);
+
 	LeaveCriticalSection(&m_cs);
 }
 
@@ -123,11 +144,21 @@ void OOBase::RWMutex::release_read()
 
 OOBase::Mutex::Mutex()
 {
+	init(true);
+}
+
+OOBase::Mutex::Mutex(bool as_spin_lock)
+{
+	init(false);
+}
+
+void OOBase::Mutex::init(bool bRecursive)
+{
 	pthread_mutexattr_t attr;
 	int err = pthread_mutexattr_init(&attr);
 	if (!err)
 	{
-		err = pthread_mutexattr_settype(&attr,PTHREAD_MUTEX_RECURSIVE);
+		err = pthread_mutexattr_settype(&attr,bRecursive ? PTHREAD_MUTEX_RECURSIVE : PTHREAD_MUTEX_NORMAL);
 		if (!err)
 		{
 			err = pthread_mutexattr_setpshared(&attr,PTHREAD_PROCESS_PRIVATE);

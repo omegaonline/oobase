@@ -31,8 +31,6 @@ namespace OOBase
 	/// A recursive mutex that can be acquired with a timeout
 	class Mutex
 	{
-		friend class Condition;
-
 	public:
 		Mutex();
 		~Mutex();
@@ -52,7 +50,12 @@ namespace OOBase
 #if defined(_WIN32)
 		Win32::SmartHandle m_mutex;
 #elif defined(HAVE_PTHREAD)
+	protected:
 		pthread_mutex_t    m_mutex;
+
+		Mutex(bool as_spin_lock);
+
+		void init(bool as_spin_lock);
 #else
 #error Fix me!
 #endif
@@ -79,10 +82,20 @@ namespace OOBase
 		 *  The platform specific spin-lock variable.
 		 */
 		CRITICAL_SECTION m_cs;
+
+#if defined(_DEBUG)
+		size_t m_recursive;
+#endif
 	};
 #else
-	// Pthreads mutexes already spin allegedly...
-	typedef Mutex SpinLock;
+	class SpinLock : public Mutex
+	{
+		friend class Condition;
+
+	public:
+		SpinLock() : Mutex(true)
+		{}
+	};
 #endif
 
 	class RWMutex

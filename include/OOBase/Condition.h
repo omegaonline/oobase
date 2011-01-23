@@ -38,7 +38,7 @@ namespace OOBase
 #if defined(_WIN32)
 		typedef Win32::condition_mutex_t Mutex;
 #elif defined(HAVE_PTHREAD)
-		typedef OOBase::Mutex Mutex;
+		typedef OOBase::SpinLock Mutex;
 #else
 #error Fix me!
 #endif

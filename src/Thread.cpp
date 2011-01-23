@@ -55,7 +55,7 @@ namespace
 			bool                       m_bAutodelete;
 		};
 
-		OOBase::Mutex              m_lock;
+		OOBase::SpinLock           m_lock;
 		OOBase::Win32::SmartHandle m_hThread;
 
 		static unsigned int __stdcall oobase_thread_fn(void* param);
@@ -74,7 +74,7 @@ namespace
 
 	bool Win32Thread::is_running()
 	{
-		OOBase::Guard<OOBase::Mutex> guard(m_lock);
+		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 		if (!m_hThread.is_valid())
 			return false;
@@ -93,7 +93,7 @@ namespace
 
 	void Win32Thread::run(Thread* pThread, bool bAutodelete, int (*thread_fn)(void*), void* param)
 	{
-		OOBase::Guard<OOBase::Mutex> guard(m_lock);
+		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 		// Close any open handles, this allows restarting
 		m_hThread.close();
@@ -126,7 +126,7 @@ namespace
 
 	bool Win32Thread::join(const OOBase::timeval_t* wait)
 	{
-		OOBase::Guard<OOBase::Mutex> guard(m_lock);
+		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 		if (!m_hThread.is_valid())
 			return true;
@@ -145,8 +145,6 @@ namespace
 
 	void Win32Thread::abort()
 	{
-		OOBase::Guard<OOBase::Mutex> guard(m_lock);
-
 		if (is_running())
 			TerminateThread(m_hThread,1);
 	}
@@ -204,10 +202,10 @@ namespace
 			Thread*            m_pThread;
 		};
 
-		OOBase::Mutex  m_lock;
-		bool           m_running;
-		pthread_t      m_thread;
-		pthread_cond_t m_condition;
+		OOBase::SpinLock m_lock;
+		bool             m_running;
+		pthread_t        m_thread;
+		pthread_cond_t   m_condition;
 
 		static void* oobase_thread_fn(void* param);
 	};
@@ -230,14 +228,14 @@ namespace
 
 	bool PthreadThread::is_running()
 	{
-		OOBase::Guard<OOBase::Mutex> guard(m_lock);
+		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 		return m_running;
 	}
 
 	void PthreadThread::run(Thread* pThread, bool bAutodelete, int (*thread_fn)(void*), void* param)
 	{
-		OOBase::Guard<OOBase::Mutex> guard(m_lock);
+		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 		assert(!m_running);
 
@@ -276,7 +274,7 @@ namespace
 
 	bool PthreadThread::join(const OOBase::timeval_t* wait)
 	{
-		OOBase::Guard<OOBase::Mutex> guard(m_lock);
+		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 		if (wait)
 		{
@@ -320,7 +318,7 @@ namespace
 
 	void PthreadThread::abort()
 	{
-		OOBase::Guard<OOBase::Mutex> guard(m_lock);
+		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 		if (m_running)
 		{
