@@ -23,7 +23,6 @@
 #define OOBASE_CONDITION_H_INCLUDED_
 
 #include "Mutex.h"
-#include "internal/Win32Impl.h"
 
 namespace OOBase
 {
@@ -58,6 +57,10 @@ namespace OOBase
 		 *  The platform specific condition variable.
 		 */
 #if defined(_WIN32)
+	#if (WINVER < 0x0600)
+		typedef OOBase::Win32::condition_variable_t* CONDITION_VARIABLE;
+	#endif
+
 		CONDITION_VARIABLE m_var;
 #elif defined(HAVE_PTHREAD)
 		pthread_cond_t     m_var;

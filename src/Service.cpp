@@ -23,6 +23,7 @@
 #include "../include/OOSvrBase/Logger.h"
 #include "../include/OOBase/Singleton.h"
 #include "../include/OOBase/Posix.h"
+#include "Win32Impl.h"
 
 #if defined(HAVE_UNISTD_H)
 #include <fcntl.h>

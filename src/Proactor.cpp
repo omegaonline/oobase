@@ -21,12 +21,12 @@
 
 #include "../include/OOSvrBase/Proactor.h"
 
-#include "../include/OOSvrBase/internal/ProactorImpl.h"
+#include "ProactorImpl.h"
 
 #if defined(HAVE_EV_H)
-#include "../include/OOSvrBase/internal/ProactorEv.h"
+#include "ProactorEv.h"
 #elif defined(_WIN32)
-#include "../include/OOSvrBase/internal/ProactorWin32.h"
+#include "ProactorWin32.h"
 #else
 #error No suitable proactor implementation!
 #endif

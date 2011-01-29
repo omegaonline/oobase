@@ -355,7 +355,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\internal\BSDSocket.h"
+				RelativePath=".\BSDSocket.h"
 				>
 			</File>
 			<File
@@ -443,11 +443,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\internal\Win32Impl.h"
+				RelativePath=".\Win32Impl.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\internal\Win32Socket.h"
+				RelativePath=".\Win32Socket.h"
 				>
 			</File>
 		</Filter>

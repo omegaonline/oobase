@@ -20,7 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/Condition.h"
-#include "../include/OOBase/internal/Win32Impl.h"
+#include "Win32Impl.h"
 
 #if defined(_WIN32)
 

@@ -19,8 +19,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/internal/BSDSocket.h"
 #include "../include/OOBase/Posix.h"
+#include "BSDSocket.h"
 
 #if defined(_WIN32)
 namespace OOBase

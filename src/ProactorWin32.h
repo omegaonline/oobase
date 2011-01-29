@@ -19,82 +19,42 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#ifndef OOSVRBASE_PROACTOR_EV_H_INCLUDED_
-#define OOSVRBASE_PROACTOR_EV_H_INCLUDED_
+#ifndef OOSVRBASE_PROACTOR_WIN32_H_INCLUDED_
+#define OOSVRBASE_PROACTOR_WIN32_H_INCLUDED_
 
 #if !defined(OOSVRBASE_PROACTOR_H_INCLUDED_)
 #error include "Proactor.h" instead
 #endif
 
-#if !defined(HAVE_EV_H)
+#if !defined(_WIN32)
 #error Includes have got confused, check Proactor.cpp
 #endif
 
-#include <ev.h>
-
-#include <deque>
-
-#include "../../OOBase/Thread.h"
-#include "../../OOBase/Condition.h"
-#include "../../OOBase/SmartPtr.h"
-
 namespace OOSvrBase
 {
-	namespace Ev
+	namespace Win32
 	{
-		typedef struct ev_loop ev_loop_t;
-
 		class ProactorImpl : public Proactor
 		{
 		public:
 			ProactorImpl();
-			~ProactorImpl();
+			virtual ~ProactorImpl();
 
 			OOBase::Socket* accept_local(Acceptor<AsyncLocalSocket>* handler, const char* path, int* perr, SECURITY_ATTRIBUTES* psa);
 			OOBase::Socket* accept_remote(Acceptor<AsyncSocket>* handler, const char* address, const char* port, int* perr);
 
 			AsyncSocketPtr attach_socket(OOBase::Socket::socket_t sock, int* perr);
-			AsyncLocalSocket* attach_local_socket(OOBase::Socket::socket_t sock, int* perr);
+			AsyncLocalSocketPtr attach_local_socket(OOBase::Socket::socket_t sock, int* perr);
 
 			AsyncLocalSocketPtr connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* wait);
 
-			struct io_watcher : public ev_io
-			{
-				void (*callback)(io_watcher*);
-			};
+			void addref();
+			void release();
 
-			void init_watcher(io_watcher* watcher, int fd, int events);
-			void start_watcher(io_watcher* watcher);
-			void stop_watcher(io_watcher* watcher);
-						
 		private:
-			typedef std::deque<io_watcher*,OOBase::CriticalAllocator<io_watcher*> > dequeType;
-
-			// The following vars all use this lock
-			OOBase::Mutex m_ev_lock;
-			ev_loop_t*    m_pLoop;
-			dequeType*    m_pIOQueue;
-			bool          m_bAsyncTriggered;
-
-			// The following vars all use this lock
-			OOBase::SpinLock m_lock;
-			bool             m_bStop;
-			dequeType        m_start_queue;
-			dequeType        m_stop_queue;
-
-			// The following vars don't...
-			typedef std::deque<OOBase::SmartPtr<OOBase::Thread>,OOBase::CriticalAllocator<OOBase::SmartPtr<OOBase::Thread> > > workerDeque;
-			workerDeque m_workers;
-			ev_async    m_alert;
-
-			static int worker(void* param);
-			int worker_i();
-
-			static void on_alert(ev_loop_t*, ev_async* watcher, int);
-			static void on_io(ev_loop_t*, ev_io* watcher, int events);
-			void on_io_i(io_watcher* watcher, int events);
+			OOBase::Atomic<size_t> m_refcount;
 		};
 	}
 }
 
-#endif // OOSVRBASE_PROACTOR_EV_H_INCLUDED_
+#endif // OOSVRBASE_PROACTOR_WIN32_H_INCLUDED_

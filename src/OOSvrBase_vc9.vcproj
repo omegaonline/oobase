@@ -363,19 +363,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOSvrBase\internal\ProactorEv.h"
+				RelativePath=".\ProactorEv.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOSvrBase\internal\ProactorImpl.h"
+				RelativePath=".\ProactorImpl.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOSvrBase\internal\ProactorWin32.h"
-				>
-			</File>
-			<File
-				RelativePath="..\include\OOSvrBase\pw_info.h"
+				RelativePath=".\ProactorWin32.h"
 				>
 			</File>
 			<File

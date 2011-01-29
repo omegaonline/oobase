@@ -51,7 +51,6 @@ namespace OOBase
 		typedef int socket_t;
 #endif
 
-	public:
 		virtual size_t recv(void* buf, size_t len, int* perr, const timeval_t* timeout = 0) = 0;
 		virtual int send(const void* buf, size_t len, const timeval_t* timeout = 0) = 0;
 		virtual void shutdown(bool bSend, bool bRecv) = 0;

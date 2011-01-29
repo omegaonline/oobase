@@ -99,6 +99,63 @@ namespace OOBase
 
 			HANDLE m_handle;
 		};	
+
+		class rwmutex_t
+		{
+		public:
+			rwmutex_t();
+			~rwmutex_t();
+
+			void acquire();
+			void release();
+			void acquire_read();
+			void release_read();
+
+		private:
+			LONG                       m_nReaders;
+			OOBase::Win32::SmartHandle m_hReaderEvent;
+			OOBase::Win32::SmartHandle m_hEvent;
+			OOBase::Win32::SmartHandle m_hWriterMutex;
+		};
+
+		class condition_variable_t
+		{
+		public:
+			condition_variable_t();
+			~condition_variable_t();
+
+			bool wait(HANDLE hMutex, DWORD dwMilliseconds);
+			void signal();
+			void broadcast();
+
+		private:
+			CRITICAL_SECTION m_waiters_lock;
+			unsigned long    m_waiters;
+			bool             m_broadcast;
+			SmartHandle      m_sema;
+			SmartHandle      m_waiters_done;
+		};
+
+		class condition_mutex_t
+		{
+			// We need private access in this function
+			friend BOOL SleepConditionVariable(CONDITION_VARIABLE* ConditionVariable, condition_mutex_t* Mutex, DWORD dwMilliseconds);
+
+		public:
+			condition_mutex_t();
+			~condition_mutex_t();
+
+			bool tryacquire();
+			void acquire();
+			void release();
+
+		private:
+			union U
+			{
+				CRITICAL_SECTION m_cs;
+				HANDLE           m_mutex;
+			} u;
+		};
 	}
 }
 

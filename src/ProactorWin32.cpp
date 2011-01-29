@@ -29,8 +29,9 @@
 
 #include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/Thread.h"
-#include "../include/OOSvrBase/internal/ProactorImpl.h"
-#include "../include/OOSvrBase/internal/ProactorWin32.h"
+#include "ProactorImpl.h"
+#include "ProactorWin32.h"
+#include "Win32Impl.h"
 
 #if defined(_MSC_VER)
 #pragma warning(push)

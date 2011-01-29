@@ -20,7 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/Once.h"
-#include "../include/OOBase/internal/Win32Impl.h"
+#include "Win32Impl.h"
 
 namespace OOBase
 {

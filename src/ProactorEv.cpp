@@ -25,10 +25,10 @@
 
 #if defined(HAVE_EV_H)
 
-#include "../include/OOBase/internal/BSDSocket.h"
 #include "../include/OOBase/Posix.h"
-#include "../include/OOSvrBase/internal/ProactorImpl.h"
-#include "../include/OOSvrBase/internal/ProactorEv.h"
+#include "BSDSocket.h"
+#include "ProactorImpl.h"
+#include "ProactorEv.h"
 
 #if defined(HAVE_UNISTD_H)
 #include <sys/un.h>

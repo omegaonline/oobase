@@ -23,14 +23,43 @@
 #define OOBASE_POSIX_H_INCLUDED_
 
 #include "../config-base.h"
+#include "SmartPtr.h"
 
 #if defined(HAVE_UNISTD_H)
+
+#include <pwd.h>
 
 namespace OOBase
 {
 	namespace POSIX
 	{
 		int set_close_on_exec(int fd, bool set);
+
+		class pw_info
+		{
+		public:
+			pw_info(uid_t uid);
+			pw_info(const char* uname);
+
+			inline struct passwd* operator ->()
+			{
+				return m_pwd;
+			}
+
+			inline bool operator !() const
+			{
+				return (m_pwd==0);
+			}
+
+		private:
+			pw_info() {};
+
+			struct passwd* m_pwd;
+			struct passwd  m_pwd2;
+			size_t         m_buf_len;
+
+			OOBase::SmartPtr<char,OOBase::ArrayDestructor<char> > m_buffer;
+		};
 	}
 }
 

@@ -19,7 +19,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/internal/Win32Socket.h"
+#include "../include/OOBase/Allocator.h"
+#include "Win32Socket.h"
 
 #if defined(_WIN32)
 
