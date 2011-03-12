@@ -317,6 +317,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ProactorWin32Pipe.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\ProactorWin32Socket.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\pw_info.cpp"
 				>
 			</File>

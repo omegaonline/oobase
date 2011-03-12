@@ -49,7 +49,7 @@ namespace OOBase
 				m_pulsed(false)
 		{}
 
-		Result push(const T& val, const timeval_t* wait = 0)
+		Result push(const T& val, const timeval_t* timeout = 0)
 		{
 			timeval_t wait2;
 			if (wait)
@@ -76,7 +76,7 @@ namespace OOBase
 			return success;
 		}
 
-		Result pop(T& val, const timeval_t* wait = 0)
+		Result pop(T& val, const timeval_t* timeout = 0)
 		{
 			timeval_t wait2;
 			if (wait)

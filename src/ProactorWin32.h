@@ -22,13 +22,7 @@
 #ifndef OOSVRBASE_PROACTOR_WIN32_H_INCLUDED_
 #define OOSVRBASE_PROACTOR_WIN32_H_INCLUDED_
 
-#if !defined(OOSVRBASE_PROACTOR_H_INCLUDED_)
-#error include "Proactor.h" instead
-#endif
-
-#if !defined(_WIN32)
-#error Includes have got confused, check Proactor.cpp
-#endif
+#include "../include/OOSvrBase/Proactor.h"
 
 namespace OOSvrBase
 {
@@ -40,16 +34,14 @@ namespace OOSvrBase
 			ProactorImpl();
 			virtual ~ProactorImpl();
 
-			OOBase::Socket* accept_local(Acceptor<AsyncLocalSocket>* handler, const char* path, int* perr, SECURITY_ATTRIBUTES* psa);
-			OOBase::Socket* accept_remote(Acceptor<AsyncSocket>* handler, const char* address, const char* port, int* perr);
+			AsyncSocket* attach_socket(OOBase::socket_t sock, int* perr);
+			AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int* perr);
 
-			AsyncSocketPtr attach_socket(OOBase::Socket::socket_t sock, int* perr);
-			AsyncLocalSocketPtr attach_local_socket(OOBase::Socket::socket_t sock, int* perr);
+			AsyncLocalSocket* connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* timeout);
 
-			AsyncLocalSocketPtr connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* wait);
-
-			void addref();
-			void release();
+		protected:
+			OOBase::SmartPtr<OOBase::Socket> accept_local(void* param, void (*callback)(void* param, AsyncLocalSocket* pSocket, const char* strAddress, int err), const char* path, int* perr, SECURITY_ATTRIBUTES* psa);
+			OOBase::SmartPtr<OOBase::Socket> accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const char* strAddress, int err), const char* address, const char* port, int* perr);
 
 		private:
 			OOBase::Atomic<size_t> m_refcount;

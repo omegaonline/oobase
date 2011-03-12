@@ -152,7 +152,7 @@ namespace OOBase
 	class Countdown
 	{
 	public:
-		Countdown(timeval_t* wait);
+		Countdown(timeval_t* timeout);
 
 		void update();
 
@@ -161,7 +161,7 @@ namespace OOBase
 		Countdown& operator = (const Countdown&);
 
 		timeval_t  m_start;
-		timeval_t* m_wait;
+		timeval_t* m_timeout;
 	};
 }
 

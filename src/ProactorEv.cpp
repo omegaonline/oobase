@@ -64,7 +64,7 @@
 
 namespace
 {
-	int connect_i(OOBase::Socket::socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* wait)
+	int connect_i(OOBase::socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* timeout)
 	{
 		// Do the connect
 		if (::connect(sock,addr,addrlen) != -1)
@@ -304,7 +304,7 @@ namespace
 		{
 		}
 
-		static AsyncSocket* Create(OOSvrBase::Ev::ProactorImpl* proactor, OOBase::Socket::socket_t sock)
+		static AsyncSocket* Create(OOSvrBase::Ev::ProactorImpl* proactor, OOBase::socket_t sock)
 		{
 			IOHelper* helper;
 			OOBASE_NEW_T(IOHelper,helper,IOHelper(proactor,sock));
@@ -327,13 +327,13 @@ namespace
 	class AsyncLocalSocket : public OOSvrBase::detail::AsyncSocketTempl<OOSvrBase::AsyncLocalSocket>
 	{
 	public:
-		AsyncLocalSocket(IOHelper* helper, OOBase::Socket::socket_t sock) :
+		AsyncLocalSocket(IOHelper* helper, OOBase::socket_t sock) :
 				OOSvrBase::detail::AsyncSocketTempl<OOSvrBase::AsyncLocalSocket>(helper),
 				m_fd(sock)
 		{
 		}
 
-		static AsyncLocalSocket* Create(OOSvrBase::Ev::ProactorImpl* proactor, OOBase::Socket::socket_t sock)
+		static AsyncLocalSocket* Create(OOSvrBase::Ev::ProactorImpl* proactor, OOBase::socket_t sock)
 		{
 			IOHelper* helper;
 			OOBASE_NEW_T(IOHelper,helper,IOHelper(proactor,sock));
@@ -352,7 +352,7 @@ namespace
 		}
 
 	private:
-		OOBase::Socket::socket_t m_fd;
+		OOBase::socket_t m_fd;
 
 		int get_uid(OOSvrBase::AsyncLocalSocket::uid_t& uid);
 	};
@@ -464,7 +464,7 @@ namespace
 	class SocketAcceptor : public OOBase::Socket
 	{
 	public:
-		SocketAcceptor(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::Socket::socket_t sock, OOSvrBase::Acceptor<SOCKET_TYPE>* handler);
+		SocketAcceptor(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::socket_t sock, OOSvrBase::Acceptor<SOCKET_TYPE>* handler);
 		virtual ~SocketAcceptor();
 
 		int send(const void* /*buf*/, size_t /*len*/, const OOBase::timeval_t* /*timeout*/ = 0)
@@ -501,7 +501,7 @@ namespace
 	};
 
 	template <typename SOCKET_TYPE, typename SOCKET_IMPL>
-	SocketAcceptor<SOCKET_TYPE,SOCKET_IMPL>::SocketAcceptor(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::Socket::socket_t sock, OOSvrBase::Acceptor<SOCKET_TYPE>* handler) :
+	SocketAcceptor<SOCKET_TYPE,SOCKET_IMPL>::SocketAcceptor(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::socket_t sock, OOSvrBase::Acceptor<SOCKET_TYPE>* handler) :
 				m_proactor(pProactor),
 				m_handler(handler),
 				m_async_count(0),
@@ -560,7 +560,7 @@ namespace
 		while (!m_closed)
 		{
 			// Call accept on the fd...
-			OOBase::Socket::socket_t new_fd = ::accept(m_watcher.fd,0,0);
+			OOBase::socket_t new_fd = ::accept(m_watcher.fd,0,0);
 			if (new_fd == INVALID_SOCKET)
 			{
 				err = socket_errno;
@@ -654,7 +654,7 @@ namespace
 	class LocalSocketAcceptor : public SocketAcceptor<OOSvrBase::AsyncLocalSocket,AsyncLocalSocket>
 	{
 	public:
-		LocalSocketAcceptor(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::Socket::socket_t sock, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler, const char* path) :
+		LocalSocketAcceptor(OOSvrBase::Ev::ProactorImpl* pProactor, OOBase::socket_t sock, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler, const char* path) :
 				SocketAcceptor<OOSvrBase::AsyncLocalSocket,AsyncLocalSocket>(pProactor,sock,handler),
 				m_path(path)
 		{}
@@ -863,7 +863,7 @@ void OOSvrBase::Ev::ProactorImpl::on_io_i(io_watcher* watcher, int /*events*/)
 	ev_io_stop(m_pLoop,watcher);
 }
 
-OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor<AsyncLocalSocket>* handler, const char* path, int* perr, SECURITY_ATTRIBUTES* psa)
+OOBase::SmartPtr<OOBase::Socket> OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor<AsyncLocalSocket>* handler, const char* path, int* perr, SECURITY_ATTRIBUTES* psa)
 {
 #if !defined(HAVE_UNISTD_H)
 	// If we don't have unix sockets, we can't do much, use Win32 Proactor instead
@@ -936,10 +936,10 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor<AsyncLocalSoc
 #endif
 }
 
-OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor<OOSvrBase::AsyncSocket>* handler, const char* address, const char* port, int* perr)
+OOBase::SmartPtr<OOBase::Socket> OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor<OOSvrBase::AsyncSocket>* handler, const char* address, const char* port, int* perr)
 {
 	*perr = 0;
-	OOBase::Socket::socket_t sock = INVALID_SOCKET;
+	OOBase::socket_t sock = INVALID_SOCKET;
 	if (address.empty())
 	{
 		sockaddr_in addr = {0};
@@ -1029,7 +1029,7 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor<OOSvrBase::A
 	return pAcceptor.detach();
 }
 
-OOSvrBase::AsyncSocketPtr OOSvrBase::Ev::ProactorImpl::attach_socket(OOBase::Socket::socket_t sock, int* perr)
+OOSvrBase::AsyncSocketPtr OOSvrBase::Ev::ProactorImpl::attach_socket(OOBase::socket_t sock, int* perr)
 {
 	// Set non-blocking...
 	*perr = OOBase::BSD::set_non_blocking(sock,true);
@@ -1044,7 +1044,7 @@ OOSvrBase::AsyncSocketPtr OOSvrBase::Ev::ProactorImpl::attach_socket(OOBase::Soc
 	return ptrSocket;
 }
 
-OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Ev::ProactorImpl::connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* wait)
+OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Ev::ProactorImpl::connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* timeout)
 {
 #if !defined(HAVE_UNISTD_H)
 	// If we don't have unix sockets, we can't do much, use Win32 Proactor instead
@@ -1056,7 +1056,7 @@ OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Ev::ProactorImpl::connect_local_socket
 	return 0;
 #else
 
-	OOBase::Socket::socket_t sock = OOBase::BSD::create_socket(AF_UNIX,SOCK_STREAM,0,perr);
+	OOBase::socket_t sock = OOBase::BSD::create_socket(AF_UNIX,SOCK_STREAM,0,perr);
 	if (sock == -1)
 		return 0;
 
@@ -1085,7 +1085,7 @@ OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Ev::ProactorImpl::connect_local_socket
 #endif
 }
 
-OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Ev::ProactorImpl::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)
+OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Ev::ProactorImpl::attach_local_socket(OOBase::socket_t sock, int* perr)
 {
 #if !defined(HAVE_UNISTD_H)
 	// If we don't have unix sockets, we can't do much, use Win32 Proactor instead

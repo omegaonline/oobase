@@ -19,9 +19,11 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/OOBase/Condition.h"
+
 #include "../include/OOSvrBase/Proactor.h"
 
-#include "ProactorImpl.h"
+//#include "ProactorImpl.h"
 
 #if defined(HAVE_EV_H)
 #include "ProactorEv.h"
@@ -37,6 +39,28 @@
 #else
 #define ERROR_OUTOFMEMORY ENOMEM
 #endif
+
+namespace
+{
+	struct WaitCallback
+	{
+		OOBase::Condition        m_condition;
+		OOBase::Condition::Mutex m_lock;
+		bool                     m_complete;
+		int                      m_err;
+
+		static void callback(void* param, OOSvrBase::AsyncSocket*, OOBase::Buffer*, int err)
+		{
+			WaitCallback* pThis = static_cast<WaitCallback*>(param);
+
+			OOBase::Guard<OOBase::Condition::Mutex> guard(pThis->m_lock);
+
+			pThis->m_err = err;
+			pThis->m_complete = true;
+			pThis->m_condition.signal();
+		}
+	};
+}
 
 OOSvrBase::Proactor::Proactor() :
 		m_impl(0)
@@ -60,365 +84,405 @@ OOSvrBase::Proactor::~Proactor()
 	OOBASE_DELETE(Proactor,m_impl);
 }
 
-OOBase::Socket* OOSvrBase::Proactor::accept_local(Acceptor<AsyncLocalSocket>* handler, const char* path, int* perr, SECURITY_ATTRIBUTES* psa)
+OOBase::SmartPtr<OOBase::Socket> OOSvrBase::Proactor::accept_local(void* param, void (*callback)(void* param, AsyncLocalSocket* pSocket, const char* strAddress, int err), const char* path, int* perr, SECURITY_ATTRIBUTES* psa)
 {
-	return m_impl->accept_local(handler,path,perr,psa);
+	return m_impl->accept_local(param,callback,path,perr,psa);
 }
 
-OOBase::Socket* OOSvrBase::Proactor::accept_remote(Acceptor<AsyncSocket>* handler, const char* address, const char* port, int* perr)
+OOBase::SmartPtr<OOBase::Socket> OOSvrBase::Proactor::accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const char* strAddress, int err), const char* address, const char* port, int* perr)
 {
-	return m_impl->accept_remote(handler,address,port,perr);
+	return m_impl->accept_remote(param,callback,address,port,perr);
 }
 
-OOSvrBase::AsyncSocketPtr OOSvrBase::Proactor::attach_socket(OOBase::Socket::socket_t sock, int* perr)
+OOSvrBase::AsyncSocket* OOSvrBase::Proactor::attach_socket(OOBase::socket_t sock, int* perr)
 {
 	return m_impl->attach_socket(sock,perr);
 }
 
-OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Proactor::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)
+OOSvrBase::AsyncLocalSocket* OOSvrBase::Proactor::attach_local_socket(OOBase::socket_t sock, int* perr)
 {
 	return m_impl->attach_local_socket(sock,perr);
 }
 
-OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Proactor::connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* wait)
+OOSvrBase::AsyncLocalSocket* OOSvrBase::Proactor::connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* timeout)
 {
-	return m_impl->connect_local_socket(path,perr,wait);
+	return m_impl->connect_local_socket(path,perr,timeout);
 }
 
-OOSvrBase::detail::AsyncQueued::AsyncQueued(bool sender, AsyncIOHelper* helper, AsyncHandler* handler) :
-		m_sender(sender),
-		m_helper(helper),
-		m_handler(handler),
-		m_closed(false)
+int OOSvrBase::AsyncSocket::recv(OOBase::Buffer* buffer, bool bAll, const OOBase::timeval_t* timeout)
 {
-}
+	WaitCallback wait;
+	wait.m_complete = false;
+	wait.m_err = 0;
 
-OOSvrBase::detail::AsyncQueued::~AsyncQueued()
-{
-	assert(m_ops.empty());
+	OOBase::Guard<OOBase::Condition::Mutex> guard(wait.m_lock);
 
-	while (!m_vecAsyncs.empty())
+	int err = recv(&wait,&WaitCallback::callback,buffer,bAll,timeout);
+	if (err == 0)
 	{
-		AsyncIOHelper::AsyncOp* p = m_vecAsyncs.back();
-		OOBASE_DELETE(AsyncOp,p);
-		m_vecAsyncs.pop_back();
-	}
+		while (!wait.m_complete)
+			wait.m_condition.wait(wait.m_lock);
 		
-	if (!m_sender)
-		OOBASE_DELETE(AsyncIOHelper,m_helper);
-}
-
-void OOSvrBase::detail::AsyncQueued::dispose()
-{
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
-
-	// Handler has gone already, don't allow any further notification
-	m_handler = 0;
-	m_closed = true;
-
-	guard.release();
-
-	shutdown();
-}
-
-void OOSvrBase::detail::AsyncQueued::shutdown()
-{
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
-
-	if (!m_closed)
-	{
-		// See if we have an op in progress
-		bool bIssueNow = m_ops.empty();
-		
-		// Insert a NULL into queue
-		m_ops.push(0);
-		
-		if (bIssueNow)
-			issue_next(guard);
-	}
-}
-
-int OOSvrBase::detail::AsyncQueued::async_op(OOBase::Buffer* buffer, size_t len)
-{
-	assert(buffer);
-
-	if (len > 0)
-	{
-		int err = buffer->space(len);
-		if (err != 0)
-			return err;
-	}
-
-	return async_op(buffer,len,0);
-}
-
-int OOSvrBase::detail::AsyncQueued::async_op(OOBase::Buffer* buffer, size_t len, BlockingInfo* param)
-{
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
-
-	if (m_closed)
-		return ENOTCONN;
-	
-	// Build a new AsyncOp
-	AsyncIOHelper::AsyncOp* op = 0;
-	if (!m_vecAsyncs.empty())
-	{
-		op = m_vecAsyncs.back();
-		m_vecAsyncs.pop_back();
-	}
-	else
-	{
-		OOBASE_NEW_T2(AsyncIOHelper::AsyncOp,op,AsyncIOHelper::AsyncOp);
-		if (!op)
-			return ERROR_OUTOFMEMORY;
-	}
-	
-	op->buffer = buffer->duplicate();
-	op->len = len;
-	op->param = param;
-
-	// See if we have an op in progress
-	bool bIssueNow = m_ops.empty();
-	
-	// Insert into queue
-	m_ops.push(op);
-	
-	if (bIssueNow)
-		issue_next(guard);
-
-	return 0;
-}
-
-void OOSvrBase::detail::AsyncQueued::issue_next(OOBase::Guard<OOBase::SpinLock>& guard)
-{
-	// Lock is assumed to be held...
-
-	while (!m_ops.empty())
-	{
-		AsyncIOHelper::AsyncOp* op = m_ops.front();
-		
-		if (op)
-		{
-			// Release the lock, because errors will synchronously call the handler...
-			guard.release();
-
-			// If we have an op... perform it
-			if (m_sender)
-				return m_helper->send(op);
-			else
-				return m_helper->recv(op);
-		}
-
-		// This is a shutdown message
-		m_helper->shutdown(m_sender,!m_sender);
-
-		m_ops.pop();
-	}
-		
-	if (m_closed)
-	{
-		// Only receiver emits on_closed...
-		if (!m_sender && m_handler)
-		{
-			// And let waiter know we have an empty queue...
-			guard.release();
-
-			// Now notify handler that we have closed and finished all ops
-			m_handler->on_closed();
-		}
-		else if (m_sender)
-		{
-			// Issue a close, which will abort any pending recv's...
-			m_helper->close();
-		}
-	}
-}
-
-bool OOSvrBase::detail::AsyncQueued::notify_async(AsyncIOHelper::AsyncOp* op, int err, bool bLast)
-{
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
-
-	bool bRelease = true;
-	if (op->param)
-	{
-		BlockingInfo* block_info = static_cast<BlockingInfo*>(op->param);
-
-		// Block recv complete
-		if (block_info->cancelled)
-		{
-			// But was cancelled...
-
-			// It's our responsibility to delete param, as the waiter has gone...
-			OOBASE_DELETE(BlockingInfo,block_info);
-		}
-		else
-		{
-			// Signal completion
-			block_info->err = err;
-			block_info->ev.set();	
-		}
-
-		// This is a sync op, caller need not release() us
-		bRelease = false;
-	}
-	else if (m_handler)
-	{
-		guard.release();
-
-		// Be aware that the handler can delete itself in the notification... 
-		// so don't use m_handler again after the callback without re-aquiring the lock
-
-		if (m_sender)
-			m_handler->on_sent(op->buffer,err);
-		else if (!bLast || op->buffer->length())
-			m_handler->on_recv(op->buffer,err);
-		
-		// Acquire lock... we need it for issue_next
-		guard.acquire();
-	}
-
-	// Done with our copy of the op
-	op->buffer->release();
-
-	if (m_vecAsyncs.size() < 4)
-		m_vecAsyncs.push_back(op);
-	else
-		OOBASE_DELETE(AsyncOp,op);
-	
-	if (bLast)
-		m_closed = true;
-
-	// Pop the op we just performed
-	assert(m_ops.front() == op);
-
-	m_ops.pop();
-	
-	issue_next(guard);
-
-	return bRelease;
-}
-
-int OOSvrBase::detail::AsyncQueued::sync_op(OOBase::Buffer* buffer, size_t len, const OOBase::timeval_t* timeout)
-{
-	BlockingInfo* block_info;
-	OOBASE_NEW_T(BlockingInfo,block_info,BlockingInfo());
-	if (!block_info)
-		return ERROR_OUTOFMEMORY;
-
-	block_info->cancelled = false;
-	block_info->err = 0;
-	
-	int err = async_op(buffer,len,block_info);
-	if (err)
-	{
-		OOBASE_DELETE(BlockingInfo,block_info);
-	}
-	else
-	{
-		// Wait for the event
-		if (!block_info->ev.wait(timeout))
-		{
-			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
-
-			// Just check we haven't just been signalled
-			if (!block_info->ev.is_set())
-			{
-				// Clear the event pointer so it is just dropped later...
-				block_info->cancelled = true;
-
-				return ETIMEDOUT;
-			}
-		}
-		
-		// Copy the error code...
-		err = block_info->err;
-
-		// Done with param...
-		OOBASE_DELETE(BlockingInfo,block_info);
+		err = wait.m_err;
 	}
 
 	return err;
 }
 
-OOSvrBase::detail::AsyncSocketImpl::AsyncSocketImpl(AsyncIOHelper* helper, AsyncHandler* handler) :
-		m_receiver(false,helper,handler),
-		m_sender(true,helper,handler),
-		m_refcount(1)
+int OOSvrBase::AsyncSocket::send(OOBase::Buffer* buffer)
 {
-	helper->bind_handler(this);
-}
+	WaitCallback wait;
+	wait.m_complete = false;
+	wait.m_err = 0;
 
-OOSvrBase::detail::AsyncSocketImpl::~AsyncSocketImpl()
-{
-}
+	OOBase::Guard<OOBase::Condition::Mutex> guard(wait.m_lock);
 
-void OOSvrBase::detail::AsyncSocketImpl::dispose()
-{
-	// Dispose both sender and receiver
-	m_receiver.dispose();
-	m_sender.dispose();
-
-	release();
-}
-
-void OOSvrBase::detail::AsyncSocketImpl::shutdown(bool bSend, bool bRecv)
-{
-	if (bSend)
-		m_sender.shutdown();
-
-	if (bRecv)
-		m_receiver.shutdown();
-}
-
-void OOSvrBase::detail::AsyncSocketImpl::addref()
-{
- 	++m_refcount;
-}
-
-void OOSvrBase::detail::AsyncSocketImpl::release()
-{
-	if (--m_refcount == 0)
-		OOBASE_DELETE(AsyncSocketImpl,this);
-}
-
-int OOSvrBase::detail::AsyncSocketImpl::async_recv(OOBase::Buffer* buffer, size_t len)
-{
-	addref();
-	int err = m_receiver.async_op(buffer,len);
-	if (err != 0)
-		release();
-
-	return err;
-}
-
-void OOSvrBase::detail::AsyncSocketImpl::on_recv(AsyncIOHelper::AsyncOp* recv_op, int err, bool bLast)
-{
-	if (m_receiver.notify_async(recv_op,err,bLast))
-		release();
-}
-
-int OOSvrBase::detail::AsyncSocketImpl::recv(OOBase::Buffer* buffer, size_t len, const OOBase::timeval_t* timeout)
-{
-	return m_receiver.sync_op(buffer,len,timeout);
-}
+	int err = send(&wait,&WaitCallback::callback,buffer);
+	if (err == 0)
+	{
+		while (!wait.m_complete)
+			wait.m_condition.wait(wait.m_lock);
 		
-int OOSvrBase::detail::AsyncSocketImpl::async_send(OOBase::Buffer* buffer)
-{
-	addref();
-	int err = m_sender.async_op(buffer,0);
-	if (err != 0)
-		release();
+		err = wait.m_err;
+	}
 
 	return err;
 }
 
-void OOSvrBase::detail::AsyncSocketImpl::on_sent(AsyncIOHelper::AsyncOp* send_op, int err)
-{
-	if (m_sender.notify_async(send_op,err,false))
-		release();
-}
-			
-int OOSvrBase::detail::AsyncSocketImpl::send(OOBase::Buffer* buffer, const OOBase::timeval_t* timeout)
-{
-	return m_sender.sync_op(buffer,0,timeout);
-}
+//OOSvrBase::detail::AsyncQueued::AsyncQueued(bool sender, AsyncIOHelper* helper, AsyncHandler* handler) :
+//		m_sender(sender),
+//		m_helper(helper),
+//		m_handler(handler),
+//		m_closed(false)
+//{
+//}
+//
+//OOSvrBase::detail::AsyncQueued::~AsyncQueued()
+//{
+//	assert(m_ops.empty());
+//
+//	while (!m_vecAsyncs.empty())
+//	{
+//		AsyncIOHelper::AsyncOp* p = m_vecAsyncs.back();
+//		OOBASE_DELETE(AsyncOp,p);
+//		m_vecAsyncs.pop_back();
+//	}
+//		
+//	if (!m_sender)
+//		OOBASE_DELETE(AsyncIOHelper,m_helper);
+//}
+//
+//void OOSvrBase::detail::AsyncQueued::dispose()
+//{
+//	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+//
+//	// Handler has gone already, don't allow any further notification
+//	m_handler = 0;
+//	m_closed = true;
+//
+//	guard.release();
+//
+//	shutdown();
+//}
+//
+//void OOSvrBase::detail::AsyncQueued::shutdown()
+//{
+//	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+//
+//	if (!m_closed)
+//	{
+//		// See if we have an op in progress
+//		bool bIssueNow = m_ops.empty();
+//		
+//		// Insert a NULL into queue
+//		m_ops.push(0);
+//		
+//		if (bIssueNow)
+//			issue_next(guard);
+//	}
+//}
+//
+//int OOSvrBase::detail::AsyncQueued::async_op(OOBase::Buffer* buffer, size_t len)
+//{
+//	assert(buffer);
+//
+//	if (len > 0)
+//	{
+//		int err = buffer->space(len);
+//		if (err != 0)
+//			return err;
+//	}
+//
+//	return async_op(buffer,len,0);
+//}
+//
+//int OOSvrBase::detail::AsyncQueued::async_op(OOBase::Buffer* buffer, size_t len, BlockingInfo* param)
+//{
+//	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+//
+//	if (m_closed)
+//		return ENOTCONN;
+//	
+//	// Build a new AsyncOp
+//	AsyncIOHelper::AsyncOp* op = 0;
+//	if (!m_vecAsyncs.empty())
+//	{
+//		op = m_vecAsyncs.back();
+//		m_vecAsyncs.pop_back();
+//	}
+//	else
+//	{
+//		OOBASE_NEW_T2(AsyncIOHelper::AsyncOp,op,AsyncIOHelper::AsyncOp);
+//		if (!op)
+//			return ERROR_OUTOFMEMORY;
+//	}
+//	
+//	op->buffer = buffer->duplicate();
+//	op->len = len;
+//	op->param = param;
+//
+//	// See if we have an op in progress
+//	bool bIssueNow = m_ops.empty();
+//	
+//	// Insert into queue
+//	m_ops.push(op);
+//	
+//	if (bIssueNow)
+//		issue_next(guard);
+//
+//	return 0;
+//}
+//
+//void OOSvrBase::detail::AsyncQueued::issue_next(OOBase::Guard<OOBase::SpinLock>& guard)
+//{
+//	// Lock is assumed to be held...
+//
+//	while (!m_ops.empty())
+//	{
+//		AsyncIOHelper::AsyncOp* op = m_ops.front();
+//		
+//		if (op)
+//		{
+//			// Release the lock, because errors will synchronously call the handler...
+//			guard.release();
+//
+//			// If we have an op... perform it
+//			if (m_sender)
+//				return m_helper->send(op);
+//			else
+//				return m_helper->recv(op);
+//		}
+//
+//		// This is a shutdown message
+//		m_helper->shutdown(m_sender,!m_sender);
+//
+//		m_ops.pop();
+//	}
+//		
+//	if (m_closed)
+//	{
+//		// Only receiver emits on_closed...
+//		if (!m_sender && m_handler)
+//		{
+//			// And let waiter know we have an empty queue...
+//			guard.release();
+//
+//			// Now notify handler that we have closed and finished all ops
+//			m_handler->on_closed();
+//		}
+//		else if (m_sender)
+//		{
+//			// Issue a close, which will abort any pending recv's...
+//			m_helper->close();
+//		}
+//	}
+//}
+//
+//bool OOSvrBase::detail::AsyncQueued::notify_async(AsyncIOHelper::AsyncOp* op, int err, bool bLast)
+//{
+//	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+//
+//	bool bRelease = true;
+//	if (op->param)
+//	{
+//		BlockingInfo* block_info = static_cast<BlockingInfo*>(op->param);
+//
+//		// Block recv complete
+//		if (block_info->cancelled)
+//		{
+//			// But was cancelled...
+//
+//			// It's our responsibility to delete param, as the waiter has gone...
+//			OOBASE_DELETE(BlockingInfo,block_info);
+//		}
+//		else
+//		{
+//			// Signal completion
+//			block_info->err = err;
+//			block_info->ev.set();	
+//		}
+//
+//		// This is a sync op, caller need not release() us
+//		bRelease = false;
+//	}
+//	else if (m_handler)
+//	{
+//		guard.release();
+//
+//		// Be aware that the handler can delete itself in the notification... 
+//		// so don't use m_handler again after the callback without re-aquiring the lock
+//
+//		if (m_sender)
+//			m_handler->on_sent(op->buffer,err);
+//		else if (!bLast || op->buffer->length())
+//			m_handler->on_recv(op->buffer,err);
+//		
+//		// Acquire lock... we need it for issue_next
+//		guard.acquire();
+//	}
+//
+//	// Done with our copy of the op
+//	op->buffer->release();
+//
+//	if (m_vecAsyncs.size() < 4)
+//		m_vecAsyncs.push_back(op);
+//	else
+//		OOBASE_DELETE(AsyncOp,op);
+//	
+//	if (bLast)
+//		m_closed = true;
+//
+//	// Pop the op we just performed
+//	assert(m_ops.front() == op);
+//
+//	m_ops.pop();
+//	
+//	issue_next(guard);
+//
+//	return bRelease;
+//}
+//
+//int OOSvrBase::detail::AsyncQueued::sync_op(OOBase::Buffer* buffer, size_t len, const OOBase::timeval_t* timeout)
+//{
+//	BlockingInfo* block_info;
+//	OOBASE_NEW_T(BlockingInfo,block_info,BlockingInfo());
+//	if (!block_info)
+//		return ERROR_OUTOFMEMORY;
+//
+//	block_info->cancelled = false;
+//	block_info->err = 0;
+//	
+//	int err = async_op(buffer,len,block_info);
+//	if (err)
+//	{
+//		OOBASE_DELETE(BlockingInfo,block_info);
+//	}
+//	else
+//	{
+//		// Wait for the event
+//		if (!block_info->ev.wait(timeout))
+//		{
+//			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+//
+//			// Just check we haven't just been signalled
+//			if (!block_info->ev.is_set())
+//			{
+//				// Clear the event pointer so it is just dropped later...
+//				block_info->cancelled = true;
+//
+//				return ETIMEDOUT;
+//			}
+//		}
+//		
+//		// Copy the error code...
+//		err = block_info->err;
+//
+//		// Done with param...
+//		OOBASE_DELETE(BlockingInfo,block_info);
+//	}
+//
+//	return err;
+//}
+//
+//OOSvrBase::detail::AsyncSocketImpl::AsyncSocketImpl(AsyncIOHelper* helper, AsyncHandler* handler) :
+//		m_receiver(false,helper,handler),
+//		m_sender(true,helper,handler),
+//		m_refcount(1)
+//{
+//	helper->bind_handler(this);
+//}
+//
+//OOSvrBase::detail::AsyncSocketImpl::~AsyncSocketImpl()
+//{
+//}
+//
+//void OOSvrBase::detail::AsyncSocketImpl::dispose()
+//{
+//	// Dispose both sender and receiver
+//	m_receiver.dispose();
+//	m_sender.dispose();
+//
+//	release();
+//}
+//
+//void OOSvrBase::detail::AsyncSocketImpl::shutdown(bool bSend, bool bRecv)
+//{
+//	if (bSend)
+//		m_sender.shutdown();
+//
+//	if (bRecv)
+//		m_receiver.shutdown();
+//}
+//
+//void OOSvrBase::detail::AsyncSocketImpl::addref()
+//{
+// 	++m_refcount;
+//}
+//
+//void OOSvrBase::detail::AsyncSocketImpl::release()
+//{
+//	if (--m_refcount == 0)
+//		OOBASE_DELETE(AsyncSocketImpl,this);
+//}
+//
+//int OOSvrBase::detail::AsyncSocketImpl::async_recv(OOBase::Buffer* buffer, size_t len)
+//{
+//	addref();
+//	int err = m_receiver.async_op(buffer,len);
+//	if (err != 0)
+//		release();
+//
+//	return err;
+//}
+//
+//void OOSvrBase::detail::AsyncSocketImpl::on_recv(AsyncIOHelper::AsyncOp* recv_op, int err, bool bLast)
+//{
+//	if (m_receiver.notify_async(recv_op,err,bLast))
+//		release();
+//}
+//
+//int OOSvrBase::detail::AsyncSocketImpl::recv(OOBase::Buffer* buffer, size_t len, const OOBase::timeval_t* timeout)
+//{
+//	return m_receiver.sync_op(buffer,len,timeout);
+//}
+//		
+//int OOSvrBase::detail::AsyncSocketImpl::async_send(OOBase::Buffer* buffer)
+//{
+//	addref();
+//	int err = m_sender.async_op(buffer,0);
+//	if (err != 0)
+//		release();
+//
+//	return err;
+//}
+//
+//void OOSvrBase::detail::AsyncSocketImpl::on_sent(AsyncIOHelper::AsyncOp* send_op, int err)
+//{
+//	if (m_sender.notify_async(send_op,err,false))
+//		release();
+//}
+//			
+//int OOSvrBase::detail::AsyncSocketImpl::send(OOBase::Buffer* buffer, const OOBase::timeval_t* timeout)
+//{
+//	return m_sender.sync_op(buffer,0,timeout);
+//}

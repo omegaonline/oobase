@@ -34,44 +34,81 @@ typedef struct
 
 namespace OOSvrBase
 {
-	class AsyncSocket;
-
-	class IOHandler
-	{
-	public:
-		virtual void on_recv(OOBase::Buffer* buffer, int err) = 0;
-		virtual void on_sent(OOBase::Buffer* buffer, int err) = 0;
-		virtual void on_closed() = 0;
-	};
-
 	class AsyncSocket
 	{
 	public:
-		virtual void close() = 0;
-		virtual void bind_handler(IOHandler* handler) = 0;
-		
-		virtual int async_recv(OOBase::Buffer* buffer, size_t len = 0) = 0;
-		virtual int async_send(OOBase::Buffer* buffer) = 0;
+		template <typename T>
+		int recv(T* param, void (T::*callback)(AsyncSocket* pSocket, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, bool bAll, const OOBase::timeval_t* timeout)
+		{
+			Thunk<T>* thunk = new Thunk<T>(param,callback);
+			return recv(thunk,&Thunk<T>::callback,buffer,bAll,timeout);
+		}
 
-		virtual int recv(OOBase::Buffer* buffer, size_t len = 0, const OOBase::timeval_t* timeout = 0) = 0;
-		virtual int send(OOBase::Buffer* buffer, const OOBase::timeval_t* timeout = 0) = 0;
+		template <typename T>
+		int recv_v(T* param, void (T::*callback)(AsyncSocket* pSocket, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout)
+		{
+			ThunkV<T>* thunk = new ThunkV<T>(param,callback);
+			return recv_v(thunk,&ThunkV<T>::callback,buffers,count,timeout);
+		}
+		
+		template <typename T>
+		int send(T* param, void (T::*callback)(AsyncSocket* pSocket, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer)
+		{
+			Thunk<T>* thunk = new Thunk<T>(param,callback);
+			return send(thunk,&Thunk<T>::callback,buffer);
+		}
+
+		template <typename T>
+		int send(T* param, void (T::*callback)(AsyncSocket* pSocket, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count)
+		{
+			ThunkV<T>* thunk = new ThunkV<T>(param,callback);
+			return send_v(thunk,&ThunkV<T>::callback,buffers,count);
+		}
+
+		int recv(OOBase::Buffer* buffer, bool bAll, const OOBase::timeval_t* timeout);
+		int send(OOBase::Buffer* buffer);
 
 		virtual void shutdown(bool bSend, bool bRecv) = 0;
 
 	protected:
 		virtual ~AsyncSocket() {}
-	};
 
-	class SocketDestructor
-	{
-	public:
-		static void destroy(AsyncSocket* ptr)
+		virtual int recv(void* param, void (*callback)(void* param, AsyncSocket* pSocket, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, bool bAll, const OOBase::timeval_t* timeout) = 0;
+		virtual int send(void* param, void (*callback)(void* param, AsyncSocket* pSocket, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer) = 0;
+		virtual int recv_v(void* param, void (*callback)(void* param, AsyncSocket* pSocket, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout) = 0;
+		virtual int send_v(void* param, void (*callback)(void* param, AsyncSocket* pSocket, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count) = 0;
+
+	private:
+		template <typename T>
+		struct Thunk
 		{
-			ptr->close();
-		}
-	};
+			T* m_param;
+			void (T::*m_callback)(AsyncSocket* pSocket, OOBase::Buffer* buffer, int err);
+		
+			static void callback(void* param, AsyncSocket* pSocket, OOBase::Buffer* buffer, int err)
+			{
+				Thunk* thunk = static_cast<Thunk*>(param);
+				if (thunk->m_callback)
+					thunk->m_param->(*thunk->m_callback)(pSocket,buffer,err);
+				delete thunk;
+			}
+		};
 
-	typedef OOBase::SmartPtr<AsyncSocket,SocketDestructor> AsyncSocketPtr;
+		template <typename T>
+		struct ThunkV
+		{
+			T* m_param;
+			void (T::*m_callback)(AsyncSocket* pSocket, OOBase::Buffer* buffers[], size_t count, int err);
+		
+			static void callback(void* param, AsyncSocket* pSocket, OOBase::Buffer* buffers[], size_t count, int err)
+			{
+				ThunkV* thunk = static_cast<ThunkV*>(param);
+				if (thunk->m_callback)
+					thunk->m_param->(*thunk->m_callback)(pSocket,buffers,count,err);
+				delete thunk;
+			}
+		};
+	};
 
 	class AsyncLocalSocket : public AsyncSocket
 	{
@@ -89,38 +126,56 @@ namespace OOSvrBase
 		virtual int get_uid(uid_t& uid) = 0;
 	};
 
-	typedef OOBase::SmartPtr<AsyncLocalSocket,SocketDestructor> AsyncLocalSocketPtr;
-
-	template <typename SOCKET_TYPE>
-	class Acceptor
-	{
-	public:
-		virtual bool on_accept(OOBase::SmartPtr<SOCKET_TYPE,SocketDestructor> ptrSocket, const char* strAddress, int err) = 0;
-	};
-
 	class Proactor
 	{
 	public:
 		Proactor();
 		virtual ~Proactor();
 
-		virtual OOBase::Socket* accept_local(Acceptor<AsyncLocalSocket>* handler, const char* path, int* perr, SECURITY_ATTRIBUTES* psa = 0);
-		virtual OOBase::Socket* accept_remote(Acceptor<AsyncSocket>* handler, const char* address, const char* port, int* perr);
+		template <typename T>
+		OOBase::SmartPtr<OOBase::Socket> accept_local(T* param, void (T::*callback)(AsyncLocalSocket* pSocket, const char* strAddress, int err), const char* path, int* perr, SECURITY_ATTRIBUTES* psa = 0)
+		{
+			Thunk<T,AsyncLocalSocket> thunk = { param, callback };
+			return accept_local(thunk,&Thunk<T,AsyncLocalSocket>::callback,path,perr,psa);
+		}
+		
+		template <typename T>
+		OOBase::SmartPtr<OOBase::Socket> accept_remote(T* param, void (T::*callback)(AsyncSocket* handler, const char* strAddress, int err), const char* address, const char* port, int* perr)
+		{
+			Thunk<T,AsyncSocket> thunk = { param, callback };
+			return accept_local(thunk,&Thunk<T,AsyncSocket>::callback,path,perr,psa);
+		}
 
-		virtual AsyncSocketPtr attach_socket(OOBase::Socket::socket_t sock, int* perr);
-		virtual AsyncLocalSocketPtr attach_local_socket(OOBase::Socket::socket_t sock, int* perr);
+		virtual AsyncSocket* attach_socket(OOBase::socket_t sock, int* perr);
+		virtual AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int* perr);
 
-		//virtual AsyncLocalSocketPtr connect_socket(const char* address, const char* port, int* perr, const OOBase::timeval_t* wait = 0);
-		virtual AsyncLocalSocketPtr connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* wait = 0);
+		//virtual AsyncLocalSocket* connect_socket(const char* address, const char* port, int* perr, const OOBase::timeval_t* timeout = 0);
+		virtual AsyncLocalSocket* connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* timeout = 0);
 
 	protected:
 		explicit Proactor(bool);
+
+		virtual OOBase::SmartPtr<OOBase::Socket> accept_local(void* param, void (*callback)(void* param, AsyncLocalSocket* pSocket, const char* strAddress, int err), const char* path, int* perr, SECURITY_ATTRIBUTES* psa);
+		virtual OOBase::SmartPtr<OOBase::Socket> accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const char* strAddress, int err), const char* address, const char* port, int* perr);
 
 	private:
 		Proactor(const Proactor&);
 		Proactor& operator = (const Proactor&);
 
 		Proactor* m_impl;
+
+		template <typename T, typename S>
+		struct Thunk
+		{
+			T* m_param;
+			void (T::*m_callback)(S* pSocket, const char* strAddress, int err);
+		
+			static void callback(void* param, S* pSocket, const char* strAddress, int err)
+			{
+				Thunk* thunk = static_cast<Thunk*>(param);
+				thunk->m_param->(*thunk->m_callback)(pSocket,strAddress,err);
+			}
+		};
 	};
 }
 
