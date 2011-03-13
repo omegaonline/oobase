@@ -111,7 +111,16 @@ DWORD OOSvrBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile
 	LPWSTR pszDCName = NULL;
 	if (NetGetAnyDCName(NULL,strDomainName.empty() ? NULL : strDomainName.c_str(),(LPBYTE*)&pszDCName) == NERR_Success)
 	{
-		strDCName = pszDCName;
+		try
+		{
+			strDCName = pszDCName;
+		}
+		catch (std::exception&)
+		{
+			NetApiBufferFree(pszDCName);
+			return ERROR_OUTOFMEMORY;
+		}
+
 		NetApiBufferFree(pszDCName);
 	}
 
@@ -121,7 +130,17 @@ DWORD OOSvrBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile
 	if (NetUserGetInfo(strDCName.empty() ? NULL : strDCName.c_str(),strUserName.c_str(),3,(LPBYTE*)&pInfo) == NERR_Success)
 	{
 		if (pInfo->usri3_profile)
-			strProfilePath = pInfo->usri3_profile;
+		{
+			try
+			{
+				strProfilePath = pInfo->usri3_profile;
+			}
+			catch (std::exception&)
+			{
+				NetApiBufferFree(pInfo);
+				return ERROR_OUTOFMEMORY;
+			}
+		}
 
 		NetApiBufferFree(pInfo);
 	}

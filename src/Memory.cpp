@@ -22,6 +22,15 @@
 #include "../include/config-base.h"
 #include "../include/OOBase/Destructor.h"
 
+namespace OOBase
+{
+	// The discrimination type for singleton scoping for this module
+	struct Module
+	{
+		int unused;
+	};
+}
+
 namespace
 {
 	class CrtAllocator

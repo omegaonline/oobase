@@ -72,6 +72,8 @@ OOBase::wstring OOBase::from_native(const char* sz, size_t len)
 
 OOBase::string OOBase::to_utf8(const wchar_t* wsz, size_t len)
 {
+	void* TODO: // template?
+
 	char szBuf[256];
 	size_t actual_len = to_utf8(szBuf,sizeof(szBuf),wsz,len);
 	if (actual_len < sizeof(szBuf))

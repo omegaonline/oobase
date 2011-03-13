@@ -34,6 +34,8 @@ OOBase::string OOBase::system_error_text(int err)
 	return Win32::FormatMessage(err);
 #else
 
+	void* TODO: // Catch!!
+
 	ostringstream out;
 	out << "(" << err << ") ";
 

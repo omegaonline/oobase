@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Allocator.h"
+#include "../include/OOBase/STLAllocator.h"
 #include "Win32Socket.h"
 
 #if defined(_WIN32)
@@ -188,8 +188,17 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int* perr, const
 	assert(perr);
 	*perr = 0;
 
-	OOBase::local_string pipe_name("\\\\.\\pipe\\");
-	pipe_name += path;
+	OOBase::string pipe_name;
+	try
+	{
+		pipe_name.assign("\\\\.\\pipe\\");
+		pipe_name += path;
+	}
+	catch (std::exception&)
+	{
+		*perr = ERROR_OUTOFMEMORY;
+		return NULL;
+	}
 
 	timeval_t wait2 = (wait ? *wait : timeval_t::MaxTime);
 	Countdown countdown(&wait2);

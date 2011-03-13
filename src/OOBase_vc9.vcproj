@@ -419,6 +419,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\include\OOBase\STLAllocator.h"
+				>
+			</File>
+			<File
 				RelativePath="..\include\OOBase\Thread.h"
 				>
 			</File>

@@ -190,6 +190,7 @@ namespace OOBase
 	class SmartPtr : public detail::SmartPtrImpl<T,Destructor>
 	{
 		typedef detail::SmartPtrImpl<T,Destructor> baseClass;
+
 	public:
 		SmartPtr(T* ptr = 0) : baseClass(ptr)
 		{}

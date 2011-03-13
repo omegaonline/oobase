@@ -46,6 +46,15 @@
 #include <syslog.h>
 #endif // HAVE_ASL_H/HAVE_SYSLOG_H
 
+namespace OOBase
+{
+	// The discrimination type for singleton scoping for this module
+	struct Module
+	{
+		int unused;
+	};
+}
+
 namespace
 {
 #if defined(_WIN32)
@@ -127,11 +136,11 @@ namespace
 	 *  e.g. \link Win32Logger \endlink , \link ASLLogger \endlink or \link SysLogLogger \endlink
 	 */
 #if defined(_WIN32)
-	typedef OOBase::Singleton<Win32Logger> LOGGER;
+	typedef OOBase::Singleton<Win32Logger,OOBase::Module> LOGGER;
 #elif defined(HAVE_ASL_H)
-	typedef OOBase::Singleton<ASLLogger> LOGGER;
+	typedef OOBase::Singleton<ASLLogger,OOBase::Module> LOGGER;
 #elif defined(HAVE_SYSLOG_H)
-	typedef OOBase::Singleton<SysLogLogger> LOGGER;
+	typedef OOBase::Singleton<SysLogLogger,OOBase::Module> LOGGER;
 #else
 #error Fix me!
 #endif

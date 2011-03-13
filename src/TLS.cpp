@@ -24,6 +24,15 @@
 
 #include <map>
 
+namespace OOBase
+{
+	// The discrimination type for singleton scoping for this module
+	struct Module
+	{
+		int unused;
+	};
+}
+
 namespace
 {
 	class TLSMap
@@ -39,7 +48,7 @@ namespace
 			void (*m_destructor)(void*);
 		};
 
-		typedef std::map<const void*,tls_val,std::less<const void*>,OOBase::CriticalAllocator<std::pair<const void*,tls_val> > > mapType;
+		typedef std::map<const void*,tls_val,std::less<const void*>,OOBase::STLAllocator<std::pair<const void*,tls_val>,OOBase::LocalAllocator<OOBase::CriticalFailure> > > mapType;
 		mapType m_mapVals;
 
 	private:
@@ -114,9 +123,9 @@ namespace
 	 *  e.g. \link Win32TLSGlobal \endlink or \link PthreadTLSGlobal \endlink
 	 */
 #if defined(_WIN32)
-	typedef OOBase::Singleton<Win32TLSGlobal> TLS_GLOBAL;
+	typedef OOBase::Singleton<Win32TLSGlobal,OOBase::Module> TLS_GLOBAL;
 #elif defined(HAVE_PTHREAD)
-	typedef OOBase::Singleton<PthreadTLSGlobal> TLS_GLOBAL;
+	typedef OOBase::Singleton<PthreadTLSGlobal,OOBase::Module> TLS_GLOBAL;
 #else
 #error Fix me!
 #endif

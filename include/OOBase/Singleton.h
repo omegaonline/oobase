@@ -26,7 +26,7 @@
 
 namespace OOBase
 {
-	template <typename T, typename DLL = OOBase::Module>
+	template <typename T, typename DLL>
 	class Singleton
 	{
 	public:

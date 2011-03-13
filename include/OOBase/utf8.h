@@ -23,7 +23,7 @@
 #define OOBASE_UTF8_H_INCLUDED_
 
 #include "../config-base.h"
-#include "Allocator.h"
+#include "STLAllocator.h"
 
 namespace OOBase
 {

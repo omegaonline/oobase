@@ -26,6 +26,12 @@
 
 namespace OOBase
 {
+	// The discrimination type for singleton scoping
+	struct Module
+	{
+		int unused;
+	};
+
 	namespace Win32
 	{
 		void WSAStartup();
@@ -103,7 +109,7 @@ WSA::~WSA()
 
 void OOBase::Win32::WSAStartup()
 {
-	OOBase::Singleton<WSA>::instance();
+	OOBase::Singleton<WSA,OOBase::Module>::instance();
 }
 
 #endif // _WIN32

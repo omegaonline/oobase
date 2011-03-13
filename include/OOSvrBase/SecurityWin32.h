@@ -25,7 +25,7 @@
 #if defined(_WIN32)
 
 #include "../OOBase/SmartPtr.h"
-#include "../OOBase/Allocator.h"
+#include "../OOBase/STLAllocator.h"
 
 #include <userenv.h>
 #include <lm.h>

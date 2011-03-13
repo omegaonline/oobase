@@ -22,7 +22,7 @@
 #ifndef OOBASE_WIN32_IMPL_H_INCLUDED_
 #define OOBASE_WIN32_IMPL_H_INCLUDED_
 
-#include "../include/OOBase/Allocator.h"
+#include "../include/OOBase/STLAllocator.h"
 #include "../include/OOBase/Win32.h"
 
 #if defined(_WIN32)

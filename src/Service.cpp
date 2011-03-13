@@ -31,6 +31,15 @@
 
 #if defined(_WIN32)
 
+namespace OOBase
+{
+	// The discrimination type for singleton scoping for this module
+	struct Module
+	{
+		int unused;
+	};
+}
+
 namespace
 {
 	struct QuitData
@@ -46,7 +55,7 @@ namespace
 		OOBase::Condition        m_condition;
 		int                      m_result;
 	};
-	typedef OOBase::Singleton<QuitData> QUIT;
+	typedef OOBase::Singleton<QuitData,OOBase::Module> QUIT;
 
 	BOOL WINAPI control_c(DWORD evt)
 	{

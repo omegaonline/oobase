@@ -25,7 +25,7 @@
 #include "Mutex.h"
 #include "Once.h"
 #include "SmartPtr.h"
-#include "Allocator.h"
+#include "STLAllocator.h"
 
 #include <list>
 
@@ -78,7 +78,7 @@ namespace OOBase
 
 		SpinLock m_lock;
 
-		typedef std::list<std::pair<pfn_destructor,void*>,OOBase::CriticalAllocator<std::pair<pfn_destructor,void*> > > listType;
+		typedef std::list<std::pair<pfn_destructor,void*>,STLAllocator<std::pair<pfn_destructor,void*>,HeapAllocator<CriticalFailure> > > listType;
 		listType m_list;
 
 		static DLLDestructor& instance()

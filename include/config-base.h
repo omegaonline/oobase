@@ -217,12 +217,6 @@
 
 namespace OOBase
 {
-	// The discrimination type for singleton scoping
-	struct Module
-	{
-		int unused;
-	};
-
 	void CallCriticalFailure(const char* pszFile, unsigned int nLine, const char*);
 	void CallCriticalFailure(const char* pszFile, unsigned int nLine, int);
 

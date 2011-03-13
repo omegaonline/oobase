@@ -27,6 +27,12 @@
 
 namespace OOBase
 {
+	// The discrimination type for singleton scoping for this module
+	struct Module
+	{
+		int unused;
+	};
+
 	namespace Win32
 	{
 		BOOL InitOnceExecuteOnce_Internal(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context);

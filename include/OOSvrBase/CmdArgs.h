@@ -22,7 +22,7 @@
 #ifndef OOSVRBASE_CMDARGS_H_INCLUDED_
 #define OOSVRBASE_CMDARGS_H_INCLUDED_
 
-#include "../OOBase/Allocator.h"
+#include "../OOBase/STLAllocator.h"
 
 #include <map>
 #include <iostream>
@@ -35,7 +35,7 @@ namespace OOSvrBase
 		void add_option(const char* id, char short_opt = 0, bool has_value = false, const char* long_opt = 0);
 		void add_argument(const char* id, int position);
 
-		typedef std::map<OOBase::string,OOBase::string,std::less<OOBase::string>,OOBase::CriticalAllocator<std::pair<const OOBase::string,OOBase::string> > > resultsType;
+		typedef std::map<OOBase::string,OOBase::string,std::less<OOBase::string>,OOBase::STLAllocator<std::pair<const OOBase::string,OOBase::string>,OOBase::HeapAllocator<OOBase::StdFailure> > > resultsType;
 		bool parse(int argc, char* argv[], resultsType& results, int skip = 1) const;
 
 	private:
@@ -46,8 +46,8 @@ namespace OOSvrBase
 			bool           m_has_value;
 		};
 
-		typedef std::multimap<OOBase::string,Option,std::less<OOBase::string>,OOBase::CriticalAllocator<std::pair<const OOBase::string,Option> > > optsType;
-		typedef std::map<OOBase::string,int,std::less<OOBase::string>,OOBase::CriticalAllocator<std::pair<const OOBase::string,int> > > argsType;
+		typedef std::multimap<OOBase::string,Option,std::less<OOBase::string>,OOBase::STLAllocator<std::pair<const OOBase::string,Option>,OOBase::HeapAllocator<OOBase::StdFailure> > > optsType;
+		typedef std::map<OOBase::string,int,std::less<OOBase::string>,OOBase::STLAllocator<std::pair<const OOBase::string,int>,OOBase::HeapAllocator<OOBase::StdFailure> > > argsType;
 
 		mutable OOBase::string m_name;
 		optsType               m_map_opts;
