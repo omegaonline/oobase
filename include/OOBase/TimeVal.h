@@ -24,6 +24,8 @@
 
 #include "../config-base.h"
 
+#include <time.h>
+
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>
 #endif

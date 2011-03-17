@@ -19,7 +19,6 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "New.h"
 #include "../include/OOBase/Singleton.h"
 #include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/tr24731.h"
@@ -28,6 +27,7 @@
 #include "../include/OOSvrBase/SecurityWin32.h"
 
 #include <stdio.h>
+#include <sstream>
 
 #if defined(_WIN32)
 #include <io.h>

@@ -19,12 +19,15 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "New.h"
+#include "../include/config-base.h"
+
+#if defined(_WIN32)
+
 #include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/Destructor.h"
 #include "Win32Impl.h"
 
-#if defined(_WIN32)
+#include <sstream>
 
 namespace OOBase
 {

@@ -60,7 +60,7 @@ namespace OOBase
 		template <typename T, typename Destructor>
 		class SmartPtrImpl
 		{
-			class SmartPtrNode : public CustomNew
+			class SmartPtrNode
 			{
 			public:
 				SmartPtrNode(T* data = 0) :

@@ -19,8 +19,9 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "New.h"
 #include "../include/OOBase/Buffer.h"
+
+#include <errno.h>
 
 OOBase::Buffer::Buffer(size_t cbSize, size_t align) :
 		m_refcount(1),

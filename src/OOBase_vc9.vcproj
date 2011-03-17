@@ -305,10 +305,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\New.h"
-				>
-			</File>
-			<File
 				RelativePath=".\Once.cpp"
 				>
 			</File>

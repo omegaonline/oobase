@@ -29,34 +29,7 @@
 	#include <oobase-autoconf.h>
 #endif
 
-////////////////////////////////////////
-// Bring in C standard libraries
-//
-#define __STDC_WANT_LIB_EXT1__ 1
-#define __STDC_WANT_SECURE_LIB__ 1
-#include <string.h>
-
-#include <stdlib.h>
-#include <wchar.h>
-#include <errno.h>
 #include <assert.h>
-#include <math.h>
-
-////////////////////////////////////////
-// Bring in C++ standard libraries
-//
-#ifdef __cplusplus
-#include <limits>
-
-#if defined(max)
-#undef max
-#endif
-
-#include <string>
-#include <sstream>
-#include <iomanip>
-#include <locale>
-#endif
 
 ////////////////////////////////////////
 // Try to work out what's going on with MS Windows

@@ -24,6 +24,8 @@
 
 #include "../OOBase/SmartPtr.h"
 
+#include <string>
+
 #if !defined(HAVE_SQLITE3) && !defined(HAVE_SQLITE3_AMALGAMATION)
 #error SQLite3 required!
 #else

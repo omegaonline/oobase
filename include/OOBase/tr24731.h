@@ -23,6 +23,11 @@
 #define OOBASE_TR24731_H_INCLUDED_
 
 #include <stdarg.h>
+#include <errno.h>
+
+#define __STDC_WANT_LIB_EXT1__ 1
+#define __STDC_WANT_SECURE_LIB__ 1
+#include <stdio.h>
 
 #ifndef HAVE_TR_24731
 #if (defined(__STDC_LIB_EXT1__) && (__STDC_LIB_EXT1__ >= 200509L)) || (defined(__STDC_SECURE_LIB__) && (__STDC_SECURE_LIB__ >= 200411L))

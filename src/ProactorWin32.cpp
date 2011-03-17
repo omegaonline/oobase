@@ -19,8 +19,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "New.h"
 #include "../include/OOSvrBase/Proactor.h"
+#include <errno.h>
 
 #if defined(_WIN32)
 

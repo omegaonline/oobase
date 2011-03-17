@@ -24,9 +24,13 @@
 
 #include "Memory.h"
 
+#include <string>
+
 #if defined(max)
 #undef max
 #endif
+
+#include <limits>
 
 namespace OOBase
 {

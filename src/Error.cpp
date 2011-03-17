@@ -19,9 +19,10 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "New.h"
 #include "../include/OOBase/tr24731.h"
 #include "Win32Impl.h"
+
+#include <sstream>
 
 namespace OOBase
 {

@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "New.h"
+#include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Thread.h"
 #include "../include/OOBase/TLSSingleton.h"
 
