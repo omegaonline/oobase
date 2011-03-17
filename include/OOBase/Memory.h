@@ -48,7 +48,7 @@ namespace OOBase
 	public:
 		void* operator new(size_t size)
 		{
-			void* p = ChunkAllocate(size);
+			void* p = OOBase::ChunkAllocate(size);
 			if (!p)
 				throw std::bad_alloc();
 
@@ -57,7 +57,7 @@ namespace OOBase
 
 		void* operator new[](size_t size)
 		{
-			void* p = HeapAllocate(size);
+			void* p = OOBase::HeapAllocate(size);
 			if (!p)
 				throw std::bad_alloc();
 
@@ -66,17 +66,17 @@ namespace OOBase
 
 		void* operator new(size_t size, const std::nothrow_t&)
 		{
-			return ChunkAllocate(size);
+			return OOBase::ChunkAllocate(size);
 		}
 
 		void* operator new[](size_t size, const std::nothrow_t&)
 		{
-			return HeapAllocate(size);
+			return OOBase::HeapAllocate(size);
 		}
 
 		void* operator new(size_t size, const critical_t&)
 		{
-			void* p = ChunkAllocate(size);
+			void* p = OOBase::ChunkAllocate(size);
 			if (!p)
 				CriticalOutOfMemory();
 
@@ -85,7 +85,7 @@ namespace OOBase
 
 		void* operator new[](size_t size, const critical_t&)
 		{
-			void* p = HeapAllocate(size);
+			void* p = OOBase::HeapAllocate(size);
 			if (!p)
 				CriticalOutOfMemory();
 
@@ -94,32 +94,32 @@ namespace OOBase
 
 		void operator delete(void* p)
 		{
-			return ChunkFree(p);
+			return OOBase::ChunkFree(p);
 		}
 
 		void operator delete(void* p, const std::nothrow_t&)
 		{
-			return ChunkFree(p);
+			return OOBase::ChunkFree(p);
 		}
 
 		void operator delete(void* p, const critical_t&)
 		{
-			return ChunkFree(p);
+			return OOBase::ChunkFree(p);
 		}
 
 		void operator delete[](void* p)
 		{
-			return HeapFree(p);
+			return OOBase::HeapFree(p);
 		}
 
 		void operator delete[](void* p, const std::nothrow_t&)
 		{
-			return HeapFree(p);
+			return OOBase::HeapFree(p);
 		}
 
 		void operator delete[](void* p, const critical_t&)
 		{
-			return HeapFree(p);
+			return OOBase::HeapFree(p);
 		}
 	};
 }

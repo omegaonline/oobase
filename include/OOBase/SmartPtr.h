@@ -41,7 +41,7 @@ namespace OOBase
 	public:
 		static void destroy(void* ptr)
 		{
-			HeapFree(ptr);
+			OOBase::HeapFree(ptr);
 		}
 	};
 
@@ -50,7 +50,7 @@ namespace OOBase
 	public:
 		static void destroy(void* ptr)
 		{
-			LocalFree(ptr);
+			OOBase::LocalFree(ptr);
 		}
 	};
 
