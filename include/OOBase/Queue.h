@@ -24,7 +24,7 @@
 
 #include "Condition.h"
 #include "Thread.h"
-#include "Allocator.h"
+#include "STLAllocator.h"
 
 #include <queue>
 

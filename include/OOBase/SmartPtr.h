@@ -22,6 +22,7 @@
 #ifndef OOBASE_SMARTPTR_H_INCLUDED_
 #define OOBASE_SMARTPTR_H_INCLUDED_
 
+#include "Memory.h"
 #include "Atomic.h"
 
 namespace OOBase
