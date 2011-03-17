@@ -19,6 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "New.h"
 #include "../include/OOBase/Singleton.h"
 #include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/tr24731.h"
@@ -110,7 +111,7 @@ namespace
 		{
 			OOBase::SmartPtr<char,CrtFreeDestructor> buf = static_cast<char*>(::malloc(len));
 			if (!buf)
-				OOBase::CallCriticalFailureMem(__FILE__,__LINE__-2);
+				OOBase::CriticalOutOfMemory();
 
 			int len2 = vsnprintf_s(buf,len,fmt,args);
 			if (len2 < 0)

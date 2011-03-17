@@ -60,7 +60,7 @@ namespace OOBase
 		{
 			T* pThis = new (std::nothrow) T();
 			if (!pThis)
-				CallCriticalFailureMem("TLS SIngleton",0);
+				CriticalOutOfMemory();
 			
 			TLS::Set(&s_sentinal,pThis,&destroy);
 

@@ -19,6 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "New.h"
 #include "../include/OOBase/Buffer.h"
 
 OOBase::Buffer::Buffer(size_t cbSize, size_t align) :

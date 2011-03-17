@@ -19,6 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "New.h"
 #include "../include/OOBase/Thread.h"
 #include "../include/OOBase/TLSSingleton.h"
 
@@ -33,7 +34,7 @@ namespace
 
 #if defined(_WIN32)
 
-	class Win32Thread : public OOBase::Thread, public OOBase::CustomNew
+	class Win32Thread : public OOBase::Thread
 	{
 	public:
 		Win32Thread();
@@ -181,7 +182,7 @@ namespace
 
 #if defined(HAVE_PTHREAD)
 
-	class PthreadThread : public OOBase::Thread, public OOBase::CustomNew
+	class PthreadThread : public OOBase::Thread
 	{
 	public:
 		PthreadThread();

@@ -69,7 +69,7 @@ namespace OOSvrBase
 			AsyncHandlerRaw* m_handler;
 		};
 
-		class AsyncHandlerRaw : public OOBase::CustomNew
+		class AsyncHandlerRaw
 		{
 		public:
 			virtual void on_recv(AsyncIOHelper::AsyncOp* recv_op, int err, bool bLast) = 0;

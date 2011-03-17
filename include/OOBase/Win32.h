@@ -26,8 +26,6 @@
 
 #if defined(_WIN32)
 
-#include "Allocator.h"
-
 namespace OOBase
 {
 	namespace Win32
@@ -102,7 +100,7 @@ namespace OOBase
 			HANDLE m_handle;
 		};	
 
-		class rwmutex_t : public OOBase::CustomNew
+		class rwmutex_t
 		{
 		public:
 			rwmutex_t();
@@ -120,7 +118,7 @@ namespace OOBase
 			OOBase::Win32::SmartHandle m_hWriterMutex;
 		};
 
-		class condition_variable_t : public OOBase::CustomNew
+		class condition_variable_t
 		{
 		public:
 			condition_variable_t();

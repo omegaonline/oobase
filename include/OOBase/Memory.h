@@ -19,14 +19,14 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#ifndef OOBASE_ALLOCATOR_H_INCLUDED_
-#define OOBASE_ALLOCATOR_H_INCLUDED_
+#ifndef OOBASE_MEMORY_H_INCLUDED_
+#define OOBASE_MEMORY_H_INCLUDED_
 
 #include "../config-base.h"
 
 namespace OOBase
 {
-	void CallCriticalFailureMem(const char* pszFile, unsigned int nLine);
+	void CriticalOutOfMemory();
 
 	void* HeapAllocate(size_t bytes);
 	void* HeapReallocate(void* p, size_t bytes);
@@ -78,7 +78,7 @@ namespace OOBase
 		{
 			void* p = ChunkAllocate(size);
 			if (!p)
-				CallCriticalFailureMem("operator new",0);
+				CriticalOutOfMemory();
 
 			return p;
 		}
@@ -87,7 +87,7 @@ namespace OOBase
 		{
 			void* p = HeapAllocate(size);
 			if (!p)
-				CallCriticalFailureMem("operator new",0);
+				CriticalOutOfMemory();
 
 			return p;
 		}
@@ -124,4 +124,4 @@ namespace OOBase
 	};
 }
 
-#endif // OOBASE_ALLOCATOR_H_INCLUDED_
+#endif // OOBASE_MEMORY_H_INCLUDED_

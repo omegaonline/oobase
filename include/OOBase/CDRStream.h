@@ -41,9 +41,7 @@ namespace OOBase
 #endif
 				m_last_error(0)
 		{
-			m_buffer = new (std::nothrow) Buffer(len,MaxAlignment);
-			if (!m_buffer)
-				OOBase::CallCriticalFailureMem(__FILE__,__LINE__-2);
+			m_buffer = new (critical) Buffer(len,MaxAlignment);
 		}
 
 		CDRStream(Buffer* buffer) :

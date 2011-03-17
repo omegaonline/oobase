@@ -19,6 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "New.h"
 #include "../include/OOBase/tr24731.h"
 #include "Win32Impl.h"
 
@@ -63,16 +64,16 @@ void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, int er
 
 #if defined(_WIN32)
 
-void OOBase::CallCriticalFailureMem(const char* pszFile, unsigned int nLine)
+void OOBase::CriticalOutOfMemory()
 {
-	CallCriticalFailure(pszFile,nLine,ERROR_OUTOFMEMORY);
+	CallCriticalFailure(__FILE__,__LINE__,ERROR_OUTOFMEMORY);
 }
 
 #elif defined(HAVE_UNISTD_H)
 
-void OOBase::CallCriticalFailureMem(const char* pszFile, unsigned int nLine)
+void OOBase::CriticalOutOfMemory()
 {
-	CallCriticalFailure(pszFile,nLine,ENOMEM);
+	CallCriticalFailure(__FILE__,__LINE__,ENOMEM);
 }
 
 #else

@@ -52,7 +52,7 @@ namespace OOBase
 		{
 			s_instance = new (std::nothrow) T();
 			if (!s_instance)
-				CallCriticalFailureMem("Singleton",0);
+				CriticalOutOfMemory();
 			
 			DLLDestructor<DLL>::add_destructor(&destroy,0);
 		}

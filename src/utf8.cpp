@@ -19,6 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "New.h"
 #include "../include/OOBase/utf8.h"
 #include "../include/OOBase/SmartPtr.h"
 
@@ -36,7 +37,7 @@ OOBase::wstring OOBase::from_utf8(const char* sz, size_t len)
 
 	SmartPtr<wchar_t,LocalDestructor> ptrBuf = static_cast<wchar_t*>(LocalAllocate(actual_len*sizeof(wchar_t)));
 	if (!ptrBuf)
-		CallCriticalFailureMem(__FILE__,__LINE__-2);
+		CriticalOutOfMemory();
 
 	from_utf8(ptrBuf,actual_len,sz,len);
 
@@ -60,7 +61,7 @@ OOBase::wstring OOBase::from_native(const char* sz, size_t len)
 
 	SmartPtr<wchar_t,LocalDestructor> ptrBuf = static_cast<wchar_t*>(LocalAllocate(actual_len*sizeof(wchar_t)));
 	if (!ptrBuf)
-		CallCriticalFailureMem(__FILE__,__LINE__-2);
+		CriticalOutOfMemory();
 
 	from_native(ptrBuf,actual_len,sz,len);
 
@@ -86,7 +87,7 @@ OOBase::string OOBase::to_utf8(const wchar_t* wsz, size_t len)
 
 	SmartPtr<char,LocalDestructor> ptrBuf = static_cast<char*>(LocalAllocate(actual_len));
 	if (!ptrBuf)
-		CallCriticalFailureMem(__FILE__,__LINE__-2);
+		CriticalOutOfMemory();
 
 	to_utf8(ptrBuf,actual_len,wsz,len);
 
@@ -110,7 +111,7 @@ OOBase::string OOBase::to_native(const wchar_t* wsz, size_t len)
 
 	SmartPtr<char,LocalDestructor> ptrBuf = static_cast<char*>(LocalAllocate(actual_len));
 	if (!ptrBuf)
-		CallCriticalFailureMem(__FILE__,__LINE__-2);
+		CriticalOutOfMemory();
 
 	to_native(ptrBuf,actual_len,wsz,len);
 

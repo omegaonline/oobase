@@ -19,6 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "New.h"
 #include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/Destructor.h"
 #include "Win32Impl.h"
@@ -41,7 +42,7 @@ namespace OOBase
 
 namespace
 {
-	class Win32Thunk : public OOBase::CustomNew
+	class Win32Thunk
 	{
 	public:
 		Win32Thunk();

@@ -19,8 +19,84 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/config-base.h"
+#include "New.h"
 #include "../include/OOBase/Destructor.h"
+
+void* operator new(size_t size)
+{
+	void* p = OOBase::ChunkAllocate(size);
+	if (!p)
+		throw std::bad_alloc();
+
+	return p;
+}
+
+void* operator new[](size_t size)
+{
+	void* p = OOBase::HeapAllocate(size);
+	if (!p)
+		throw std::bad_alloc();
+
+	return p;
+}
+
+void* operator new(size_t size, const std::nothrow_t&)
+{
+	return OOBase::ChunkAllocate(size);
+}
+
+void* operator new[](size_t size, const std::nothrow_t&)
+{
+	return OOBase::HeapAllocate(size);
+}
+
+void* operator new(size_t size, const OOBase::critical_t&)
+{
+	void* p = OOBase::ChunkAllocate(size);
+	if (!p)
+		OOBase::CriticalOutOfMemory();
+
+	return p;
+}
+
+void* operator new[](size_t size, const OOBase::critical_t&)
+{
+	void* p = OOBase::HeapAllocate(size);
+	if (!p)
+		OOBase::CriticalOutOfMemory();
+
+	return p;
+}
+
+void operator delete(void* p)
+{
+	return OOBase::ChunkFree(p);
+}
+
+void operator delete(void* p, const std::nothrow_t&)
+{
+	return OOBase::ChunkFree(p);
+}
+
+void operator delete(void* p, const OOBase::critical_t&)
+{
+	return OOBase::ChunkFree(p);
+}
+
+void operator delete[](void* p)
+{
+	return OOBase::HeapFree(p);
+}
+
+void operator delete[](void* p, const std::nothrow_t&)
+{
+	return OOBase::HeapFree(p);
+}
+
+void operator delete[](void* p, const OOBase::critical_t&)
+{
+	return OOBase::HeapFree(p);
+}
 
 namespace OOBase
 {

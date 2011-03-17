@@ -22,9 +22,7 @@
 #ifndef OOBASE_STL_ALLOCATOR_H_INCLUDED_
 #define OOBASE_STL_ALLOCATOR_H_INCLUDED_
 
-#include "Allocator.h"
-
-#include <list>
+#include "Memory.h"
 
 #if defined(max)
 #undef max
@@ -46,7 +44,7 @@ namespace OOBase
 	public:
 		static void fail()
 		{
-			CallCriticalFailureMem("OOBase::CriticalAllocator::allocate()",0);
+			CriticalOutOfMemory();
 		}
 	};
 

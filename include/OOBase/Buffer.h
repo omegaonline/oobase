@@ -23,6 +23,7 @@
 #define OOBASE_BUFFER_H_INCLUDED_
 
 #include "Atomic.h"
+#include "Memory.h"
 
 namespace OOBase
 {
@@ -45,7 +46,7 @@ namespace OOBase
 	                         length()        space()      \endverbatim
 	 *  \warning This class is not thread-safe.
 	 */
-	class Buffer
+	class Buffer : public CustomNew
 	{
 	public:
 		/// The constructor allocates the internal buffer to size \p cbSize.

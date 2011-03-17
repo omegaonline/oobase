@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2009 Rick Taylor
+// Copyright (C) 2011 Rick Taylor
 //
 // This file is part of OOBase, the Omega Online Base library.
 //
@@ -19,24 +19,23 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "New.h"
-#include "../include/OOBase/Posix.h"
+#ifndef OOBASE_NEW_H_INCLUDED_
+#define OOBASE_NEW_H_INCLUDED_
 
-#if defined (HAVE_UNISTD_H)
+#include "../include/OOBase/Memory.h"
 
-#include <fcntl.h>
+// Global operator new overloads
+void* operator new(size_t size);
+void* operator new[](size_t size);
+void* operator new(size_t size, const std::nothrow_t&);
+void* operator new[](size_t size, const std::nothrow_t&);
+void* operator new(size_t size, const OOBase::critical_t&);
+void* operator new[](size_t size, const OOBase::critical_t&);
+void operator delete(void* p);
+void operator delete(void* p, const std::nothrow_t&);
+void operator delete(void* p, const OOBase::critical_t&);
+void operator delete[](void* p);
+void operator delete[](void* p, const std::nothrow_t&);
+void operator delete[](void* p, const OOBase::critical_t&);
 
-int OOBase::POSIX::set_close_on_exec(int sock, bool set)
-{
-	int flags = fcntl(sock,F_GETFD);
-	if (flags == -1)
-		return errno;
-
-	flags = (set ? flags | FD_CLOEXEC : flags & ~FD_CLOEXEC);
-	if (fcntl(sock,F_GETFD,flags) == -1)
-		return errno;
-
-	return 0;
-}
-
-#endif
+#endif // OOBASE_NEW_H_INCLUDED_

@@ -19,6 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "New.h"
 #include "../include/OOBase/TLSSingleton.h"
 #include "../include/OOBase/Singleton.h"
 
@@ -35,7 +36,7 @@ namespace OOBase
 
 namespace
 {
-	class TLSMap : public OOBase::CustomNew
+	class TLSMap
 	{
 	public:
 		static TLSMap* instance(bool create = true);

@@ -305,6 +305,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\New.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Once.cpp"
 				>
 			</File>
@@ -347,10 +351,6 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath="..\include\OOBase\Allocator.h"
-				>
-			</File>
-			<File
 				RelativePath="..\include\OOBase\Atomic.h"
 				>
 			</File>
@@ -384,6 +384,10 @@
 			</File>
 			<File
 				RelativePath="..\include\OOBase\DLL.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\Memory.h"
 				>
 			</File>
 			<File
