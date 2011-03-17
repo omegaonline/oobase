@@ -78,7 +78,7 @@ OOBase::Buffer& OOBase::Buffer::operator = (const Buffer& rhs)
 	return *this;
 }
 
-OOBase::Buffer* OOBase::Buffer::duplicate()
+OOBase::Buffer* OOBase::Buffer::addref()
 {
 	++m_refcount;
 	return this;

@@ -313,6 +313,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ProactorEvSocket.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\ProactorWin32.cpp"
 				>
 			</File>

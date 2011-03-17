@@ -23,7 +23,7 @@
 
 #include <algorithm>
 
-#if defined(HAVE_EV_H)
+//#if defined(HAVE_EV_H)
 
 #include "../include/OOBase/Posix.h"
 #include "BSDSocket.h"

@@ -52,7 +52,7 @@ namespace OOBase
 		Buffer(size_t cbSize = 256, size_t align = 1);
 
 		/// Return a reference counted copy
-		Buffer* duplicate();
+		Buffer* addref();
 
 		/// Release a reference
 		void release();
