@@ -113,7 +113,7 @@ namespace OOSvrBase
 		DWORD LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile);
 		void* GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls);
 		DWORD GetNameFromToken(HANDLE hToken, OOBase::wstring& strUserName, OOBase::wstring& strDomainName);
-		DWORD GetLogonSID(HANDLE hToken, OOBase::SmartPtr<void,OOBase::FreeDestructor<1> >& pSIDLogon);
+		DWORD GetLogonSID(HANDLE hToken, OOBase::SmartPtr<void,OOBase::HeapDestructor>& pSIDLogon);
 		DWORD EnableUserAccessToDir(const wchar_t* pszPath, const TOKEN_USER* pUser);
 		bool MatchSids(ULONG count, PSID_AND_ATTRIBUTES pSids1, PSID_AND_ATTRIBUTES pSids2);
 		bool MatchPrivileges(ULONG count, PLUID_AND_ATTRIBUTES Privs1, PLUID_AND_ATTRIBUTES Privs2);

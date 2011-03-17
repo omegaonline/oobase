@@ -34,7 +34,7 @@ namespace OOSvrBase
 {
 	namespace Win32
 	{
-		class ProactorImpl : public Proactor
+		class ProactorImpl : public Proactor, public OOBase::CustomNew
 		{
 		public:
 			ProactorImpl();

@@ -77,8 +77,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, i
 	if (sock == INVALID_SOCKET)
 		return 0;
 
-	OOBase::Win32::Socket* pSocket;
-	OOBASE_NEW_T(OOBase::Win32::Socket,pSocket,OOBase::Win32::Socket(sock));
+	OOBase::Win32::Socket* pSocket = new (std::nothrow) OOBase::Win32::Socket(sock);
 	if (!pSocket)
 	{
 		*perr = ERROR_OUTOFMEMORY;

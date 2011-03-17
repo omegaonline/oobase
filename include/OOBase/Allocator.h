@@ -24,103 +24,102 @@
 
 #include "../config-base.h"
 
-#if defined(max)
-#undef max
-#endif
-
 namespace OOBase
 {
+	void CallCriticalFailureMem(const char* pszFile, unsigned int nLine);
+
 	void* HeapAllocate(size_t bytes);
 	void* HeapReallocate(void* p, size_t bytes);
 	void HeapFree(void* p);
+
+	void* ChunkAllocate(size_t bytes);
+	void ChunkFree(void* p);
 
 	void* LocalAllocate(size_t bytes);
 	void* LocalReallocate(void* p, size_t bytes);
 	void LocalFree(void* p);
 
-	void* ChunkAllocate(size_t size, size_t count);
-	void ChunkFree(void* p, size_t size, size_t count);
+	struct critical_t
+	{};
+	extern const critical_t critical;
 	
-	class NullFailure
+	class CustomNew
 	{
 	public:
-		static void fail()
-		{ }
-	};
-
-	class StdFailure
-	{
-	public:
-		static void fail()
-		{ 
-			throw std::bad_alloc();
-		}
-	};
-
-	class CriticalFailure
-	{
-	public:
-		static void fail()
+		void* operator new(size_t size)
 		{
-			OOBase::CallCriticalFailureMem("OOBase::CriticalAllocator::allocate()",0);
-		}
-	};
-
-	// Allocator types
-	template <typename FailureStrategy>
-	class HeapAllocator
-	{
-	public:
-		static void* allocate(size_t size, size_t count) 
-		{
-			void* p = OOBase::HeapAllocate(size*count);
-			if (p == NULL)
-				FailureStrategy::fail();
+			void* p = ChunkAllocate(size);
+			if (!p)
+				throw std::bad_alloc();
 
 			return p;
 		}
 
-		static void deallocate(void* p, size_t /*size*/, size_t /*count*/) 
+		void* operator new[](size_t size)
 		{
-			OOBase::HeapFree(p);
-		}
-	};
-
-	template <typename FailureStrategy>
-	class ChunkAllocator
-	{
-	public:
-		static void* allocate(size_t size, size_t count) 
-		{
-			void* p = OOBase::ChunkAllocate(size,count);
-			if (p == NULL)
-				FailureStrategy::fail();
+			void* p = HeapAllocate(size);
+			if (!p)
+				throw std::bad_alloc();
 
 			return p;
 		}
 
-		static void deallocate(void* p, size_t size, size_t count) 
+		void* operator new(size_t size, const std::nothrow_t&)
 		{
-			OOBase::ChunkFree(p,size,count);
+			return ChunkAllocate(size);
 		}
-	};
 
-	template <typename FailureStrategy>
-	class LocalAllocator
-	{
-	public:
-		static void* allocate(size_t size, size_t count) 
+		void* operator new[](size_t size, const std::nothrow_t&)
 		{
-			void* p = OOBase::LocalAllocate(size*count);
-			if (p == NULL)
-				FailureStrategy::fail();
+			return HeapAllocate(size);
+		}
+
+		void* operator new(size_t size, const critical_t&)
+		{
+			void* p = ChunkAllocate(size);
+			if (!p)
+				CallCriticalFailureMem("operator new",0);
 
 			return p;
 		}
 
-		static void deallocate(void* p, size_t /*size*/, size_t /*count*/) 
+		void* operator new[](size_t size, const critical_t&)
 		{
-			OOBase::LocalFree(p);
+			void* p = HeapAllocate(size);
+			if (!p)
+				CallCriticalFailureMem("operator new",0);
+
+			return p;
+		}
+
+		void operator delete(void* p)
+		{
+			return ChunkFree(p);
+		}
+
+		void operator delete(void* p, const std::nothrow_t&)
+		{
+			return ChunkFree(p);
+		}
+
+		void operator delete(void* p, const critical_t&)
+		{
+			return ChunkFree(p);
+		}
+
+		void operator delete[](void* p)
+		{
+			return HeapFree(p);
+		}
+
+		void operator delete[](void* p, const std::nothrow_t&)
+		{
+			return HeapFree(p);
+		}
+
+		void operator delete[](void* p, const critical_t&)
+		{
+			return HeapFree(p);
 		}
 	};
 }

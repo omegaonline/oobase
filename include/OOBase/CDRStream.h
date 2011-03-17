@@ -41,7 +41,7 @@ namespace OOBase
 #endif
 				m_last_error(0)
 		{
-			OOBASE_NEW_T(Buffer,m_buffer,Buffer(len,MaxAlignment));
+			m_buffer = new (std::nothrow) Buffer(len,MaxAlignment);
 			if (!m_buffer)
 				OOBase::CallCriticalFailureMem(__FILE__,__LINE__-2);
 		}

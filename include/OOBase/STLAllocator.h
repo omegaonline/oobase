@@ -24,12 +24,76 @@
 
 #include "Allocator.h"
 
+#include <list>
+
 #if defined(max)
 #undef max
 #endif
 
 namespace OOBase
 {
+	class StdFailure
+	{
+	public:
+		static void fail()
+		{ 
+			throw std::bad_alloc();
+		}
+	};
+
+	class CriticalFailure
+	{
+	public:
+		static void fail()
+		{
+			CallCriticalFailureMem("OOBase::CriticalAllocator::allocate()",0);
+		}
+	};
+
+	// Allocator types
+	template <typename FailureStrategy>
+	class HeapAllocator
+	{
+	public:
+		static void* allocate(size_t size, size_t count) 
+		{
+			void* p = NULL;
+			if (count == 1)
+				p = OOBase::ChunkAllocate(size);
+			else
+				p = OOBase::HeapAllocate(size*count);
+			
+			if (p == NULL)
+				FailureStrategy::fail();
+
+			return p;
+		}
+
+		static void deallocate(void* p, size_t /*size*/, size_t /*count*/) 
+		{
+			OOBase::HeapFree(p);
+		}
+	};
+
+	template <typename FailureStrategy>
+	class LocalAllocator
+	{
+	public:
+		static void* allocate(size_t size, size_t count) 
+		{
+			void* p = OOBase::LocalAllocate(size*count);
+			if (p == NULL)
+				FailureStrategy::fail();
+
+			return p;
+		}
+
+		static void deallocate(void* p, size_t /*size*/, size_t /*count*/) 
+		{
+			OOBase::LocalFree(p);
+		}
+	};
+
 	template <typename T, typename A>
 	class STLAllocator
 	{
@@ -132,7 +196,6 @@ namespace OOBase
 	// Some useful typedefs
 	typedef std::basic_string<char, std::char_traits<char>, STLAllocator<char,HeapAllocator<OOBase::StdFailure> > > string;
 	typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, STLAllocator<wchar_t,HeapAllocator<OOBase::StdFailure> > > wstring;
-
 	typedef std::basic_ostringstream<char, std::char_traits<char>, STLAllocator<char,HeapAllocator<OOBase::StdFailure> > > ostringstream;
 
 	typedef std::basic_string<char, std::char_traits<char>, STLAllocator<char,LocalAllocator<OOBase::StdFailure> > > local_string;

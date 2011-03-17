@@ -306,16 +306,14 @@ namespace
 
 		static AsyncSocket* Create(OOSvrBase::Ev::ProactorImpl* proactor, OOBase::Socket::socket_t sock)
 		{
-			IOHelper* helper;
-			OOBASE_NEW_T(IOHelper,helper,IOHelper(proactor,sock));
+			IOHelper* helper = new (std::nothrow) IOHelper(proactor,sock);
 			if (!helper)
 				return 0;
 
-			AsyncSocket* pSock;
-			OOBASE_NEW_T(AsyncSocket,pSock,AsyncSocket(helper));
+			AsyncSocket* pSock = new (std::nothrow) AsyncSocket(helper);
 			if (!pSock)
 			{
-				OOBASE_DELETE(IOHelper,helper);
+				delete helper;
 				return 0;
 			}
 
@@ -335,16 +333,14 @@ namespace
 
 		static AsyncLocalSocket* Create(OOSvrBase::Ev::ProactorImpl* proactor, OOBase::Socket::socket_t sock)
 		{
-			IOHelper* helper;
-			OOBASE_NEW_T(IOHelper,helper,IOHelper(proactor,sock));
+			IOHelper* helper = new (std::nothrow) IOHelper(proactor,sock);
 			if (!helper)
 				return 0;
 
-			AsyncLocalSocket* pSock;
-			OOBASE_NEW_T(AsyncLocalSocket,pSock,AsyncLocalSocket(helper,sock));
+			AsyncLocalSocket* pSock = new (std::nothrow) AsyncLocalSocket(helper,sock);
 			if (!pSock)
 			{
-				OOBASE_DELETE(IOHelper,helper);
+				delete helper;
 				return 0;
 			}
 
@@ -590,7 +586,7 @@ namespace
 				}
 			}
 
-			OOBase::local_string strAddress;
+			OOBase::string strAddress;
 			if (!err && new_fd != INVALID_SOCKET)
 			{
 				// Get the address...
@@ -692,8 +688,7 @@ OOSvrBase::Ev::ProactorImpl::ProactorImpl() :
 	int num_procs = 2;
 	for (int i=0; i<num_procs; ++i)
 	{
-		OOBase::SmartPtr<OOBase::Thread> ptrThread;
-		OOBASE_NEW_T_CRITICAL(OOBase::Thread,ptrThread,OOBase::Thread(false));
+		OOBase::SmartPtr<OOBase::Thread> ptrThread = new (OOBase::critical) OOBase::Thread(false);
 
 		ptrThread->run(&worker,this);
 
@@ -918,8 +913,7 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor<AsyncLocalSoc
 	}
 
 	// Wrap up in a controlling socket class
-	OOBase::SmartPtr<LocalSocketAcceptor> pAccept;
-	OOBASE_NEW_T(LocalSocketAcceptor,pAccept,LocalSocketAcceptor(this,fd,handler,path));
+	OOBase::SmartPtr<LocalSocketAcceptor> pAccept = new (std::nothrow) LocalSocketAcceptor(this,fd,handler,path);
 	if (!pAccept)
 	{
 		*perr = ENOMEM;
@@ -1013,8 +1007,7 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor<OOSvrBase::A
 
 	// Wrap up in a controlling socket class
 	typedef SocketAcceptor<OOSvrBase::AsyncSocket,::AsyncSocket> socket_templ_t;
-	OOBase::SmartPtr<socket_templ_t> pAccept;
-	OOBASE_NEW_T(socket_templ_t,pAccept,socket_templ_t(this,sock,handler));
+	OOBase::SmartPtr<socket_templ_t> pAccept = new (std::nothrow) socket_templ_t(this,sock,handler));
 	if (!pAccept)
 	{
 		*perr = ENOMEM;

@@ -170,7 +170,7 @@ namespace OOBase
 		Condition        m_available;
 		Condition        m_space;
 
-		std::queue<T,std::deque<T,OOBase::CriticalAllocator<T> > > m_queue;
+		std::queue<T,std::deque<T,STLAllocator<T,HeapAllocator<CriticalFailure> > > > m_queue;
 	};
 }
 

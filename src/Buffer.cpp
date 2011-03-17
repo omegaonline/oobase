@@ -87,7 +87,7 @@ OOBase::Buffer* OOBase::Buffer::duplicate()
 void OOBase::Buffer::release()
 {
 	if (--m_refcount == 0)
-		OOBASE_DELETE(Buffer,this);
+		delete this;
 }
 
 OOBase::Buffer::~Buffer()
@@ -232,15 +232,15 @@ int OOBase::Buffer::space(size_t cbSpace)
 
 int OOBase::Buffer::priv_malloc(char*& ptr, size_t& bytes)
 {
-	ptr = static_cast<char*>(OOBase::Allocate(bytes,1,__FILE__,__LINE__));
-	return (!ptr ? errno : 0);
+	ptr = static_cast<char*>(HeapAllocate(bytes));
+	return (!ptr ? ENOMEM : 0);
 }
 
 int OOBase::Buffer::priv_realloc(char*& ptr, size_t& bytes)
 {
-	char* new_ptr = static_cast<char*>(OOBase::Reallocate(ptr,bytes,__FILE__,__LINE__));
+	char* new_ptr = static_cast<char*>(HeapReallocate(ptr,bytes));
 	if (!new_ptr)
-		return errno;
+		return ENOMEM;
 
 	ptr = new_ptr;
 	return 0;
@@ -248,5 +248,5 @@ int OOBase::Buffer::priv_realloc(char*& ptr, size_t& bytes)
 
 void OOBase::Buffer::priv_free(char* ptr)
 {
-	OOBase::Free(ptr,1);
+	HeapFree(ptr);
 }

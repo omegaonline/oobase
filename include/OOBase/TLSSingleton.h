@@ -58,8 +58,9 @@ namespace OOBase
 
 		static void* init()
 		{
-			T* pThis;
-			OOBASE_NEW_T_CRITICAL(T,pThis,T());
+			T* pThis = new (std::nothrow) T();
+			if (!pThis)
+				CallCriticalFailureMem("TLS SIngleton",0);
 			
 			TLS::Set(&s_sentinal,pThis,&destroy);
 
@@ -68,7 +69,7 @@ namespace OOBase
 
 		static void destroy(void* p)
 		{
-			OOBASE_DELETE(T,reinterpret_cast<T*>(p));
+			delete reinterpret_cast<T*>(p);
 		}
 	};
 

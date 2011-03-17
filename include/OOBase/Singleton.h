@@ -50,7 +50,9 @@ namespace OOBase
 
 		static void init()
 		{
-			OOBASE_NEW_T_CRITICAL(T,s_instance,T());
+			s_instance = new (std::nothrow) T();
+			if (!s_instance)
+				CallCriticalFailureMem("Singleton",0);
 			
 			DLLDestructor<DLL>::add_destructor(&destroy,0);
 		}
@@ -59,7 +61,7 @@ namespace OOBase
 		{
 			assert(s_instance != reinterpret_cast<T*>((uintptr_t)0xdeadbeef));
 
-			OOBASE_DELETE(T,s_instance);
+			delete s_instance;
 			s_instance = reinterpret_cast<T*>((uintptr_t)0xdeadbeef);
 		}
 	};

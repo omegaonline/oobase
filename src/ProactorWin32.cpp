@@ -342,8 +342,7 @@ namespace
 
 		static AsyncSocket* Create(OOSvrBase::Win32::ProactorImpl* pProactor, SOCKET sock, int& dwErr)
 		{
-			IOHelper* helper;
-			OOBASE_NEW_T(SocketIOHelper,helper,SocketIOHelper(pProactor,(HANDLE)sock));
+			IOHelper* helper = new (std::nothrow) SocketIOHelper(pProactor,(HANDLE)sock);
 			if (!helper)
 			{
 				dwErr = ERROR_OUTOFMEMORY;
@@ -353,16 +352,15 @@ namespace
 			dwErr = helper->bind();
 			if (dwErr)
 			{
-				OOBASE_DELETE(IOHelper,helper);
+				delete helper;
 				return 0;
 			}
 
-			AsyncSocket* pSock;
-			OOBASE_NEW_T(AsyncSocket,pSock,AsyncSocket(helper));
+			AsyncSocket* pSock = new (std::nothrow) AsyncSocket(helper);
 			if (!pSock)
 			{
 				dwErr = ERROR_OUTOFMEMORY;
-				OOBASE_DELETE(IOHelper,helper);
+				delete helper;
 				return 0;
 			}
 
@@ -584,7 +582,7 @@ namespace
 		}
 
 		OOSvrBase::AsyncSocketPtr ptrSocket;
-		OOBase::local_string strAddress;
+		OOBase::string strAddress;
 
 		if (dwErr == 0)
 		{
@@ -632,8 +630,7 @@ namespace
 
 		static AsyncLocalSocket* Create(OOSvrBase::Win32::ProactorImpl* pProactor, HANDLE hPipe, DWORD& dwErr)
 		{
-			PipeIOHelper* helper;
-			OOBASE_NEW_T(PipeIOHelper,helper,PipeIOHelper(pProactor,hPipe));
+			PipeIOHelper* helper = new (std::nothrow) PipeIOHelper(pProactor,hPipe);
 			if (!helper)
 			{
 				dwErr = ERROR_OUTOFMEMORY;
@@ -643,16 +640,15 @@ namespace
 			dwErr = helper->bind();
 			if (dwErr)
 			{
-				OOBASE_DELETE(PipeIOHelper,helper);
+				delete helper;
 				return 0;
 			}
 
-			AsyncLocalSocket* sock;
-			OOBASE_NEW_T(AsyncLocalSocket,sock,AsyncLocalSocket(hPipe,helper));
+			AsyncLocalSocket* sock = new (std::nothrow) AsyncLocalSocket(hPipe,helper);
 			if (!sock)
 			{
 				dwErr = ERROR_OUTOFMEMORY;
-				OOBASE_DELETE(PipeIOHelper,helper);
+				delete helper;
 				return 0;
 			}
 
@@ -918,8 +914,7 @@ void OOSvrBase::Win32::ProactorImpl::release()
 
 OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_local(Acceptor<AsyncLocalSocket>* handler, const char* path, int* perr, SECURITY_ATTRIBUTES* psa)
 {
-	OOBase::SmartPtr<PipeAcceptor> pAcceptor;
-	OOBASE_NEW_T(PipeAcceptor,pAcceptor,PipeAcceptor(this,OOBase::string("\\\\.\\pipe\\") + path,psa,handler));
+	OOBase::SmartPtr<PipeAcceptor> pAcceptor = new (std::nothrow) PipeAcceptor(this,OOBase::string("\\\\.\\pipe\\") + path,psa,handler);
 	if (!pAcceptor)
 	{
 		*perr = ERROR_OUTOFMEMORY;
@@ -1009,8 +1004,7 @@ OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_remote(Acceptor<AsyncSock
 	}
 
 	// Wrap up in a controlling socket class
-	OOBase::SmartPtr<SocketAcceptor> pAcceptor;
-	OOBASE_NEW_T(SocketAcceptor,pAcceptor,SocketAcceptor(this,sock,handler,af_family));
+	OOBase::SmartPtr<SocketAcceptor> pAcceptor = new (std::nothrow) SocketAcceptor(this,sock,handler,af_family);
 	if (!pAcceptor)
 	{
 		*perr = ENOMEM;
@@ -1045,7 +1039,7 @@ OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Win32::ProactorImpl::connect_local_soc
 	assert(perr);
 	*perr = 0;
 
-	OOBase::local_string pipe_name("\\\\.\\pipe\\");
+	OOBase::string pipe_name("\\\\.\\pipe\\");
 	pipe_name += path;
 
 	OOBase::timeval_t wait2 = (wait ? *wait : OOBase::timeval_t::MaxTime);

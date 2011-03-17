@@ -33,7 +33,7 @@ namespace
 
 #if defined(_WIN32)
 
-	class Win32Thread : public OOBase::Thread
+	class Win32Thread : public OOBase::Thread, public OOBase::CustomNew
 	{
 	public:
 		Win32Thread();
@@ -169,7 +169,7 @@ namespace
 		unsigned int ret = static_cast<unsigned int>((*thread_fn)(p));
 
 		if (bAutodelete)
-			OOBASE_DELETE(Thread,pThread);
+			delete pThread;
 
 		// Make sure we clean up any thread-local storage
 		OOBase::TLS::ThreadExit();
@@ -181,7 +181,7 @@ namespace
 
 #if defined(HAVE_PTHREAD)
 
-	class PthreadThread : public OOBase::Thread
+	class PthreadThread : public OOBase::Thread, public OOBase::CustomNew
 	{
 	public:
 		PthreadThread();
@@ -361,7 +361,7 @@ namespace
 			OOBase_CallCriticalFailure(err);
 
 		if (bAutodelete)
-			OOBASE_DELETE(Thread,pThread);
+			delete pThread;
 
 		return (void*)ret;
 	}
@@ -375,9 +375,9 @@ OOBase::Thread::Thread(bool bAutodelete) :
 		m_bAutodelete(bAutodelete)
 {
 #if defined(_WIN32)
-	OOBASE_NEW_T_CRITICAL(Win32Thread,m_impl,Win32Thread());
+	m_impl = new (OOBase::critical) Win32Thread();
 #elif defined(HAVE_PTHREAD)
-	OOBASE_NEW_T_CRITICAL(PthreadThread,m_impl,PthreadThread());
+	m_impl = new (OOBase::critical) PthreadThread();
 #else
 #error Fix me!
 #endif
@@ -391,7 +391,7 @@ OOBase::Thread::Thread(bool,bool) :
 
 OOBase::Thread::~Thread()
 {
-	OOBASE_DELETE(Thread,m_impl);
+	delete m_impl;
 }
 
 void OOBase::Thread::run(int (*thread_fn)(void*), void* param)

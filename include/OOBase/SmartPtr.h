@@ -32,17 +32,25 @@ namespace OOBase
 	public:
 		static void destroy(T* ptr)
 		{
-			OOBASE_DELETE(T,ptr);
+			delete ptr;
 		}
 	};
 
-	template <int T>
-	class FreeDestructor
+	class HeapDestructor
 	{
 	public:
 		static void destroy(void* ptr)
 		{
-			::OOBase::Free(ptr,T);
+			HeapFree(ptr);
+		}
+	};
+
+	class LocalDestructor
+	{
+	public:
+		static void destroy(void* ptr)
+		{
+			LocalFree(ptr);
 		}
 	};
 
@@ -51,7 +59,7 @@ namespace OOBase
 		template <typename T, typename Destructor>
 		class SmartPtrImpl
 		{
-			class SmartPtrNode
+			class SmartPtrNode : public CustomNew
 			{
 			public:
 				SmartPtrNode(T* data = 0) :
@@ -67,7 +75,7 @@ namespace OOBase
 				void release()
 				{
 					if (--m_refcount == 0)
-						OOBASE_DELETE(SmartPtrNode,this);
+						delete this;
 				}
 
 				T* value()
@@ -101,7 +109,7 @@ namespace OOBase
 			SmartPtrImpl(T* ptr = 0) : m_node(0)
 			{
 				if (ptr)
-					OOBASE_NEW_T_CRITICAL(SmartPtrNode,m_node,SmartPtrNode(ptr));
+					m_node = new (OOBase::critical) SmartPtrNode(ptr);
 			}
 
 			SmartPtrImpl(const SmartPtrImpl& rhs) : m_node(rhs.m_node)
@@ -119,7 +127,7 @@ namespace OOBase
 				}
 
 				if (ptr)
-					OOBASE_NEW_T_CRITICAL(SmartPtrNode,m_node,SmartPtrNode(ptr));
+					m_node = new (OOBase::critical) SmartPtrNode(ptr);
 				
 				return *this;
 			}

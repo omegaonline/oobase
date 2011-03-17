@@ -393,8 +393,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, i
 	if (sock == INVALID_SOCKET)
 		return 0;
 
-	::Socket* pSocket;
-	OOBASE_NEW_T(::Socket,pSocket,::Socket(sock));
+	::Socket* pSocket = new (std::nothrow) ::Socket(sock);
 	if (!pSocket)
 	{
 		*perr = ENOMEM;
@@ -425,8 +424,7 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int* perr, const
 		return 0;
 	}
 
-	::Socket* pSocket;
-	OOBASE_NEW_T(::Socket,pSocket,::Socket(sock));
+	::Socket* pSocket = new (std::nothrow) ::Socket(sock);
 	if (!pSocket)
 	{
 		*perr = ENOMEM;

@@ -184,53 +184,10 @@
 #define OOBase_CallCriticalFailure(expr) \
 	OOBase::CallCriticalFailure(__FILE__,__LINE__,expr)
 
-#define OOBASE_NEW_T_CRITICAL(TYPE,POINTER,CONSTRUCTOR) \
-	do { \
-		void* OOBASE_NEW_ptr = ::OOBase::Allocate(sizeof(TYPE),0,__FILE__,__LINE__); \
-		if (!OOBASE_NEW_ptr) { ::OOBase::CallCriticalFailureMem(__FILE__,__LINE__); } \
-		try { POINTER = new (OOBASE_NEW_ptr) CONSTRUCTOR; } catch (...) { ::OOBase::Free(OOBASE_NEW_ptr,0); throw; } \
-	} while ((void)0,false)
-
-#define OOBASE_NEW_T2(TYPE,POINTER,CONSTRUCTOR) \
-	POINTER = new (::OOBase::Allocate(sizeof(TYPE),0,__FILE__,__LINE__)) CONSTRUCTOR
-
-#define OOBASE_NEW_T(TYPE,POINTER,CONSTRUCTOR) \
-	do { \
-		void* OOBASE_NEW_ptr = ::OOBase::Allocate(sizeof(TYPE),0,__FILE__,__LINE__); \
-		try { POINTER = new (OOBASE_NEW_ptr) CONSTRUCTOR; } catch (...) { ::OOBase::Free(OOBASE_NEW_ptr,0); throw; } \
-	} while ((void)0,false)
-
-#define OOBASE_NEW_T_RETURN(TYPE,CONSTRUCTOR) \
-	do { \
-		void* OOBASE_NEW_ptr = ::OOBase::Allocate(sizeof(TYPE),0,__FILE__,__LINE__); \
-		try { return new (OOBASE_NEW_ptr) CONSTRUCTOR; } catch (...) { ::OOBase::Free(OOBASE_NEW_ptr,0); throw; } \
-	} while ((void)0,false)
-
-#define OOBASE_DELETE(TYPE,POINTER) \
-	do { \
-		if (POINTER) \
-		{ \
-			POINTER->~TYPE(); \
-			::OOBase::Free(POINTER,0); \
-		} \
-	} while ((void)0,false)
-
 namespace OOBase
 {
 	void CallCriticalFailure(const char* pszFile, unsigned int nLine, const char*);
 	void CallCriticalFailure(const char* pszFile, unsigned int nLine, int);
-
-	// flags: 0 - C++ object - align to size, no reallocation
-	//        1 - Buffer - align 32, reallocation
-	//        2 - Stack-local buffer - align 32, no reallocation
-	void* Allocate(size_t len, int flags, const char* file = 0, unsigned int line = 0);
-
-	// ptr must be alloc'ed with flag = 1 or NULL causing alloc with type 1
-	void* Reallocate(void* ptr, size_t len, const char* file = 0, unsigned int line = 0);
-
-	void Free(void* ptr, int flags);
-
-	void CallCriticalFailureMem(const char* pszFile, unsigned int nLine);
 }
 
 #if !defined(HAVE_STATIC_ASSERT)

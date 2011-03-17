@@ -41,7 +41,7 @@ namespace OOBase
 
 namespace
 {
-	class Win32Thunk
+	class Win32Thunk : public OOBase::CustomNew
 	{
 	public:
 		Win32Thunk();
@@ -184,8 +184,7 @@ namespace
 	BOOL Win32Thunk::init(INIT_ONCE*,void*,void**)
 	{
 		// Ensure s_instance is fully constructed before assignment...
-		Win32Thunk* instance;
-		OOBASE_NEW_T_CRITICAL(Win32Thunk,instance,Win32Thunk());
+		Win32Thunk* instance = new (OOBase::critical) Win32Thunk();
 		s_instance = instance;
 		
 		OOBase::DLLDestructor<OOBase::Module>::add_destructor(&destroy,0);
@@ -200,7 +199,7 @@ namespace
 
 		s_instance = reinterpret_cast<Win32Thunk*>((uintptr_t)0xdeadbeef);
 
-		OOBASE_DELETE(Win32Thunk,instance);
+		delete instance;
 	}
 
 	void Win32Thunk::init_low_frag_heap()
@@ -291,7 +290,7 @@ namespace
 	{
 		OOBase::Win32::rwmutex_t** mtx = reinterpret_cast<OOBase::Win32::rwmutex_t**>(SRWLock);
 
-		OOBASE_NEW_T_CRITICAL(OOBase::Win32::rwmutex_t,(*mtx),OOBase::Win32::rwmutex_t());
+		*mtx = new (OOBase::critical) OOBase::Win32::rwmutex_t();
 	}
 
 	void Win32Thunk::impl_AcquireSRWLockShared(SRWLOCK* SRWLock)
@@ -318,7 +317,7 @@ namespace
 	{
 		OOBase::Win32::condition_variable_t** var = reinterpret_cast<OOBase::Win32::condition_variable_t**>(ConditionVariable);
 
-		OOBASE_NEW_T_CRITICAL(OOBase::Win32::condition_variable_t,(*var),OOBase::Win32::condition_variable_t());
+		*var = new (OOBase::critical) OOBase::Win32::condition_variable_t();
 	}
 
 	void Win32Thunk::impl_WakeConditionVariable(CONDITION_VARIABLE* ConditionVariable)
@@ -374,7 +373,7 @@ void OOBase::Win32::ReleaseSRWLockExclusive(SRWLOCK* SRWLock)
 void OOBase::Win32::DeleteSRWLock(SRWLOCK* SRWLock)
 {
 	if (Win32Thunk::instance().m_InitializeSRWLock == Win32Thunk::impl_InitializeSRWLock)
-		OOBASE_DELETE(rwmutex_t,(*reinterpret_cast<rwmutex_t**>(SRWLock)));
+		delete *reinterpret_cast<rwmutex_t**>(SRWLock);
 }
 
 OOBase::Win32::rwmutex_t::rwmutex_t() :
@@ -475,7 +474,7 @@ void OOBase::Win32::WakeAllConditionVariable(CONDITION_VARIABLE* ConditionVariab
 void OOBase::Win32::DeleteConditionVariable(CONDITION_VARIABLE* ConditionVariable)
 {
 	if (Win32Thunk::instance().m_InitializeConditionVariable == Win32Thunk::impl_InitializeConditionVariable)
-		OOBASE_DELETE(condition_variable_t,(*reinterpret_cast<condition_variable_t**>(ConditionVariable)));
+		delete *reinterpret_cast<condition_variable_t**>(ConditionVariable);
 }
 
 BOOL OOBase::Win32::BindIoCompletionCallback(HANDLE FileHandle, LPOVERLAPPED_COMPLETION_ROUTINE Function, ULONG Flags)

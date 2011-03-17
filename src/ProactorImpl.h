@@ -50,7 +50,7 @@ namespace OOSvrBase
 				m_handler = handler;
 			}
 
-			struct AsyncOp
+			struct AsyncOp 
 			{
 				OOBase::Buffer* buffer;
 				size_t          len;
@@ -69,7 +69,7 @@ namespace OOSvrBase
 			AsyncHandlerRaw* m_handler;
 		};
 
-		class AsyncHandlerRaw
+		class AsyncHandlerRaw : public OOBase::CustomNew
 		{
 		public:
 			virtual void on_recv(AsyncIOHelper::AsyncOp* recv_op, int err, bool bLast) = 0;
@@ -159,12 +159,12 @@ namespace OOSvrBase
 					m_pImpl(0),
 					m_io_handler(0)
 			{ 
-				OOBASE_NEW_T_CRITICAL(AsyncSocketImpl,m_pImpl,AsyncSocketImpl(helper,this));
+				m_pImpl = new (OOBase::critical) AsyncSocketImpl(helper,this);
 			}
 
 			void close()
 			{
-				OOBASE_DELETE(AsyncSocketTempl,this);
+				delete this;
 			}
 
 			void bind_handler(OOSvrBase::IOHandler* handler)

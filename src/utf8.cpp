@@ -34,7 +34,7 @@ OOBase::wstring OOBase::from_utf8(const char* sz, size_t len)
 		return wstring(szBuf,actual_len);
 	}
 
-	SmartPtr<wchar_t,FreeDestructor<2> > ptrBuf = static_cast<wchar_t*>(Allocate(actual_len*sizeof(wchar_t),2,__FILE__,__LINE__));
+	SmartPtr<wchar_t,LocalDestructor> ptrBuf = static_cast<wchar_t*>(LocalAllocate(actual_len*sizeof(wchar_t)));
 	if (!ptrBuf)
 		CallCriticalFailureMem(__FILE__,__LINE__-2);
 
@@ -58,7 +58,7 @@ OOBase::wstring OOBase::from_native(const char* sz, size_t len)
 		return wstring(szBuf,actual_len);
 	}
 
-	SmartPtr<wchar_t,FreeDestructor<2> > ptrBuf = static_cast<wchar_t*>(Allocate(actual_len*sizeof(wchar_t),2,__FILE__,__LINE__));
+	SmartPtr<wchar_t,LocalDestructor> ptrBuf = static_cast<wchar_t*>(LocalAllocate(actual_len*sizeof(wchar_t)));
 	if (!ptrBuf)
 		CallCriticalFailureMem(__FILE__,__LINE__-2);
 
@@ -72,7 +72,7 @@ OOBase::wstring OOBase::from_native(const char* sz, size_t len)
 
 OOBase::string OOBase::to_utf8(const wchar_t* wsz, size_t len)
 {
-	void* TODO: // template?
+	void* TODO; // template?
 
 	char szBuf[256];
 	size_t actual_len = to_utf8(szBuf,sizeof(szBuf),wsz,len);
@@ -84,7 +84,7 @@ OOBase::string OOBase::to_utf8(const wchar_t* wsz, size_t len)
 		return string(szBuf,actual_len);
 	}
 
-	SmartPtr<char,FreeDestructor<2> > ptrBuf = static_cast<char*>(Allocate(actual_len,2,__FILE__,__LINE__));
+	SmartPtr<char,LocalDestructor> ptrBuf = static_cast<char*>(LocalAllocate(actual_len));
 	if (!ptrBuf)
 		CallCriticalFailureMem(__FILE__,__LINE__-2);
 
@@ -108,7 +108,7 @@ OOBase::string OOBase::to_native(const wchar_t* wsz, size_t len)
 		return string(szBuf,actual_len);
 	}
 
-	SmartPtr<char,FreeDestructor<2> > ptrBuf = static_cast<char*>(Allocate(actual_len,2,__FILE__,__LINE__));
+	SmartPtr<char,LocalDestructor> ptrBuf = static_cast<char*>(LocalAllocate(actual_len));
 	if (!ptrBuf)
 		CallCriticalFailureMem(__FILE__,__LINE__-2);
 

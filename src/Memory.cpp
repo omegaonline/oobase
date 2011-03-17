@@ -224,33 +224,33 @@ namespace
 
 
 
-// flags: 0 - C++ object - align to size, no reallocation
-//        1 - Buffer - align 32, reallocation
-//        2 - Stack-local buffer - align 32, no reallocation
-void* OOBase::Allocate(size_t len, int flags, const char* file, unsigned int line)
-{
-#if defined(_DEBUG)
-	return MemoryManager<MemWatcher>::allocate(len,flags,file,line);
-#else
-	return MemoryManager<CrtAllocator>::allocate(len,flags,file,line);
-#endif
-}
-
-// ptr must be alloc'ed with flag = 1 or NULL causing alloc with type 1
-void* OOBase::Reallocate(void* ptr, size_t len, const char* file, unsigned int line)
-{
-#if defined(_DEBUG)
-	return MemoryManager<MemWatcher>::reallocate(ptr,len,file,line);
-#else
-	return MemoryManager<CrtAllocator>::reallocate(ptr,len,file,line);
-#endif
-}
-
-void OOBase::Free(void* ptr, int flags)
-{
-#if defined(_DEBUG)
-	MemoryManager<MemWatcher>::free(ptr,flags);
-#else
-	MemoryManager<CrtAllocator>::free(ptr,flags);
-#endif	
-}
+//// flags: 0 - C++ object - align to size, no reallocation
+////        1 - Buffer - align 32, reallocation
+////        2 - Stack-local buffer - align 32, no reallocation
+//void* OOBase::Allocate(size_t len, int flags, const char* file, unsigned int line)
+//{
+//#if defined(_DEBUG)
+//	return MemoryManager<MemWatcher>::allocate(len,flags,file,line);
+//#else
+//	return MemoryManager<CrtAllocator>::allocate(len,flags,file,line);
+//#endif
+//}
+//
+//// ptr must be alloc'ed with flag = 1 or NULL causing alloc with type 1
+//void* OOBase::Reallocate(void* ptr, size_t len, const char* file, unsigned int line)
+//{
+//#if defined(_DEBUG)
+//	return MemoryManager<MemWatcher>::reallocate(ptr,len,file,line);
+//#else
+//	return MemoryManager<CrtAllocator>::reallocate(ptr,len,file,line);
+//#endif
+//}
+//
+//void OOBase::Free(void* ptr, int flags)
+//{
+//#if defined(_DEBUG)
+//	MemoryManager<MemWatcher>::free(ptr,flags);
+//#else
+//	MemoryManager<CrtAllocator>::free(ptr,flags);
+//#endif	
+//}

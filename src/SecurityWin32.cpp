@@ -64,7 +64,7 @@ DWORD OOSvrBase::Win32::sec_descript_t::SetEntriesInAcl(ULONG cCountOfExplicitEn
 DWORD OOSvrBase::Win32::GetNameFromToken(HANDLE hToken, OOBase::wstring& strUserName, OOBase::wstring& strDomainName)
 {
 	// Find out all about the user associated with hToken
-	OOBase::SmartPtr<TOKEN_USER,OOBase::FreeDestructor<1> > ptrUserInfo = static_cast<TOKEN_USER*>(GetTokenInfo(hToken,TokenUser));
+	OOBase::SmartPtr<TOKEN_USER,OOBase::HeapDestructor> ptrUserInfo = static_cast<TOKEN_USER*>(GetTokenInfo(hToken,TokenUser));
 	if (!ptrUserInfo)
 		return GetLastError();
 
@@ -75,14 +75,14 @@ DWORD OOSvrBase::Win32::GetNameFromToken(HANDLE hToken, OOBase::wstring& strUser
 	if (dwUNameSize == 0)
 		return GetLastError();
 
-	OOBase::SmartPtr<wchar_t,OOBase::FreeDestructor<2> > ptrUserName = static_cast<wchar_t*>(OOBase::Allocate(dwUNameSize*sizeof(wchar_t),2,__FILE__,__LINE__));
+	OOBase::SmartPtr<wchar_t,OOBase::LocalDestructor> ptrUserName = static_cast<wchar_t*>(OOBase::LocalAllocate(dwUNameSize*sizeof(wchar_t)));
 	if (!ptrUserName)
 		return ERROR_OUTOFMEMORY;
 
-	OOBase::SmartPtr<wchar_t,OOBase::FreeDestructor<2> > ptrDomainName;
+	OOBase::SmartPtr<wchar_t,OOBase::LocalDestructor> ptrDomainName;
 	if (dwDNameSize)
 	{
-		ptrDomainName = static_cast<wchar_t*>(OOBase::Allocate(dwDNameSize*sizeof(wchar_t),2,__FILE__,__LINE__));
+		ptrDomainName = static_cast<wchar_t*>(OOBase::LocalAllocate(dwDNameSize*sizeof(wchar_t)));
 		if (!ptrDomainName)
 			return ERROR_OUTOFMEMORY;
 	}
@@ -164,10 +164,10 @@ DWORD OOSvrBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile
 	return ERROR_SUCCESS;
 }
 
-DWORD OOSvrBase::Win32::GetLogonSID(HANDLE hToken, OOBase::SmartPtr<void,OOBase::FreeDestructor<1> >& pSIDLogon)
+DWORD OOSvrBase::Win32::GetLogonSID(HANDLE hToken, OOBase::SmartPtr<void,OOBase::HeapDestructor>& pSIDLogon)
 {
 	// Get the logon SID of the Token
-	OOBase::SmartPtr<TOKEN_GROUPS,OOBase::FreeDestructor<1> > ptrGroups = static_cast<TOKEN_GROUPS*>(GetTokenInfo(hToken,TokenGroups));
+	OOBase::SmartPtr<TOKEN_GROUPS,OOBase::HeapDestructor> ptrGroups = static_cast<TOKEN_GROUPS*>(GetTokenInfo(hToken,TokenGroups));
 	if (!ptrGroups)
 		return GetLastError();
 
@@ -180,7 +180,7 @@ DWORD OOSvrBase::Win32::GetLogonSID(HANDLE hToken, OOBase::SmartPtr<void,OOBase:
 			if (IsValidSid(ptrGroups->Groups[dwIndex].Sid))
 			{
 				DWORD dwLen = GetLengthSid(ptrGroups->Groups[dwIndex].Sid);
-				pSIDLogon = static_cast<PSID>(OOBase::Allocate(dwLen,1,__FILE__,__LINE__));
+				pSIDLogon = static_cast<PSID>(OOBase::HeapAllocate(dwLen));
 				if (!pSIDLogon)
 					return ERROR_OUTOFMEMORY;
 
@@ -198,12 +198,12 @@ DWORD OOSvrBase::Win32::GetLogonSID(HANDLE hToken, OOBase::SmartPtr<void,OOBase:
 DWORD OOSvrBase::Win32::SetTokenDefaultDACL(HANDLE hToken)
 {
 	// Get the current Default DACL
-	OOBase::SmartPtr<TOKEN_DEFAULT_DACL,OOBase::FreeDestructor<1> > ptrDef_dacl = static_cast<TOKEN_DEFAULT_DACL*>(GetTokenInfo(hToken,TokenDefaultDacl));
+	OOBase::SmartPtr<TOKEN_DEFAULT_DACL,OOBase::HeapDestructor> ptrDef_dacl = static_cast<TOKEN_DEFAULT_DACL*>(GetTokenInfo(hToken,TokenDefaultDacl));
 	if (!ptrDef_dacl)
 		return ERROR_OUTOFMEMORY;
 
 	// Get the logon SID of the Token
-	OOBase::SmartPtr<void,OOBase::FreeDestructor<1> > ptrSIDLogon = 0;
+	OOBase::SmartPtr<void,OOBase::HeapDestructor> ptrSIDLogon = 0;
 	DWORD dwRes = GetLogonSID(hToken,ptrSIDLogon);
 	if (dwRes != ERROR_SUCCESS)
 		return dwRes;
@@ -327,7 +327,7 @@ void* OOSvrBase::Win32::GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls)
 {
 	for (DWORD dwLen = 256;;)
 	{
-		void* pBuffer = OOBase::Allocate(dwLen,1,__FILE__,__LINE__);
+		void* pBuffer = OOBase::HeapAllocate(dwLen);
 		if (!pBuffer)
 		{
 			SetLastError(ERROR_OUTOFMEMORY);
@@ -339,7 +339,7 @@ void* OOSvrBase::Win32::GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls)
 
 		DWORD err = GetLastError();
 
-		OOBase::Free(pBuffer,1);
+		OOBase::HeapFree(pBuffer);
 
 		SetLastError(err);
 			

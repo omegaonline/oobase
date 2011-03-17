@@ -42,9 +42,9 @@ OOSvrBase::Proactor::Proactor() :
 		m_impl(0)
 {
 #if defined(HAVE_EV_H)
-	OOBASE_NEW_T_CRITICAL(Ev::ProactorImpl,m_impl,Ev::ProactorImpl());
+	m_impl = new (OOBase::critical) Ev::ProactorImpl();
 #elif defined(_WIN32)
-	OOBASE_NEW_T_CRITICAL(Win32::ProactorImpl,m_impl,Win32::ProactorImpl());
+	m_impl = new (OOBase::critical) Win32::ProactorImpl();
 #else
 #error Fix me!
 #endif
@@ -57,7 +57,7 @@ OOSvrBase::Proactor::Proactor(bool) :
 
 OOSvrBase::Proactor::~Proactor()
 {
-	OOBASE_DELETE(Proactor,m_impl);
+	delete m_impl;
 }
 
 OOBase::Socket* OOSvrBase::Proactor::accept_local(Acceptor<AsyncLocalSocket>* handler, const char* path, int* perr, SECURITY_ATTRIBUTES* psa)
@@ -100,12 +100,12 @@ OOSvrBase::detail::AsyncQueued::~AsyncQueued()
 	while (!m_vecAsyncs.empty())
 	{
 		AsyncIOHelper::AsyncOp* p = m_vecAsyncs.back();
-		OOBASE_DELETE(AsyncOp,p);
+		delete p;
 		m_vecAsyncs.pop_back();
 	}
 		
 	if (!m_sender)
-		OOBASE_DELETE(AsyncIOHelper,m_helper);
+		delete m_helper;
 }
 
 void OOSvrBase::detail::AsyncQueued::dispose()
@@ -168,7 +168,7 @@ int OOSvrBase::detail::AsyncQueued::async_op(OOBase::Buffer* buffer, size_t len,
 	}
 	else
 	{
-		OOBASE_NEW_T2(AsyncIOHelper::AsyncOp,op,AsyncIOHelper::AsyncOp);
+		op = new (std::nothrow) AsyncIOHelper::AsyncOp;
 		if (!op)
 			return ERROR_OUTOFMEMORY;
 	}
@@ -249,7 +249,7 @@ bool OOSvrBase::detail::AsyncQueued::notify_async(AsyncIOHelper::AsyncOp* op, in
 			// But was cancelled...
 
 			// It's our responsibility to delete param, as the waiter has gone...
-			OOBASE_DELETE(BlockingInfo,block_info);
+			delete block_info;
 		}
 		else
 		{
@@ -283,7 +283,7 @@ bool OOSvrBase::detail::AsyncQueued::notify_async(AsyncIOHelper::AsyncOp* op, in
 	if (m_vecAsyncs.size() < 4)
 		m_vecAsyncs.push_back(op);
 	else
-		OOBASE_DELETE(AsyncOp,op);
+		delete op;
 	
 	if (bLast)
 		m_closed = true;
@@ -300,8 +300,7 @@ bool OOSvrBase::detail::AsyncQueued::notify_async(AsyncIOHelper::AsyncOp* op, in
 
 int OOSvrBase::detail::AsyncQueued::sync_op(OOBase::Buffer* buffer, size_t len, const OOBase::timeval_t* timeout)
 {
-	BlockingInfo* block_info;
-	OOBASE_NEW_T(BlockingInfo,block_info,BlockingInfo());
+	BlockingInfo* block_info = new (std::nothrow) BlockingInfo();
 	if (!block_info)
 		return ERROR_OUTOFMEMORY;
 
@@ -311,7 +310,7 @@ int OOSvrBase::detail::AsyncQueued::sync_op(OOBase::Buffer* buffer, size_t len, 
 	int err = async_op(buffer,len,block_info);
 	if (err)
 	{
-		OOBASE_DELETE(BlockingInfo,block_info);
+		delete block_info;
 	}
 	else
 	{
@@ -334,7 +333,7 @@ int OOSvrBase::detail::AsyncQueued::sync_op(OOBase::Buffer* buffer, size_t len, 
 		err = block_info->err;
 
 		// Done with param...
-		OOBASE_DELETE(BlockingInfo,block_info);
+		delete block_info;
 	}
 
 	return err;
@@ -378,7 +377,7 @@ void OOSvrBase::detail::AsyncSocketImpl::addref()
 void OOSvrBase::detail::AsyncSocketImpl::release()
 {
 	if (--m_refcount == 0)
-		OOBASE_DELETE(AsyncSocketImpl,this);
+		delete this;
 }
 
 int OOSvrBase::detail::AsyncSocketImpl::async_recv(OOBase::Buffer* buffer, size_t len)

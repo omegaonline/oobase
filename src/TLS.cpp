@@ -35,7 +35,7 @@ namespace OOBase
 
 namespace
 {
-	class TLSMap
+	class TLSMap : public OOBase::CustomNew
 	{
 	public:
 		static TLSMap* instance(bool create = true);
@@ -142,7 +142,7 @@ namespace
 #endif
 		if (!inst && create)
 		{
-			OOBASE_NEW_T_CRITICAL(TLSMap,inst,TLSMap());
+			inst = new (OOBase::critical) TLSMap();
 			
 #if defined(_WIN32)
 			OOBase::DLLDestructor<OOBase::Module>::add_destructor(destroy,inst);
@@ -174,7 +174,7 @@ namespace
 			}
 			inst->m_mapVals.clear();
 			
-			OOBASE_DELETE(TLSMap,inst);
+			delete inst;
 		}
 
 #if defined(_WIN32)
