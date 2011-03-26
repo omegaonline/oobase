@@ -25,6 +25,8 @@
 #include "Buffer.h"
 #include "ByteSwap.h"
 
+#include <string>
+
 namespace OOBase
 {
 	class CDRStream

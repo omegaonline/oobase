@@ -21,6 +21,8 @@
 
 #include "../include/OOBase/Destructor.h"
 
+const OOBase::critical_t OOBase::critical;
+
 void* operator new(size_t size)
 {
 	void* p = OOBase::ChunkAllocate(size);
@@ -111,17 +113,17 @@ namespace
 	class CrtAllocator
 	{
 	public:
-		static void* allocate(size_t len, int /*flags*/, const char* /*file*/, unsigned int /*line*/)
+		static void* allocate(size_t len)
 		{
 			return ::malloc(len);
 		}
 
-		static void* reallocate(void* ptr, size_t len, const char* /*file*/, unsigned int /*line*/)
+		static void* reallocate(void* ptr, size_t len)
 		{
 			return ::realloc(ptr,len);
 		}
 
-		static void free(void* ptr, int /*flags*/)
+		static void free(void* ptr)
 		{
 			::free(ptr);
 		}	
@@ -131,31 +133,31 @@ namespace
 	class MemoryManager
 	{
 	public:
-		static void* allocate(size_t len, int flags, const char* file, unsigned int line)
+		static void* allocate(size_t len)
 		{
 			Instance& i = instance();
 
-			void* p = i.inst.allocate(len,flags,file,line);
+			void* p = i.inst.allocate(len);
 			if (p)
 				++i.refcount;
 			return p;
 		}
 
-		static void* reallocate(void* ptr, size_t len, const char* file, unsigned int line)
+		static void* reallocate(void* ptr, size_t len)
 		{
 			if (!ptr)
-				return allocate(len,1,file,line);
+				return allocate(len);
 			else
-				return instance().inst.reallocate(ptr,len,file,line);
+				return instance().inst.reallocate(ptr,len);
 		}
 			
-		static void free(void* ptr, int flags)
+		static void free(void* ptr)
 		{
 			if (ptr)
 			{
 				Instance& i = instance();
 
-				i.inst.free(ptr,flags);
+				i.inst.free(ptr);
 				if (--i.refcount == 0)
 					term(const_cast<Instance*>(s_instance));
 			}
@@ -225,7 +227,7 @@ namespace
 	class MemWatcher
 	{
 	public:
-		void* allocate(size_t len, int flags, const char* file, unsigned int line)
+		void* allocate(size_t len)
 		{
 			/*if (flags == 2)
 			{
@@ -240,7 +242,7 @@ namespace
 			//os << "Alloc(" << flags << ") " << p << " " << len << " " << file << " " << line << std::endl;
 			//OutputDebugString(os.str().c_str());
 
-			void* p = CrtAllocator::allocate(len,flags,file,line);
+			void* p = CrtAllocator::allocate(len);
 
 			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
@@ -249,9 +251,9 @@ namespace
 			return p;
 		}
 
-		void* reallocate(void* ptr, size_t len, const char* file, unsigned int line)
+		void* reallocate(void* ptr, size_t len)
 		{
-			void* p = CrtAllocator::reallocate(ptr,len,file,line);
+			void* p = CrtAllocator::reallocate(ptr,len);
 
 			if (p != ptr)
 			{
@@ -266,7 +268,7 @@ namespace
 			return p;
 		}
 
-		void free(void* ptr, int flags)
+		void free(void* ptr)
 		{
 			//std::ostringstream os;
 			//os << "Free(" << flags << ")  " << mem << std::endl;
@@ -286,7 +288,7 @@ namespace
 			size_t c = m_setEntries.erase(ptr);
 			assert(c == 1);
 
-			CrtAllocator::free(ptr,flags);
+			CrtAllocator::free(ptr);
 		}
 
 	private:
@@ -295,37 +297,56 @@ namespace
 	};
 }
 
+void* OOBase::HeapAllocate(size_t bytes)
+{
+#if defined(_DEBUG)
+	return MemoryManager<MemWatcher>::allocate(bytes);
+#else
+	return MemoryManager<CrtAllocator>::allocate(bytes);
+#endif
+}
+
+void* OOBase::HeapReallocate(void* p, size_t bytes)
+{
+#if defined(_DEBUG)
+	return MemoryManager<MemWatcher>::reallocate(p,bytes);
+#else
+	return MemoryManager<CrtAllocator>::reallocate(p,bytes);
+#endif
+}
+
+void OOBase::HeapFree(void* p)
+{
+#if defined(_DEBUG)
+	MemoryManager<MemWatcher>::free(p);
+#else
+	MemoryManager<CrtAllocator>::free(p);
+#endif	
+}
+
+void* OOBase::ChunkAllocate(size_t bytes)
+{
+	return HeapAllocate(bytes);
+}
+
+void OOBase::ChunkFree(void* p)
+{
+	return HeapFree(p);
+}
+
+void* OOBase::LocalAllocate(size_t bytes)
+{
+	return HeapAllocate(bytes);
+}
+
+void* OOBase::LocalReallocate(void* p, size_t bytes)
+{
+	return HeapReallocate(p,bytes);
+}
+
+void OOBase::LocalFree(void* p)
+{
+	return HeapFree(p);
+}
+
 #endif // _DEBUG
-
-
-
-//// flags: 0 - C++ object - align to size, no reallocation
-////        1 - Buffer - align 32, reallocation
-////        2 - Stack-local buffer - align 32, no reallocation
-//void* OOBase::Allocate(size_t len, int flags, const char* file, unsigned int line)
-//{
-//#if defined(_DEBUG)
-//	return MemoryManager<MemWatcher>::allocate(len,flags,file,line);
-//#else
-//	return MemoryManager<CrtAllocator>::allocate(len,flags,file,line);
-//#endif
-//}
-//
-//// ptr must be alloc'ed with flag = 1 or NULL causing alloc with type 1
-//void* OOBase::Reallocate(void* ptr, size_t len, const char* file, unsigned int line)
-//{
-//#if defined(_DEBUG)
-//	return MemoryManager<MemWatcher>::reallocate(ptr,len,file,line);
-//#else
-//	return MemoryManager<CrtAllocator>::reallocate(ptr,len,file,line);
-//#endif
-//}
-//
-//void OOBase::Free(void* ptr, int flags)
-//{
-//#if defined(_DEBUG)
-//	MemoryManager<MemWatcher>::free(ptr,flags);
-//#else
-//	MemoryManager<CrtAllocator>::free(ptr,flags);
-//#endif	
-//}

@@ -25,6 +25,7 @@
 #include "Memory.h"
 
 #include <string>
+#include <sstream>
 
 #if defined(max)
 #undef max
