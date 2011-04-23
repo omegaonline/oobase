@@ -24,6 +24,8 @@
 
 #if defined(_WIN32)
 
+#include <string>
+
 #if !defined(STATUS_PIPE_BROKEN)
 #define STATUS_PIPE_BROKEN 0xC000014BL
 #endif
@@ -583,7 +585,7 @@ namespace
 		}
 
 		OOSvrBase::AsyncSocketPtr ptrSocket;
-		OOBase::string strAddress;
+		std::string strAddress;
 
 		if (dwErr == 0)
 		{
@@ -686,7 +688,7 @@ namespace
 	class PipeAcceptor : public OOBase::Socket
 	{
 	public:
-		PipeAcceptor(OOSvrBase::Win32::ProactorImpl* pProactor, const OOBase::string& pipe_name, LPSECURITY_ATTRIBUTES psa, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler);
+		PipeAcceptor(OOSvrBase::Win32::ProactorImpl* pProactor, const std::string& pipe_name, LPSECURITY_ATTRIBUTES psa, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler);
 		virtual ~PipeAcceptor();
 
 		int send(const void* /*buf*/, size_t /*len*/, const OOBase::timeval_t* /*timeout*/ = 0)
@@ -721,7 +723,7 @@ namespace
 		bool                                               m_closed;
 		Completion                                         m_completion;
 		OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>*  m_handler;
-		const OOBase::string                               m_pipe_name;
+		const std::string                               m_pipe_name;
 		LPSECURITY_ATTRIBUTES                              m_psa;
 		size_t                                             m_async_count;
 		
@@ -729,7 +731,7 @@ namespace
 		void do_accept(DWORD& dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
 	};
 
-	PipeAcceptor::PipeAcceptor(OOSvrBase::Win32::ProactorImpl* pProactor, const OOBase::string& pipe_name, LPSECURITY_ATTRIBUTES psa, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler) :
+	PipeAcceptor::PipeAcceptor(OOSvrBase::Win32::ProactorImpl* pProactor, const std::string& pipe_name, LPSECURITY_ATTRIBUTES psa, OOSvrBase::Acceptor<OOSvrBase::AsyncLocalSocket>* handler) :
 			m_pProactor(pProactor),
 			m_closed(false),
 			m_handler(handler),
@@ -915,7 +917,7 @@ void OOSvrBase::Win32::ProactorImpl::release()
 
 OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_local(Acceptor<AsyncLocalSocket>* handler, const char* path, int* perr, SECURITY_ATTRIBUTES* psa)
 {
-	OOBase::SmartPtr<PipeAcceptor> pAcceptor = new (std::nothrow) PipeAcceptor(this,OOBase::string("\\\\.\\pipe\\") + path,psa,handler);
+	OOBase::SmartPtr<PipeAcceptor> pAcceptor = new (std::nothrow) PipeAcceptor(this,std::string("\\\\.\\pipe\\") + path,psa,handler);
 	if (!pAcceptor)
 	{
 		*perr = ERROR_OUTOFMEMORY;
@@ -1008,7 +1010,7 @@ OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_remote(Acceptor<AsyncSock
 	OOBase::SmartPtr<SocketAcceptor> pAcceptor = new (std::nothrow) SocketAcceptor(this,sock,handler,af_family);
 	if (!pAcceptor)
 	{
-		*perr = ENOMEM;
+		*perr = ERROR_OUTOFMEMORY;
 		closesocket(sock);
 		return 0;
 	}
@@ -1040,7 +1042,7 @@ OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Win32::ProactorImpl::connect_local_soc
 	assert(perr);
 	*perr = 0;
 
-	OOBase::string pipe_name("\\\\.\\pipe\\");
+	std::string pipe_name("\\\\.\\pipe\\");
 	pipe_name += path;
 
 	OOBase::timeval_t wait2 = (wait ? *wait : OOBase::timeval_t::MaxTime);

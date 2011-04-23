@@ -24,7 +24,6 @@
 
 #include "../include/OOBase/TimeVal.h"
 #include "../include/OOBase/Condition.h"
-#include "../include/OOBase/STLAllocator.h"
 
 #include <queue>
 
@@ -105,7 +104,7 @@ namespace OOSvrBase
 			OOBase::SpinLock                    m_lock;
 			bool                                m_closed;
 
-			std::queue<AsyncIOHelper::AsyncOp*,std::deque<AsyncIOHelper::AsyncOp*,OOBase::STLAllocator<AsyncIOHelper::AsyncOp*,OOBase::HeapAllocator<OOBase::CriticalFailure> > > > m_ops;
+			std::queue<AsyncIOHelper::AsyncOp*> m_ops;
 						
 			struct BlockingInfo
 			{
@@ -114,7 +113,7 @@ namespace OOSvrBase
 				bool          cancelled;
 			};
 
-			std::vector<AsyncIOHelper::AsyncOp*,OOBase::STLAllocator<AsyncIOHelper::AsyncOp*,OOBase::HeapAllocator<OOBase::CriticalFailure> > > m_vecAsyncs;
+			std::vector<AsyncIOHelper::AsyncOp*> m_vecAsyncs;
 
 			int async_op(OOBase::Buffer* buffer, size_t len, BlockingInfo* param);
 			void issue_next(OOBase::Guard<OOBase::SpinLock>& guard);

@@ -21,14 +21,12 @@
 
 #include "../include/OOBase/Buffer.h"
 
-#include <errno.h>
-
 OOBase::Buffer::Buffer(size_t cbSize, size_t align) :
 		m_refcount(1),
 		m_capacity(0),
-		m_buffer(0),
-		m_wr_ptr(0),
-		m_rd_ptr(0)
+		m_buffer(NULL),
+		m_wr_ptr(NULL),
+		m_rd_ptr(NULL)
 {
 	// Make sure we have room to align tiny blocks with big alignment...
 	if (cbSize < align)
@@ -45,9 +43,9 @@ OOBase::Buffer::Buffer(size_t cbSize, size_t align) :
 OOBase::Buffer::Buffer(const Buffer& rhs) :
 		m_refcount(1),
 		m_capacity(0),
-		m_buffer(0),
-		m_wr_ptr(0),
-		m_rd_ptr(0)
+		m_buffer(NULL),
+		m_wr_ptr(NULL),
+		m_rd_ptr(NULL)
 {
 	size_t cbSize = rhs.m_capacity;
 	int err = priv_malloc(m_buffer,cbSize);
@@ -235,14 +233,14 @@ int OOBase::Buffer::space(size_t cbSpace)
 int OOBase::Buffer::priv_malloc(char*& ptr, size_t& bytes)
 {
 	ptr = static_cast<char*>(HeapAllocate(bytes));
-	return (!ptr ? ENOMEM : 0);
+	return (!ptr ? ERROR_OUTOFMEMORY : 0);
 }
 
 int OOBase::Buffer::priv_realloc(char*& ptr, size_t& bytes)
 {
 	char* new_ptr = static_cast<char*>(HeapReallocate(ptr,bytes));
 	if (!new_ptr)
-		return ENOMEM;
+		return ERROR_OUTOFMEMORY;
 
 	ptr = new_ptr;
 	return 0;

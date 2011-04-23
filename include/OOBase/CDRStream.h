@@ -24,8 +24,7 @@
 
 #include "Buffer.h"
 #include "ByteSwap.h"
-
-#include <string>
+#include "String.h"
 
 namespace OOBase
 {
@@ -35,7 +34,7 @@ namespace OOBase
 		static const int MaxAlignment = 8;
 
 		CDRStream(size_t len = 256) :
-				m_buffer(0),
+				m_buffer(NULL),
 #if (OMEGA_BYTE_ORDER == OMEGA_BIG_ENDIAN)
 				m_big_endian(true),
 #else
@@ -47,7 +46,7 @@ namespace OOBase
 		}
 
 		CDRStream(Buffer* buffer) :
-				m_buffer(0),
+				m_buffer(NULL),
 #if (OMEGA_BYTE_ORDER == OMEGA_BIG_ENDIAN)
 				m_big_endian(true),
 #else
@@ -59,7 +58,7 @@ namespace OOBase
 		}
 
 		CDRStream(const CDRStream& rhs) :
-				m_buffer(0),
+				m_buffer(NULL),
 				m_big_endian(rhs.m_big_endian),
 				m_last_error(rhs.m_last_error)
 		{
@@ -158,10 +157,9 @@ namespace OOBase
 			return true;
 		}
 
-		/** A specialization of read() for type \p std::basic_string.
+		/** A specialization of read() for type \p LocalString.
 		 */
-		template <typename Alloc>
-		bool read(std::basic_string<char,std::char_traits<char>,Alloc>& val)
+		bool read(LocalString& val)
 		{
 			if (m_last_error != 0)
 				return false;
@@ -188,13 +186,14 @@ namespace OOBase
 			}
 
 			if (len == 0)
-				val.empty();
+				val.clear();
 			else
 			{
-				val.assign(m_buffer->rd_ptr(),len);
-				m_buffer->rd_ptr(len);
+				m_last_error = val.assign(m_buffer->rd_ptr(),len);
+				if (m_last_error == 0)
+					m_buffer->rd_ptr(len);				
 			}
-			return true;
+			return (m_last_error == 0);
 		}
 
 		/** A specialization of read() for type \p bool.
@@ -216,7 +215,7 @@ namespace OOBase
 				return false;
 			}
 
-			val = (*m_buffer->rd_ptr() == 0 ? false : true);
+			val = (*m_buffer->rd_ptr() == NULL ? false : true);
 			m_buffer->rd_ptr(1);
 			return true;
 		}
@@ -310,13 +309,6 @@ namespace OOBase
 			m_buffer->wr_ptr(len);
 
 			return true;
-		}
-
-		/// A specialization of write() for type \p std::basic_string.
-		template <typename Alloc>
-		bool write(const std::basic_string<char,std::char_traits<char>,Alloc>& strText)
-		{
-			return write(strText.data(),strText.size());
 		}
 
 		/// A specialization of write() for type \p bool.

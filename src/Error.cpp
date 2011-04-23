@@ -20,71 +20,135 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/tr24731.h"
-#include "Win32Impl.h"
-
-#include <sstream>
+#include "../include/OOBase/SmartPtr.h"
+#include "../include/OOBase/String.h"
 
 namespace OOBase
 {
 	// This is the critical failure hook
-	void CriticalFailure(const char* msg);
+	void OnCriticalFailure(const char* msg);
+
+	namespace detail
+	{
+		char* get_error_buffer(size_t& len);
+	}
 }
 
-OOBase::string OOBase::system_error_text(int err)
-{
 #if defined(_WIN32)
-	return Win32::FormatMessage(err);
+
+#include <process.h>
+
+namespace
+{
+	bool format_msg(char* err_buf, size_t err_len, DWORD dwErr, HMODULE hModule)
+	{
+		DWORD dwFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK;
+		if (hModule)
+			dwFlags |= FORMAT_MESSAGE_FROM_HMODULE;
+		else
+			dwFlags |= FORMAT_MESSAGE_FROM_SYSTEM;
+
+		LPVOID lpBuf;
+		if (::FormatMessageA(
+					dwFlags,
+					hModule,
+					dwErr,
+					0,
+					(LPSTR)&lpBuf,
+					0,  NULL))
+		{
+			OOBase::SmartPtr<char,OOBase::Win32::LocalAllocDestructor<char> > buf = static_cast<char*>(lpBuf);
+			size_t len = strlen(buf);
+			while (len > 0 && (buf[len-1]=='\r' || buf[len-1]=='\n'))
+				--len;
+
+			if (len >= err_len)
+				len = err_len - 1;
+
+			memcpy(err_buf,buf,len);
+			err_buf[len] = '\0';
+		
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+}
+#endif // _WIN32
+
+const char* OOBase::system_error_text(int err)
+{
+	static const char unknown_error[] = "Unknown error or error in processing";
+#if defined(_WIN32)
+
+	if (err == -1)
+		err = GetLastError();
+
+	size_t err_len = 0;
+	char* err_buf = OOBase::detail::get_error_buffer(err_len);
+	
+	int offset = snprintf_s(err_buf,err_len,"(%x) ",err);
+	if (offset == -1)
+		offset = 0;
+
+	bool ok = false;
+	if (!(err & 0xC0000000))
+		ok = format_msg(err_buf+offset,err_len-offset,err,NULL);
+	else
+		ok = format_msg(err_buf+offset,err_len-offset,err,GetModuleHandleW(L"NTDLL.DLL"));
+
+	if (!ok)
+		memcpy(err_buf,unknown_error,sizeof(unknown_error));
+
+	return err_buf;
+
 #else
 
-	void* TODO: // Catch!!
+	if (err == -1)
+		err = errno;
 
-	ostringstream out;
-	out << "(" << err << ") ";
+	size_t err_len = 0;
+	char* err_buf = OOBase::detail::get_error_buffer(err_len);
+	
+	int offset = snprintf_s(err_buf,err_len,"(%d) ",err);
+	if (offset == -1)
+		offset = 0;
 
+	bool ok = false;
 #if defined(HAVE_PTHREADS_H)
-	char szBuf[256] = {0};
-	strerror_r(szBuf,sizeof(szBuf),err);
-	out << szBuf;
+	ok = (strerror_r(err_buf+offset,err_len-offset,err) == 0);
 #elif defined(HAVE_TR_24731)
-	char szBuf[256] = {0};
-	strerror_s(szBuf,sizeof(szBuf),err);
-	out << szBuf;
+	ok = (strerror_s(err_buf+offset,err_len-offset,err) == 0);
 #else
-	out << ::strerror(err);
+	const char* str_err = ::strerror(err);
+	if (str_err)
+	{
+		memcpy(err_buf+offset,str_err,err_len-offset);
+		ok = true;
+	}
 #endif
 
-	return out.str();
+	if (!ok)
+		memcpy(err_buf,unknown_error,sizeof(unknown_error));
+
+	return err_buf;
 
 #endif
 }
 
 void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, int err)
 {
-	CallCriticalFailure(pszFile,nLine,OOBase::system_error_text(err).c_str());
+	CallCriticalFailure(pszFile,nLine,OOBase::system_error_text(err));
 }
-
-#if defined(_WIN32)
-
-void OOBase::CriticalOutOfMemory()
-{
-	CallCriticalFailure(__FILE__,__LINE__,ERROR_OUTOFMEMORY);
-}
-
-#elif defined(HAVE_UNISTD_H)
-
-void OOBase::CriticalOutOfMemory()
-{
-	CallCriticalFailure(__FILE__,__LINE__,ENOMEM);
-}
-
-#else
-#error Fix me!
-#endif
 
 void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, const char* msg)
 {
-	ostringstream out;
-	out << pszFile << "(" << nLine << "): " << msg;
-	OOBase::CriticalFailure(out.str().c_str());
+	static char szBuf[1024] = {0};
+	snprintf_s(szBuf,sizeof(szBuf),"%s(%u): %s",pszFile,nLine,msg);
+	
+	OOBase::OnCriticalFailure(szBuf);
+
 	abort();
 }

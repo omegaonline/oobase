@@ -27,8 +27,6 @@
 #include "../include/OOBase/Destructor.h"
 #include "Win32Impl.h"
 
-#include <sstream>
-
 namespace OOBase
 {
 	// The discrimination type for singleton scoping for this module
@@ -106,10 +104,10 @@ namespace
 		static void destroy(void*);
 	};
 
-	volatile Win32Thunk* Win32Thunk::s_instance = 0;
+	volatile Win32Thunk* Win32Thunk::s_instance = NULL;
 
 	Win32Thunk::Win32Thunk() :
-			m_hKernel32(0)
+			m_hKernel32(NULL)
 	{
 		m_hKernel32 = GetModuleHandleW(L"Kernel32.dll");
 		if (!m_hKernel32)
@@ -149,7 +147,7 @@ namespace
 				!m_WakeAllConditionVariable)
 		{
 			m_InitializeConditionVariable = impl_InitializeConditionVariable;
-			m_SleepConditionVariableCS = 0;
+			m_SleepConditionVariableCS = NULL;
 			m_WakeConditionVariable = impl_WakeConditionVariable;
 			m_WakeAllConditionVariable = impl_WakeAllConditionVariable;
 		}
@@ -177,7 +175,7 @@ namespace
 		if (!s_instance)
 		{
 			static INIT_ONCE key = {0};
-			if (!InitOnceExecuteOnce_Internal(&key,&init,0,0))
+			if (!InitOnceExecuteOnce_Internal(&key,&init,NULL,NULL))
 				OOBase_CallCriticalFailure(GetLastError());
 		}
 
@@ -191,7 +189,7 @@ namespace
 		Win32Thunk* instance = new (OOBase::critical) Win32Thunk();
 		s_instance = instance;
 		
-		OOBase::DLLDestructor<OOBase::Module>::add_destructor(&destroy,0);
+		OOBase::DLLDestructor<OOBase::Module>::add_destructor(&destroy,NULL);
 		return TRUE;
 	}
 
@@ -459,7 +457,7 @@ void OOBase::Win32::InitializeConditionVariable(CONDITION_VARIABLE* ConditionVar
 
 BOOL OOBase::Win32::SleepConditionVariable(CONDITION_VARIABLE* ConditionVariable, condition_mutex_t* Mutex, DWORD dwMilliseconds)
 {
-	if (Win32Thunk::instance().m_SleepConditionVariableCS == 0)
+	if (!Win32Thunk::instance().m_SleepConditionVariableCS)
 		return (*reinterpret_cast<condition_variable_t**>(ConditionVariable))->wait(Mutex->u.m_mutex,dwMilliseconds) ? TRUE : FALSE;
 	else
 		return (*Win32Thunk::instance().m_SleepConditionVariableCS)(ConditionVariable,&Mutex->u.m_cs,dwMilliseconds);
@@ -666,7 +664,7 @@ void OOBase::Win32::condition_variable_t::signal()
 	LeaveCriticalSection(&m_waiters_lock);
 
 	// If there aren't any waiters, then this is a no-op.
-	if (have_waiters && !ReleaseSemaphore(m_sema,1,0))
+	if (have_waiters && !ReleaseSemaphore(m_sema,1,NULL))
 		OOBase_CallCriticalFailure(GetLastError());
 }
 
@@ -711,53 +709,6 @@ void OOBase::Win32::condition_variable_t::broadcast()
 	}
 	else
 		LeaveCriticalSection(&m_waiters_lock);
-}
-
-namespace
-{
-	OOBase::string format_msg(DWORD dwErr, HMODULE hModule)
-	{
-		DWORD dwFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK;
-		if (hModule)
-			dwFlags |= FORMAT_MESSAGE_FROM_HMODULE;
-		else
-			dwFlags |= FORMAT_MESSAGE_FROM_SYSTEM;
-
-		LPVOID lpBuf;
-		if (::FormatMessageA(
-					dwFlags,
-					hModule,
-					dwErr,
-					0,
-					(LPSTR)&lpBuf,
-					0,  NULL))
-		{
-			OOBase::SmartPtr<char,OOBase::Win32::LocalAllocDestructor<char> > lpMsgBuf = static_cast<char*>(lpBuf);
-			OOBase::string res((LPCSTR)lpMsgBuf);
-			while (*res.rbegin() == '\r' || *res.rbegin() == '\n')
-				res = res.substr(0,res.size()-1);
-
-			return res;
-		}
-		else
-		{
-			return "Unknown error";
-		}
-	}
-}
-
-OOBase::string OOBase::Win32::FormatMessage(DWORD dwErr)
-{
-	ostringstream ret;
-	ret.setf(std::ios_base::hex,std::ios_base::basefield);
-	ret << "(0x" << dwErr << ") ";
-
-	if (!(dwErr & 0xC0000000))
-		ret << format_msg(dwErr,NULL);
-	else
-		ret << format_msg(dwErr,GetModuleHandleW(L"NTDLL.DLL"));
-
-	return ret.str();
 }
 
 #endif // _WIN32

@@ -29,8 +29,6 @@
 	#include <oobase-autoconf.h>
 #endif
 
-#include <assert.h>
-
 ////////////////////////////////////////
 // Try to work out what's going on with MS Windows
 #if defined(HAVE_WINDOWS_H)
@@ -102,6 +100,19 @@
 #endif
 
 ////////////////////////////////////////
+// Some standard headers.
+#include <assert.h>
+#include <errno.h>
+#include <stdarg.h>
+
+////////////////////////////////////////
+// Define some standard errors to avoid lots of #ifdefs.
+
+#if !defined(_WIN32)
+#define ERROR_OUTOFMEMORY ENOMEM
+#endif
+
+////////////////////////////////////////
 // Byte-order (endian-ness) determination.
 # if defined(BYTE_ORDER)
 #   if (BYTE_ORDER == LITTLE_ENDIAN)
@@ -161,6 +172,8 @@ namespace OOBase
 {
 	void CallCriticalFailure(const char* pszFile, unsigned int nLine, const char*);
 	void CallCriticalFailure(const char* pszFile, unsigned int nLine, int);
+
+	const char* system_error_text(int err = -1);
 }
 
 #if !defined(HAVE_STATIC_ASSERT)

@@ -586,7 +586,7 @@ namespace
 				}
 			}
 
-			OOBase::string strAddress;
+			std::string strAddress;
 			if (!err && new_fd != INVALID_SOCKET)
 			{
 				// Get the address...
@@ -619,7 +619,7 @@ namespace
 				ptrSocket = SOCKET_IMPL::Create(m_proactor,new_fd);
 				if (!ptrSocket)
 				{
-					err = ENOMEM;
+					err = ERROR_OUTOFMEMORY;
 					closesocket(new_fd);
 				}
 			}
@@ -662,7 +662,7 @@ namespace
 		}
 
 	private:
-		const OOBase::string m_path;
+		const std::string m_path;
 	};
 #endif
 }
@@ -916,7 +916,7 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_local(Acceptor<AsyncLocalSoc
 	OOBase::SmartPtr<LocalSocketAcceptor> pAccept = new (std::nothrow) LocalSocketAcceptor(this,fd,handler,path);
 	if (!pAccept)
 	{
-		*perr = ENOMEM;
+		*perr = ERROR_OUTOFMEMORY;
 		closesocket(fd);
 		return 0;
 	}
@@ -1010,7 +1010,7 @@ OOBase::Socket* OOSvrBase::Ev::ProactorImpl::accept_remote(Acceptor<OOSvrBase::A
 	OOBase::SmartPtr<socket_templ_t> pAccept = new (std::nothrow) socket_templ_t(this,sock,handler));
 	if (!pAccept)
 	{
-		*perr = ENOMEM;
+		*perr = ERROR_OUTOFMEMORY;
 		closesocket(sock);
 		return 0;
 	}
@@ -1032,7 +1032,7 @@ OOSvrBase::AsyncSocketPtr OOSvrBase::Ev::ProactorImpl::attach_socket(OOBase::Soc
 	// Wrap socket
 	OOSvrBase::AsyncSocketPtr ptrSocket = ::AsyncSocket::Create(this,sock);
 	if (!ptrSocket)
-		*perr = ENOMEM;
+		*perr = ERROR_OUTOFMEMORY;
 
 	return ptrSocket;
 }
@@ -1072,7 +1072,7 @@ OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Ev::ProactorImpl::connect_local_socket
 	// Wrap socket
 	OOSvrBase::AsyncLocalSocketPtr ptrSocket = ::AsyncLocalSocket::Create(this,sock);
 	if (!ptrSocket)
-		*perr = ENOMEM;
+		*perr = ERROR_OUTOFMEMORY;
 
 	return ptrSocket;
 #endif
@@ -1097,7 +1097,7 @@ OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Ev::ProactorImpl::attach_local_socket(
 	// Wrap socket
 	OOSvrBase::AsyncLocalSocketPtr ptrSocket = ::AsyncLocalSocket::Create(this,sock);
 	if (!ptrSocket)
-		*perr = ENOMEM;
+		*perr = ERROR_OUTOFMEMORY;
 
 	return ptrSocket;
 

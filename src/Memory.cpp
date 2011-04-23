@@ -25,7 +25,7 @@ const OOBase::critical_t OOBase::critical;
 
 void* operator new(size_t size)
 {
-	void* p = OOBase::ChunkAllocate(size);
+	void* p = OOBase::HeapAllocate(size);
 	if (!p)
 		throw std::bad_alloc();
 
@@ -43,7 +43,7 @@ void* operator new[](size_t size)
 
 void* operator new(size_t size, const std::nothrow_t&)
 {
-	return OOBase::ChunkAllocate(size);
+	return OOBase::HeapAllocate(size);
 }
 
 void* operator new[](size_t size, const std::nothrow_t&)
@@ -53,9 +53,9 @@ void* operator new[](size_t size, const std::nothrow_t&)
 
 void* operator new(size_t size, const OOBase::critical_t&)
 {
-	void* p = OOBase::ChunkAllocate(size);
+	void* p = OOBase::HeapAllocate(size);
 	if (!p)
-		OOBase::CriticalOutOfMemory();
+		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
 	return p;
 }
@@ -64,24 +64,24 @@ void* operator new[](size_t size, const OOBase::critical_t&)
 {
 	void* p = OOBase::HeapAllocate(size);
 	if (!p)
-		OOBase::CriticalOutOfMemory();
+		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
 	return p;
 }
 
 void operator delete(void* p)
 {
-	return OOBase::ChunkFree(p);
+	return OOBase::HeapFree(p);
 }
 
 void operator delete(void* p, const std::nothrow_t&)
 {
-	return OOBase::ChunkFree(p);
+	return OOBase::HeapFree(p);
 }
 
 void operator delete(void* p, const OOBase::critical_t&)
 {
-	return OOBase::ChunkFree(p);
+	return OOBase::HeapFree(p);
 }
 
 void operator delete[](void* p)
@@ -187,18 +187,24 @@ namespace
 		static void init()
 		{
 			// Use crt malloc here...
-			Instance* instance = new (std::nothrow) Instance();
+			Instance* instance = static_cast<Instance*>(malloc(sizeof(Instance)));
+			if (!instance)
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+			
+			// Placement new
+			new (instance) Instance();
 			instance->refcount = 1;
 
 			s_instance = instance;
 
-			OOBase::DLLDestructor<OOBase::Module>::add_destructor(deref,0);
+			OOBase::DLLDestructor<OOBase::Module>::add_destructor(deref,NULL);
 		}
 
 		static void term(Instance* i)
 		{
 			s_instance = reinterpret_cast<Instance*>((uintptr_t)0xdeadbeef);
-			delete i;
+			i->~Instance();
+			free(i);
 		}
 
 		static void deref(void*)
@@ -213,7 +219,7 @@ namespace
 	};
 
 	template <typename T>
-	volatile typename MemoryManager<T>::Instance* MemoryManager<T>::s_instance = 0;
+	volatile typename MemoryManager<T>::Instance* MemoryManager<T>::s_instance = NULL;
 }
 
 
@@ -299,39 +305,29 @@ namespace
 
 void* OOBase::HeapAllocate(size_t bytes)
 {
-#if defined(_DEBUG)
-	return MemoryManager<MemWatcher>::allocate(bytes);
-#else
+//#if defined(_DEBUG)
+//	return MemoryManager<MemWatcher>::allocate(bytes);
+//#else
 	return MemoryManager<CrtAllocator>::allocate(bytes);
-#endif
+//#endif
 }
 
 void* OOBase::HeapReallocate(void* p, size_t bytes)
 {
-#if defined(_DEBUG)
-	return MemoryManager<MemWatcher>::reallocate(p,bytes);
-#else
+//#if defined(_DEBUG)
+//	return MemoryManager<MemWatcher>::reallocate(p,bytes);
+//#else
 	return MemoryManager<CrtAllocator>::reallocate(p,bytes);
-#endif
+//#endif
 }
 
 void OOBase::HeapFree(void* p)
 {
-#if defined(_DEBUG)
-	MemoryManager<MemWatcher>::free(p);
-#else
+//#if defined(_DEBUG)
+//	MemoryManager<MemWatcher>::free(p);
+//#else
 	MemoryManager<CrtAllocator>::free(p);
-#endif	
-}
-
-void* OOBase::ChunkAllocate(size_t bytes)
-{
-	return HeapAllocate(bytes);
-}
-
-void OOBase::ChunkFree(void* p)
-{
-	return HeapFree(p);
+//#endif	
 }
 
 void* OOBase::LocalAllocate(size_t bytes)

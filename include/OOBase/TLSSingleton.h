@@ -29,7 +29,7 @@ namespace OOBase
 	namespace TLS
 	{
 		bool Get(const void* key, void** val);
-		void Set(const void* key, void* val, void (*destructor)(void*) = 0);
+		int Set(const void* key, void* val, void (*destructor)(void*) = NULL);
 		
 		void ThreadExit();
 	}
@@ -40,7 +40,7 @@ namespace OOBase
 	public:
 		static T* instance()
 		{
-			void* inst = 0;
+			void* inst = NULL;
 			if (!TLS::Get(&s_sentinal,&inst))
 				inst = init();
 
@@ -54,15 +54,17 @@ namespace OOBase
 		TLSSingleton& operator = (const TLSSingleton&);
 		~TLSSingleton();
 
-		static const size_t s_sentinal;
+		static const size_t s_sentinal = 0;
 
 		static void* init()
 		{
 			T* pThis = new (std::nothrow) T();
 			if (!pThis)
-				CriticalOutOfMemory();
-			
-			TLS::Set(&s_sentinal,pThis,&destroy);
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+						
+			int err = TLS::Set(&s_sentinal,pThis,&destroy);
+			if (err != 0)
+				OOBase_CallCriticalFailure(err);
 
 			return pThis;
 		}
@@ -72,9 +74,6 @@ namespace OOBase
 			delete reinterpret_cast<T*>(p);
 		}
 	};
-
-	template <typename T, typename DLL>
-	const size_t TLSSingleton<T,DLL>::s_sentinal = 0;
 }
 
 #endif // OOBASE_TLS_SINGLETON_H_INCLUDED_

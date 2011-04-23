@@ -20,42 +20,53 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOSvrBase/CmdArgs.h"
+#include "../include/OOSvrBase/Logger.h"
 
-#include <sstream>
-
-void OOSvrBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, const char* long_opt)
+int OOSvrBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, const char* long_opt)
 {
-	assert(id);
-	assert(m_map_args.find(id) == m_map_args.end());
+	OOBase::String strId,strLongOpt;
+	int err = strId.assign(id);
+	if (err == 0)
+		err = strLongOpt.assign(long_opt);
+
+	if (err != 0)
+		return err;
+
+	assert(!strId.empty());
+	assert(m_map_args.find(strId) == m_map_args.npos);
 
 	Option opt;
 	opt.m_short_opt = short_opt;
 	if (long_opt)
-		opt.m_long_opt = long_opt;
+		opt.m_long_opt = strLongOpt;
 	else
-		opt.m_long_opt = id;
+		opt.m_long_opt = strId;
 
 	opt.m_has_value = has_value;
 
-	m_map_opts.insert(optsType::value_type(id,opt));;
+	return m_map_opts.insert(strId,opt);
 }
 
-void OOSvrBase::CmdArgs::add_argument(const char* id, int position)
+int OOSvrBase::CmdArgs::add_argument(const char* id, int position)
 {
-	assert(id);
-	assert(m_map_opts.find(id) == m_map_opts.end());
-	assert(m_map_args.find(id) == m_map_args.end());
+	OOBase::String strId;
+	int err = strId.assign(id);
+	if (err != 0)
+		return err;
 
-	m_map_args[id] = position;
+	assert(!strId.empty());
+	assert(m_map_opts.find(strId) == m_map_opts.npos);
+	assert(m_map_args.find(strId) == m_map_args.npos);
+
+	return m_map_args.insert(strId,position);
 }
 
-bool OOSvrBase::CmdArgs::parse(int argc, char* argv[], resultsType& results, int skip) const
+int OOSvrBase::CmdArgs::parse(int argc, char* argv[], results_t& results, int skip) const
 {
-	m_name = argv[0];
-
 	bool bEndOfOpts = false;
 	int pos = 0;
-	for (int i=skip; i<argc; ++i)
+	int err = 0;
+	for (int i=skip; i<argc && err==0; ++i)
 	{
 		if (strcmp(argv[i],"--") == 0)
 		{
@@ -70,121 +81,137 @@ bool OOSvrBase::CmdArgs::parse(int argc, char* argv[], resultsType& results, int
 			if (argv[i][1] == '-')
 			{
 				// Long option
-				if (!parse_long_option(results,argv,i,argc))
-					return false;
+				err = parse_long_option(argv[0],results,argv,i,argc);
 			}
 			else
 			{
 				// Short options
-				if (!parse_short_options(results,argv,i,argc))
-					return false;
+				err = parse_short_options(argv[0],results,argv,i,argc);
 			}
 		}
 		else
 		{
 			// Arguments
-			parse_arg(results,argv[i],pos++);
+			err = parse_arg(results,argv[i],pos++);
 		}
 	}
 
-	return true;
+	return err;
 }
 
-bool OOSvrBase::CmdArgs::parse_long_option(resultsType& results, char** argv, int& arg, int argc) const
+int OOSvrBase::CmdArgs::parse_long_option(const char* name, results_t& results, char** argv, int& arg, int argc) const
 {
-	for (optsType::const_iterator i=m_map_opts.begin(); i!=m_map_opts.end(); ++i)
+	for (size_t i=0; i < m_map_opts.size(); ++i)
 	{
-		OOBase::string value = "true";
-		if (i->second.m_long_opt == argv[arg]+2)
+		const Option& opt = *m_map_opts.at(i);
+
+		const char* value = "true";
+		if (opt.m_long_opt == argv[arg]+2)
 		{
-			if (i->second.m_has_value)
+			if (opt.m_has_value)
 			{
 				if (arg >= argc-1)
-				{
-					std::cerr << m_name << " - Missing argument for option " << argv[arg] << std::endl;
-					return false;
-				}
+					LOG_ERROR_RETURN(("%s - Missing argument for option %s",name,argv[arg]),EINVAL);
+					
 				value = argv[++arg];
 			}
 
-			results[i->first] = value;
-			return true;
+			OOBase::String strVal;
+			int err = strVal.assign(value);
+			if (err != 0)
+				return err;
+
+			return results.insert(*m_map_opts.key_at(i),strVal);
 		}
 
-		if (strncmp(i->second.m_long_opt.c_str(),argv[arg]+2,i->second.m_long_opt.length())==0 && argv[arg][i->second.m_long_opt.length()+2]=='=')
+		if (strncmp(opt.m_long_opt.c_str(),argv[arg]+2,opt.m_long_opt.length())==0 && argv[arg][opt.m_long_opt.length()+2]=='=')
 		{
-			if (i->second.m_has_value)
-				value = &argv[arg][i->second.m_long_opt.length()+3];
+			if (opt.m_has_value)
+				value = &argv[arg][opt.m_long_opt.length()+3];
 
-			results[i->first] = value;
-			return true;
+			OOBase::String strVal;
+			int err = strVal.assign(value);
+			if (err != 0)
+				return err;
+
+			return results.insert(*m_map_opts.key_at(i),strVal);
 		}
 	}
 
-	std::cerr << m_name << " - Unrecognised option " << argv[arg] << std::endl;
-	return false;
+	LOG_ERROR_RETURN(("%s - Unrecognised option %s",name,argv[arg]),EINVAL);
 }
 
-bool OOSvrBase::CmdArgs::parse_short_options(resultsType& results, char** argv, int& arg, int argc) const
+int OOSvrBase::CmdArgs::parse_short_options(const char* name, results_t& results, char** argv, int& arg, int argc) const
 {
 	for (char* c = argv[arg]+1; *c!='\0'; ++c)
 	{
-		optsType::const_iterator i;
-		for (i=m_map_opts.begin(); i!=m_map_opts.end(); ++i)
+		size_t i;
+		for (i = 0; i < m_map_opts.size(); ++i)
 		{
-			if (i->second.m_short_opt == *c)
+			const Option& opt = *m_map_opts.at(i);
+			if (opt.m_short_opt == *c)
 			{
-				if (i->second.m_has_value)
+				if (opt.m_has_value)
 				{
-					OOBase::string value;
+					const char* value;
 					if (c[1] == '\0')
 					{
 						// Next arg is the value
 						if (arg >= argc-1)
-						{
-							std::cerr << m_name << " - Missing argument for option -" << c << std::endl;
-							return false;
-						}
+							LOG_ERROR_RETURN(("%s - Missing argument for option -%s",name,c),EINVAL);
+						
 						value = argv[++arg];
 					}
 					else
 						value = &c[1];
 
 					// No more for this arg...
-					results[i->first] = value;
-					return true;
+					OOBase::String strVal;
+					int err = strVal.assign(value);
+					if (err != 0)
+						return err;
+
+					return results.insert(*m_map_opts.key_at(i),strVal);
 				}
 				else
 				{
-					results[i->first] = "true";
+					OOBase::String strVal;
+					int err = strVal.assign("true");
+					if (err == 0)
+						err = results.insert(*m_map_opts.key_at(i),strVal);
+
+					if (err != 0)
+						return err;
+
 					break;
 				}
 			}
 		}
 
-		if (i == m_map_opts.end())
-		{
-			std::cerr << m_name << " - Unrecognised option -" << c << std::endl;
-			return false;
-		}
+		if (i == m_map_opts.size())
+			LOG_ERROR_RETURN(("%s - Unrecognised option -%c",name,c),EINVAL);
 	}
 
-	return true;
+	return 0;
 }
 
-void OOSvrBase::CmdArgs::parse_arg(resultsType& results, const char* arg, int position) const
+int OOSvrBase::CmdArgs::parse_arg(results_t& results, const char* arg, int position) const
 {
-	for (argsType::const_iterator i=m_map_args.begin(); i!=m_map_args.end(); ++i)
+	OOBase::String strArg;
+	int err = strArg.assign(arg);
+	if (err != 0)
+		return err;
+
+	for (size_t i=0; i < m_map_args.size(); ++i)
 	{
-		if (position == i->second)
-		{
-			results[i->first] = arg;
-			return;
-		}
+		if (position == *m_map_args.at(i))
+			return results.insert(*m_map_args.key_at(i),strArg);
 	}
 
-	OOBase::ostringstream ss;
-	ss.imbue(std::locale::classic());
-	ss << "$" << position;
-	results[ss.str()] = arg;
+	OOBase::String strResult;
+	err = strResult.printf("@d",position);
+	if (err != 0)
+		return err;
+
+	return results.insert(strResult,strArg);
 }

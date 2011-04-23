@@ -22,8 +22,6 @@
 #include "../include/OOBase/Posix.h"
 #include "BSDSocket.h"
 
-#include <errno.h>
-
 #if defined(_WIN32)
 namespace OOBase
 {
@@ -398,7 +396,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, i
 	::Socket* pSocket = new (std::nothrow) ::Socket(sock);
 	if (!pSocket)
 	{
-		*perr = ENOMEM;
+		*perr = ERROR_OUTOFMEMORY;
 		closesocket(sock);
 		return 0;
 	}
@@ -429,7 +427,7 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int* perr, const
 	::Socket* pSocket = new (std::nothrow) ::Socket(sock);
 	if (!pSocket)
 	{
-		*perr = ENOMEM;
+		*perr = ERROR_OUTOFMEMORY;
 		::close(sock);
 		return 0;
 	}

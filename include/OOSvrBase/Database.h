@@ -24,8 +24,6 @@
 
 #include "../OOBase/SmartPtr.h"
 
-#include <string>
-
 #if !defined(HAVE_SQLITE3) && !defined(HAVE_SQLITE3_AMALGAMATION)
 #error SQLite3 required!
 #else
@@ -54,12 +52,6 @@ namespace OOSvrBase
 
 			int bind_int64(int index, const sqlite3_int64& val);
 			int bind_string(int index, const char* val, size_t len);
-
-			template <typename Alloc>
-			int bind_string(int index, const std::basic_string<char,std::char_traits<char>,Alloc>& val)
-			{
-				return bind_string(index,val.c_str(),val.length());
-			}
 
 			sqlite3_stmt* statement();
 
@@ -118,7 +110,7 @@ namespace OOSvrBase
 
 			sqlite3* database();
 
-			int begin_transaction(OOBase::SmartPtr<Transaction>& ptrTrans, const char* pszType = 0);
+			int begin_transaction(OOBase::SmartPtr<Transaction>& ptrTrans, const char* pszType = NULL);
 			int prepare_statement(OOBase::SmartPtr<Statement>& ptrStmt, const char* pszStatement, ...);
 
 		private:

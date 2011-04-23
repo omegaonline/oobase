@@ -22,15 +22,12 @@
 #include "../include/OOBase/Singleton.h"
 #include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/tr24731.h"
+#include "../include/OOBase/String.h"
 
 #include "../include/OOSvrBase/Logger.h"
 #include "../include/OOSvrBase/SecurityWin32.h"
 
-#include <stdio.h>
-#include <sstream>
-
 #if defined(_WIN32)
-#include <io.h>
 #define getpid GetCurrentProcessId
 #endif // _WIN32
 
@@ -66,7 +63,7 @@ namespace
 		~Win32Logger();
 
 		void open(const char* name);
-		void log(OOSvrBase::Logger::Priority priority, const char* fmt, va_list args);
+		void log(OOSvrBase::Logger::Priority priority, const char* msg);
 
 	private:
 		OOBase::Mutex m_lock;
@@ -104,32 +101,6 @@ namespace
 			::free(ptr);
 		}
 	};
-
-	std::string string_printf(const char* fmt, va_list args)
-	{
-		for (size_t len=256;;)
-		{
-			OOBase::SmartPtr<char,CrtFreeDestructor> buf = static_cast<char*>(::malloc(len));
-			if (!buf)
-				OOBase::CriticalOutOfMemory();
-
-			int len2 = vsnprintf_s(buf,len,fmt,args);
-			if (len2 < 0)
-				OOBase_CallCriticalFailure("vsnprintf_s failed");
-
-			try
-			{
-				if (static_cast<size_t>(len2) < len)
-					return std::string(buf,len2);
-			}
-			catch (std::exception& e)
-			{
-				OOBase_CallCriticalFailure(e.what());
-			}
-
-			len = len2 + 1;
-		}
-	}
 
 	/** \typedef LOGGER
 	 *  The logger singleton.
@@ -174,17 +145,14 @@ namespace
 			return;
 
 		// Create the relevant registry keys if they don't already exist
-		std::string strName;
-		try
-		{
-			strName = "SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\";
-			strName += name;
-		}
-		catch (std::exception& e)
-		{
-			OOBase_CallCriticalFailure(e.what());
-		}
-
+		OOBase::LocalString strName;
+		int err = strName.assign("SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\");
+		if (err == 0)
+			err = strName.append(name);
+		
+		if (err != 0)
+			OOBase_CallCriticalFailure(err);
+		
 		HKEY hk;
 		DWORD dwDisp;
 		if (RegCreateKeyExA(HKEY_LOCAL_MACHINE,strName.c_str(),0,NULL,REG_OPTION_NON_VOLATILE,KEY_WRITE,NULL,&hk,&dwDisp) == ERROR_SUCCESS)
@@ -201,7 +169,7 @@ namespace
 		m_hLog = RegisterEventSourceA(NULL,name);
 	}
 
-	void Win32Logger::log(OOSvrBase::Logger::Priority priority, const char* fmt, va_list args)
+	void Win32Logger::log(OOSvrBase::Logger::Priority priority, const char* msg)
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
@@ -224,12 +192,10 @@ namespace
 			break;
 		}
 
-		std::string msg = string_printf(fmt,args);
-
 #if !defined(_DEBUG)
 		if (m_hLog && priority != OOSvrBase::Logger::Debug)
 		{
-			const char* arrBufs[2] = { msg.c_str(), 0 };
+			const char* arrBufs[2] = { msg.c_str(), NULL };
 
 			PSID psid = NULL;
 			OOBase::Win32::SmartHandle hProcessToken;
@@ -248,7 +214,7 @@ namespace
 
 					DWORD err = GetLastError();
 
-					ptrSIDProcess = 0;
+					ptrSIDProcess = NULL;
 
 					SetLastError(err);
 						
@@ -266,7 +232,7 @@ namespace
 		if (priority == OOSvrBase::Logger::Debug)
 #endif
 		{
-			OutputDebugStringA(msg.c_str());
+			OutputDebugStringA(msg);
 			OutputDebugStringA("\n");
 		}
 
@@ -290,7 +256,7 @@ namespace
 		default:
 			break;
 		}
-		fputs(msg.c_str(),out_file);
+		fputs(msg,out_file);
 		fputs("\n",out_file);
 		fflush(out_file);
 	}
@@ -380,9 +346,13 @@ void OOSvrBase::Logger::log(Priority priority, const char* fmt, ...)
 	va_list args;
 	va_start(args,fmt);
 
-	LOGGER::instance().log(priority,fmt,args);
+	OOBase::LocalString msg;
+	int err = msg.vprintf(fmt,args);
 
 	va_end(args);
+
+	if (err == 0)
+		LOGGER::instance().log(priority,msg.c_str());
 }
 
 void OOSvrBase::Logger::filenum_t::log(const char* fmt, ...)
@@ -390,17 +360,15 @@ void OOSvrBase::Logger::filenum_t::log(const char* fmt, ...)
 	va_list args;
 	va_start(args,fmt);
 
-	try
-	{
-		std::ostringstream out;
-		out << "[" << getpid() << "] " << m_pszFilename << "(" << m_nLine << "): " << fmt;
-
-		LOGGER::instance().log(m_priority,out.str().c_str(),args);
-	}
-	catch (std::exception& e)
-	{
-		OOBase_CallCriticalFailure(e.what());
-	}
+	OOBase::LocalString msg;
+	int err = msg.vprintf(fmt,args);
 
 	va_end(args);
+
+	if (err == 0)
+	{
+		OOBase::LocalString header;
+		if (header.printf("[%u] %s(%u): %s",getpid(),m_pszFilename,m_nLine,msg.c_str()) == 0)
+			LOGGER::instance().log(m_priority,header.c_str());
+	}
 }

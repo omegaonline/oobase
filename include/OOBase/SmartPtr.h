@@ -63,7 +63,7 @@ namespace OOBase
 			class SmartPtrNode
 			{
 			public:
-				SmartPtrNode(T* data = 0) :
+				SmartPtrNode(T* data = NULL) :
 						m_data(data),
 						m_refcount(1)
 				{}
@@ -92,7 +92,7 @@ namespace OOBase
 				T* detach()
 				{
 					T* d = m_data;
-					m_data = 0;
+					m_data = NULL;
 					return d;
 				}
 
@@ -107,7 +107,7 @@ namespace OOBase
 			};
 
 		public:
-			SmartPtrImpl(T* ptr = 0) : m_node(0)
+			SmartPtrImpl(T* ptr = NULL) : m_node(0)
 			{
 				if (ptr)
 					m_node = new (OOBase::critical) SmartPtrNode(ptr);
@@ -124,7 +124,7 @@ namespace OOBase
 				if (m_node)
 				{
 					m_node->release();
-					m_node = 0;
+					m_node = NULL;
 				}
 
 				if (ptr)
@@ -140,7 +140,7 @@ namespace OOBase
 					if (m_node)
 					{
 						m_node->release();
-						m_node = 0;
+						m_node = NULL;
 					}
 
 					m_node = rhs.m_node;
@@ -159,12 +159,12 @@ namespace OOBase
 
 			T* detach()
 			{
-				T* v = 0;
+				T* v = NULL;
 				if (m_node)
 				{
 					v = m_node->detach();
 					m_node->release();
-					m_node = 0;
+					m_node = NULL;
 				}
 				return v;
 			}
@@ -182,12 +182,12 @@ namespace OOBase
 		protected:
 			T* value()
 			{
-				return (m_node ? m_node->value() : 0);
+				return (m_node ? m_node->value() : NULL);
 			}
 
 			const T* value() const
 			{
-				return (m_node ? m_node->value() : 0);
+				return (m_node ? m_node->value() : NULL);
 			}
 
 		private:
@@ -201,7 +201,7 @@ namespace OOBase
 		typedef detail::SmartPtrImpl<T,Destructor> baseClass;
 
 	public:
-		SmartPtr(T* ptr = 0) : baseClass(ptr)
+		SmartPtr(T* ptr = NULL) : baseClass(ptr)
 		{}
 
 		SmartPtr(const SmartPtr& rhs) : baseClass(rhs)
@@ -223,14 +223,14 @@ namespace OOBase
 
 		T* operator ->()
 		{
-			assert(baseClass::value() != 0);
+			assert(baseClass::value() != NULL);
 
 			return baseClass::value();
 		}
 
 		const T* operator ->() const
 		{
-			assert(baseClass::value() != 0);
+			assert(baseClass::value() != NULL);
 
 			return baseClass::value();
 		}
@@ -241,7 +241,7 @@ namespace OOBase
 	{
 		typedef detail::SmartPtrImpl<void,Destructor> baseClass;
 	public:
-		SmartPtr(void* ptr = 0) : baseClass(ptr)
+		SmartPtr(void* ptr = NULL) : baseClass(ptr)
 		{}
 
 		SmartPtr(const SmartPtr& rhs) : baseClass(rhs)

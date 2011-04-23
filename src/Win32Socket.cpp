@@ -24,6 +24,8 @@
 
 #if defined(_WIN32)
 
+#include <string>
+
 namespace
 {
 	class Socket : public OOBase::Win32::Socket
@@ -188,7 +190,7 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int* perr, const
 	assert(perr);
 	*perr = 0;
 
-	OOBase::string pipe_name;
+	std::string pipe_name;
 	try
 	{
 		pipe_name.assign("\\\\.\\pipe\\");

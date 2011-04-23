@@ -22,40 +22,35 @@
 #ifndef OOSVRBASE_CMDARGS_H_INCLUDED_
 #define OOSVRBASE_CMDARGS_H_INCLUDED_
 
+#include "../OOBase/String.h"
+#include "../OOBase/Table.h"
 #include "../OOBase/STLAllocator.h"
-
-#include <map>
-#include <iostream>
 
 namespace OOSvrBase
 {
 	class CmdArgs
 	{
 	public:
-		void add_option(const char* id, char short_opt = 0, bool has_value = false, const char* long_opt = 0);
-		void add_argument(const char* id, int position);
+		int add_option(const char* id, char short_opt = 0, bool has_value = false, const char* long_opt = NULL);
+		int add_argument(const char* id, int position);
 
-		typedef std::map<OOBase::string,OOBase::string,std::less<OOBase::string>,OOBase::STLAllocator<std::pair<const OOBase::string,OOBase::string>,OOBase::HeapAllocator<OOBase::StdFailure> > > resultsType;
-		bool parse(int argc, char* argv[], resultsType& results, int skip = 1) const;
+		typedef OOBase::Table<OOBase::String,OOBase::String,OOBase::HeapAllocator<OOBase::NoFailure> > results_t;
+		int parse(int argc, char* argv[], results_t& results, int skip = 1) const;
 
 	private:
 		struct Option
 		{
 			char           m_short_opt;
-			OOBase::string m_long_opt;
+			OOBase::String m_long_opt;
 			bool           m_has_value;
 		};
 
-		typedef std::multimap<OOBase::string,Option,std::less<OOBase::string>,OOBase::STLAllocator<std::pair<const OOBase::string,Option>,OOBase::HeapAllocator<OOBase::StdFailure> > > optsType;
-		typedef std::map<OOBase::string,int,std::less<OOBase::string>,OOBase::STLAllocator<std::pair<const OOBase::string,int>,OOBase::HeapAllocator<OOBase::StdFailure> > > argsType;
+		OOBase::Table<OOBase::String,Option,OOBase::HeapAllocator<OOBase::NoFailure> > m_map_opts;
+		OOBase::Table<OOBase::String,int,OOBase::HeapAllocator<OOBase::NoFailure> >    m_map_args;
 
-		mutable OOBase::string m_name;
-		optsType               m_map_opts;
-		argsType               m_map_args;
-
-		bool parse_long_option(resultsType& results, char** argv, int& arg, int argc) const;
-		bool parse_short_options(resultsType& results, char** argv, int& arg, int argc) const;
-		void parse_arg(resultsType& results, const char* opt, int position) const;
+		int parse_long_option(const char* name, results_t& results, char** argv, int& arg, int argc) const;
+		int parse_short_options(const char* name, results_t& results, char** argv, int& arg, int argc) const;
+		int parse_arg(results_t& results, const char* opt, int position) const;
 	};
 }
 

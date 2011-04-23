@@ -78,7 +78,7 @@ int OOSvrBase::Db::Statement::bind_int64(int index, const sqlite3_int64& val)
 
 int OOSvrBase::Db::Statement::bind_string(int index, const char* val, size_t len)
 {
-	return sqlite3_bind_text(m_pStmt,index,val,static_cast<int>(len),0);
+	return sqlite3_bind_text(m_pStmt,index,val,static_cast<int>(len),NULL);
 }
 
 sqlite3_stmt* OOSvrBase::Db::Statement::statement()
@@ -97,7 +97,7 @@ OOSvrBase::Db::Transaction::Transaction(sqlite3* db) :
 }
 
 OOSvrBase::Db::Database::Database() :
-		m_db(0)
+		m_db(NULL)
 {
 	assert(sqlite3_threadsafe());
 }
@@ -108,7 +108,7 @@ OOSvrBase::Db::Database::~Database()
 	{
 		// Close all prepared statements...
 		sqlite3_stmt* pStmt;
-		while ((pStmt = sqlite3_next_stmt(m_db, 0)) != 0)
+		while ((pStmt = sqlite3_next_stmt(m_db,NULL)) != 0)
 			sqlite3_finalize(pStmt);
 
 		// Now close the db
@@ -121,7 +121,7 @@ bool OOSvrBase::Db::Database::open(const char* pszDb, int flags)
 {
 	assert(!m_db);
 
-	int err = sqlite3_open_v2(pszDb,&m_db,SQLITE_OPEN_FULLMUTEX | flags /*SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE*/,0);
+	int err = sqlite3_open_v2(pszDb,&m_db,SQLITE_OPEN_FULLMUTEX | flags /*SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE*/,NULL);
 	if (err != SQLITE_OK)
 	{
 		if (!m_db)
@@ -130,7 +130,7 @@ bool OOSvrBase::Db::Database::open(const char* pszDb, int flags)
 		{
 			LOG_ERROR(("sqlite3_open(%s) failed: %s",pszDb,sqlite3_errmsg(m_db)));
 			sqlite3_close(m_db);
-			m_db = 0;
+			m_db = NULL;
 			return false;
 		}
 	}
@@ -142,7 +142,7 @@ bool OOSvrBase::Db::Database::open(const char* pszDb, int flags)
 
 int OOSvrBase::Db::Database::exec(const char* szSQL)
 {
-	int err = sqlite3_exec(m_db,szSQL,NULL,0,NULL);
+	int err = sqlite3_exec(m_db,szSQL,NULL,NULL,NULL);
 	if (err != SQLITE_OK && err != SQLITE_READONLY)
 		LOG_ERROR(("sqlite3_exec failed: %s",sqlite3_errmsg(m_db)));
 	return err;
@@ -157,9 +157,9 @@ int OOSvrBase::Db::Database::begin_transaction(OOBase::SmartPtr<Transaction>& pt
 {
 	int err = 0;
 	if (pszType)
-		err = sqlite3_exec(m_db,pszType,NULL,0,NULL);
+		err = sqlite3_exec(m_db,pszType,NULL,NULL,NULL);
 	else
-		err = sqlite3_exec(m_db,"BEGIN TRANSACTION;",NULL,0,NULL);
+		err = sqlite3_exec(m_db,"BEGIN TRANSACTION;",NULL,NULL,NULL);
 
 	if (err != SQLITE_OK)
 		return err;
@@ -167,7 +167,7 @@ int OOSvrBase::Db::Database::begin_transaction(OOBase::SmartPtr<Transaction>& pt
 	ptrTrans = new (std::nothrow) Transaction(m_db);
 	if (!ptrTrans)
 	{
-		sqlite3_exec(m_db,"ROLLBACK;",NULL,0,NULL);
+		sqlite3_exec(m_db,"ROLLBACK;",NULL,NULL,NULL);
 		LOG_ERROR_RETURN(("Out of memory"),SQLITE_NOMEM);
 	}
 
@@ -184,7 +184,7 @@ int OOSvrBase::Db::Database::prepare_statement(OOBase::SmartPtr<OOSvrBase::Db::S
 	if (!pszBuf)
 		LOG_ERROR_RETURN(("sqlite3_vmprintf failed: %s",sqlite3_errmsg(m_db)),sqlite3_errcode(m_db));
 
-	sqlite3_stmt* pStmt = 0;
+	sqlite3_stmt* pStmt = NULL;
 	int err = sqlite3_prepare_v2(m_db,pszBuf,-1,&pStmt,NULL);
 	sqlite3_free(pszBuf);
 
@@ -204,23 +204,23 @@ int OOSvrBase::Db::Database::prepare_statement(OOBase::SmartPtr<OOSvrBase::Db::S
 OOSvrBase::Db::Transaction::~Transaction()
 {
 	if (m_db)
-		sqlite3_exec(m_db,"ROLLBACK;",NULL,0,NULL);
+		sqlite3_exec(m_db,"ROLLBACK;",NULL,NULL,NULL);
 }
 
 int OOSvrBase::Db::Transaction::commit()
 {
-	int err = sqlite3_exec(m_db,"COMMIT;",NULL,0,NULL);
+	int err = sqlite3_exec(m_db,"COMMIT;",NULL,NULL,NULL);
 	if (err == SQLITE_OK)
-		m_db = 0;
+		m_db = NULL;
 
 	return err;
 }
 
 int OOSvrBase::Db::Transaction::rollback()
 {
-	int err = sqlite3_exec(m_db,"ROLLBACK;",NULL,0,NULL);
+	int err = sqlite3_exec(m_db,"ROLLBACK;",NULL,NULL,NULL);
 	if (err == SQLITE_OK)
-		m_db = 0;
+		m_db = NULL;
 
 	return err;
 }

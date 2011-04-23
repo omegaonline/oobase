@@ -24,9 +24,7 @@
 #include "../include/OOBase/TLSSingleton.h"
 
 #if defined(_WIN32)
-
 #include <process.h>
-
 #endif
 
 namespace
@@ -42,7 +40,7 @@ namespace
 
 		void run(Thread* pThread, bool bAutodelete, int (*thread_fn)(void*), void* param);
 
-		virtual bool join(const OOBase::timeval_t* wait = 0);
+		virtual bool join(const OOBase::timeval_t* wait = NULL);
 		virtual void abort();
 		virtual bool is_running();
 
@@ -64,7 +62,7 @@ namespace
 
 	Win32Thread::Win32Thread() :
 			OOBase::Thread(false,false),
-			m_hThread(0)
+			m_hThread(NULL)
 	{
 	}
 
@@ -161,7 +159,9 @@ namespace
 		bool bAutodelete = wrap->m_bAutodelete;
 
 		// Set our self pointer in TLS
-		OOBase::TLS::Set(&s_sentinal,pThread);
+		int err = OOBase::TLS::Set(&s_sentinal,pThread);
+		if (err != 0)
+			OOBase_CallCriticalFailure(err);
 
 		// Set the event, meaning we have started
 		if (!SetEvent(wrap->m_hEvent))
@@ -189,7 +189,7 @@ namespace
 		virtual ~PthreadThread();
 
 		virtual void run(Thread* pThread, bool bAutodelete, int (*thread_fn)(void*), void* param);
-		virtual bool join(const OOBase::timeval_t* wait = 0);
+		virtual bool join(const OOBase::timeval_t* wait = NULL);
 		virtual void abort();
 		virtual bool is_running();
 
@@ -310,7 +310,7 @@ namespace
 
 		if (m_running)
 		{
-			void* ret = 0;
+			void* ret = NULL;
 			pthread_join(m_thread,&ret);
 		}
 
@@ -327,7 +327,7 @@ namespace
 			if (err)
 				OOBase_CallCriticalFailure(err);
 
-			void* ret = 0;
+			void* ret = NULL;
 			pthread_join(m_thread,&ret);
 		}
 	}
@@ -344,7 +344,9 @@ namespace
 		bool bAutodelete = wrap->m_bAutodelete;
 
 		// Set our self pointer in TLS
-		OOBase::TLS::Set(&s_sentinal,pThread);
+		int err = OOBase::TLS::Set(&s_sentinal,pThread);
+		if (err != 0)
+			OOBase_CallCriticalFailure(err);
 
 		pThis->m_running = true;
 
@@ -372,7 +374,7 @@ namespace
 }
 
 OOBase::Thread::Thread(bool bAutodelete) :
-		m_impl(0),
+		m_impl(NULL),
 		m_bAutodelete(bAutodelete)
 {
 #if defined(_WIN32)
@@ -385,7 +387,7 @@ OOBase::Thread::Thread(bool bAutodelete) :
 }
 
 OOBase::Thread::Thread(bool,bool) :
-		m_impl(0),
+		m_impl(NULL),
 		m_bAutodelete(false)
 {
 }
@@ -461,12 +463,7 @@ void OOBase::Thread::sleep(const timeval_t& wait)
 
 OOBase::Thread* OOBase::Thread::self()
 {
-	void* v = 0;
-	OOBase::TLS::Get(&s_sentinal,&v);
-	if (v)
-		return static_cast<OOBase::Thread*>(v);
-
-	return 0;
+	void* v = NULL;
+	OOBase::TLS::Get(&s_sentinal,&v);	
+	return static_cast<OOBase::Thread*>(v);
 }
-
-const size_t OOBase::Thread::s_sentinal = 0;

@@ -24,7 +24,7 @@
 #if defined(_WIN32)
 
 OOBase::DLL::DLL() :
-		m_module(0)
+		m_module(NULL)
 {
 }
 
@@ -50,14 +50,14 @@ bool OOBase::DLL::unload()
 	if (!FreeLibrary(m_module))
 		return false;
 
-	m_module = 0;
+	m_module = NULL;
 	return true;
 }
 
 void* OOBase::DLL::symbol(const char* sym_name)
 {
 	if (!m_module)
-		return 0;
+		return NULL;
 
 	return (void*)GetProcAddress(m_module,sym_name);
 }
@@ -93,7 +93,7 @@ namespace
 }
 
 OOBase::DLL::DLL() :
-		m_module(0)
+		m_module(NULL)
 {
 }
 
@@ -145,14 +145,14 @@ bool OOBase::DLL::unload()
 	if (lt_dlclose(m_module))
 		return false;
 
-	m_module = 0;
+	m_module = NULL;
 	return true;
 }
 
 void* OOBase::DLL::symbol(const char* sym_name)
 {
 	if (!m_module)
-		return 0;
+		return NULL;
 
 	OOBase::Guard<OOBase::Mutex> guard(LT_HELPER::instance().m_lock);
 

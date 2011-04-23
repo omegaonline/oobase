@@ -45,7 +45,7 @@ namespace OOBase
 		Condition();
 		~Condition();
 
-		bool wait(Condition::Mutex& mutex, const timeval_t* wait = 0);
+		bool wait(Condition::Mutex& mutex, const timeval_t* wait = NULL);
 		void signal();
 		void broadcast();
 
@@ -77,7 +77,7 @@ namespace OOBase
 
 		bool is_set();
 		void set();
-		bool wait(const timeval_t* wait = 0);
+		bool wait(const timeval_t* wait = NULL);
 		void reset();
 
 	private:

@@ -24,14 +24,12 @@
 
 #include "Memory.h"
 
-#include <string>
-#include <sstream>
-
 #if defined(max)
 #undef max
 #endif
 
 #include <limits>
+#include <new>
 
 namespace OOBase
 {
@@ -49,8 +47,15 @@ namespace OOBase
 	public:
 		static void fail()
 		{
-			CriticalOutOfMemory();
+			OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 		}
+	};
+
+	class NoFailure
+	{
+	public:
+		static void fail()
+		{ }
 	};
 
 	// Allocator types
@@ -58,21 +63,25 @@ namespace OOBase
 	class HeapAllocator
 	{
 	public:
-		static void* allocate(size_t size, size_t count) 
+		static void* allocate(size_t size) 
 		{
-			void* p = NULL;
-			if (count == 1)
-				p = OOBase::ChunkAllocate(size);
-			else
-				p = OOBase::HeapAllocate(size*count);
-			
+			void* p = OOBase::HeapAllocate(size);
 			if (p == NULL)
 				FailureStrategy::fail();
 
 			return p;
 		}
 
-		static void deallocate(void* p, size_t /*size*/, size_t /*count*/) 
+		static void* reallocate(void* p, size_t size)
+		{
+			void* p1 = OOBase::HeapReallocate(p,size);
+			if (p1 == NULL)
+				FailureStrategy::fail();
+
+			return p1;
+		}
+
+		static void free(void* p) 
 		{
 			OOBase::HeapFree(p);
 		}
@@ -82,16 +91,25 @@ namespace OOBase
 	class LocalAllocator
 	{
 	public:
-		static void* allocate(size_t size, size_t count) 
+		static void* allocate(size_t size) 
 		{
-			void* p = OOBase::LocalAllocate(size*count);
+			void* p = OOBase::LocalAllocate(size);
 			if (p == NULL)
 				FailureStrategy::fail();
 
 			return p;
 		}
 
-		static void deallocate(void* p, size_t /*size*/, size_t /*count*/) 
+		static void* reallocate(void* p, size_t size)
+		{
+			void* p1 = OOBase::LocalReallocate(p,size);
+			if (p1 == NULL)
+				FailureStrategy::fail();
+
+			return p1;
+		}
+
+		static void free(void* p) 
 		{
 			OOBase::LocalFree(p);
 		}
@@ -159,7 +177,7 @@ namespace OOBase
 		void construct(pointer p, const_reference value) 
 		{
 			// initialize memory with placement new
-			new (static_cast<void*>(p)) T(value);
+			::new (static_cast<void*>(p)) T(value);
 		}
 
 		// destroy elements of initialized storage p
@@ -173,13 +191,13 @@ namespace OOBase
 		// allocate but don't initialize num elements of type T
 		pointer allocate(size_type num, const void* = NULL) 
 		{
-			return static_cast<pointer>(A::allocate(sizeof(T),num));
+			return static_cast<pointer>(A::allocate(sizeof(T) * num));
 		}
 
 		// deallocate storage p of deleted elements
-		void deallocate(pointer p, size_type num) 
+		void deallocate(pointer p, size_type /*num*/) 
 		{
-			A::deallocate(p,sizeof(T),num);	
+			A::free(p);	
 		}
 	};
 
@@ -195,16 +213,6 @@ namespace OOBase
 	{
 		return !(a1 == a2);
 	}
-
-	// Some useful typedefs
-	typedef std::basic_string<char, std::char_traits<char>, STLAllocator<char,HeapAllocator<OOBase::StdFailure> > > string;
-	typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, STLAllocator<wchar_t,HeapAllocator<OOBase::StdFailure> > > wstring;
-	typedef std::basic_ostringstream<char, std::char_traits<char>, STLAllocator<char,HeapAllocator<OOBase::StdFailure> > > ostringstream;
-
-	typedef std::basic_string<char, std::char_traits<char>, STLAllocator<char,LocalAllocator<OOBase::StdFailure> > > local_string;
-	typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, STLAllocator<wchar_t,LocalAllocator<OOBase::StdFailure> > > local_wstring;
-
-	string system_error_text(int err);
 }
 
 #endif // OOBASE_STL_ALLOCATOR_H_INCLUDED_

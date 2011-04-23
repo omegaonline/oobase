@@ -26,8 +26,7 @@
 #include "Once.h"
 #include "SmartPtr.h"
 #include "STLAllocator.h"
-
-#include <list>
+#include "Stack.h"
 
 namespace OOBase
 {
@@ -46,14 +45,17 @@ namespace OOBase
 		{
 			DLLDestructor& inst = instance();
 			Guard<SpinLock> guard(inst.m_lock);
-			inst.m_list.push_front(std::pair<pfn_destructor,void*>(pfn,p));
+			
+			int err = inst.m_list.push(Node(pfn,p));
+			if (err != 0)
+				OOBase_CallCriticalFailure(err);
 		}
 
 		static void remove_destructor(pfn_destructor pfn, void* p)
 		{
 			DLLDestructor& inst = instance();
 			Guard<SpinLock> guard(inst.m_lock);
-			inst.m_list.remove(std::pair<pfn_destructor,void*>(pfn,p));
+			inst.m_list.erase(Node(pfn,p));
 		}
 
 	private:
@@ -61,25 +63,42 @@ namespace OOBase
 		DLLDestructor(const DLLDestructor&);
 		DLLDestructor& operator = (const DLLDestructor&);
 
+		struct Node
+		{
+			Node(pfn_destructor pfn, void* p) : m_pfn(pfn), m_param(p)
+			{}
+
+			bool operator == (const Node& rhs) const
+			{
+				return (m_pfn == rhs.m_pfn && m_param == rhs.m_param);
+			}
+
+			pfn_destructor m_pfn;
+			void*          m_param;
+		};
+
+		SpinLock                              m_lock;
+		Stack<Node,HeapAllocator<NoFailure> > m_list;
+
 		~DLLDestructor()
 		{
 			Guard<SpinLock> guard(m_lock);
 
-			for (listType::iterator i=m_list.begin(); i!=m_list.end(); ++i)
+			Node node(NULL,NULL);
+			while (m_list.pop(&node))
 			{
+				guard.release();
+
 				try
 				{
-					(*(i->first))(i->second);
+					(*node.m_pfn)(node.m_param);
 				}
 				catch (...)
 				{}
+
+				guard.acquire();
 			}
 		}
-
-		SpinLock m_lock;
-
-		typedef std::list<std::pair<pfn_destructor,void*>,STLAllocator<std::pair<pfn_destructor,void*>,HeapAllocator<CriticalFailure> > > listType;
-		listType m_list;
 
 		static DLLDestructor& instance()
 		{
@@ -102,7 +121,7 @@ namespace OOBase
 	};
 
 	template <typename DLL>
-	volatile DLLDestructor<DLL>* DLLDestructor<DLL>::s_instance = 0;
+	volatile DLLDestructor<DLL>* DLLDestructor<DLL>::s_instance = NULL;
 }
 
 #endif // OOBASE_DESTRUCTOR_H_INCLUDED_

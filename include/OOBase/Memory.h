@@ -28,14 +28,9 @@
 
 namespace OOBase
 {
-	void CriticalOutOfMemory();
-
 	void* HeapAllocate(size_t bytes);
 	void* HeapReallocate(void* p, size_t bytes);
 	void HeapFree(void* p);
-
-	void* ChunkAllocate(size_t bytes);
-	void ChunkFree(void* p);
 
 	void* LocalAllocate(size_t bytes);
 	void* LocalReallocate(void* p, size_t bytes);

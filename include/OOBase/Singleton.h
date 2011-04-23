@@ -50,14 +50,12 @@ namespace OOBase
 
 		static void init()
 		{
-			s_instance = new (std::nothrow) T();
-			if (!s_instance)
-				CriticalOutOfMemory();
+			s_instance = new (critical) T();
 			
-			DLLDestructor<DLL>::add_destructor(&destroy,0);
+			DLLDestructor<DLL>::add_destructor(&destroy,NULL);
 		}
 
-		static void destroy(void* = 0)
+		static void destroy(void* = NULL)
 		{
 			assert(s_instance != reinterpret_cast<T*>((uintptr_t)0xdeadbeef));
 
@@ -67,7 +65,7 @@ namespace OOBase
 	};
 
 	template <typename T, typename DLL>
-	T* Singleton<T,DLL>::s_instance = 0;
+	T* Singleton<T,DLL>::s_instance = NULL;
 }
 
 #endif // OOBASE_SINGLETON_H_INCLUDED_

@@ -34,7 +34,7 @@ namespace OOBase
 
 		void run(int (*thread_fn)(void*), void* param);
 
-		virtual bool join(const timeval_t* wait = 0);
+		virtual bool join(const timeval_t* wait = NULL);
 		virtual void abort();
 		virtual bool is_running();
 
@@ -48,7 +48,7 @@ namespace OOBase
 
 		virtual void run(Thread* /*pThread*/, bool /*bAutodelete*/, int (* /*thread_fn*/)(void*), void* /*param*/) { assert(false); };
 
-		static const size_t s_sentinal;
+		static const size_t s_sentinal = 0;
 
 	private:
 		Thread(const Thread&);

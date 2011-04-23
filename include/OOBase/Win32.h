@@ -75,7 +75,7 @@ namespace OOBase
 
 			bool is_valid() const
 			{
-				return (m_handle != 0 && m_handle != INVALID_HANDLE_VALUE);
+				return (m_handle != NULL && m_handle != INVALID_HANDLE_VALUE);
 			}
 
 			HANDLE* operator &()

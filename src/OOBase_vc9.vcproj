@@ -313,6 +313,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\String.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Thread.cpp"
 				>
 			</File>
@@ -351,6 +355,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\include\OOBase\BoundedQueue.h"
+				>
+			</File>
+			<File
 				RelativePath=".\BSDSocket.h"
 				>
 			</File>
@@ -380,6 +388,14 @@
 			</File>
 			<File
 				RelativePath="..\include\OOBase\DLL.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\HandleTable.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\HashTable.h"
 				>
 			</File>
 			<File
@@ -419,7 +435,19 @@
 				>
 			</File>
 			<File
+				RelativePath="..\include\OOBase\Stack.h"
+				>
+			</File>
+			<File
 				RelativePath="..\include\OOBase\STLAllocator.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\String.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\Table.h"
 				>
 			</File>
 			<File

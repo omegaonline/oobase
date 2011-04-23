@@ -51,13 +51,13 @@ namespace
 
 void OOBase::Once::Run(once_t* key, pfn_once fn)
 {
-	if (!Win32::InitOnceExecuteOnce(key,&PINIT_ONCE_FN_impl,(void*)fn,0))
+	if (!Win32::InitOnceExecuteOnce(key,&PINIT_ONCE_FN_impl,(void*)fn,NULL))
 		OOBase_CallCriticalFailure(GetLastError());
 }
 
 void OOBase::Once::Run_Internal(once_t* key, pfn_once fn)
 {
-	if (!Win32::InitOnceExecuteOnce_Internal(key,&PINIT_ONCE_FN_impl,(void*)fn,0))
+	if (!Win32::InitOnceExecuteOnce_Internal(key,&PINIT_ONCE_FN_impl,(void*)fn,NULL))
 		OOBase_CallCriticalFailure(GetLastError());
 }
 

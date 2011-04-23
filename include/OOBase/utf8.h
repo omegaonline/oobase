@@ -23,25 +23,20 @@
 #define OOBASE_UTF8_H_INCLUDED_
 
 #include "../config-base.h"
-#include "STLAllocator.h"
 
 namespace OOBase
 {
 	size_t measure_utf8(const char* sz, size_t len = (size_t)-1);
 	size_t from_utf8(wchar_t* wsz, size_t wlen, const char* sz, size_t len = size_t(-1));
-	wstring from_utf8(const char* sz, size_t len = size_t(-1));
-
+		
 	size_t measure_utf8(const wchar_t* wsz, size_t len = (size_t)-1);
 	size_t to_utf8(char* sz, size_t len, const wchar_t* wsz, size_t wlen = size_t(-1));
-	string to_utf8(const wchar_t* wsz, size_t len = size_t(-1));
-
+	
 	size_t measure_native(const char* sz, size_t len = (size_t)-1);
 	size_t from_native(wchar_t* wsz, size_t wlen, const char* sz, size_t len = size_t(-1));
-	wstring from_native(const char* sz, size_t len = size_t(-1));
-
+	
 	size_t measure_native(const wchar_t* wsz, size_t len = (size_t)-1);
 	size_t to_native(char* sz, size_t len, const wchar_t* wsz, size_t wlen = size_t(-1));
-	string to_native(const wchar_t* wsz, size_t len = size_t(-1));
 }
 
 #endif // OOBASE_UTF8_H_INCLUDED_

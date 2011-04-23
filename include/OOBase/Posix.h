@@ -48,7 +48,7 @@ namespace OOBase
 
 			inline bool operator !() const
 			{
-				return (m_pwd==0);
+				return (m_pwd == NULL);
 			}
 
 		private:

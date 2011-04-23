@@ -35,7 +35,7 @@ namespace OOBase
 		~Mutex();
 
 		bool tryacquire();
-		bool acquire(const timeval_t* wait = 0);
+		bool acquire(const timeval_t* wait = NULL);
 		void release();
 
 	private:
