@@ -110,25 +110,6 @@ namespace OOBase
 
 namespace
 {
-	class CrtAllocator
-	{
-	public:
-		static void* allocate(size_t len)
-		{
-			return ::malloc(len);
-		}
-
-		static void* reallocate(void* ptr, size_t len)
-		{
-			return ::realloc(ptr,len);
-		}
-
-		static void free(void* ptr)
-		{
-			::free(ptr);
-		}	
-	};
-
 	template <typename T>
 	class MemoryManager
 	{
@@ -187,7 +168,7 @@ namespace
 		static void init()
 		{
 			// Use crt malloc here...
-			Instance* instance = static_cast<Instance*>(malloc(sizeof(Instance)));
+			Instance* instance = static_cast<Instance*>(OOBase::CrtAllocator::allocate(sizeof(Instance)));
 			if (!instance)
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 			
@@ -204,7 +185,7 @@ namespace
 		{
 			s_instance = reinterpret_cast<Instance*>((uintptr_t)0xdeadbeef);
 			i->~Instance();
-			free(i);
+			OOBase::CrtAllocator::free(i);
 		}
 
 		static void deref(void*)
@@ -248,7 +229,7 @@ namespace
 			//os << "Alloc(" << flags << ") " << p << " " << len << " " << file << " " << line << std::endl;
 			//OutputDebugString(os.str().c_str());
 
-			void* p = CrtAllocator::allocate(len);
+			void* p = OOBase::CrtAllocator::allocate(len);
 
 			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
@@ -259,7 +240,7 @@ namespace
 
 		void* reallocate(void* ptr, size_t len)
 		{
-			void* p = CrtAllocator::reallocate(ptr,len);
+			void* p = OOBase::CrtAllocator::reallocate(ptr,len);
 
 			if (p != ptr)
 			{
@@ -294,7 +275,7 @@ namespace
 			size_t c = m_setEntries.erase(ptr);
 			assert(c == 1);
 
-			CrtAllocator::free(ptr);
+			OOBase::CrtAllocator::free(ptr);
 		}
 
 	private:

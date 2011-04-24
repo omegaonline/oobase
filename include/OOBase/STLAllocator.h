@@ -59,6 +59,25 @@ namespace OOBase
 	};
 
 	// Allocator types
+	class CrtAllocator
+	{
+	public:
+		static void* allocate(size_t len)
+		{
+			return ::malloc(len);
+		}
+
+		static void* reallocate(void* ptr, size_t len)
+		{
+			return ::realloc(ptr,len);
+		}
+
+		static void free(void* ptr)
+		{
+			::free(ptr);
+		}	
+	};
+
 	template <typename FailureStrategy>
 	class HeapAllocator
 	{

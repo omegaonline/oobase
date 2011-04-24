@@ -77,8 +77,8 @@ namespace OOBase
 			void*          m_param;
 		};
 
-		SpinLock                              m_lock;
-		Stack<Node,HeapAllocator<NoFailure> > m_list;
+		SpinLock                 m_lock;
+		Stack<Node,CrtAllocator> m_list;
 
 		~DLLDestructor()
 		{

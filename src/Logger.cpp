@@ -98,7 +98,7 @@ namespace
 	public:
 		static void destroy(void* ptr)
 		{
-			::free(ptr);
+			OOBase::CrtAllocator::free(ptr);
 		}
 	};
 
@@ -205,7 +205,7 @@ namespace
 				OOBase::SmartPtr<TOKEN_USER,CrtFreeDestructor> ptrSIDProcess;
 				for (DWORD dwLen = 256;;)
 				{
-					ptrSIDProcess = static_cast<TOKEN_USER*>(::malloc(dwLen));
+					ptrSIDProcess = static_cast<TOKEN_USER*>(OOBase::CrtAllocator::allocate(dwLen));
 					if (!ptrSIDProcess)
 						break;
 
