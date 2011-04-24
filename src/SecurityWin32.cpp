@@ -115,12 +115,14 @@ DWORD OOSvrBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile
 		return err;
 
 	// Lookup a DC for pszDomain
-	OOBase::SmartPtr<wchar_t,NetApiDestructor> ptrDCName = NULL;
-	NetGetAnyDCName(NULL,strDomainName,(LPBYTE*)&ptrDCName);
+	LPBYTE v = NULL;
+	NetGetAnyDCName(NULL,strDomainName,&v);
+	OOBase::SmartPtr<wchar_t,NetApiDestructor> ptrDCName = reinterpret_cast<wchar_t*>(v);
 
 	// Try to find the user's profile path...
-	OOBase::SmartPtr<USER_INFO_3,NetApiDestructor> pInfo = NULL;
-	NetUserGetInfo(ptrDCName,strUserName,3,(LPBYTE*)&pInfo);
+	v = NULL;
+	NetUserGetInfo(ptrDCName,strUserName,3,&v);
+	OOBase::SmartPtr<USER_INFO_3,NetApiDestructor> pInfo = reinterpret_cast<USER_INFO_3*>(v);
 
 	// Load the Users Profile
 	PROFILEINFOW profile_info = {0};
