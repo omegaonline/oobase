@@ -19,6 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/OOBase/Memory.h"
 #include "../include/OOSvrBase/Proactor.h"
 
 #include "ProactorImpl.h"
@@ -173,7 +174,7 @@ int OOSvrBase::detail::AsyncQueued::async_op(OOBase::Buffer* buffer, size_t len,
 			return ERROR_OUTOFMEMORY;
 	}
 	
-	op->buffer = buffer->duplicate();
+	op->buffer = buffer->addref();
 	op->len = len;
 	op->param = param;
 

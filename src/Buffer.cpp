@@ -21,6 +21,11 @@
 
 #include "../include/OOBase/Buffer.h"
 
+OOBase::Buffer* OOBase::Buffer::create(size_t cbSize, size_t align)
+{
+	return new (std::nothrow) Buffer(cbSize,align);
+}
+
 OOBase::Buffer::Buffer(size_t cbSize, size_t align) :
 		m_refcount(1),
 		m_capacity(0),
@@ -32,53 +37,15 @@ OOBase::Buffer::Buffer(size_t cbSize, size_t align) :
 	if (cbSize < align)
 		cbSize += align;
 
-	int err = priv_malloc(m_buffer,cbSize);
-	if (err == 0)
+	m_buffer = static_cast<char*>(OOBase::HeapAllocate(cbSize));
+	if (m_buffer)
 	{
 		m_capacity = cbSize;
 		reset(align);
 	}
 }
 
-OOBase::Buffer::Buffer(const Buffer& rhs) :
-		m_refcount(1),
-		m_capacity(0),
-		m_buffer(NULL),
-		m_wr_ptr(NULL),
-		m_rd_ptr(NULL)
-{
-	size_t cbSize = rhs.m_capacity;
-	int err = priv_malloc(m_buffer,cbSize);
-	if (err == 0)
-	{
-		m_capacity = cbSize;
-		memcpy(m_buffer,rhs.m_buffer,rhs.m_capacity);
-
-		m_rd_ptr = m_buffer + (rhs.m_rd_ptr - rhs.m_buffer);
-		m_wr_ptr = m_buffer + (rhs.m_wr_ptr - rhs.m_buffer);
-	}
-}
-
-OOBase::Buffer& OOBase::Buffer::operator = (const Buffer& rhs)
-{
-	if (&rhs != this)
-	{
-		size_t cbSize = rhs.m_capacity;
-		int err = priv_realloc(m_buffer,cbSize);
-		if (err == 0)
-		{
-			m_capacity = cbSize;
-			memcpy(m_buffer,rhs.m_buffer,rhs.m_capacity);
-
-			m_rd_ptr = m_buffer + (rhs.m_rd_ptr - rhs.m_buffer);
-			m_wr_ptr = m_buffer + (rhs.m_wr_ptr - rhs.m_buffer);
-		}
-	}
-
-	return *this;
-}
-
-OOBase::Buffer* OOBase::Buffer::duplicate()
+OOBase::Buffer* OOBase::Buffer::addref()
 {
 	++m_refcount;
 	return this;
@@ -92,7 +59,7 @@ void OOBase::Buffer::release()
 
 OOBase::Buffer::~Buffer()
 {
-	priv_free(m_buffer);
+	OOBase::HeapFree(m_buffer);
 }
 
 const char* OOBase::Buffer::rd_ptr() const
@@ -219,34 +186,14 @@ int OOBase::Buffer::space(size_t cbSpace)
 		size_t rd_pos = (m_rd_ptr - m_buffer);
 		size_t wr_pos = (m_wr_ptr - m_buffer);
 
-		err = priv_realloc(m_buffer,cbAbsCapacity);
-		if (err == 0)
-		{
-			m_rd_ptr = m_buffer + rd_pos;
-			m_wr_ptr = m_buffer + wr_pos;
-			m_capacity = cbAbsCapacity;
-		}
+		char* new_ptr = static_cast<char*>(OOBase::HeapReallocate(m_buffer,cbAbsCapacity));
+		if (!new_ptr)
+			return ERROR_OUTOFMEMORY;
+
+		m_buffer = new_ptr;
+		m_rd_ptr = m_buffer + rd_pos;
+		m_wr_ptr = m_buffer + wr_pos;
+		m_capacity = cbAbsCapacity;
 	}
 	return err;
-}
-
-int OOBase::Buffer::priv_malloc(char*& ptr, size_t& bytes)
-{
-	ptr = static_cast<char*>(HeapAllocate(bytes));
-	return (!ptr ? ERROR_OUTOFMEMORY : 0);
-}
-
-int OOBase::Buffer::priv_realloc(char*& ptr, size_t& bytes)
-{
-	char* new_ptr = static_cast<char*>(HeapReallocate(ptr,bytes));
-	if (!new_ptr)
-		return ERROR_OUTOFMEMORY;
-
-	ptr = new_ptr;
-	return 0;
-}
-
-void OOBase::Buffer::priv_free(char* ptr)
-{
-	HeapFree(ptr);
 }

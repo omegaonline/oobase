@@ -22,6 +22,7 @@
 #ifndef OOBASE_SINGLETON_H_INCLUDED_
 #define OOBASE_SINGLETON_H_INCLUDED_
 
+#include "Memory.h"
 #include "Destructor.h"
 
 namespace OOBase

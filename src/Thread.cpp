@@ -19,9 +19,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Memory.h"
-#include "../include/OOBase/Thread.h"
 #include "../include/OOBase/TLSSingleton.h"
+#include "../include/OOBase/Thread.h"
 
 #if defined(_WIN32)
 #include <process.h>

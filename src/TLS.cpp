@@ -211,8 +211,8 @@ int OOBase::TLS::Set(const void* key, void* val, void (*destructor)(void*))
 	v.m_val = val;
 	v.m_destructor = destructor;
 
-	TLSMap::tls_val* pv = NULL;
-	if (!inst->m_mapVals.find(key,pv))
+	TLSMap::tls_val* pv = inst->m_mapVals.find(key);
+	if (!pv)
 		return inst->m_mapVals.insert(key,v);
 	
 	*pv = v;

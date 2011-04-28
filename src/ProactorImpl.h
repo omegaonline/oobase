@@ -22,6 +22,7 @@
 #ifndef OOSVRBASE_PROACTOR_IMPL_H_INCLUDED_
 #define OOSVRBASE_PROACTOR_IMPL_H_INCLUDED_
 
+#include "../include/OOBase/Memory.h"
 #include "../include/OOBase/TimeVal.h"
 #include "../include/OOBase/Condition.h"
 

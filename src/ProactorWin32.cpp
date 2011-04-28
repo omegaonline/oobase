@@ -19,6 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/OOBase/Memory.h"
 #include "../include/OOSvrBase/Proactor.h"
 #include <errno.h>
 

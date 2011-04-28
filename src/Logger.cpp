@@ -195,7 +195,7 @@ namespace
 #if !defined(_DEBUG)
 		if (m_hLog && priority != OOSvrBase::Logger::Debug)
 		{
-			const char* arrBufs[2] = { msg.c_str(), NULL };
+			const char* arrBufs[2] = { msg, NULL };
 
 			PSID psid = NULL;
 			OOBase::Win32::SmartHandle hProcessToken;

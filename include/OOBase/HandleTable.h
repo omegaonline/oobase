@@ -39,7 +39,7 @@ namespace OOBase
 		~HandleTable()
 		{}
 			
-		int insert(const V& value, ID handle, ID min, ID max)
+		int insert(const V& value, ID& handle, ID min, ID max)
 		{
 			ID next = m_next;
 			if (next < min)
@@ -51,7 +51,7 @@ namespace OOBase
 					next = min;
 				
 				handle = next++;
-				if (baseClass::find(handle) == size_t(-1))
+				if (!baseClass::exists(handle))
 					break;
 				
 				// Check we don't loop endlessly
@@ -66,12 +66,12 @@ namespace OOBase
 			return err;
 		}
 
-		bool erase(const ID& handle, V* value)
+		bool erase(const ID& handle, V* value = NULL)
 		{
 			return baseClass::erase(handle,value);
 		}
 		
-		bool pop(ID* handle, V* value)
+		bool pop(ID* handle = NULL, V* value = NULL)
 		{
 			return baseClass::pop(handle,value);
 		}
@@ -79,6 +79,11 @@ namespace OOBase
 		bool find(const ID& handle, V& value) const
 		{
 			return baseClass::find(handle,value);
+		}
+
+		V* find(const ID& handle)
+		{
+			return baseClass::find(handle);
 		}
 		
 	private:

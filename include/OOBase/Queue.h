@@ -22,6 +22,8 @@
 #ifndef OOBASE_QUEUE_H_INCLUDED_
 #define OOBASE_QUEUE_H_INCLUDED_
 
+#include "Memory.h"
+
 namespace OOBase
 {
 	template <typename T, typename Allocator>

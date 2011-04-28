@@ -22,7 +22,7 @@
 #ifndef OOBASE_STACK_H_INCLUDED_
 #define OOBASE_STACK_H_INCLUDED_
 
-#include "../config-base.h"
+#include "Memory.h"
 
 namespace OOBase
 {

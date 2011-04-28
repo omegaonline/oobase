@@ -22,7 +22,7 @@
 #ifndef OOBASE_TABLE_H_INCLUDED_
 #define OOBASE_TABLE_H_INCLUDED_
 
-#include "Stack.h"
+#include "Memory.h"
 
 #include <stdlib.h>
 

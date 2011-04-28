@@ -206,7 +206,7 @@ DWORD OOSvrBase::Win32::SetTokenDefaultDACL(HANDLE hToken)
 	if (!SetTokenInformation(hToken,TokenDefaultDacl,&def_dacl,sizeof(def_dacl)))
 		dwRes = GetLastError();
 
-	LocalFree(def_dacl.DefaultDacl);
+	::LocalFree(def_dacl.DefaultDacl);
 
 	return dwRes;
 }

@@ -19,6 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Destructor.h"
 
 const OOBase::critical_t OOBase::critical;
@@ -119,8 +120,8 @@ namespace
 			Instance& i = instance();
 
 			void* p = i.inst.allocate(len);
-			if (p)
-				++i.refcount;
+			//if (p)
+			//	++i.refcount;
 			return p;
 		}
 
@@ -139,8 +140,8 @@ namespace
 				Instance& i = instance();
 
 				i.inst.free(ptr);
-				if (--i.refcount == 0)
-					term(const_cast<Instance*>(s_instance));
+				//if (--i.refcount == 0)
+				//	term(const_cast<Instance*>(s_instance));
 			}
 		}
 
@@ -194,7 +195,7 @@ namespace
 
 			Instance* i = const_cast<Instance*>(s_instance);
 
-			if (i && --i->refcount == 0)
+			//if (i && --i->refcount == 0)
 				term(i);
 		}
 	};
@@ -206,7 +207,9 @@ namespace
 
 #if defined(_DEBUG)
 
-#include <set>
+#include "../include/OOBase/HashTable.h"
+
+#include <stdio.h>
 
 namespace
 {
@@ -214,26 +217,23 @@ namespace
 	class MemWatcher
 	{
 	public:
+		~MemWatcher()
+		{
+			//if (!m_setEntries.empty())
+			//	printf("****************** MEM LEAKS! *****************\n");
+
+			void* p = NULL;
+			while (m_setEntries.pop(&p))
+				OOBase::CrtAllocator::free(p);
+		}
+
 		void* allocate(size_t len)
 		{
-			/*if (flags == 2)
-			{
-		#if defined(_MSC_VER)
-				return _malloca(len);
-		#else
-				flags = 1;
-		#endif
-			}*/
-			
-			//std::ostringstream os;
-			//os << "Alloc(" << flags << ") " << p << " " << len << " " << file << " " << line << std::endl;
-			//OutputDebugString(os.str().c_str());
-
 			void* p = OOBase::CrtAllocator::allocate(len);
 
 			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-			m_setEntries.insert(p);
+			m_setEntries.insert(p,len);
 
 			return p;
 		}
@@ -246,10 +246,10 @@ namespace
 			{
 				OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-				size_t c = m_setEntries.erase(ptr);
-				assert(c == 1);
+				bool e = m_setEntries.erase(ptr);
+				assert(e);
 
-				m_setEntries.insert(p);
+				m_setEntries.insert(p,len);
 			}
 
 			return p;
@@ -257,73 +257,61 @@ namespace
 
 		void free(void* ptr)
 		{
-			//std::ostringstream os;
-			//os << "Free(" << flags << ")  " << mem << std::endl;
-			//OutputDebugString(os.str().c_str());
-			/*if (flags == 2)
-			{
-		#if defined(_MSC_VER)
-				_freea(mem);
-				return;
-		#else
-				flags = 1;
-		#endif
-			}*/
-
 			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-			size_t c = m_setEntries.erase(ptr);
-			assert(c == 1);
+			bool e = m_setEntries.erase(ptr);
+			assert(e);
 
 			OOBase::CrtAllocator::free(ptr);
 		}
 
 	private:
 		OOBase::SpinLock   m_lock;
-		std::set<void*>    m_setEntries;
+		OOBase::HashTable<void*,size_t,OOBase::CrtAllocator> m_setEntries;
 	};
 }
 
+#endif // _DEBUG
+
 void* OOBase::HeapAllocate(size_t bytes)
 {
-//#if defined(_DEBUG)
-//	return MemoryManager<MemWatcher>::allocate(bytes);
-//#else
+#if defined(_DEBUG)
+	return MemoryManager<MemWatcher>::allocate(bytes);
+#else
 	return MemoryManager<CrtAllocator>::allocate(bytes);
-//#endif
+#endif
 }
 
 void* OOBase::HeapReallocate(void* p, size_t bytes)
 {
-//#if defined(_DEBUG)
-//	return MemoryManager<MemWatcher>::reallocate(p,bytes);
-//#else
+#if defined(_DEBUG)
+	return MemoryManager<MemWatcher>::reallocate(p,bytes);
+#else
 	return MemoryManager<CrtAllocator>::reallocate(p,bytes);
-//#endif
+#endif
 }
 
 void OOBase::HeapFree(void* p)
 {
-//#if defined(_DEBUG)
-//	MemoryManager<MemWatcher>::free(p);
-//#else
+#if defined(_DEBUG)
+	MemoryManager<MemWatcher>::free(p);
+#else
 	MemoryManager<CrtAllocator>::free(p);
-//#endif	
+#endif	
 }
 
 void* OOBase::LocalAllocate(size_t bytes)
 {
-	return HeapAllocate(bytes);
+	return OOBase::HeapAllocate(bytes);
 }
 
 void* OOBase::LocalReallocate(void* p, size_t bytes)
 {
-	return HeapReallocate(p,bytes);
+	return OOBase::HeapReallocate(p,bytes);
 }
 
 void OOBase::LocalFree(void* p)
 {
-	return HeapFree(p);
+	return OOBase::HeapFree(p);
 }
 
-#endif // _DEBUG

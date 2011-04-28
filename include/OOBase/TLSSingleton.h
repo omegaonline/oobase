@@ -22,7 +22,7 @@
 #ifndef OOBASE_TLS_SINGLETON_H_INCLUDED_
 #define OOBASE_TLS_SINGLETON_H_INCLUDED_
 
-#include "../config-base.h"
+#include "Memory.h"
 
 namespace OOBase
 {
@@ -58,10 +58,8 @@ namespace OOBase
 
 		static void* init()
 		{
-			T* pThis = new (std::nothrow) T();
-			if (!pThis)
-				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-						
+			T* pThis = new (critical) T();
+									
 			int err = TLS::Set(&s_sentinal,pThis,&destroy);
 			if (err != 0)
 				OOBase_CallCriticalFailure(err);

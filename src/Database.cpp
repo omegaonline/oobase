@@ -19,6 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/OOBase/Memory.h"
 #include "../include/OOSvrBase/Database.h"
 #include "../include/OOSvrBase/Logger.h"
 

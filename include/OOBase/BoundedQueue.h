@@ -22,9 +22,9 @@
 #ifndef OOBASE_BOUNDED_QUEUE_H_INCLUDED_
 #define OOBASE_BOUNDED_QUEUE_H_INCLUDED_
 
+#include "STLAllocator.h"
 #include "Condition.h"
 #include "Thread.h"
-#include "STLAllocator.h"
 #include "Queue.h"
 
 namespace OOBase
@@ -166,7 +166,7 @@ namespace OOBase
 		Condition        m_available;
 		Condition        m_space;
 
-		Queue<T,HeapAllocator<CriticalFailure> > m_queue;
+		Queue<T,OOBase::HeapAllocator<CriticalFailure> > m_queue;
 	};
 }
 

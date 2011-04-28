@@ -22,7 +22,7 @@
 #ifndef OOBASE_HASHTABLE_H_INCLUDED_
 #define OOBASE_HASHTABLE_H_INCLUDED_
 
-#include "../config-base.h"
+#include "Memory.h"
 
 namespace OOBase
 {
@@ -31,8 +31,7 @@ namespace OOBase
 	{
 		static size_t hash(T v)
 		{
-			static_assert(false,"You need to implement Hash() for your type");
-			return 0;
+			return v;
 		}
 	};
 
@@ -48,30 +47,23 @@ namespace OOBase
 		}
 	};
 	
-	template <>
-	struct Hash<size_t>
-	{
-		static size_t hash(size_t v)
-		{
-			return v;
-		}
-	};
-	
 	template <typename K, typename V, typename Allocator, typename H = OOBase::Hash<K> >
 	class HashTable
 	{
 	public:
-		HashTable() : m_data(NULL), m_size(0), m_count(0)
+		static const size_t npos = size_t(-1);
+
+		HashTable(const H& h = H()) : m_data(NULL), m_size(0), m_count(0), m_hash(h)
 		{}
 			
 		~HashTable()
 		{
 			destroy(m_data,m_size);
 		}
-			
+
 		int insert(const K& key, const V& value)
 		{
-			if (m_count+(m_size/8) >= m_size)
+			if (m_count+(m_size/7) >= m_size)
 			{
 				int err = grow();
 				if (err != 0)
@@ -84,31 +76,35 @@ namespace OOBase
 			
 			return err;
 		}
+
+		bool exists(const K& key) const
+		{
+			return (find_i(key) != npos);
+		}
 		
 		bool find(const K& key, V& value) const
 		{
-			size_t pos = find(key);
-			if (pos == size_t(-1))
+			size_t pos = find_i(key);
+			if (pos == npos)
 				return false;
 			
 			value = m_data[pos].m_value;
 			return true;
 		}
 
-		bool find(const K& key, V*& value)
+		V* find(const K& key)
 		{
-			size_t pos = find(key);
-			if (pos == size_t(-1))
-				return false;
+			size_t pos = find_i(key);
+			if (pos == npos)
+				return NULL;
 			
-			value = &m_data[pos].m_value;
-			return true;
+			return &m_data[pos].m_value;
 		}
 		
 		bool erase(const K& key, V* value = NULL)
 		{
-			size_t pos = find(key);
-			if (pos == size_t(-1))
+			size_t pos = find_i(key);
+			if (pos == npos)
 				return false;
 			
 			if (value)
@@ -123,7 +119,7 @@ namespace OOBase
 		{
 			for (size_t i=0;i<m_size && m_count>0;++i)
 			{
-				if (m_data[i].m_in_use)
+				if (m_data[i].m_in_use == 2)
 				{
 					if (key)
 						*key = m_data[i].m_key;
@@ -143,7 +139,7 @@ namespace OOBase
 		{
 			for (size_t i=0;i<m_size && m_count>0;++i)
 			{
-				if (m_data[i].m_in_use)
+				if (m_data[i].m_in_use == 2)
 				{
 					m_data[i].~Node();
 					--m_count;
@@ -160,6 +156,41 @@ namespace OOBase
 		{
 			return m_count;
 		}
+
+		size_t begin() const
+		{
+			for (size_t i=0;i<m_size;++i)
+			{
+				if (m_data[i].m_in_use == 2)
+					return i;
+			}
+			return npos;
+		}
+
+		size_t next(size_t pos) const
+		{
+			for (size_t i=pos+1;i<m_size;++i)
+			{
+				if (m_data[i].m_in_use == 2)
+					return i;
+			}
+			return npos;
+		}
+
+		V* at(size_t pos)
+		{
+			return (m_data && pos < m_size && m_data[pos].m_in_use==2 ? &m_data[pos].m_value : NULL);
+		}
+		
+		const V* at(size_t pos) const
+		{
+			return (m_data && pos < m_size && m_data[pos].m_in_use==2 ? &m_data[pos].m_value : NULL);
+		}
+		
+		const K* key_at(size_t pos) const
+		{
+			return (m_data && pos < m_size && m_data[pos].m_in_use==2 ? &m_data[pos].m_key : NULL);
+		}
 		
 	private:
 		// Do not allow copy constructors or assignment
@@ -170,22 +201,23 @@ namespace OOBase
 	
 		struct Node
 		{
-			Node(const K& k, const V& v) : m_in_use(true), m_key(k), m_value(v)
+			Node(const K& k, const V& v) : m_in_use(2), m_key(k), m_value(v)
 			{}
 				
 			~Node() 
 			{
-				m_in_use = false;
+				m_in_use = 1;
 			}
 			
-			bool m_in_use;
-			K    m_key;
-			V    m_value;
+			int m_in_use;
+			K   m_key;
+			V   m_value;
 		};
 				
-		Node*  m_data;
-		size_t m_size;
-		size_t m_count;
+		Node*    m_data;
+		size_t   m_size;
+		size_t   m_count;
+		const H& m_hash;
 		
 		int grow()
 		{
@@ -196,12 +228,12 @@ namespace OOBase
 			
 			// Set nothing in use
 			for (size_t i=0;i<new_size;++i)
-				new_data[i].m_in_use = false;
+				new_data[i].m_in_use = 0;
 				
 			// Now reinsert the contents of m_data into new_data
 			for (size_t i=0;i<m_size;++i)
 			{
-				if (m_data[i].m_in_use)
+				if (m_data[i].m_in_use == 2)
 				{
 					int err = insert_i(new_data,new_size,m_data[i].m_key,m_data[i].m_value);
 					if (err != 0)
@@ -223,41 +255,36 @@ namespace OOBase
 		{
 			for (size_t i=0;i<size;++i)
 			{
-				if (data[i].m_in_use)
+				if (data[i].m_in_use == 2)
 					data[i].~Node();
 			}
 			Allocator::free(data);
 		}
-		
-		void rehash(size_t& h) const
-		{
-			h += (m_size/4) + 1;
-		}
-		
-		size_t find(const K& key) const
+
+		size_t find_i(const K& key) const
 		{
 			if (m_count == 0)
-				return size_t(-1);
+				return npos;
 			
-			for (size_t h = H::hash(key);;rehash(h))
+			for (size_t h = m_hash.hash(key);;++h)
 			{
 				size_t h1 = h & (m_size-1);
 				
-				if (!m_data[h1].m_in_use)
-					return size_t(-1);
+				if (m_data[h1].m_in_use == 0)
+					return npos;
 				
-				if (m_data[h1].m_key == key)
+				if (m_data[h1].m_in_use == 2 && m_data[h1].m_key == key)
 					return h1;
 			}
 		}
 		
 		int insert_i(Node* data, size_t size, const K& key, const V& value)
 		{
-			for (size_t h = H::hash(key);;rehash(h))
+			for (size_t h = m_hash.hash(key);;++h)
 			{
 				size_t h1 = h & (size-1);
 				
-				if (!data[h1].m_in_use)
+				if (data[h1].m_in_use != 2)
 				{
 					// Placement new
 					new (&data[h1]) Node(key,value);
