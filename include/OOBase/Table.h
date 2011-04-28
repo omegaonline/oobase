@@ -28,7 +28,7 @@
 
 namespace OOBase
 {
-	template <typename K, typename V, typename Allocator>
+	template <typename K, typename V, typename Allocator = HeapAllocator<NoFailure> >
 	class Table
 	{
 	public:

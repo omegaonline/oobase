@@ -26,7 +26,7 @@
 
 namespace OOBase
 {
-	template <typename ID, typename V, typename Allocator>
+	template <typename ID, typename V, typename Allocator = HeapAllocator<NoFailure> >
 	class HandleTable : private HashTable<ID,V,Allocator>
 	{
 		typedef HashTable<ID,V,Allocator> baseClass;

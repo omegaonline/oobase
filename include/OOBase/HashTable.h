@@ -47,7 +47,7 @@ namespace OOBase
 		}
 	};
 	
-	template <typename K, typename V, typename Allocator, typename H = OOBase::Hash<K> >
+	template <typename K, typename V, typename Allocator = HeapAllocator<NoFailure>, typename H = OOBase::Hash<K> >
 	class HashTable
 	{
 	public:

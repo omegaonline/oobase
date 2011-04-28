@@ -26,7 +26,7 @@
 
 namespace OOBase
 {
-	template <typename T, typename Allocator>
+	template <typename T, typename Allocator = HeapAllocator<NoFailure> >
 	class Queue
 	{
 	public:

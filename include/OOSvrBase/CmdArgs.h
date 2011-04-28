@@ -34,7 +34,7 @@ namespace OOSvrBase
 		int add_option(const char* id, char short_opt = 0, bool has_value = false, const char* long_opt = NULL);
 		int add_argument(const char* id, int position);
 
-		typedef OOBase::Table<OOBase::String,OOBase::String,OOBase::HeapAllocator<OOBase::NoFailure> > results_t;
+		typedef OOBase::Table<OOBase::String,OOBase::String> results_t;
 		int parse(int argc, char* argv[], results_t& results, int skip = 1) const;
 
 	private:
@@ -45,8 +45,8 @@ namespace OOSvrBase
 			bool           m_has_value;
 		};
 
-		OOBase::Table<OOBase::String,Option,OOBase::HeapAllocator<OOBase::NoFailure> > m_map_opts;
-		OOBase::Table<OOBase::String,int,OOBase::HeapAllocator<OOBase::NoFailure> >    m_map_args;
+		OOBase::Table<OOBase::String,Option> m_map_opts;
+		OOBase::Table<OOBase::String,int>    m_map_args;
 
 		int parse_long_option(const char* name, results_t& results, char** argv, int& arg, int argc) const;
 		int parse_short_options(const char* name, results_t& results, char** argv, int& arg, int argc) const;

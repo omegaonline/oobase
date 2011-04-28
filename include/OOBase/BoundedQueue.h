@@ -166,7 +166,7 @@ namespace OOBase
 		Condition        m_available;
 		Condition        m_space;
 
-		Queue<T,OOBase::HeapAllocator<CriticalFailure> > m_queue;
+		Queue<T> m_queue;
 	};
 }
 
