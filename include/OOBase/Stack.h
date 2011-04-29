@@ -111,6 +111,16 @@ namespace OOBase
 		{
 			return m_top;
 		}
+
+		T* at(size_t pos)
+		{
+			return (pos >= m_top ? NULL : &m_data[pos]);
+		}
+
+		const T* at(size_t pos) const
+		{
+			return (pos >= m_top ? NULL : &m_data[pos]);
+		}
 			
 	private:
 		// Do not allow copy constructors or assignment

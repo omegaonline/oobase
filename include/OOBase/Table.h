@@ -84,8 +84,6 @@ namespace OOBase
 		
 		bool erase(const K& key, V* value = NULL)
 		{
-			assert(value);
-			
 			size_t pos = find(key);
 			if (pos == npos)
 				return false;

@@ -27,7 +27,7 @@
 namespace OOBase
 {
 	template <typename ID, typename V, typename Allocator = HeapAllocator<NoFailure> >
-	class HandleTable : private HashTable<ID,V,Allocator>
+	class HandleTable : public HashTable<ID,V,Allocator>
 	{
 		typedef HashTable<ID,V,Allocator> baseClass;
 		
@@ -64,26 +64,6 @@ namespace OOBase
 				m_next = next;
 			
 			return err;
-		}
-
-		bool erase(const ID& handle, V* value = NULL)
-		{
-			return baseClass::erase(handle,value);
-		}
-		
-		bool pop(ID* handle = NULL, V* value = NULL)
-		{
-			return baseClass::pop(handle,value);
-		}
-		
-		bool find(const ID& handle, V& value) const
-		{
-			return baseClass::find(handle,value);
-		}
-
-		V* find(const ID& handle)
-		{
-			return baseClass::find(handle);
 		}
 		
 	private:
