@@ -50,15 +50,16 @@ namespace OOBase
 
 		Result push(const T& val, const timeval_t* wait = 0)
 		{
-			timeval_t wait2;
-			if (wait)
-				wait2 = *wait;
+			timeval_t wait2 = (wait ? *wait : timeval_t::MaxTime);
 			Countdown countdown(&wait2);
-
+			
 			Guard<Condition::Mutex> guard(m_lock);
 
 			while (!m_closed && m_queue.size() >= m_bound)
 			{
+				if (wait)
+					countdown.update();
+
 				if (!m_space.wait(m_lock,(wait ? &wait2 : 0)))
 					return timedout;
 			}
@@ -76,9 +77,7 @@ namespace OOBase
 
 		Result pop(T& val, const timeval_t* wait = 0)
 		{
-			timeval_t wait2;
-			if (wait)
-				wait2 = *wait;
+			timeval_t wait2 = (wait ? *wait : timeval_t::MaxTime);
 			Countdown countdown(&wait2);
 
 			Guard<Condition::Mutex> guard(m_lock);
@@ -86,6 +85,9 @@ namespace OOBase
 			while (!m_pulsed && !m_closed && m_queue.empty())
 			{
 				++m_waiters;
+
+				if (wait)
+					countdown.update();
 
 				if (!m_available.wait(m_lock,(wait ? &wait2 : 0)))
 				{
