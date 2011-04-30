@@ -26,6 +26,8 @@
 #include <process.h>
 #endif
 
+size_t OOBase::Thread::s_sentinal = 0;
+
 namespace
 {
 

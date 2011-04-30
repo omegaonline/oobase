@@ -54,7 +54,7 @@ namespace OOBase
 		TLSSingleton& operator = (const TLSSingleton&);
 		~TLSSingleton();
 
-		static const size_t s_sentinal = 0;
+		static size_t s_sentinal;
 
 		static void* init()
 		{
@@ -72,6 +72,9 @@ namespace OOBase
 			delete reinterpret_cast<T*>(p);
 		}
 	};
+
+	template <typename T, typename DLL>
+	size_t TLSSingleton<T,DLL>::s_sentinal = 1;
 }
 
 #endif // OOBASE_TLS_SINGLETON_H_INCLUDED_
