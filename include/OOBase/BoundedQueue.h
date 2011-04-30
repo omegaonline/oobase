@@ -38,15 +38,22 @@ namespace OOBase
 			success = 0,
 			timedout,
 			closed,
-			pulsed
+			pulsed,
+			error
 		};
 
 		BoundedQueue(size_t bound = 10) :
 				m_bound(bound),
 				m_waiters(0),
 				m_closed(false),
-				m_pulsed(false)
+				m_pulsed(false),
+				m_last_error(0)
 		{}
+
+		int last_error() const
+		{
+			return m_last_error;
+		}
 
 		Result push(const T& val, const timeval_t* wait = 0)
 		{
@@ -54,6 +61,9 @@ namespace OOBase
 			Countdown countdown(&wait2);
 			
 			Guard<Condition::Mutex> guard(m_lock);
+
+			if (m_last_error != 0)
+				return error;
 
 			while (!m_closed && m_queue.size() >= m_bound)
 			{
@@ -67,8 +77,9 @@ namespace OOBase
 			if (m_closed)
 				return closed;
 
-			int err = m_queue.push(val);
-			assert(err == 0);
+			m_last_error = m_queue.push(val);
+			if (m_last_error != 0)
+				return error;
 			
 			m_available.signal();
 
@@ -81,6 +92,9 @@ namespace OOBase
 			Countdown countdown(&wait2);
 
 			Guard<Condition::Mutex> guard(m_lock);
+
+			if (m_last_error != 0)
+				return error;
 
 			while (!m_pulsed && !m_closed && m_queue.empty())
 			{
@@ -157,6 +171,7 @@ namespace OOBase
 		size_t           m_waiters;
 		bool             m_closed;
 		bool             m_pulsed;
+		int              m_last_error;
 		Condition::Mutex m_lock;
 		Condition        m_available;
 		Condition        m_space;
