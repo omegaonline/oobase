@@ -22,9 +22,9 @@
 #ifndef OOSVRBASE_CMDARGS_H_INCLUDED_
 #define OOSVRBASE_CMDARGS_H_INCLUDED_
 
+#include "../OOBase/Memory.h"
 #include "../OOBase/String.h"
 #include "../OOBase/Table.h"
-#include "../OOBase/STLAllocator.h"
 
 namespace OOSvrBase
 {

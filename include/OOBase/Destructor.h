@@ -22,10 +22,10 @@
 #ifndef OOBASE_DESTRUCTOR_H_INCLUDED_
 #define OOBASE_DESTRUCTOR_H_INCLUDED_
 
+#include "Memory.h"
 #include "Mutex.h"
 #include "Once.h"
 #include "SmartPtr.h"
-#include "STLAllocator.h"
 #include "Stack.h"
 
 namespace OOBase

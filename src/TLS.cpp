@@ -19,10 +19,10 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/OOBase/Memory.h"
 #include "../include/OOBase/TLSSingleton.h"
 #include "../include/OOBase/Singleton.h"
 #include "../include/OOBase/HashTable.h"
-#include "../include/OOBase/STLAllocator.h"
 
 namespace OOBase
 {
@@ -53,7 +53,7 @@ namespace
 			void (*m_destructor)(void*);
 		};
 
-		OOBase::HashTable<const void*,tls_val,OOBase::LocalAllocator<OOBase::CriticalFailure> > m_mapVals;
+		OOBase::HashTable<const void*,tls_val,OOBase::LocalAllocator> m_mapVals;
 
 		// Special internal thread-local variables
 		char m_error_buffer[512];

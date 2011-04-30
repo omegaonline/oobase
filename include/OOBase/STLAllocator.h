@@ -51,90 +51,7 @@ namespace OOBase
 		}
 	};
 
-	class NoFailure
-	{
-	public:
-		static void fail()
-		{ }
-	};
-
-	// Allocator types
-	class CrtAllocator
-	{
-	public:
-		static void* allocate(size_t len)
-		{
-			return ::malloc(len);
-		}
-
-		static void* reallocate(void* ptr, size_t len)
-		{
-			return ::realloc(ptr,len);
-		}
-
-		static void free(void* ptr)
-		{
-			::free(ptr);
-		}	
-	};
-
-	template <typename FailureStrategy>
-	class HeapAllocator
-	{
-	public:
-		static void* allocate(size_t size) 
-		{
-			void* p = OOBase::HeapAllocate(size);
-			if (p == NULL)
-				FailureStrategy::fail();
-
-			return p;
-		}
-
-		static void* reallocate(void* p, size_t size)
-		{
-			void* p1 = OOBase::HeapReallocate(p,size);
-			if (p1 == NULL)
-				FailureStrategy::fail();
-
-			return p1;
-		}
-
-		static void free(void* p) 
-		{
-			OOBase::HeapFree(p);
-		}
-	};
-
-	template <typename FailureStrategy>
-	class LocalAllocator
-	{
-	public:
-		static void* allocate(size_t size) 
-		{
-			void* p = OOBase::LocalAllocate(size);
-			if (p == NULL)
-				FailureStrategy::fail();
-
-			return p;
-		}
-
-		static void* reallocate(void* p, size_t size)
-		{
-			void* p1 = OOBase::LocalReallocate(p,size);
-			if (p1 == NULL)
-				FailureStrategy::fail();
-
-			return p1;
-		}
-
-		static void free(void* p) 
-		{
-			OOBase::LocalFree(p);
-		}
-	};
-
-	template <typename T, typename A>
+	template <typename T, typename A, typename F>
 	class STLAllocator
 	{
 	public:
@@ -151,7 +68,7 @@ namespace OOBase
 		template <typename U>
 		struct rebind 
 		{
-			typedef STLAllocator<U,A> other;
+			typedef STLAllocator<U,A,F> other;
 		};
 
 		// return address of values
@@ -174,11 +91,11 @@ namespace OOBase
 		{}
 
 		template <typename U>
-		STLAllocator (const STLAllocator<U,A>&) throw() 
+		STLAllocator (const STLAllocator<U,A,F>&) throw() 
 		{}
 
 		template<typename U>
-		STLAllocator& operator = (const STLAllocator<U,A>&) throw()
+		STLAllocator& operator = (const STLAllocator<U,A,F>&) throw()
 		{
 			return *this;
 		}
@@ -210,7 +127,11 @@ namespace OOBase
 		// allocate but don't initialize num elements of type T
 		pointer allocate(size_type num, const void* = NULL) 
 		{
-			return static_cast<pointer>(A::allocate(sizeof(T) * num));
+			pointer p = static_cast<pointer>(A::allocate(sizeof(T) * num));
+			if (!p)
+				F::fail();
+
+			return p;
 		}
 
 		// deallocate storage p of deleted elements
@@ -221,14 +142,14 @@ namespace OOBase
 	};
 
 	// return that all specializations of this allocator are interchangeable
-	template <typename T1, typename T2, typename A>
-	bool operator == (const STLAllocator<T1,A>&, const STLAllocator<T2,A>&) throw()
+	template <typename T1, typename T2, typename A, typename F>
+	bool operator == (const STLAllocator<T1,A,F>&, const STLAllocator<T2,A,F>&) throw()
 	{
 		return true;
 	}
 
-	template <typename T1, typename T2, typename A>
-	bool operator != (const STLAllocator<T1,A>& a1, const STLAllocator<T2,A>& a2) throw()
+	template <typename T1, typename T2, typename A, typename F>
+	bool operator != (const STLAllocator<T1,A,F>& a1, const STLAllocator<T2,A,F>& a2) throw()
 	{
 		return !(a1 == a2);
 	}

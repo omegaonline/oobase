@@ -39,6 +39,64 @@ namespace OOBase
 	struct critical_t
 	{};
 	extern const critical_t critical;
+
+	// Allocator types
+	class CrtAllocator
+	{
+	public:
+		static void* allocate(size_t len)
+		{
+			return ::malloc(len);
+		}
+
+		static void* reallocate(void* ptr, size_t len)
+		{
+			return ::realloc(ptr,len);
+		}
+
+		static void free(void* ptr)
+		{
+			::free(ptr);
+		}	
+	};
+
+	class HeapAllocator
+	{
+	public:
+		static void* allocate(size_t size) 
+		{
+			return OOBase::HeapAllocate(size);
+		}
+
+		static void* reallocate(void* p, size_t size)
+		{
+			return OOBase::HeapReallocate(p,size);
+		}
+
+		static void free(void* p) 
+		{
+			OOBase::HeapFree(p);
+		}
+	};
+
+	class LocalAllocator
+	{
+	public:
+		static void* allocate(size_t size) 
+		{
+			return OOBase::LocalAllocate(size);
+		}
+
+		static void* reallocate(void* p, size_t size)
+		{
+			return OOBase::LocalReallocate(p,size);
+		}
+
+		static void free(void* p) 
+		{
+			OOBase::LocalFree(p);
+		}
+	};
 }
 
 // Global operator new overloads
