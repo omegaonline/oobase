@@ -66,10 +66,9 @@ namespace OOBase
 			if (m_closed)
 				return closed;
 
-			m_queue.push(val);
+			int err = m_queue.push(val);
+			assert(err == 0);
 			
-			guard.release();
-
 			m_available.signal();
 
 			return success;
@@ -102,9 +101,7 @@ namespace OOBase
 
 			if (m_queue.pop(&val))
 			{
-				guard.release();
-
-				m_space.signal();
+				m_space.signal();				
 
 				return success;
 			}
@@ -118,27 +115,23 @@ namespace OOBase
 		{
 			Guard<Condition::Mutex> guard(m_lock);
 
-			bool bSignal = !m_closed;
-			m_closed = true;
-
-			guard.release();
-
-			if (bSignal)
+			if (!m_closed)
 			{
 				m_available.broadcast();
 				m_space.broadcast();
 			}
+
+			m_closed = true;
 		}
 
 		void pulse()
 		{
 			Guard<Condition::Mutex> guard(m_lock);
 
-			bool bSignal = !m_pulsed;
-			m_pulsed = true;
-
-			if (bSignal)
+			if (!m_pulsed)
 			{
+				m_pulsed = true;
+
 				m_available.broadcast();
 				
 				while (m_waiters)
