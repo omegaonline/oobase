@@ -93,7 +93,7 @@ namespace OOBase
 		
 		const char* c_str() const
 		{
-			return m_data;
+			return (m_data ? m_data : "\0");
 		}
 		
 		char operator [] (size_t idx) const
@@ -198,7 +198,7 @@ namespace OOBase
 		
 		const char* c_str() const
 		{
-			return (m_node ? m_node->m_data : NULL);
+			return (m_node ? m_node->m_data : "\0");
 		}
 		
 		char operator [] (size_t idx) const

@@ -274,7 +274,9 @@ namespace OOBase
 			if (m_last_error != 0 || !m_buffer)
 				return false;
 
-			if (len == (size_t)-1)
+			if (!pszText)
+				len = 0;
+			else if (len == (size_t)-1)
 				len = strlen(pszText);
 
 			if (len >= 0xFFFFFFFF)
