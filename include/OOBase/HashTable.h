@@ -120,8 +120,7 @@ namespace OOBase
 			if (value)
 				*value = m_data[pos].m_value;
 			
-			m_data[pos].~Node();
-			--m_count;
+			del_node(pos);
 			return true;
 		}
 		
@@ -137,8 +136,7 @@ namespace OOBase
 					if (value)
 						*value = m_data[i].m_value;
 					
-					m_data[i].~Node();
-					--m_count;
+					del_node(i);
 					return true;
 				}
 			}
@@ -214,11 +212,6 @@ namespace OOBase
 			Node(const K& k, const V& v) : m_in_use(2), m_key(k), m_value(v)
 			{}
 				
-			~Node() 
-			{
-				m_in_use = 1;
-			}
-			
 			int m_in_use;
 			K   m_key;
 			V   m_value;
@@ -228,6 +221,17 @@ namespace OOBase
 		size_t   m_size;
 		size_t   m_count;
 		const H& m_hash;
+
+		void del_node(size_t pos)
+		{
+			m_data[pos].~Node();
+			m_data[pos].m_in_use = 1;
+			--m_count;
+
+			size_t next = (pos+1) & (m_size-1);
+			if (m_data[next].m_in_use == 0)
+				m_data[pos].m_in_use = 0;
+		}
 		
 		int grow()
 		{
@@ -276,16 +280,19 @@ namespace OOBase
 			if (m_count == 0)
 				return npos;
 			
-			for (size_t h = m_hash.hash(key);;++h)
+			size_t start = m_hash.hash(key);
+			for (size_t h = start;h < start + m_size;++h)
 			{
 				size_t h1 = h & (m_size-1);
 				
 				if (m_data[h1].m_in_use == 0)
-					return npos;
+					break;
 				
 				if (m_data[h1].m_in_use == 2 && m_data[h1].m_key == key)
 					return h1;
 			}
+
+			return npos;
 		}
 		
 		int insert_i(Node* data, size_t size, const K& key, const V& value)
