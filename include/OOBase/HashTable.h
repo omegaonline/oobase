@@ -53,7 +53,7 @@ namespace OOBase
 	public:
 		static const size_t npos = size_t(-1);
 
-		HashTable(const H& h = H()) : m_data(NULL), m_size(0), m_count(0), m_hash(h)
+		HashTable(const H& h = H()) : m_data(NULL), m_size(0), m_count(0), m_hash(h), m_clone(false)
 		{}
 			
 		~HashTable()
@@ -65,7 +65,13 @@ namespace OOBase
 		{
 			if (m_count+(m_size/7) >= m_size)
 			{
-				int err = grow();
+				int err = clone(true);
+				if (err != 0)
+					return err;
+			}
+			else if (m_clone)
+			{
+				int err = clone(false);
 				if (err != 0)
 					return err;
 			}
@@ -81,7 +87,7 @@ namespace OOBase
 		{
 			size_t pos = find_i(key);
 			if (pos == npos)
-				return  insert(key,value);
+				return insert(key,value);
 			
 			*at(pos) = value;
 			return 0;
@@ -222,6 +228,8 @@ namespace OOBase
 		size_t   m_count;
 		const H& m_hash;
 
+		mutable bool m_clone;
+
 		void del_node(size_t pos)
 		{
 			m_data[pos].~Node();
@@ -233,9 +241,11 @@ namespace OOBase
 				m_data[pos].m_in_use = 0;
 		}
 		
-		int grow()
+		int clone(bool grow)
 		{
-			size_t new_size = (m_size == 0 ? 16 : m_size * 2);
+			m_clone = false;
+
+			size_t new_size = (m_size == 0 ? 16 : (grow ? m_size * 2 : m_size));
 			Node* new_data = static_cast<Node*>(Allocator::allocate(new_size*sizeof(Node)));
 			if (!new_data)
 				return ERROR_OUTOFMEMORY;
@@ -286,12 +296,13 @@ namespace OOBase
 				size_t h1 = h & (m_size-1);
 				
 				if (m_data[h1].m_in_use == 0)
-					break;
+					return npos;
 				
 				if (m_data[h1].m_in_use == 2 && m_data[h1].m_key == key)
 					return h1;
 			}
 
+			m_clone = true;
 			return npos;
 		}
 		
