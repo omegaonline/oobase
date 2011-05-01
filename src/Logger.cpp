@@ -197,12 +197,12 @@ namespace
 		{
 			const char* arrBufs[2] = { msg, NULL };
 
+			OOBase::SmartPtr<TOKEN_USER,CrtFreeDestructor> ptrSIDProcess;
 			PSID psid = NULL;
 			OOBase::Win32::SmartHandle hProcessToken;
 			
 			if (OpenProcessToken(GetCurrentProcess(),TOKEN_QUERY,&hProcessToken))
 			{
-				OOBase::SmartPtr<TOKEN_USER,CrtFreeDestructor> ptrSIDProcess;
 				for (DWORD dwLen = 256;;)
 				{
 					ptrSIDProcess = static_cast<TOKEN_USER*>(OOBase::CrtAllocator::allocate(dwLen));
