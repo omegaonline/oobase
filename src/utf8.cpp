@@ -54,7 +54,13 @@ size_t OOBase::from_utf8(wchar_t* wsz, size_t wlen, const char* sz, size_t len)
 
 	int actual_len = MultiByteToWideChar(CP_UTF8,0,sz,static_cast<int>(len),wsz,static_cast<int>(wlen));
 	if (actual_len < 1)
+	{
+		DWORD dwErr = GetLastError();
+		if (dwErr == ERROR_INSUFFICIENT_BUFFER)
+			return measure_utf8(sz,len);
+
 		actual_len = 0;
+	}
 
 	return static_cast<size_t>(actual_len);
 }
@@ -89,7 +95,13 @@ size_t OOBase::from_native(wchar_t* wsz, size_t wlen, const char* sz, size_t len
 
 	int actual_len = MultiByteToWideChar(CP_THREAD_ACP,0,sz,static_cast<int>(len),wsz,static_cast<int>(wlen));
 	if (actual_len < 1)
+	{
+		DWORD dwErr = GetLastError();
+		if (dwErr == ERROR_INSUFFICIENT_BUFFER)
+			return measure_native(sz,len);
+
 		actual_len = 0;
+	}
 
 	return static_cast<size_t>(actual_len);
 }
