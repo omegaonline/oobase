@@ -439,10 +439,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\STLAllocator.h"
-				>
-			</File>
-			<File
 				RelativePath="..\include\OOBase\String.h"
 				>
 			</File>
