@@ -22,7 +22,7 @@
 #ifndef OOBASE_STRING_H_INCLUDED_
 #define OOBASE_STRING_H_INCLUDED_
 
-#include "../include/OOBase/Memory.h"
+#include "Memory.h"
 
 namespace OOBase
 {

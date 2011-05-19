@@ -120,10 +120,6 @@ namespace OOBase
 		 *  The platform specific read/write lock variable.
 		 */
 #if defined(_WIN32)
-	#if (WINVER < 0x0600)
-		typedef OOBase::Win32::rwmutex_t* SRWLOCK;
-	#endif
-
 		SRWLOCK          m_lock;
 #elif defined(HAVE_PTHREAD)
 		pthread_rwlock_t m_mutex;

@@ -89,7 +89,7 @@ int OOBase::LocalString::vprintf(const char* format, va_list args)
 	if (r == -1)
 		return errno;
 	
-	if (r < sizeof(szBuf))
+	if (static_cast<size_t>(r) < sizeof(szBuf))
 		new_buf = szBuf;
 	else
 	{
@@ -243,7 +243,7 @@ int OOBase::String::printf(const char* format, ...)
 	if (r == -1)
 		return errno;
 	
-	if (r < sizeof(szBuf))
+	if (static_cast<size_t>(r) < sizeof(szBuf))
 		new_buf = szBuf;
 	else
 	{

@@ -22,7 +22,7 @@
 #include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Destructor.h"
 
-const OOBase::critical_t OOBase::critical;
+const OOBase::critical_t OOBase::critical = {0};
 
 void* operator new(size_t size)
 {

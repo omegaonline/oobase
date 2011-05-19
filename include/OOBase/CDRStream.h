@@ -225,7 +225,7 @@ namespace OOBase
 				return false;
 			}
 
-			val = (*m_buffer->rd_ptr() == NULL ? false : true);
+			val = (*m_buffer->rd_ptr() == 0 ? false : true);
 			m_buffer->rd_ptr(1);
 			return true;
 		}

@@ -123,7 +123,7 @@ void OOSvrBase::Server::quit()
 
 namespace
 {
-	static SERVICE_STATUS_HANDLE s_ssh = NULL;
+	static SERVICE_STATUS_HANDLE s_ssh = (SERVICE_STATUS_HANDLE)NULL;
 
 	static VOID WINAPI ServiceCtrl(DWORD dwControl)
 	{

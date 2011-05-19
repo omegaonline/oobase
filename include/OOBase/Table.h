@@ -46,7 +46,7 @@ namespace OOBase
 		
 		int reserve(size_t capacity)
 		{
-			return reserve_i(capacity + m_top);
+			return reserve_i(capacity + m_size);
 		}
 		
 		int insert(const K& key, const V& value, bool do_sort = true)

@@ -24,6 +24,7 @@
 
 #include "../config-base.h"
 
+#include <malloc.h>
 #include <new>
 
 namespace OOBase
@@ -36,8 +37,7 @@ namespace OOBase
 	void* LocalReallocate(void* p, size_t bytes);
 	void LocalFree(void* p);
 
-	struct critical_t
-	{};
+	struct critical_t { int unused; };
 	extern const critical_t critical;
 
 	// Allocator types

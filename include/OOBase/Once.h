@@ -24,6 +24,10 @@
 
 #include "Win32.h"
 
+#if defined(_WIN32) && (WINVER < 0x0600)
+	typedef LONG INIT_ONCE;
+#endif
+
 namespace OOBase
 {
 	namespace Once
@@ -37,10 +41,6 @@ namespace OOBase
 		 */
 
 #if defined(_WIN32)
-	#if (WINVER < 0x0600)
-		typedef LONG INIT_ONCE;
-	#endif
-
 		typedef INIT_ONCE once_t;
 		#define ONCE_T_INIT {0}
 #elif defined(HAVE_PTHREAD)

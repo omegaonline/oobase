@@ -135,7 +135,18 @@ namespace OOBase
 			SmartHandle      m_sema;
 			SmartHandle      m_waiters_done;
 		};
+	}
+}
 
+#if (WINVER < 0x0600)
+	typedef OOBase::Win32::condition_variable_t* CONDITION_VARIABLE;
+	typedef OOBase::Win32::rwmutex_t* SRWLOCK;
+#endif
+
+namespace OOBase
+{
+	namespace Win32
+	{
 		class condition_mutex_t
 		{
 			// We need private access in this function

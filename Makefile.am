@@ -61,14 +61,17 @@ endif
 liboobase_la_SOURCES = \
 	include/config-base.h \
 	include/config-msvc.h \
-	include/OOBase/Allocator.h \
 	include/OOBase/Atomic.h \
+	include/OOBase/BoundedQueue.h \
 	include/OOBase/Buffer.h \
 	include/OOBase/ByteSwap.h \
 	include/OOBase/CDRStream.h \
 	include/OOBase/Condition.h \
 	include/OOBase/Destructor.h \
 	include/OOBase/DLL.h \
+	include/OOBase/HandleTable.h \
+	include/OOBase/HashTable.h \
+	include/OOBase/Memory.h \
 	include/OOBase/Mutex.h \
 	include/OOBase/Once.h \
 	include/OOBase/Posix.h \
@@ -76,15 +79,18 @@ liboobase_la_SOURCES = \
 	include/OOBase/Singleton.h \
 	include/OOBase/SmartPtr.h \
 	include/OOBase/Socket.h \
+	include/OOBase/Stack.h \
+	include/OOBase/String.h \
+	include/OOBase/Table.h \
 	include/OOBase/Thread.h \
 	include/OOBase/TimeVal.h \
 	include/OOBase/TLSSingleton.h \
 	include/OOBase/tr24731.h \
 	include/OOBase/utf8.h \
 	include/OOBase/Win32.h \
-	include/OOBase/internal/BSDSocket.h \
-	include/OOBase/internal/Win32Impl.h \
-	include/OOBase/internal/Win32Socket.h \
+	src/BSDSocket.h \
+	src/Win32Impl.h \
+	src/Win32Socket.h \
 	src/BSDSocket.cpp \
 	src/Buffer.cpp \
 	src/Condition.cpp \
@@ -94,6 +100,7 @@ liboobase_la_SOURCES = \
 	src/Mutex.cpp \
 	src/Once.cpp \
 	src/Posix.cpp \
+	src/String.cpp \
 	src/Thread.cpp \
 	src/TimeVal.cpp \
 	src/TLS.cpp \
@@ -116,12 +123,11 @@ liboosvrbase_la_SOURCES = \
 	include/OOSvrBase/Database.h \
 	include/OOSvrBase/Logger.h \
 	include/OOSvrBase/Proactor.h \
-	include/OOSvrBase/pw_info.h \
 	include/OOSvrBase/SecurityWin32.h \
 	include/OOSvrBase/Service.h \
-	include/OOSvrBase/internal/ProactorEv.h \
-	include/OOSvrBase/internal/ProactorImpl.h \
-	include/OOSvrBase/internal/ProactorWin32.h \
+	src/ProactorEv.h \
+	src/ProactorImpl.h \
+	src/ProactorWin32.h \
 	src/CmdArgs.cpp \
 	src/Database.cpp \
 	src/Logger.cpp \
