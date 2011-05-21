@@ -192,6 +192,8 @@ size_t OOBase::to_native(char* sz, size_t len, const wchar_t* wsz, size_t wlen)
 
 #include <wchar.h>
 #include <stdlib.h>
+#include <limits.h>
+#include <string.h>
 
 namespace
 {
@@ -203,14 +205,14 @@ namespace
 		//  2 = 2 byte sequence
 		//  3 = 3 byte sequence
 		//  4 = 4 byte sequence
-		
+
 		// -1 = Continuation byte
 		// -2 = Overlong 2 byte sequence
 		// -3 = 3 byte overlong check (0x80..0x9F) as next byte fail
 		// -4 = 3 byte reserved check (0xA0..0xBF) as next byte fail
 		// -5 = 4 byte overlong check (0x80..0x8F) as next byte fail
 		// -6 = 4 byte reserved check (0x90..0xBF) as next byte fail
-		
+
 		 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  // 0x00..0x0F
 		 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  // 0x10..0x1F
 		 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  // 0x20..0x2F
@@ -248,28 +250,28 @@ size_t OOBase::measure_utf8(const char* start, size_t len)
 		int l = 0;
 
 		c = *sz++;
-		
+
 		switch (utf8_data[c])
 		{
 			case 1:
 				wide_val = c;
 				break;
-			
-			case 2: 
+
+			case 2:
 				wide_val = (c & 0x1F);
 				l = 1;
 				break;
-			
+
 			case -2:
 				++sz;
 				break;
-				
+
 			case 3:
 				wide_val = (c & 0x0F);
 				l = 2;
 				break;
-			
-			case -3: 
+
+			case -3:
 				if (*sz >= 0x80 && *sz <= 0x9F)
 					sz += 2;
 				else
@@ -278,7 +280,7 @@ size_t OOBase::measure_utf8(const char* start, size_t len)
 					l = 2;
 				}
 				break;
-					
+
 			case -4:
 				if (*sz >= 0xA0 && *sz <= 0xBF)
 					sz += 2;
@@ -288,12 +290,12 @@ size_t OOBase::measure_utf8(const char* start, size_t len)
 					l = 2;
 				}
 				break;
-				
+
 			case 4:
 				wide_val = (c & 0x07);
 				l = 3;
 				break;
-				
+
 			case -5:
 				if (*sz >= 0x80 && *sz <= 0x8F)
 					sz += 3;
@@ -303,7 +305,7 @@ size_t OOBase::measure_utf8(const char* start, size_t len)
 					l = 3;
 				}
 				break;
-			
+
 			case -6:
 				if (*sz >= 0x90 && *sz <= 0xBF)
 					sz += 3;
@@ -312,12 +314,12 @@ size_t OOBase::measure_utf8(const char* start, size_t len)
 					wide_val = (c & 0x07);
 					l = 3;
 				}
-				break;		
-			
+				break;
+
 			default:
 				break;
 		}
-		
+
 		while (l-- > 0)
 		{
 			c = *sz++;
@@ -327,11 +329,11 @@ size_t OOBase::measure_utf8(const char* start, size_t len)
 				sz += l;
 				break;
 			}
-			
+
 			wide_val <<= 6;
 			wide_val |= (c & 0x3F);
 		}
-		
+
 		if (sizeof(wchar_t) == 2 && (wide_val & 0xFFFF0000))
 		{
 			// Oh god.. we're big and going to UTF-16
@@ -339,7 +341,7 @@ size_t OOBase::measure_utf8(const char* start, size_t len)
 		}
 		else
 			++required_len;
-		
+
 	} while (len == size_t(-1) ? c != '\0' : size_t(sz-start)<len);
 
 	return required_len;
@@ -374,28 +376,28 @@ size_t OOBase::from_utf8(wchar_t* wsz, size_t wlen, const char* start, size_t le
 		int l = 0;
 
 		c = *sz++;
-		
+
 		switch (utf8_data[c])
 		{
 			case 1:
 				wide_val = c;
 				break;
-			
-			case 2: 
+
+			case 2:
 				wide_val = (c & 0x1F);
 				l = 1;
 				break;
-			
+
 			case -2:
 				++sz;
 				break;
-				
+
 			case 3:
 				wide_val = (c & 0x0F);
 				l = 2;
 				break;
-			
-			case -3: 
+
+			case -3:
 				if (*sz >= 0x80 && *sz <= 0x9F)
 					sz += 2;
 				else
@@ -404,7 +406,7 @@ size_t OOBase::from_utf8(wchar_t* wsz, size_t wlen, const char* start, size_t le
 					l = 2;
 				}
 				break;
-					
+
 			case -4:
 				if (*sz >= 0xA0 && *sz <= 0xBF)
 					sz += 2;
@@ -414,12 +416,12 @@ size_t OOBase::from_utf8(wchar_t* wsz, size_t wlen, const char* start, size_t le
 					l = 2;
 				}
 				break;
-				
+
 			case 4:
 				wide_val = (c & 0x07);
 				l = 3;
 				break;
-				
+
 			case -5:
 				if (*sz >= 0x80 && *sz <= 0x8F)
 					sz += 3;
@@ -429,7 +431,7 @@ size_t OOBase::from_utf8(wchar_t* wsz, size_t wlen, const char* start, size_t le
 					l = 3;
 				}
 				break;
-			
+
 			case -6:
 				if (*sz >= 0x90 && *sz <= 0xBF)
 					sz += 3;
@@ -438,12 +440,12 @@ size_t OOBase::from_utf8(wchar_t* wsz, size_t wlen, const char* start, size_t le
 					wide_val = (c & 0x07);
 					l = 3;
 				}
-				break;		
-			
+				break;
+
 			default:
 				break;
 		}
-		
+
 		while (l-- > 0)
 		{
 			c = *sz++;
@@ -453,11 +455,11 @@ size_t OOBase::from_utf8(wchar_t* wsz, size_t wlen, const char* start, size_t le
 				sz += l;
 				break;
 			}
-			
+
 			wide_val <<= 6;
 			wide_val |= (c & 0x3F);
 		}
-		
+
 		if (sizeof(wchar_t) == 2 && (wide_val & 0xFFFF0000))
 		{
 			// Oh god.. we're big and going to UTF-16
@@ -481,7 +483,7 @@ size_t OOBase::from_utf8(wchar_t* wsz, size_t wlen, const char* start, size_t le
 			if (required_len < wlen)
 				*wp++ = static_cast<wchar_t>(wide_val);
 		}
-	} 
+	}
 	while (len == size_t(-1) ? c != '\0' : size_t(sz-start)<len);
 
 	return required_len;
@@ -765,7 +767,7 @@ size_t OOBase::measure_native(const wchar_t* wsz, size_t len)
 		if (count == size_t(-1))
 			break;
 
-		required_len += count;	
+		required_len += count;
 	}
 
 	return required_len;
@@ -804,7 +806,7 @@ size_t OOBase::to_native(char* sz, size_t len, const wchar_t* wsz, size_t wlen)
 			break;
 		else if (wlen == size_t(-1) && size_t(p-sz) + count == len)
 			break;
-							
+
 		memcpy(p,c,count);
 		p += count;
 	}

@@ -115,7 +115,7 @@ OOBase::timeval_t OOBase::timeval_t::deadline(unsigned long msec)
 	time_t t = this->m_tv_sec;
 	::tm v = {0};
 
-#if defined(HAVE_PTHREADS_H)
+#if defined(HAVE_PTHREAD)
 	gmtime_r(&t,&v);
 #elif defined(HAVE_TR_24731)
 	gmtime_s(&v,&t);
@@ -131,7 +131,7 @@ OOBase::timeval_t OOBase::timeval_t::deadline(unsigned long msec)
 	time_t t = this->m_tv_sec;
 	::tm v = {0};
 
-#if defined(HAVE_PTHREADS_H)
+#if defined(HAVE_PTHREAD)
 	localtime_r(&t,&v);
 #elif defined(HAVE_TR_24731)
 	localtime_s(&v,&t);

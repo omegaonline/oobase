@@ -21,6 +21,8 @@
 
 #include "../include/OOBase/Buffer.h"
 
+#include <string.h>
+
 OOBase::Buffer* OOBase::Buffer::create(size_t cbSize, size_t align)
 {
 	return new (std::nothrow) Buffer(cbSize,align);
@@ -163,7 +165,7 @@ int OOBase::Buffer::compact(size_t align)
 		memmove(m_rd_ptr,orig_rd,static_cast<size_t>(len));
 		m_wr_ptr = m_rd_ptr + len;
 	}
-	
+
 	return err;
 }
 

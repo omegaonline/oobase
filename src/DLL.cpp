@@ -66,6 +66,15 @@ void* OOBase::DLL::symbol(const char* sym_name)
 
 #include "../include/OOBase/Singleton.h"
 
+namespace OOBase
+{
+	// The discrimination type for singleton scoping for this module
+	struct Module
+	{
+		int unused;
+	};
+}
+
 namespace
 {
 	struct Libtool_Helper
@@ -89,7 +98,7 @@ namespace
 		OOBase::Mutex m_lock;
 	};
 
-	typedef OOBase::Singleton<Libtool_Helper> LT_HELPER;
+	typedef OOBase::Singleton<Libtool_Helper,OOBase::Module> LT_HELPER;
 }
 
 OOBase::DLL::DLL() :

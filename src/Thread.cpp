@@ -352,7 +352,7 @@ namespace
 		pThis->m_running = true;
 
 		// Set the event, meaning we have started
-		int err = pthread_cond_signal(&pThis->m_condition);
+		err = pthread_cond_signal(&pThis->m_condition);
 		if (err)
 			OOBase_CallCriticalFailure(err);
 
@@ -465,6 +465,6 @@ void OOBase::Thread::sleep(const timeval_t& wait)
 OOBase::Thread* OOBase::Thread::self()
 {
 	void* v = NULL;
-	OOBase::TLS::Get(&s_sentinal,&v);	
+	OOBase::TLS::Get(&s_sentinal,&v);
 	return static_cast<OOBase::Thread*>(v);
 }

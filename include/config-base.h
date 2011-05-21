@@ -94,8 +94,11 @@
 	#endif
 
 	// Check pthreads
-	#if defined (HAVE_PTHREADS_H) && !defined(_POSIX_THREADS)
+	#if defined (HAVE_PTHREAD)
+	#include <pthread.h>
+	#if !defined(_POSIX_THREADS)
 	#error Your pthreads does not appears to be POSIX compliant?
+	#endif
 	#endif
 #endif
 

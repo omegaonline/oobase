@@ -58,7 +58,7 @@ namespace OOBase
 			struct passwd  m_pwd2;
 			size_t         m_buf_len;
 
-			OOBase::SmartPtr<char,OOBase::ArrayDestructor<char> > m_buffer;
+			OOBase::SmartPtr<char,OOBase::HeapDestructor> m_buffer;
 		};
 	}
 }

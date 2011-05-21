@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "Memory.h"
+#include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Posix.h"
 #include "BSDSocket.h"
 
@@ -416,8 +416,7 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int* perr, const
 
 	sockaddr_un addr;
 	addr.sun_family = AF_UNIX;
-	memset(addr.sun_path,0,sizeof(addr.sun_path));
-	path.copy(addr.sun_path,sizeof(addr.sun_path)-1);
+	strncpy(addr.sun_path,path,sizeof(addr.sun_path)-1);
 
 	if ((*perr = connect_i(sock,(sockaddr*)(&addr),sizeof(addr),wait)) != 0)
 	{

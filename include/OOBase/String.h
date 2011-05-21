@@ -24,6 +24,8 @@
 
 #include "Memory.h"
 
+#include <string.h>
+
 namespace OOBase
 {
 	class LocalString
@@ -33,14 +35,14 @@ namespace OOBase
 
 		LocalString() : m_data(NULL)
 		{}
-			
+
 		~LocalString()
 		{
 			OOBase::LocalFree(m_data);
 		}
-			
-		int assign(const char* sz, size_t len = npos);		
-		int append(const char* sz, size_t len = npos);		
+
+		int assign(const char* sz, size_t len = npos);
+		int append(const char* sz, size_t len = npos);
 		void replace(char from, char to);
 		int printf(const char* format, ...);
 		int vprintf(const char* format, va_list args);
@@ -60,7 +62,7 @@ namespace OOBase
 				return (rhs == NULL ? 0 : -1);
 			else if (rhs == NULL)
 				return 1;
-			
+
 			return strcmp(m_data,rhs);
 		}
 
@@ -80,42 +82,42 @@ namespace OOBase
 		{
 			assign(NULL,0);
 		}
-		
+
 		size_t length() const
 		{
 			return (m_data ? strlen(m_data) : 0);
 		}
-		
+
 		bool empty() const
 		{
 			return (m_data ? m_data[0] == '\0' : true);
 		}
-		
+
 		const char* c_str() const
 		{
 			return (m_data ? m_data : "\0");
 		}
-		
+
 		char operator [] (size_t idx) const
 		{
 			if (idx >= length())
 				return '\0';
-			
+
 			return m_data[idx];
 		}
-		
+
 		size_t find(char c, size_t start = 0) const;
 		size_t find(const char* sz, size_t start = 0) const;
-		
+
 	private:
 		// Do not allow copy constructors or assignment
 		// as memory allocation will occur...
 		LocalString(const LocalString&);
 		LocalString& operator = (const LocalString&);
-	
+
 		char*  m_data;
 	};
-	
+
 	class String
 	{
 	public:
@@ -123,12 +125,12 @@ namespace OOBase
 
 		String() : m_node(NULL)
 		{}
-			
+
 		String(const String& rhs) : m_node(rhs.m_node)
 		{
 			node_addref(m_node);
 		}
-		
+
 		String& operator = (const String& rhs)
 		{
 			if (&rhs != this)
@@ -139,14 +141,14 @@ namespace OOBase
 			}
 			return *this;
 		}
-		
+
 		~String()
 		{
 			node_release(m_node);
 		}
-			
+
 		int assign(const char* sz, size_t len = npos);
-		int append(const char* sz, size_t len = npos);		
+		int append(const char* sz, size_t len = npos);
 		void replace(char from, char to);
 		int printf(const char* format, ...);
 
@@ -165,7 +167,7 @@ namespace OOBase
 				return (rhs == NULL ? 0 : -1);
 			else if (rhs == NULL)
 				return 1;
-			
+
 			return strcmp(m_node->m_data,rhs);
 		}
 
@@ -190,36 +192,36 @@ namespace OOBase
 		{
 			return (m_node ? strlen(m_node->m_data) : 0);
 		}
-		
+
 		bool empty() const
 		{
 			return (m_node ? m_node->m_data[0] == '\0' : true);
 		}
-		
+
 		const char* c_str() const
 		{
 			return (m_node ? m_node->m_data : "\0");
 		}
-		
+
 		char operator [] (size_t idx) const
 		{
 			if (idx >= length())
 				return '\0';
-			
+
 			return m_node->m_data[idx];
 		}
-		
+
 		size_t find(char c, size_t start = 0) const;
 		size_t find(const char* sz, size_t start = 0) const;
-	
+
 	private:
 		struct Node
 		{
 			size_t m_refcount;
-			char   m_data[1];			
+			char   m_data[1];
 		};
 		Node* m_node;
-		
+
 		static void node_addref(Node* node);
 		static void node_release(Node* node);
 		static Node* node_allocate(size_t len);

@@ -119,10 +119,10 @@ namespace OOBase
 {
 	namespace detail
 	{
-		template <typename T, const size_t S> 
+		template <typename T, const size_t S>
 		struct AtomicImpl;
 	}
-		
+
 	template <typename T>
 	class Atomic
 	{
@@ -153,7 +153,7 @@ namespace OOBase
 
 		T Exchange(const T newVal)
 		{
-			return Exchange(m_val,newVal);			
+			return Exchange(m_val,newVal);
 		}
 
 		static T CompareAndSwap(T& val, const T oldVal, const T newVal)
@@ -236,7 +236,7 @@ namespace OOBase
 	private:
 		T m_val;
 	};
-	
+
 	namespace detail
 	{
 		template <typename T>
@@ -255,9 +255,9 @@ namespace OOBase
 				return (T)ATOMIC_EXCH_32(&val,newVal);
 			#else
 				T oldVal(val);
-				while (CompareAndSwap(val,oldVal,newVal)) != oldVal)
+				while (CompareAndSwap(val,oldVal,newVal) != oldVal)
 					oldVal = val;
-			
+
 				return oldVal;
 			#endif
 			}
@@ -315,7 +315,7 @@ namespace OOBase
 				T oldVal(val);
 				while (CompareAndSwap(val,oldVal,newVal) != oldVal)
 					oldVal = val;
-			
+
 				return oldVal;
 			#endif
 			}

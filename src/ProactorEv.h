@@ -54,7 +54,7 @@ namespace OOSvrBase
 			OOBase::Socket* accept_remote(Acceptor<AsyncSocket>* handler, const char* address, const char* port, int* perr);
 
 			AsyncSocketPtr attach_socket(OOBase::Socket::socket_t sock, int* perr);
-			AsyncLocalSocket* attach_local_socket(OOBase::Socket::socket_t sock, int* perr);
+			AsyncLocalSocketPtr attach_local_socket(OOBase::Socket::socket_t sock, int* perr);
 
 			AsyncLocalSocketPtr connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* wait);
 
@@ -66,7 +66,7 @@ namespace OOSvrBase
 			void init_watcher(io_watcher* watcher, int fd, int events);
 			void start_watcher(io_watcher* watcher);
 			void stop_watcher(io_watcher* watcher);
-						
+
 		private:
 			typedef std::deque<io_watcher*> dequeType;
 

@@ -72,7 +72,7 @@ namespace
 #endif
 
 #if defined(HAVE_ASL_H)
-	
+
 	class ASLLogger
 	{
 #error Fix me!
@@ -86,7 +86,7 @@ namespace
 		~SysLogLogger();
 
 		void open(const char* name);
-		void log(OOSvrBase::Logger::Priority priority, const char* fmt, va_list args);
+		void log(OOSvrBase::Logger::Priority priority, const char* msg);
 
 	private:
 		OOBase::Mutex m_lock;
@@ -149,10 +149,10 @@ namespace
 		int err = strName.assign("SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\");
 		if (err == 0)
 			err = strName.append(name);
-		
+
 		if (err != 0)
 			OOBase_CallCriticalFailure(err);
-		
+
 		HKEY hk;
 		DWORD dwDisp;
 		if (RegCreateKeyExA(HKEY_LOCAL_MACHINE,strName.c_str(),0,NULL,REG_OPTION_NON_VOLATILE,KEY_WRITE,NULL,&hk,&dwDisp) == ERROR_SUCCESS)
@@ -200,7 +200,7 @@ namespace
 			OOBase::SmartPtr<TOKEN_USER,CrtFreeDestructor> ptrSIDProcess;
 			PSID psid = NULL;
 			OOBase::Win32::SmartHandle hProcessToken;
-			
+
 			if (OpenProcessToken(GetCurrentProcess(),TOKEN_QUERY,&hProcessToken))
 			{
 				for (DWORD dwLen = 256;;)
@@ -217,7 +217,7 @@ namespace
 					ptrSIDProcess = NULL;
 
 					SetLastError(err);
-						
+
 					if (err != ERROR_INSUFFICIENT_BUFFER)
 						break;
 				}
@@ -279,7 +279,7 @@ namespace
 		openlog(name,LOG_NDELAY,LOG_DAEMON);
 	}
 
-	void SysLogLogger::log(OOSvrBase::Logger::Priority priority, const char* fmt, va_list args)
+	void SysLogLogger::log(OOSvrBase::Logger::Priority priority, const char* msg)
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
@@ -327,7 +327,7 @@ namespace
 			break;
 		}
 
-		fputs(string_printf(fmt,args).c_str(),out_file);
+		fputs(msg,out_file);
 		fputs("\n",out_file);
 		fflush(out_file);
 	}

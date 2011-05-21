@@ -67,7 +67,7 @@ namespace
 
 			memcpy(err_buf,buf,len);
 			err_buf[len] = '\0';
-		
+
 			return true;
 		}
 		else
@@ -88,7 +88,7 @@ const char* OOBase::system_error_text(int err)
 
 	size_t err_len = 0;
 	char* err_buf = OOBase::detail::get_error_buffer(err_len);
-	
+
 	int offset = snprintf_s(err_buf,err_len,"(%x) ",err);
 	if (offset == -1)
 		offset = 0;
@@ -111,14 +111,14 @@ const char* OOBase::system_error_text(int err)
 
 	size_t err_len = 0;
 	char* err_buf = OOBase::detail::get_error_buffer(err_len);
-	
+
 	int offset = snprintf_s(err_buf,err_len,"(%d) ",err);
 	if (offset == -1)
 		offset = 0;
 
 	bool ok = false;
-#if defined(HAVE_PTHREADS_H)
-	ok = (strerror_r(err_buf+offset,err_len-offset,err) == 0);
+#if defined(HAVE_PTHREAD)
+	ok = (strerror_r(err,err_buf+offset,err_len-offset) == 0);
 #elif defined(HAVE_TR_24731)
 	ok = (strerror_s(err_buf+offset,err_len-offset,err) == 0);
 #else
@@ -147,8 +147,6 @@ void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, const 
 {
 	static char szBuf[1024] = {0};
 	snprintf_s(szBuf,sizeof(szBuf),"%s(%u): %s",pszFile,nLine,msg);
-	
-	OOBase::OnCriticalFailure(szBuf);
 
-	abort();
+	OOBase::OnCriticalFailure(szBuf);
 }

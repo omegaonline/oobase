@@ -22,6 +22,7 @@
 #include "../include/OOSvrBase/Service.h"
 #include "../include/OOSvrBase/Logger.h"
 #include "../include/OOBase/Singleton.h"
+#include "../include/OOBase/String.h"
 #include "../include/OOBase/Posix.h"
 #include "Win32Impl.h"
 
