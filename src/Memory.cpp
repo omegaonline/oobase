@@ -152,18 +152,15 @@ namespace
 			OOBase::Atomic<size_t> refcount;
 		};
 
-		static volatile Instance* s_instance;
+		static Instance* s_instance;
 
 		static Instance& instance()
 		{
-			if (!s_instance)
-			{
-				static OOBase::Once::once_t key = ONCE_T_INIT;
-				OOBase::Once::Run_Internal(&key,&init);
-			}
-
+			static OOBase::Once::once_t key = ONCE_T_INIT;
+			OOBase::Once::Run_Internal(&key,&init);
+			
 			assert(s_instance != reinterpret_cast<Instance*>((uintptr_t)0xdeadbeef));
-			return *const_cast<Instance*>(s_instance);
+			return *s_instance;
 		}
 
 		static void init()
@@ -201,7 +198,7 @@ namespace
 	};
 
 	template <typename T>
-	volatile typename MemoryManager<T>::Instance* MemoryManager<T>::s_instance = NULL;
+	typename MemoryManager<T>::Instance* MemoryManager<T>::s_instance = NULL;
 }
 
 

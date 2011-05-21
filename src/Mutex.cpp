@@ -39,11 +39,6 @@ OOBase::SpinLock::~SpinLock()
 
 void OOBase::SpinLock::acquire()
 {
-#if defined(_DEBUG)
-	if (tryacquire())
-		return;
-#endif
-
 	EnterCriticalSection(&m_cs);
 
 	assert(m_recursive++ == 0);
@@ -51,16 +46,12 @@ void OOBase::SpinLock::acquire()
 
 bool OOBase::SpinLock::tryacquire()
 {
-#if !defined(_DEBUG)
-	return (TryEnterCriticalSection(&m_cs) ? true : false);
-#else
 	if (!TryEnterCriticalSection(&m_cs))
 		return false;
 
 	assert(m_recursive++ == 0);
 
 	return true;
-#endif
 }
 
 void OOBase::SpinLock::release()

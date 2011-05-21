@@ -102,13 +102,10 @@ namespace OOBase
 
 		static DLLDestructor& instance()
 		{
-			if (!s_instance)
-			{
-				static Once::once_t key = ONCE_T_INIT;
-				Once::Run_Internal(&key,&init);
-			}
-
-			return *const_cast<DLLDestructor*>(s_instance);
+			static Once::once_t key = ONCE_T_INIT;
+			Once::Run_Internal(&key,&init);
+			
+			return *s_instance;
 		}
 
 		static void init()
@@ -117,11 +114,11 @@ namespace OOBase
 			s_instance = &inst;
 		}
 
-		static volatile DLLDestructor* s_instance;
+		static DLLDestructor* s_instance;
 	};
 
 	template <typename DLL>
-	volatile DLLDestructor<DLL>* DLLDestructor<DLL>::s_instance = NULL;
+	DLLDestructor<DLL>* DLLDestructor<DLL>::s_instance = NULL;
 }
 
 #endif // OOBASE_DESTRUCTOR_H_INCLUDED_
