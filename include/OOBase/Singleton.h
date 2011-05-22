@@ -56,7 +56,7 @@ namespace OOBase
 			DLLDestructor<DLL>::add_destructor(&destroy,NULL);
 		}
 
-		static void destroy(void* = NULL)
+		static void destroy(void*)
 		{
 			assert(s_instance != reinterpret_cast<T*>((uintptr_t)0xdeadbeef));
 
@@ -66,7 +66,7 @@ namespace OOBase
 	};
 
 	template <typename T, typename DLL>
-	T* Singleton<T,DLL>::s_instance = NULL;
+	T* Singleton<T,DLL>::s_instance;
 }
 
 #endif // OOBASE_SINGLETON_H_INCLUDED_

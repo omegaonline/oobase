@@ -118,7 +118,7 @@ namespace OOBase
 	};
 
 	template <typename DLL>
-	DLLDestructor<DLL>* DLLDestructor<DLL>::s_instance = NULL;
+	DLLDestructor<DLL>* DLLDestructor<DLL>::s_instance;
 }
 
 #endif // OOBASE_DESTRUCTOR_H_INCLUDED_
