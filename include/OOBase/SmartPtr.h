@@ -110,7 +110,7 @@ namespace OOBase
 			SmartPtrImpl(T* ptr = NULL) : m_node(0)
 			{
 				if (ptr)
-					m_node = new (OOBase::critical) SmartPtrNode(ptr);
+					m_node = new (critical) SmartPtrNode(ptr);
 			}
 
 			SmartPtrImpl(const SmartPtrImpl& rhs) : m_node(rhs.m_node)
@@ -128,7 +128,7 @@ namespace OOBase
 				}
 
 				if (ptr)
-					m_node = new (OOBase::critical) SmartPtrNode(ptr);
+					m_node = new (critical) SmartPtrNode(ptr);
 				
 				return *this;
 			}

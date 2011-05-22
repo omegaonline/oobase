@@ -379,9 +379,9 @@ OOBase::Thread::Thread(bool bAutodelete) :
 		m_bAutodelete(bAutodelete)
 {
 #if defined(_WIN32)
-	m_impl = new (OOBase::critical) Win32Thread();
+	m_impl = new (critical) Win32Thread();
 #elif defined(HAVE_PTHREAD)
-	m_impl = new (OOBase::critical) PthreadThread();
+	m_impl = new (critical) PthreadThread();
 #else
 #error Fix me!
 #endif
