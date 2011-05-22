@@ -25,7 +25,10 @@
 #include "Win32.h"
 
 #if defined(_WIN32) && (WINVER < 0x0600)
-	typedef LONG INIT_ONCE;
+typedef union 
+{       
+	PVOID Ptr;
+} INIT_ONCE;
 #endif
 
 namespace OOBase

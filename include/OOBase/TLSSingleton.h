@@ -69,7 +69,7 @@ namespace OOBase
 
 		static void destroy(void* p)
 		{
-			delete reinterpret_cast<T*>(p);
+			delete static_cast<T*>(p);
 		}
 	};
 

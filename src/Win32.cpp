@@ -235,7 +235,7 @@ namespace
 		// *check == 2  <- Init failed...
 		// *check == 3  <- Init succeeded...
 
-		LONG* check = reinterpret_cast<LONG*>(InitOnce);
+		LONG* check = reinterpret_cast<LONG*>(&InitOnce->Ptr);
 		switch (InterlockedCompareExchange(check,1,0))
 		{
 		case 2:
