@@ -172,13 +172,10 @@ namespace
 
 	Win32Thunk& Win32Thunk::instance()
 	{
-		if (!s_instance)
-		{
-			static INIT_ONCE key = {0};
-			if (!InitOnceExecuteOnce_Internal(&key,&init,NULL,NULL))
-				OOBase_CallCriticalFailure(GetLastError());
-		}
-
+		static INIT_ONCE key = {0};
+		if (!InitOnceExecuteOnce_Internal(&key,&init,NULL,NULL))
+			OOBase_CallCriticalFailure(GetLastError());
+		
 		assert(s_instance != reinterpret_cast<Win32Thunk*>((uintptr_t)0xdeadbeef));
 		return *const_cast<Win32Thunk*>(s_instance);
 	}
