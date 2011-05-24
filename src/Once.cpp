@@ -44,20 +44,21 @@ namespace
 {
 	static BOOL __stdcall PINIT_ONCE_FN_impl(INIT_ONCE* /*InitOnce*/, void* Parameter, void** /*Context*/)
 	{
-		(*((OOBase::Once::pfn_once)Parameter))();
+		OOBase::Once::pfn_once pfn = *static_cast<OOBase::Once::pfn_once*>(Parameter);
+		(*pfn)();
 		return TRUE;
 	}
 }
 
 void OOBase::Once::Run(once_t* key, pfn_once fn)
 {
-	if (!Win32::InitOnceExecuteOnce(key,&PINIT_ONCE_FN_impl,(void*)fn,NULL))
+	if (!Win32::InitOnceExecuteOnce(key,&PINIT_ONCE_FN_impl,&fn,NULL))
 		OOBase_CallCriticalFailure(GetLastError());
 }
 
 void OOBase::Once::Run_Internal(once_t* key, pfn_once fn)
 {
-	if (!Win32::InitOnceExecuteOnce_Internal(key,&PINIT_ONCE_FN_impl,(void*)fn,NULL))
+	if (!Win32::InitOnceExecuteOnce_Internal(key,&PINIT_ONCE_FN_impl,&fn,NULL))
 		OOBase_CallCriticalFailure(GetLastError());
 }
 
