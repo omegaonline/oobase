@@ -98,13 +98,13 @@ namespace
 	private:
 		void init_low_frag_heap();
 
-		static volatile Win32Thunk* s_instance;
+		static Win32Thunk* s_instance;
 
 		static BOOL __stdcall init(INIT_ONCE*,void*,void**);
 		static void destroy(void*);
 	};
 
-	volatile Win32Thunk* Win32Thunk::s_instance = NULL;
+	Win32Thunk* Win32Thunk::s_instance = NULL;
 
 	Win32Thunk::Win32Thunk() :
 			m_hKernel32(NULL)
