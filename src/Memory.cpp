@@ -24,6 +24,25 @@
 
 const OOBase::critical_t OOBase::critical = {0};
 
+#if !defined(_WIN32)
+
+void* OOBase::CrtAllocator::allocate(size_t len)
+{
+	return ::malloc(len);
+}
+
+void* OOBase::CrtAllocator::reallocate(void* ptr, size_t len)
+{
+	return ::realloc(ptr,len);
+}
+
+void OOBase::CrtAllocator::free(void* ptr)
+{
+	::free(ptr);
+}
+
+#endif
+
 void* operator new(size_t size)
 {
 	void* p = OOBase::HeapAllocate(size);
@@ -157,7 +176,7 @@ namespace
 		static Instance& instance()
 		{
 			static OOBase::Once::once_t key = ONCE_T_INIT;
-			OOBase::Once::Run_Internal(&key,&init);
+			OOBase::Once::Run(&key,&init);
 			
 			assert(s_instance != reinterpret_cast<Instance*>((uintptr_t)0xdeadbeef));
 			return *s_instance;

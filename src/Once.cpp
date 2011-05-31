@@ -22,23 +22,7 @@
 #include "../include/OOBase/Once.h"
 #include "Win32Impl.h"
 
-namespace OOBase
-{
-	namespace Once
-	{
-		void Run_Internal(once_t* key, pfn_once fn);
-	}
-}
-
 #if defined(_WIN32)
-
-namespace OOBase
-{
-	namespace Win32
-	{
-		BOOL InitOnceExecuteOnce_Internal(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context);
-	}
-}
 
 namespace
 {
@@ -56,12 +40,6 @@ void OOBase::Once::Run(once_t* key, pfn_once fn)
 		OOBase_CallCriticalFailure(GetLastError());
 }
 
-void OOBase::Once::Run_Internal(once_t* key, pfn_once fn)
-{
-	if (!Win32::InitOnceExecuteOnce_Internal(key,&PINIT_ONCE_FN_impl,&fn,NULL))
-		OOBase_CallCriticalFailure(GetLastError());
-}
-
 #elif defined(HAVE_PTHREAD)
 
 void OOBase::Once::Run(once_t* key, pfn_once fn)
@@ -69,11 +47,6 @@ void OOBase::Once::Run(once_t* key, pfn_once fn)
 	int err = pthread_once(key,fn);
 	if (err != 0)
 		OOBase_CallCriticalFailure(err);
-}
-
-void OOBase::Once::Run_Internal(once_t* key, pfn_once fn)
-{
-	return Run(key,fn);
 }
 
 #else

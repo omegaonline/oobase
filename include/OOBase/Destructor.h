@@ -30,11 +30,6 @@
 
 namespace OOBase
 {
-	namespace Once
-	{
-		void Run_Internal(once_t* key, pfn_once fn);
-	}
-
 	template <typename DLL>
 	class DLLDestructor
 	{
@@ -103,7 +98,7 @@ namespace OOBase
 		static DLLDestructor& instance()
 		{
 			static Once::once_t key = ONCE_T_INIT;
-			Once::Run_Internal(&key,&init);
+			Once::Run(&key,&init);
 			
 			return *s_instance;
 		}
