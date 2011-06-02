@@ -8,9 +8,6 @@ EXTRA_DIST = \
 ####################################
 # Some helper targets
 
-gitbundle:
-	git bundle create oobase.git --all
-
 astyle:
 	astyle -A1 -T4 -K -N -w -U -c -n -R $(srcdir)/*.h
 	astyle -A1 -T4 -K -N -w -U -c -n -R $(srcdir)/*.inl
@@ -112,7 +109,7 @@ liboobase_la_SOURCES = \
 
 liboosvrbase_la_CFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
 liboosvrbase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
-liboosvrbase_la_LDFLAGS = $(PTHREAD_LIBS) $(EV_LIBS)
+liboosvrbase_la_LDFLAGS = $(PTHREAD_LIBS) $(EV_LIBS) $(SQLITE3_LIBS) 
 
 if WIN32
 liboosvrbase_la_LDFLAGS += -lnetapi32 -luserenv -lshlwapi

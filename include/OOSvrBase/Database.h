@@ -112,7 +112,9 @@ namespace OOSvrBase
 
 			int begin_transaction(OOBase::SmartPtr<Transaction>& ptrTrans, const char* pszType = NULL);
 			int prepare_statement(OOBase::SmartPtr<Statement>& ptrStmt, const char* pszStatement, ...);
-
+			
+			sqlite3_int64 last_insert_rowid();
+			
 		private:
 			sqlite3* m_db;
 

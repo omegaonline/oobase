@@ -149,6 +149,11 @@ int OOSvrBase::Db::Database::exec(const char* szSQL)
 	return err;
 }
 
+sqlite3_int64 OOSvrBase::Db::Database::last_insert_rowid()
+{
+	return sqlite3_last_insert_rowid(m_db);
+}
+
 sqlite3* OOSvrBase::Db::Database::database()
 {
 	return m_db;
