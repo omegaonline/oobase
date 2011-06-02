@@ -71,6 +71,10 @@ AS_IF([test "x$oo_test_CFLAGS" != "xset"],
   [
     AX_CFLAGS_GCC_OPTION([-O2])
   ])
+  
+  AX_CFLAGS_GCC_OPTION([-pipe])
+    
+  AS_CASE([$host_os],[mingw*],[CFLAGS="$CFLAGS -march=i686 -mtune=native"])
 ])
 
 # Set sensible default CXXFLAGS if necessary
@@ -91,6 +95,10 @@ AS_IF([test "x$oo_test_CXXFLAGS" != "xset"],
     AX_CXXFLAGS_GCC_OPTION([-fno-rtti])
     AX_CXXFLAGS_GCC_OPTION([-O2])
   ])
+  
+  AX_CXXFLAGS_GCC_OPTION([-pipe])
+     
+  AS_CASE([$host_os],[mingw*],[CXXFLAGS="$CXXFLAGS -march=i686 -mtune=native"])
 ])
 
 # Add debug defines
