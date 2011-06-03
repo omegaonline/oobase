@@ -65,7 +65,7 @@ namespace OOBase
 	class SpinLock
 	{
 	public:
-		SpinLock(unsigned int max_spin = 4001);
+		SpinLock(unsigned int max_spin = 401);
 		~SpinLock();
 
 		bool tryacquire();
@@ -81,10 +81,6 @@ namespace OOBase
 		 *  The platform specific spin-lock variable.
 		 */
 		CRITICAL_SECTION m_cs;
-
-#if defined(_DEBUG)
-		size_t m_recursive;
-#endif
 	};
 #else
 	class SpinLock : public Mutex

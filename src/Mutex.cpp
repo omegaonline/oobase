@@ -25,9 +25,6 @@
 #if defined(_WIN32)
 
 OOBase::SpinLock::SpinLock(unsigned int max_spin)
-#if defined(_DEBUG)
-	: m_recursive(0)
-#endif
 {
 	InitializeCriticalSectionAndSpinCount(&m_cs,max_spin);
 }
@@ -41,7 +38,7 @@ void OOBase::SpinLock::acquire()
 {
 	EnterCriticalSection(&m_cs);
 
-	assert(m_recursive++ == 0);
+	assert(m_cs.RecursionCount == 1);
 }
 
 bool OOBase::SpinLock::tryacquire()
@@ -49,15 +46,13 @@ bool OOBase::SpinLock::tryacquire()
 	if (!TryEnterCriticalSection(&m_cs))
 		return false;
 
-	assert(m_recursive++ == 0);
+	assert(m_cs.RecursionCount == 1);
 
 	return true;
 }
 
 void OOBase::SpinLock::release()
 {
-	assert(--m_recursive == 0);
-
 	LeaveCriticalSection(&m_cs);
 }
 
