@@ -24,9 +24,6 @@
 
 #include "Memory.h"
 
-// Because I don't want to #include <stdlib.h> in a header
-extern "C" void *bsearch(const void *key, const void *base, size_t nmemb,size_t size, int (*compar)(const void *, const void *));
-
 namespace OOBase
 {
 	template <typename K, typename V, typename Allocator = HeapAllocator>
@@ -121,10 +118,10 @@ namespace OOBase
 		template <typename T>
 		size_t find(T key, bool first = false) const
 		{
-			const Node* p = static_cast<Node*>(::bsearch(&key,m_data,m_size,sizeof(Node),&compare<T>));
+			const Node* p = bsearch(key);
 			
 			// Scan for the first
-			while (first && p > m_data && (p-1)->m_key == p->m_key)
+			while (p && first && p > m_data && (p-1)->m_key == p->m_key)
 				--p;
 
 			return (p ? static_cast<size_t>(p - m_data) : npos);
@@ -247,19 +244,25 @@ namespace OOBase
 			return 0;
 		}
 					
-		template <typename P>
-		static int compare(const void* pa, const void* pb)
+		template <typename T>
+		const Node* bsearch(const T& key) const
 		{
-			const P& a = *static_cast<const P*>(pa);
-			const K& b = static_cast<const Node*>(pb)->m_key;
-			
-			if (b == a)
-				return 0;
-			if (b > a)
-				return -1;
-			else 
-				return 1;
+			const Node* base = m_data;
+			for (size_t span = m_size; span > 0; span /= 2) 
+			{
+				const Node* mid_point = base + (span / 2);	        
+				if (mid_point->m_key == key)
+					return mid_point;
+				
+				if (mid_point->m_key < key) 
+				{
+					base = mid_point + 1;
+					--span;
+				}
+			}
+		    return NULL;
 		}
+
 	};
 }
 
