@@ -139,8 +139,8 @@ namespace
 			Instance& i = instance();
 
 			void* p = i.inst.allocate(len);
-			//if (p)
-			//	++i.refcount;
+			if (p)
+				++i.refcount;
 			return p;
 		}
 
@@ -159,8 +159,8 @@ namespace
 				Instance& i = instance();
 
 				i.inst.free(ptr);
-				//if (--i.refcount == 0)
-				//	term(const_cast<Instance*>(s_instance));
+				if (--i.refcount == 0)
+					term(const_cast<Instance*>(s_instance));
 			}
 		}
 
@@ -175,8 +175,11 @@ namespace
 
 		static Instance& instance()
 		{
-			static OOBase::Once::once_t key = ONCE_T_INIT;
-			OOBase::Once::Run(&key,&init);
+			if (!s_instance)
+			{
+				static OOBase::Once::once_t key = ONCE_T_INIT;
+				OOBase::Once::Run(&key,&init);
+			}
 			
 			assert(s_instance != reinterpret_cast<Instance*>((uintptr_t)0xdeadbeef));
 			return *s_instance;
@@ -211,7 +214,7 @@ namespace
 
 			Instance* i = const_cast<Instance*>(s_instance);
 
-			//if (i && --i->refcount == 0)
+			if (i && --i->refcount == 0)
 				term(i);
 		}
 	};
@@ -235,12 +238,8 @@ namespace
 	public:
 		~MemWatcher()
 		{
-			//if (!m_setEntries.empty())
-			//	printf("****************** MEM LEAKS! *****************\n");
-
-			void* p = NULL;
-			while (m_setEntries.pop(&p))
-				OOBase::CrtAllocator::free(p);
+			if (!m_setEntries.empty())
+				printf("****************** MEM LEAKS! *****************\n");
 		}
 
 		void* allocate(size_t len)

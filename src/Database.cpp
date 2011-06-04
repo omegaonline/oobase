@@ -149,6 +149,11 @@ int OOSvrBase::Db::Database::exec(const char* szSQL)
 	return err;
 }
 
+sqlite3_int64 OOSvrBase::Db::Database::last_insert_rowid()
+{
+	return sqlite3_last_insert_rowid(m_db);
+}
+
 sqlite3* OOSvrBase::Db::Database::database()
 {
 	return m_db;
@@ -163,8 +168,8 @@ int OOSvrBase::Db::Database::begin_transaction(OOBase::SmartPtr<Transaction>& pt
 		err = sqlite3_exec(m_db,"BEGIN TRANSACTION;",NULL,NULL,NULL);
 
 	if (err != SQLITE_OK)
-		return err;
-
+		LOG_ERROR_RETURN(("sqlite3_exec(%s) failed: %s",pszType ? pszType : "BEGIN TRANSACTION",sqlite3_errmsg(m_db)),err);
+		
 	ptrTrans = new (std::nothrow) Transaction(m_db);
 	if (!ptrTrans)
 	{
@@ -205,7 +210,7 @@ int OOSvrBase::Db::Database::prepare_statement(OOBase::SmartPtr<OOSvrBase::Db::S
 OOSvrBase::Db::Transaction::~Transaction()
 {
 	if (m_db)
-		sqlite3_exec(m_db,"ROLLBACK;",NULL,NULL,NULL);
+		rollback();
 }
 
 int OOSvrBase::Db::Transaction::commit()
@@ -213,6 +218,8 @@ int OOSvrBase::Db::Transaction::commit()
 	int err = sqlite3_exec(m_db,"COMMIT;",NULL,NULL,NULL);
 	if (err == SQLITE_OK)
 		m_db = NULL;
+	else
+		LOG_ERROR(("sqlite3_exec(COMMIT) failed: %s",sqlite3_errmsg(m_db)));
 
 	return err;
 }
@@ -222,6 +229,8 @@ int OOSvrBase::Db::Transaction::rollback()
 	int err = sqlite3_exec(m_db,"ROLLBACK;",NULL,NULL,NULL);
 	if (err == SQLITE_OK)
 		m_db = NULL;
+	else
+		LOG_ERROR(("sqlite3_exec(ROLLBACK) failed: %s",sqlite3_errmsg(m_db)));
 
 	return err;
 }
