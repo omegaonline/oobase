@@ -151,7 +151,7 @@ namespace
 			else
 				return instance().inst.reallocate(ptr,len);
 		}
-			
+
 		static void free(void* ptr)
 		{
 			if (ptr)
@@ -180,7 +180,7 @@ namespace
 				static OOBase::Once::once_t key = ONCE_T_INIT;
 				OOBase::Once::Run(&key,&init);
 			}
-			
+
 			assert(s_instance != reinterpret_cast<Instance*>((uintptr_t)0xdeadbeef));
 			return *s_instance;
 		}
@@ -191,7 +191,7 @@ namespace
 			Instance* instance = static_cast<Instance*>(OOBase::CrtAllocator::allocate(sizeof(Instance)));
 			if (!instance)
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-			
+
 			// Placement new
 			new (instance) Instance();
 			instance->refcount = 1;
@@ -274,8 +274,8 @@ namespace
 		{
 			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-			bool e = m_setEntries.erase(ptr);
-			assert(e);
+			//bool e = m_setEntries.erase(ptr);
+			//assert(e);
 
 			OOBase::CrtAllocator::free(ptr);
 		}
@@ -312,7 +312,7 @@ void OOBase::HeapFree(void* p)
 	MemoryManager<MemWatcher>::free(p);
 #else
 	MemoryManager<CrtAllocator>::free(p);
-#endif	
+#endif
 }
 
 void* OOBase::LocalAllocate(size_t bytes)
