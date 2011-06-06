@@ -20,7 +20,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/utf8.h"
-#include "../include/OOBase/SmartPtr.h"
 
 #if defined(_WIN32)
 

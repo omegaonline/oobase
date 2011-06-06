@@ -23,7 +23,6 @@
 
 #if defined(_WIN32)
 
-#include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/Destructor.h"
 #include "Win32Impl.h"
 
