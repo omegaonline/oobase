@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2008 Rick Taylor
+// Copyright (C) 2008,2011 Rick Taylor
 //
 // This file is part of OOSvrBase, the Omega Online Base library.
 //
@@ -25,10 +25,39 @@
 
 #if defined(HAVE_SQLITE3) || defined(HAVE_SQLITE3_AMALGAMATION)
 
+OOSvrBase::Db::Statement::Statement(sqlite3_stmt* pStmt) :
+		m_pStmt(pStmt)
+{ }
+
 OOSvrBase::Db::Statement::~Statement()
 {
 	if (m_pStmt)
 		sqlite3_finalize(m_pStmt);
+}
+
+int OOSvrBase::Db::Statement::prepare(Database& db, const char* pszStatement, ...)
+{
+	va_list ap;
+	va_start(ap,pszStatement);
+	char* pszBuf = sqlite3_vmprintf(pszStatement,ap);
+	va_end(ap);
+
+	if (!pszBuf)
+		LOG_ERROR_RETURN(("sqlite3_vmprintf failed: %s",sqlite3_errmsg(db.m_db)),sqlite3_errcode(db.m_db));
+
+	if (m_pStmt)
+	{
+		sqlite3_finalize(m_pStmt);
+		m_pStmt = NULL;
+	}
+	
+	int err = sqlite3_prepare_v2(db.m_db,pszBuf,-1,&m_pStmt,NULL);
+	sqlite3_free(pszBuf);
+
+	if (err != SQLITE_OK)
+		LOG_ERROR_RETURN(("sqlite3_prepare_v2 failed: %s",sqlite3_errmsg(db.m_db)),err);
+
+	return 0;
 }
 
 int OOSvrBase::Db::Statement::step()
@@ -39,11 +68,12 @@ int OOSvrBase::Db::Statement::step()
 	return err;
 }
 
-int OOSvrBase::Db::Statement::reset()
+int OOSvrBase::Db::Statement::reset(bool log)
 {
 	int err = sqlite3_reset(m_pStmt);
-	if (err != SQLITE_OK)
+	if (err != SQLITE_OK && log)
 		LOG_ERROR(("sqlite3_reset failed: %s",sqlite3_errmsg(sqlite3_db_handle(m_pStmt))));
+	
 	return err;
 }
 
@@ -82,21 +112,6 @@ int OOSvrBase::Db::Statement::bind_string(int index, const char* val, size_t len
 	return sqlite3_bind_text(m_pStmt,index,val,static_cast<int>(len),NULL);
 }
 
-sqlite3_stmt* OOSvrBase::Db::Statement::statement()
-{
-	return m_pStmt;
-}
-
-OOSvrBase::Db::Statement::Statement(sqlite3_stmt* pStmt) :
-		m_pStmt(pStmt)
-{ }
-
-
-OOSvrBase::Db::Transaction::Transaction(sqlite3* db) :
-		m_db(db)
-{
-}
-
 OOSvrBase::Db::Database::Database() :
 		m_db(NULL)
 {
@@ -109,7 +124,7 @@ OOSvrBase::Db::Database::~Database()
 	{
 		// Close all prepared statements...
 		sqlite3_stmt* pStmt;
-		while ((pStmt = sqlite3_next_stmt(m_db,NULL)) != 0)
+		while ((pStmt = sqlite3_next_stmt(m_db,NULL)) != NULL)
 			sqlite3_finalize(pStmt);
 
 		// Now close the db
@@ -154,12 +169,17 @@ sqlite3_int64 OOSvrBase::Db::Database::last_insert_rowid()
 	return sqlite3_last_insert_rowid(m_db);
 }
 
-sqlite3* OOSvrBase::Db::Database::database()
+OOSvrBase::Db::Transaction::Transaction(Database& db) : 
+		m_db(db.m_db)
+{ }
+
+OOSvrBase::Db::Transaction::~Transaction()
 {
-	return m_db;
+	if (m_db)
+		rollback();
 }
 
-int OOSvrBase::Db::Database::begin_transaction(OOBase::SmartPtr<Transaction>& ptrTrans, const char* pszType)
+int OOSvrBase::Db::Transaction::begin(const char* pszType)
 {
 	int err = 0;
 	if (pszType)
@@ -169,48 +189,8 @@ int OOSvrBase::Db::Database::begin_transaction(OOBase::SmartPtr<Transaction>& pt
 
 	if (err != SQLITE_OK)
 		LOG_ERROR_RETURN(("sqlite3_exec(%s) failed: %s",pszType ? pszType : "BEGIN TRANSACTION",sqlite3_errmsg(m_db)),err);
-		
-	ptrTrans = new (std::nothrow) Transaction(m_db);
-	if (!ptrTrans)
-	{
-		sqlite3_exec(m_db,"ROLLBACK;",NULL,NULL,NULL);
-		LOG_ERROR_RETURN(("Out of memory"),SQLITE_NOMEM);
-	}
-
+	
 	return 0;
-}
-
-int OOSvrBase::Db::Database::prepare_statement(OOBase::SmartPtr<OOSvrBase::Db::Statement>& ptrStmt, const char* pszStatement, ...)
-{
-	va_list ap;
-	va_start(ap,pszStatement);
-	char* pszBuf = sqlite3_vmprintf(pszStatement,ap);
-	va_end(ap);
-
-	if (!pszBuf)
-		LOG_ERROR_RETURN(("sqlite3_vmprintf failed: %s",sqlite3_errmsg(m_db)),sqlite3_errcode(m_db));
-
-	sqlite3_stmt* pStmt = NULL;
-	int err = sqlite3_prepare_v2(m_db,pszBuf,-1,&pStmt,NULL);
-	sqlite3_free(pszBuf);
-
-	if (err != SQLITE_OK)
-		LOG_ERROR_RETURN(("sqlite3_prepare_v2 failed: %s",sqlite3_errmsg(m_db)),err);
-
-	ptrStmt = new (std::nothrow) Statement(pStmt);
-	if (!ptrStmt)
-	{
-		sqlite3_finalize(pStmt);
-		LOG_ERROR_RETURN(("Out of memory"),SQLITE_NOMEM);
-	}
-
-	return 0;
-}
-
-OOSvrBase::Db::Transaction::~Transaction()
-{
-	if (m_db)
-		rollback();
 }
 
 int OOSvrBase::Db::Transaction::commit()
@@ -220,7 +200,7 @@ int OOSvrBase::Db::Transaction::commit()
 		m_db = NULL;
 	else
 		LOG_ERROR(("sqlite3_exec(COMMIT) failed: %s",sqlite3_errmsg(m_db)));
-
+		
 	return err;
 }
 
@@ -231,7 +211,7 @@ int OOSvrBase::Db::Transaction::rollback()
 		m_db = NULL;
 	else
 		LOG_ERROR(("sqlite3_exec(ROLLBACK) failed: %s",sqlite3_errmsg(m_db)));
-
+		
 	return err;
 }
 
