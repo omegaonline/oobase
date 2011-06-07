@@ -49,7 +49,7 @@ namespace OOBase
 			}
 			
 			// Placement new
-			new (&m_data[m_back]) T(val);
+			::new (&m_data[m_back]) T(val);
 				
 			m_back = (m_back + 1) % m_capacity;
 			return 0;
@@ -123,7 +123,7 @@ namespace OOBase
 			// Now copy the contents of m_data into new_data
 			size_t new_back = 0;
 			for (size_t i=m_front;m_capacity != 0 && i != m_back; i = (i+1) % m_capacity)
-				new (&new_data[new_back++]) T(m_data[i]);
+				::new (&new_data[new_back++]) T(m_data[i]);
 			
 			for (size_t i=m_front;m_capacity != 0 && i != m_back; i = (i+1) % m_capacity)
 				m_data[i].~T();

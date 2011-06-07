@@ -315,7 +315,7 @@ namespace OOBase
 				if (data[h1].m_in_use != 2)
 				{
 					// Placement new
-					new (&data[h1]) Node(key,value);
+					::new (&data[h1]) Node(key,value);
 					return 0;
 				}
 				

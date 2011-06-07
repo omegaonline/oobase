@@ -58,7 +58,7 @@ namespace OOBase
 			}
 			
 			// Placement new
-			new (&m_data[m_size]) Node(key,value);
+			::new (&m_data[m_size]) Node(key,value);
 			
 			// This is exception safe as the increment happens here
 			++m_size;
@@ -232,7 +232,7 @@ namespace OOBase
 					return ERROR_OUTOFMEMORY;
 				
 				for (size_t i=0;i<m_size;++i)
-					new (&new_data[i]) Node(m_data[i].m_key,m_data[i].m_value);
+					::new (&new_data[i]) Node(m_data[i].m_key,m_data[i].m_value);
 				
 				for (size_t i=0;i<m_size;++i)
 					m_data[i].~Node();

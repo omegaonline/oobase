@@ -172,7 +172,7 @@ namespace
 				OOBase_CallCriticalFailure(GetLastError());
 
 			// Placement new...
-			s_instance = new (p) Win32Thunk();
+			s_instance = ::new (p) Win32Thunk();
 			
 			// This will call us again on Win32
 			OOBase::DLLDestructor<OOBase::Module>::add_destructor(&destroy,NULL);

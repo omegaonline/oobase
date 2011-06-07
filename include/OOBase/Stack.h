@@ -56,7 +56,7 @@ namespace OOBase
 			}
 			
 			// Placement new with copy constructor
-			new (&m_data[m_top]) T(value);
+			::new (&m_data[m_top]) T(value);
 			
 			// This is exception safe as the increment happens here
 			++m_top;
@@ -142,7 +142,7 @@ namespace OOBase
 					return ERROR_OUTOFMEMORY;
 				
 				for (size_t i=0;i<m_top;++i)
-					new (&new_data[i]) T(m_data[i]);
+					::new (&new_data[i]) T(m_data[i]);
 									
 				for (size_t i=0;i<m_top;++i)
 					m_data[i].~T();
