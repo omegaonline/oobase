@@ -126,7 +126,7 @@ namespace
 {
 	static SERVICE_STATUS_HANDLE s_ssh = (SERVICE_STATUS_HANDLE)NULL;
 
-	static VOID WINAPI ServiceCtrl(DWORD dwControl)
+	VOID WINAPI ServiceCtrl(DWORD dwControl)
 	{
 		SERVICE_STATUS ss = {0};
 		ss.dwControlsAccepted = SERVICE_ACCEPT_STOP|SERVICE_ACCEPT_SHUTDOWN;
@@ -168,7 +168,7 @@ namespace
 		}
 	}
 
-	static VOID WINAPI ServiceMain(DWORD /*dwArgc*/, LPWSTR* lpszArgv)
+	VOID WINAPI ServiceMain(DWORD /*dwArgc*/, LPWSTR* lpszArgv)
 	{
 		SERVICE_STATUS ss = {0};
 		ss.dwControlsAccepted = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN | SERVICE_ACCEPT_PARAMCHANGE;
