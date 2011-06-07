@@ -19,6 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/OOBase/CustomNew.h"
 #include "../include/OOBase/TLSSingleton.h"
 #include "../include/OOBase/Thread.h"
 

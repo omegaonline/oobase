@@ -19,6 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/OOBase/CustomNew.h"
 #include "../include/OOBase/Singleton.h"
 #include "Win32Socket.h"
 

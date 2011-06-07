@@ -64,6 +64,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/ByteSwap.h \
 	include/OOBase/CDRStream.h \
 	include/OOBase/Condition.h \
+	include/OOBase/CustomNew.h \
 	include/OOBase/Destructor.h \
 	include/OOBase/DLL.h \
 	include/OOBase/HandleTable.h \

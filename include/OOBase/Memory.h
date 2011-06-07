@@ -88,18 +88,4 @@ namespace OOBase
 	};
 }
 
-// Global operator new overloads
-void* operator new(size_t size);
-void* operator new[](size_t size);
-void* operator new(size_t size, const std::nothrow_t&);
-void* operator new[](size_t size, const std::nothrow_t&);
-void* operator new(size_t size, const OOBase::critical_t&);
-void* operator new[](size_t size, const OOBase::critical_t&);
-void operator delete(void* p);
-void operator delete(void* p, const std::nothrow_t&);
-void operator delete(void* p, const OOBase::critical_t&);
-void operator delete[](void* p);
-void operator delete[](void* p, const std::nothrow_t&);
-void operator delete[](void* p, const OOBase::critical_t&);
-
 #endif // OOBASE_MEMORY_H_INCLUDED_

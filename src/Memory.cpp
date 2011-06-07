@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Memory.h"
+#include "../include/OOBase/CustomNew.h"
 #include "../include/OOBase/Destructor.h"
 
 const OOBase::critical_t OOBase::critical = {0};

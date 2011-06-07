@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Memory.h"
+#include "../include/OOBase/CustomNew.h"
 #include "../include/OOBase/Posix.h"
 #include "BSDSocket.h"
 

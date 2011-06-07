@@ -20,6 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/Buffer.h"
+#include "../include/OOBase/CustomNew.h"
 
 #include <string.h>
 

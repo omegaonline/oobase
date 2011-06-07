@@ -22,7 +22,6 @@
 #ifndef OOBASE_BOUNDED_QUEUE_H_INCLUDED_
 #define OOBASE_BOUNDED_QUEUE_H_INCLUDED_
 
-#include "Memory.h"
 #include "Condition.h"
 #include "Thread.h"
 #include "Queue.h"
