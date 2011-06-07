@@ -58,7 +58,11 @@ namespace OOBase
 
 		static void* init()
 		{
-			T* pThis = new (critical) T();
+			void* p = OOBase::HeapAllocate(sizeof(T));
+			if (!p)
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+			
+			T* pThis = ::new (p) T();
 									
 			int err = TLS::Set(&s_sentinal,pThis,&destroy);
 			if (err != 0)
@@ -69,7 +73,11 @@ namespace OOBase
 
 		static void destroy(void* p)
 		{
-			delete static_cast<T*>(p);
+			if (p)
+			{
+				static_cast<T*>(p)->~T();
+				OOBase::HeapFree(p);
+			}
 		}
 	};
 

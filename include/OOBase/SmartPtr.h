@@ -63,10 +63,14 @@ namespace OOBase
 			class SmartPtrNode
 			{
 			public:
-				SmartPtrNode(T* data = NULL) :
-						m_data(data),
-						m_refcount(1)
-				{}
+				static SmartPtrNode* create(T* data = NULL)
+				{
+					void* p = OOBase::HeapAllocate(sizeof(SmartPtrNode));
+					if (!p)
+						OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+					
+					return ::new (p) SmartPtrNode(data);
+				}
 
 				void addref()
 				{
@@ -76,7 +80,11 @@ namespace OOBase
 				void release()
 				{
 					if (--m_refcount == 0)
-						delete this;
+					{
+						void* p = this;
+						this->~SmartPtrNode();
+						OOBase::HeapFree(p);
+					}
 				}
 
 				T* value()
@@ -97,6 +105,11 @@ namespace OOBase
 				}
 
 			private:
+				SmartPtrNode(T* data = NULL) :
+						m_data(data),
+						m_refcount(1)
+				{}
+					
 				~SmartPtrNode()
 				{
 					Destructor::destroy(m_data);
@@ -110,7 +123,7 @@ namespace OOBase
 			SmartPtrImpl(T* ptr = NULL) : m_node(0)
 			{
 				if (ptr)
-					m_node = new (critical) SmartPtrNode(ptr);
+					m_node = SmartPtrNode::create(ptr);
 			}
 
 			SmartPtrImpl(const SmartPtrImpl& rhs) : m_node(rhs.m_node)
@@ -128,7 +141,7 @@ namespace OOBase
 				}
 
 				if (ptr)
-					m_node = new (critical) SmartPtrNode(ptr);
+					m_node = SmartPtrNode::create(ptr);
 				
 				return *this;
 			}
