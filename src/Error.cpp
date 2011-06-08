@@ -21,12 +21,23 @@
 
 #include "../include/OOBase/tr24731.h"
 #include "../include/OOBase/SmartPtr.h"
-#include "../include/OOBase/String.h"
+
+#include <stdlib.h>
+#include <signal.h>
+
+#include <exception>
 
 namespace OOBase
 {
 	// This is the critical failure hook
-	void OnCriticalFailure(const char* msg);
+	// Return true to avoid frther error printing
+	#if defined(__GNUC__)
+	__attribute__((weak)) bool OnCriticalFailure(const char* msg) { return false; }
+	#elif defined(_MSC_VER)
+	bool OnCriticalFailure(const char* msg) { return false; }
+	#else
+	#error Weak symbol support for your compiler?
+	#endif	
 
 	namespace detail
 	{
@@ -40,6 +51,8 @@ namespace OOBase
 
 namespace
 {
+	VOID WINAPI DummyServiceMain(DWORD /*dwArgc*/, LPWSTR* /*lpszArgv*/) { }
+
 	bool format_msg(char* err_buf, size_t err_len, DWORD dwErr, HMODULE hModule)
 	{
 		DWORD dwFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK;
@@ -75,48 +88,64 @@ namespace
 			return false;
 		}
 	}
+	
+	#endif // _WIN32
+	
+	void unexpected()
+	{
+		OOBase::CallCriticalFailure(NULL,0,"Unexpected exception thrown");
+	}
+	
+	void terminate()
+	{
+		OOBase::CallCriticalFailure(NULL,0,"Unhandled exception");
+	}
+	
+#if !defined(OOBASE_NO_ERROR_HANDLERS)
+	static struct install_handlers
+	{
+		install_handlers()
+		{
+			std::set_unexpected(&unexpected);
+			std::set_terminate(&terminate);
+			
+			#if defined(_WIN32)
+				const DWORD new_mask = SEM_FAILCRITICALERRORS|SEM_NOOPENFILEERRORBOX;
+				DWORD mask = SetErrorMode(new_mask);
+				SetErrorMode(mask | new_mask);
+			#endif
+		}
+	} s_err_handler;
+#endif
 }
-#endif // _WIN32
 
 const char* OOBase::system_error_text(int err)
 {
 	static const char unknown_error[] = "Unknown error or error in processing";
-#if defined(_WIN32)
-
-	if (err == -1)
-		err = GetLastError();
-
+	bool ok = false;
+	
 	size_t err_len = 0;
 	char* err_buf = OOBase::detail::get_error_buffer(err_len);
 
 	int offset = snprintf_s(err_buf,err_len,"(%x) ",err);
 	if (offset == -1)
 		offset = 0;
+	
+#if defined(_WIN32)
 
-	bool ok = false;
+	if (err == -1)
+		err = GetLastError();
+	
 	if (!(err & 0xC0000000))
 		ok = format_msg(err_buf+offset,err_len-offset,err,NULL);
 	else
 		ok = format_msg(err_buf+offset,err_len-offset,err,GetModuleHandleW(L"NTDLL.DLL"));
-
-	if (!ok)
-		memcpy(err_buf,unknown_error,sizeof(unknown_error));
-
-	return err_buf;
 
 #else
 
 	if (err == -1)
 		err = errno;
 
-	size_t err_len = 0;
-	char* err_buf = OOBase::detail::get_error_buffer(err_len);
-
-	int offset = snprintf_s(err_buf,err_len,"(%d) ",err);
-	if (offset == -1)
-		offset = 0;
-
-	bool ok = false;
 #if defined(HAVE_PTHREAD)
 	ok = (strerror_r(err,err_buf+offset,err_len-offset) == 0);
 #elif defined(HAVE_TR_24731)
@@ -129,13 +158,12 @@ const char* OOBase::system_error_text(int err)
 		ok = true;
 	}
 #endif
-
+#endif
+	
 	if (!ok)
 		memcpy(err_buf,unknown_error,sizeof(unknown_error));
 
 	return err_buf;
-
-#endif
 }
 
 void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, int err)
@@ -145,8 +173,66 @@ void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, int er
 
 void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, const char* msg)
 {
-	static char szBuf[1024] = {0};
-	snprintf_s(szBuf,sizeof(szBuf),"%s(%u): %s",pszFile,nLine,msg);
+	static char szBuf[1024] = {0};		
+	
+	if (pszFile)
+	{
+		snprintf_s(szBuf,sizeof(szBuf),
+			"Critical error '%s' has occurred in the application at %s(%u).  "
+			"The application will now terminate.\n",msg,pszFile,nLine);
+	}
+	else
+	{
+		snprintf_s(szBuf,sizeof(szBuf),
+			"Critical error '%s' has occurred in the application.  "
+			"The application will now terminate.\n",msg);
+	}
+	
+	bool bReport = false;
+	if (!OOBase::OnCriticalFailure(szBuf))
+	{
+		bReport = true;
+		
+#if defined(_WIN32)
+		// Output to the debugger
+		OutputDebugStringA(szBuf);		
+		
+		// Try to detect if we are running as a service
+		static wchar_t sn[] = L"";
+		static SERVICE_TABLE_ENTRYW ste[] =
+		{
+			{sn, &DummyServiceMain },
+			{NULL, NULL}
+		};
+		
+		if (!StartServiceCtrlDispatcherW(ste) && GetLastError() == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT)
+		{
+			if (GetConsoleWindow() == NULL)
+			{
+				// We are not a console application...
+				::MessageBoxA(NULL,szBuf,"Critical error in application",MB_ICONERROR | MB_TASKMODAL | MB_OK | MB_SETFOREGROUND);
+				bReport = false;
+			}
+		}
+#endif
+	}
 
-	OOBase::OnCriticalFailure(szBuf);
+	if (bReport)
+	{
+		fputs(szBuf,stderr);
+		fflush(stderr);
+	}
+
+#if defined(_WIN32)
+	#if defined(_DEBUG)
+		if (IsDebuggerPresent()) DebugBreak();
+	#endif
+	// We don't want the stupid CRT abort message
+	TerminateProcess(GetCurrentProcess(),EXIT_FAILURE);
+#else
+	#if defined(_DEBUG)
+		signal(SIGINT);
+	#endif
+	abort();
+#endif
 }
