@@ -47,12 +47,16 @@ dist-hook:
 
 noinst_LTLIBRARIES = liboobase.la liboosvrbase.la
 
-liboobase_la_CFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
-liboobase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
-liboobase_la_LDFLAGS = $(PTHREAD_LIBS) $(LIBLTDL)
+liboobase_la_CFLAGS = $(PTHREAD_CFLAGS)
+liboobase_la_CXXFLAGS = $(PTHREAD_CFLAGS)
+liboobase_la_LDFLAGS = $(PTHREAD_LIBS)
 
 if WIN32
-liboobase_la_LDFLAGS += -lws2_32
+liboobase_la_LIBADD = -lws2_32
+else
+liboobase_la_CFLAGS += $(LTDLINCL)
+liboobase_la_CXXFLAGS += $(LTDLINCL)
+liboobase_la_LIBADD = $(LIBLTDL)
 endif 
 
 liboobase_la_SOURCES = \
@@ -105,15 +109,18 @@ liboobase_la_SOURCES = \
 	src/tr24731.cpp \
 	src/utf8.cpp \
 	src/Win32.cpp \
-	src/Win32Socket.cpp	\
+	src/Win32Socket.cpp \
 	src/Win32Socket2.cpp	
 
 liboosvrbase_la_CFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
 liboosvrbase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
-liboosvrbase_la_LDFLAGS = $(PTHREAD_LIBS) $(EV_LIBS) $(SQLITE3_LIBS) 
+liboosvrbase_la_LDFLAGS = $(PTHREAD_LIBS)
+liboosvrbase_la_LIBADD = $(SQLITE3_LIBS)
 
 if WIN32
-liboosvrbase_la_LDFLAGS += -lnetapi32 -luserenv -lshlwapi
+liboosvrbase_la_LIBADD += -lnetapi32 -luserenv
+else
+liboosvrbase_la_LIBADD += $(EV_LIBS)
 endif
 
 liboosvrbase_la_SOURCES = \

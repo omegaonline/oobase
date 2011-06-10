@@ -78,6 +78,8 @@ AS_IF([test "x$oo_test_CFLAGS" != "xset"],
   [
     AX_CFLAGS_GCC_OPTION([-march=i686])
     AX_CFLAGS_GCC_OPTION([-mtune=native])
+	
+	AX_CFLAGS_GCC_OPTION([-static-libgcc])	
   ])
 ])
 
@@ -86,6 +88,7 @@ AS_IF([test "x$oo_test_CXXFLAGS" != "xset"],
 [
   # Always try to hide symbols
   AX_CXXFLAGS_GCC_OPTION([-fvisibility=hidden])
+  AX_CXXFLAGS_GCC_OPTION([-fno-rtti])
   
   # Always add full warnings
   AX_CXXFLAGS_WARN_ALL
@@ -96,7 +99,6 @@ AS_IF([test "x$oo_test_CXXFLAGS" != "xset"],
   	AX_CXXFLAGS_GCC_OPTION([-O0])
   ],
   [
-    AX_CXXFLAGS_GCC_OPTION([-fno-rtti])
     AX_CXXFLAGS_GCC_OPTION([-O2])
   ])
   
@@ -106,6 +108,9 @@ AS_IF([test "x$oo_test_CXXFLAGS" != "xset"],
   [
     AX_CXXFLAGS_GCC_OPTION([-march=i686])
     AX_CXXFLAGS_GCC_OPTION([-mtune=native])
+	
+	AX_CXXFLAGS_GCC_OPTION([-static-libgcc])
+	AX_CXXFLAGS_GCC_OPTION([-static-libstdc++])
   ])
 ])
 
