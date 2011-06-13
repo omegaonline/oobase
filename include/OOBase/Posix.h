@@ -25,7 +25,7 @@
 #include "../config-base.h"
 #include "SmartPtr.h"
 
-#if defined(HAVE_UNISTD_H)
+#if defined(HAVE_UNISTD_H) || defined(DOXYGEN)
 
 #include <pwd.h>
 

@@ -24,27 +24,7 @@
 
 #include "Mutex.h"
 
-#if defined(DOXYGEN)
-
-/* Define if you have atomic compare-and-swap for 32bit values */
-#define ATOMIC_CAS_32(t,v)
-
-/* Define if you have atomic inc and dec for 32bit values */
-#define ATOMIC_INC_32(t)
-#define ATOMIC_DEC_32(t)
-#define ATOMIC_ADD_32(t,v)
-#define ATOMIC_SUB_32(t,v)
-
-/* Define if you have atomic compare-and-swap for 64bit values */
-#define ATOMIC_CAS_64(t,v)
-
-/* Define if you have atomic compare-and-swap for 64bit values */
-#define ATOMIC_INC_64(t)
-#define ATOMIC_DEC_64(t)
-#define ATOMIC_ADD_64(t,v)
-#define ATOMIC_SUB_64(t,v)
-
-#elif defined(_MSC_VER)
+#if defined(_MSC_VER)
 
 #include <intrin.h>
 

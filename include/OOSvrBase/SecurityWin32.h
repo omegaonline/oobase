@@ -75,6 +75,9 @@ CreateRestrictedToken(
 #include <WinSafer.h>
 #endif
 
+#endif
+#if defined(_WIN32) || defined(DOXYGEN)
+
 namespace OOSvrBase
 {
 	namespace Win32

@@ -24,7 +24,7 @@
 
 #if defined(_MSC_VER)
 	#include "oobase-msvc.h"
-#else
+#elif !defined(DOXYGEN)
 	// Autoconf
 	#include <oobase-autoconf.h>
 #endif
@@ -111,39 +111,44 @@
 ////////////////////////////////////////
 // Define some standard errors to avoid lots of #ifdefs.
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(DOXYGEN)
 #define ERROR_OUTOFMEMORY ENOMEM
 #endif
 
 ////////////////////////////////////////
 // Byte-order (endian-ness) determination.
-# if defined(BYTE_ORDER)
+
+/// if (OOBASE_BYTE_ORDER == OOBASE_LITTLE_ENDIAN) then the current machine is little-endian
+#define OOBASE_LITTLE_ENDIAN 0x0123
+
+/// if (OOBASE_BYTE_ORDER == OOBASE_BIG_ENDIAN) then the current machine is big-endian
+#define OOBASE_BIG_ENDIAN 0x3210
+
+#if defined(DOXYGEN)
+/// Defines the current byte order
+#define OOBASE_BYTE_ORDER
+
+#elif defined(BYTE_ORDER)
 #   if (BYTE_ORDER == LITTLE_ENDIAN)
-#     define OMEGA_LITTLE_ENDIAN 0x0123
-#     define OMEGA_BYTE_ORDER OMEGA_LITTLE_ENDIAN
+#     define OOBASE_BYTE_ORDER OOBASE_LITTLE_ENDIAN
 #   elif (BYTE_ORDER == BIG_ENDIAN)
-#     define OMEGA_BIG_ENDIAN 0x3210
-#     define OMEGA_BYTE_ORDER OMEGA_BIG_ENDIAN
+#     define OOBASE_BYTE_ORDER OOBASE_BIG_ENDIAN
 #   else
 #     error: unknown BYTE_ORDER!
 #   endif /* BYTE_ORDER */
 # elif defined(_BYTE_ORDER)
 #   if (_BYTE_ORDER == _LITTLE_ENDIAN)
-#     define OMEGA_LITTLE_ENDIAN 0x0123
-#     define OMEGA_BYTE_ORDER OMEGA_LITTLE_ENDIAN
+#     define OOBASE_BYTE_ORDER OOBASE_LITTLE_ENDIAN
 #   elif (_BYTE_ORDER == _BIG_ENDIAN)
-#     define OMEGA_BIG_ENDIAN 0x3210
-#     define OMEGA_BYTE_ORDER OMEGA_BIG_ENDIAN
+#     define OOBASE_BYTE_ORDER OOBASE_BIG_ENDIAN
 #   else
 #     error: unknown _BYTE_ORDER!
 #   endif /* _BYTE_ORDER */
 # elif defined(__BYTE_ORDER)
 #   if (__BYTE_ORDER == __LITTLE_ENDIAN)
-#     define OMEGA_LITTLE_ENDIAN 0x0123
-#     define OMEGA_BYTE_ORDER OMEGA_LITTLE_ENDIAN
+#     define OOBASE_BYTE_ORDER OOBASE_LITTLE_ENDIAN
 #   elif (__BYTE_ORDER == __BIG_ENDIAN)
-#     define OMEGA_BIG_ENDIAN 0x3210
-#     define OMEGA_BYTE_ORDER OMEGA_BIG_ENDIAN
+#     define OOBASE_BYTE_ORDER OOBASE_BIG_ENDIAN
 #   else
 #     error: unknown __BYTE_ORDER!
 #   endif /* __BYTE_ORDER */
@@ -154,12 +159,10 @@
      defined(ARM) || defined(_M_IA64) || \
      defined(_M_AMD64) || defined(__amd64)
     // We know these are little endian.
-#     define OMEGA_LITTLE_ENDIAN 0x0123
-#     define OMEGA_BYTE_ORDER OMEGA_LITTLE_ENDIAN
+#     define OOBASE_BYTE_ORDER OOBASE_LITTLE_ENDIAN
 #   else
     // Otherwise, we assume big endian.
-#     define OMEGA_BIG_ENDIAN 0x3210
-#     define OMEGA_BYTE_ORDER OMEGA_BIG_ENDIAN
+#     define OOBASE_BYTE_ORDER OOBASE_BIG_ENDIAN
 #   endif
 # endif /* ! BYTE_ORDER && ! __BYTE_ORDER */
 
@@ -168,6 +171,7 @@
 
 #ifdef __cplusplus
 
+/// Call OOBase::CallCriticalFailure passing __FILE__ and __LINE__
 #define OOBase_CallCriticalFailure(expr) \
 	OOBase::CallCriticalFailure(__FILE__,__LINE__,expr)
 
@@ -176,10 +180,14 @@ namespace OOBase
 	void CallCriticalFailure(const char* pszFile, unsigned int nLine, const char*);
 	void CallCriticalFailure(const char* pszFile, unsigned int nLine, int);
 
+	/// Return the system supplied error string from error code 'err' . If err == -1, use errno or GetLastError()
 	const char* system_error_text(int err = -1);
 }
 
-#if !defined(HAVE_STATIC_ASSERT)
+#if defined(DOXYGEN)
+/// Compile time assertion, assert that expr == true
+#define static_assert(expr,msg)
+#elif !defined(HAVE_STATIC_ASSERT)
 #define static_assert(expr,msg) \
 	{ struct oobase_static_assert { char static_check[expr ? 1 : -1]; }; }
 #endif

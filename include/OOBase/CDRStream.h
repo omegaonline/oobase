@@ -35,7 +35,7 @@ namespace OOBase
 
 		CDRStream(size_t len = 256) :
 				m_buffer(NULL),
-#if (OMEGA_BYTE_ORDER == OMEGA_BIG_ENDIAN)
+#if (OOBASE_BYTE_ORDER == OMEGA_BIG_ENDIAN)
 				m_big_endian(true),
 #else
 				m_big_endian(false),
@@ -49,7 +49,7 @@ namespace OOBase
 
 		CDRStream(Buffer* buffer) :
 				m_buffer(NULL),
-#if (OMEGA_BYTE_ORDER == OMEGA_BIG_ENDIAN)
+#if (OOBASE_BYTE_ORDER == OMEGA_BIG_ENDIAN)
 				m_big_endian(true),
 #else
 				m_big_endian(false),
@@ -132,7 +132,7 @@ namespace OOBase
 		template <typename T>
 		T byte_swap(const T& val) const
 		{
-#if (OMEGA_BYTE_ORDER == OMEGA_BIG_ENDIAN)
+#if (OOBASE_BYTE_ORDER == OMEGA_BIG_ENDIAN)
 			return (m_big_endian ? val : OOBase::byte_swap(val));
 #else
 			return (!m_big_endian ? val : OOBase::byte_swap(val));

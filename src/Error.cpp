@@ -29,9 +29,12 @@
 
 namespace OOBase
 {
-	// This is the critical failure hook
-	// Return true to avoid frther error printing
-	#if defined(__GNUC__)
+	#if defined(DOXYGEN)
+	/** The critical failure hook.
+	 * Return true to avoid further error printing
+	 * This function is linked as 'weak' so it can be overridden. */
+	bool OnCriticalFailure(const char* msg) { return false; }
+	#elif defined(__GNUC__)
 	__attribute__((weak)) bool OnCriticalFailure(const char* msg) { return false; }
 	#elif defined(_MSC_VER)
 	bool OnCriticalFailure(const char* msg) { return false; }
@@ -89,8 +92,9 @@ namespace
 		}
 	}
 	
-	#endif // _WIN32
-	
+#endif // _WIN32
+
+#if !defined(DOXYGEN)
 	void unexpected()
 	{
 		OOBase::CallCriticalFailure(NULL,0,"Unexpected exception thrown");
@@ -116,7 +120,9 @@ namespace
 			#endif
 		}
 	} s_err_handler;
-#endif
+#endif // !defined(OOBASE_NO_ERROR_HANDLERS)
+	
+#endif // !defined(DOXYGEN)
 }
 
 const char* OOBase::system_error_text(int err)

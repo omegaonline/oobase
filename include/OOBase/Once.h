@@ -35,15 +35,15 @@ namespace OOBase
 {
 	namespace Once
 	{
-		/** \typedef once_t
-		 *  The platform specific 'once' type.
-		 */
-
+#if defined(DOXYGEN)
+		/// The platform specific 'once' type.
+		struct once_t {};
+		
 		/** \def ONCE_T_INIT
 		 *  The platform specific 'once' type initialiser
 		 */
-
-#if defined(_WIN32)
+		#define ONCE_T_INIT
+#elif defined(_WIN32)
 		typedef INIT_ONCE once_t;
 		#define ONCE_T_INIT {0}
 #elif defined(HAVE_PTHREAD)

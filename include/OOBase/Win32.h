@@ -24,7 +24,7 @@
 
 #include "../config-base.h"
 
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(DOXYGEN)
 
 namespace OOBase
 {
@@ -100,6 +100,7 @@ namespace OOBase
 			HANDLE m_handle;
 		};	
 
+#if !defined(DOXYGEN)
 		class rwmutex_t
 		{
 		public:
@@ -135,8 +136,11 @@ namespace OOBase
 			SmartHandle      m_sema;
 			SmartHandle      m_waiters_done;
 		};
+#endif // !defined(DOXYGEN)
 	}
 }
+
+#if !defined(DOXYGEN)
 
 #if (WINVER < 0x0600)
 	typedef OOBase::Win32::condition_variable_t* CONDITION_VARIABLE;
@@ -169,6 +173,7 @@ namespace OOBase
 		};
 	}
 }
+#endif // !defined(DOXYGEN)
 
 #endif // defined(_WIN32)
 

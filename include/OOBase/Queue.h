@@ -112,13 +112,7 @@ namespace OOBase
 			size_t new_size = (m_capacity == 0 ? 8 : m_capacity * 2);
 			T* new_data = static_cast<T*>(Allocator::allocate(new_size*sizeof(T)));
 			if (!new_data)
-			{
-#if defined(_WIN32)
 				return ERROR_OUTOFMEMORY;
-#else
-				return ENOMEM;
-#endif
-			}
 				
 			// Now copy the contents of m_data into new_data
 			size_t new_back = 0;
