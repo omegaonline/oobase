@@ -79,8 +79,7 @@ namespace OOBase
 		{
 			Guard<SpinLock> guard(m_lock);
 
-			Node node(NULL,NULL);
-			while (m_list.pop(&node))
+			for (Node node(NULL,NULL);m_list.pop(&node);)
 			{
 				guard.release();
 
