@@ -24,8 +24,12 @@
 
 #include <stdlib.h>
 #include <signal.h>
-
+#include <string.h>
 #include <exception>
+
+#if defined(_WIN32)
+#include <process.h>
+#endif
 
 namespace OOBase
 {
@@ -40,7 +44,7 @@ namespace OOBase
 	bool OnCriticalFailure(const char* msg) { return false; }
 	#else
 	#error Weak symbol support for your compiler?
-	#endif	
+	#endif
 
 	namespace detail
 	{
@@ -48,12 +52,10 @@ namespace OOBase
 	}
 }
 
-#if defined(_WIN32)
-
-#include <process.h>
-
 namespace
 {
+#if defined(_WIN32)
+
 	VOID WINAPI DummyServiceMain(DWORD /*dwArgc*/, LPWSTR* /*lpszArgv*/) { }
 
 	bool format_msg(char* err_buf, size_t err_len, DWORD dwErr, HMODULE hModule)
@@ -91,7 +93,7 @@ namespace
 			return false;
 		}
 	}
-	
+
 #endif // _WIN32
 
 #if !defined(DOXYGEN)
@@ -99,12 +101,12 @@ namespace
 	{
 		OOBase::CallCriticalFailure(NULL,0,"Unexpected exception thrown");
 	}
-	
+
 	void terminate()
 	{
 		OOBase::CallCriticalFailure(NULL,0,"Unhandled exception");
 	}
-	
+
 #if !defined(OOBASE_NO_ERROR_HANDLERS)
 	static struct install_handlers
 	{
@@ -112,7 +114,7 @@ namespace
 		{
 			std::set_unexpected(&unexpected);
 			std::set_terminate(&terminate);
-			
+
 			#if defined(_WIN32)
 				const DWORD new_mask = SEM_FAILCRITICALERRORS|SEM_NOOPENFILEERRORBOX;
 				DWORD mask = SetErrorMode(new_mask);
@@ -121,7 +123,7 @@ namespace
 		}
 	} s_err_handler;
 #endif // !defined(OOBASE_NO_ERROR_HANDLERS)
-	
+
 #endif // !defined(DOXYGEN)
 }
 
@@ -129,19 +131,19 @@ const char* OOBase::system_error_text(int err)
 {
 	static const char unknown_error[] = "Unknown error or error in processing";
 	bool ok = false;
-	
+
 	size_t err_len = 0;
 	char* err_buf = OOBase::detail::get_error_buffer(err_len);
 
 	int offset = snprintf_s(err_buf,err_len,"(%x) ",err);
 	if (offset == -1)
 		offset = 0;
-	
+
 #if defined(_WIN32)
 
 	if (err == -1)
 		err = GetLastError();
-	
+
 	if (!(err & 0xC0000000))
 		ok = format_msg(err_buf+offset,err_len-offset,err,NULL);
 	else
@@ -165,7 +167,7 @@ const char* OOBase::system_error_text(int err)
 	}
 #endif
 #endif
-	
+
 	if (!ok)
 		memcpy(err_buf,unknown_error,sizeof(unknown_error));
 
@@ -179,8 +181,8 @@ void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, int er
 
 void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, const char* msg)
 {
-	static char szBuf[1024] = {0};		
-	
+	static char szBuf[1024] = {0};
+
 	if (pszFile)
 	{
 		snprintf_s(szBuf,sizeof(szBuf),
@@ -193,16 +195,16 @@ void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, const 
 			"Critical error '%s' has occurred in the application.  "
 			"The application will now terminate.\n",msg);
 	}
-	
+
 	bool bReport = false;
 	if (!OOBase::OnCriticalFailure(szBuf))
 	{
 		bReport = true;
-		
+
 #if defined(_WIN32)
 		// Output to the debugger
-		OutputDebugStringA(szBuf);		
-		
+		OutputDebugStringA(szBuf);
+
 		// Try to detect if we are running as a service
 		static wchar_t sn[] = L"";
 		static SERVICE_TABLE_ENTRYW ste[] =
@@ -210,7 +212,7 @@ void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, const 
 			{sn, &DummyServiceMain },
 			{NULL, NULL}
 		};
-		
+
 		if (!StartServiceCtrlDispatcherW(ste) && GetLastError() == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT)
 		{
 			if (GetConsoleWindow() == NULL)
@@ -237,7 +239,7 @@ void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, const 
 	TerminateProcess(GetCurrentProcess(),EXIT_FAILURE);
 #else
 	#if defined(_DEBUG)
-		signal(SIGINT);
+		raise(SIGINT);
 	#endif
 	abort();
 #endif
