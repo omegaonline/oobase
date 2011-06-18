@@ -182,6 +182,11 @@ namespace OOBase
 
 	/// Return the system supplied error string from error code 'err' . If err == -1, use errno or GetLastError()
 	const char* system_error_text(int err = -1);
+
+	typedef bool (*OnCriticalFailure)(const char*);
+
+	/// Override the default critical failure behaviour
+	OnCriticalFailure SetCriticalFailure(OnCriticalFailure pfn);
 }
 
 #if defined(DOXYGEN)

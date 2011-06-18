@@ -33,19 +33,6 @@
 
 namespace OOBase
 {
-	#if defined(DOXYGEN)
-	/** The critical failure hook.
-	 * Return true to avoid further error printing
-	 * This function is linked as 'weak' so it can be overridden. */
-	bool OnCriticalFailure(const char* msg) { return false; }
-	#elif defined(__GNUC__)
-	__attribute__((weak)) bool OnCriticalFailure(const char* msg) { return false; }
-	#elif defined(_MSC_VER)
-	bool OnCriticalFailure(const char* msg) { return false; }
-	#else
-	#error Weak symbol support for your compiler?
-	#endif
-
 	namespace detail
 	{
 		char* get_error_buffer(size_t& len);
@@ -95,6 +82,13 @@ namespace
 	}
 
 #endif // _WIN32
+
+	bool DefaultOnCriticalFailure(const char* /*msg*/) 
+	{ 
+		return false; 
+	}
+
+	static bool (*s_pfnCriticalFailure)(const char*) = &DefaultOnCriticalFailure;
 
 #if !defined(DOXYGEN)
 	void unexpected()
@@ -197,7 +191,7 @@ void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, const 
 	}
 
 	bool bReport = false;
-	if (!OOBase::OnCriticalFailure(szBuf))
+	if (!(*s_pfnCriticalFailure)(szBuf))
 	{
 		bReport = true;
 
@@ -243,4 +237,15 @@ void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, const 
 	#endif
 	abort();
 #endif
+}
+
+OOBase::OnCriticalFailure OOBase::SetCriticalFailure(OnCriticalFailure pfn)
+{
+	OnCriticalFailure oldVal = NULL;
+	do
+	{
+		oldVal = s_pfnCriticalFailure;
+	} while (Atomic<OnCriticalFailure>::CompareAndSwap(s_pfnCriticalFailure,oldVal,pfn) != oldVal);
+
+	return oldVal;
 }
