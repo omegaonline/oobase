@@ -57,7 +57,7 @@ int OOSvrBase::Db::Statement::prepare(Database& db, const char* pszStatement, ..
 	if (err != SQLITE_OK)
 		LOG_ERROR_RETURN(("sqlite3_prepare_v2 failed: %s",sqlite3_errmsg(db.m_db)),err);
 
-	return 0;
+	return err;
 }
 
 int OOSvrBase::Db::Statement::step()
@@ -137,7 +137,7 @@ bool OOSvrBase::Db::Database::open(const char* pszDb, int flags)
 {
 	assert(!m_db);
 
-	int err = sqlite3_open_v2(pszDb,&m_db,SQLITE_OPEN_FULLMUTEX | flags /*SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE*/,NULL);
+	int err = sqlite3_open_v2(pszDb,&m_db,SQLITE_OPEN_FULLMUTEX | flags,NULL);
 	if (err != SQLITE_OK)
 	{
 		if (!m_db)
