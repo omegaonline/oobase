@@ -274,8 +274,8 @@ namespace
 		{
 			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-			//bool e = m_setEntries.erase(ptr);
-			//assert(e);
+			bool e = m_setEntries.erase(ptr);
+			assert(e);
 
 			OOBase::CrtAllocator::free(ptr);
 		}
