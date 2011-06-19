@@ -24,7 +24,7 @@
 #if defined(_WIN32)
 
 OOBase::DLL::DLL() :
-		m_module(0)
+		m_module(NULL)
 {
 }
 
@@ -50,14 +50,14 @@ bool OOBase::DLL::unload()
 	if (!FreeLibrary(m_module))
 		return false;
 
-	m_module = 0;
+	m_module = NULL;
 	return true;
 }
 
 void* OOBase::DLL::symbol(const char* sym_name)
 {
 	if (!m_module)
-		return 0;
+		return NULL;
 
 	return (void*)GetProcAddress(m_module,sym_name);
 }
@@ -65,6 +65,15 @@ void* OOBase::DLL::symbol(const char* sym_name)
 #else
 
 #include "../include/OOBase/Singleton.h"
+
+namespace OOBase
+{
+	// The discrimination type for singleton scoping for this module
+	struct Module
+	{
+		int unused;
+	};
+}
 
 namespace
 {
@@ -89,11 +98,11 @@ namespace
 		OOBase::Mutex m_lock;
 	};
 
-	typedef OOBase::Singleton<Libtool_Helper> LT_HELPER;
+	typedef OOBase::Singleton<Libtool_Helper,OOBase::Module> LT_HELPER;
 }
 
 OOBase::DLL::DLL() :
-		m_module(0)
+		m_module(NULL)
 {
 }
 
@@ -145,14 +154,14 @@ bool OOBase::DLL::unload()
 	if (lt_dlclose(m_module))
 		return false;
 
-	m_module = 0;
+	m_module = NULL;
 	return true;
 }
 
 void* OOBase::DLL::symbol(const char* sym_name)
 {
 	if (!m_module)
-		return 0;
+		return NULL;
 
 	OOBase::Guard<OOBase::Mutex> guard(LT_HELPER::instance().m_lock);
 

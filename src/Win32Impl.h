@@ -22,8 +22,8 @@
 #ifndef OOBASE_WIN32_IMPL_H_INCLUDED_
 #define OOBASE_WIN32_IMPL_H_INCLUDED_
 
-#include "../include/OOBase/Allocator.h"
-#include "../include/OOBase/Win32.h"
+#include "../include/OOBase/Once.h"
+#include "../include/OOBase/Mutex.h"
 
 #if defined(_WIN32)
 
@@ -35,8 +35,6 @@ namespace OOBase
 {
 	namespace Win32
 	{
-		OOBase::string FormatMessage(DWORD dwErr = GetLastError());
-
 		BOOL InitOnceExecuteOnce(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context);
 		
 		void InitializeSRWLock(SRWLOCK* SRWLock);

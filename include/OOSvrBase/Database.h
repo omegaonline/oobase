@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2008 Rick Taylor
+// Copyright (C) 2008,2011 Rick Taylor
 //
 // This file is part of OOSvrBase, the Omega Online Base library.
 //
@@ -22,8 +22,6 @@
 #ifndef OOSVRBASE_DATABASE_H_INCLUDED_
 #define OOSVRBASE_DATABASE_H_INCLUDED_
 
-#include "../OOBase/SmartPtr.h"
-
 #if !defined(HAVE_SQLITE3) && !defined(HAVE_SQLITE3_AMALGAMATION)
 #error SQLite3 required!
 #else
@@ -34,15 +32,37 @@ namespace OOSvrBase
 {
 	namespace Db
 	{
+		class Database
+		{
+			friend class Statement;
+			friend class Transaction;
+		
+		public:
+			Database();
+			~Database();
+
+			bool open(const char* pszDb, int flags);
+			int exec(const char* pszSQL);
+						
+			sqlite3_int64 last_insert_rowid();
+			
+		private:
+			sqlite3* m_db;
+
+			Database(const Database&);
+			Database& operator = (const Database&);
+		};
+		
 		class Statement
 		{
-			friend class Database;
-
 		public:
+			Statement(sqlite3_stmt* pStmt = NULL);
 			~Statement();
+			
+			int prepare(Database& db, const char* pszStatement, ...);
 
 			int step();
-			int reset();
+			int reset(bool log = true);
 
 			int column_int(int iCol);
 			const char* column_text(int iCol);
@@ -53,16 +73,7 @@ namespace OOSvrBase
 			int bind_int64(int index, const sqlite3_int64& val);
 			int bind_string(int index, const char* val, size_t len);
 
-			template <typename Alloc>
-			int bind_string(int index, const std::basic_string<char,std::char_traits<char>,Alloc>& val)
-			{
-				return bind_string(index,val.c_str(),val.length());
-			}
-
-			sqlite3_stmt* statement();
-
 		private:
-			Statement(sqlite3_stmt* pStmt);
 			Statement(const Statement&);
 			Statement& operator = (const Statement&);
 
@@ -77,7 +88,7 @@ namespace OOSvrBase
 
 			~Resetter()
 			{
-				m_stmt.reset();
+				m_stmt.reset(false);
 			}
 
 		private:
@@ -89,41 +100,19 @@ namespace OOSvrBase
 
 		class Transaction
 		{
-			friend class Database;
-
 		public:
+			Transaction(Database& db);
 			~Transaction();
 
+			int begin(const char* pszType = NULL);
 			int commit();
 			int rollback();
 
 		private:
-			Transaction(sqlite3* db);
 			Transaction(const Transaction&);
 			Transaction& operator = (const Transaction&);
 
 			sqlite3* m_db;
-		};
-
-		class Database
-		{
-		public:
-			Database();
-			~Database();
-
-			bool open(const char* pszDb, int flags);
-			int exec(const char* pszSQL);
-
-			sqlite3* database();
-
-			int begin_transaction(OOBase::SmartPtr<Transaction>& ptrTrans, const char* pszType = 0);
-			int prepare_statement(OOBase::SmartPtr<Statement>& ptrStmt, const char* pszStatement, ...);
-
-		private:
-			sqlite3* m_db;
-
-			Database(const Database&);
-			Database& operator = (const Database&);
 		};
 	}
 }

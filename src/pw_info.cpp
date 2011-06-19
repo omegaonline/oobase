@@ -24,7 +24,7 @@
 #if defined(HAVE_UNISTD_H)
 
 OOBase::POSIX::pw_info::pw_info(uid_t uid) :
-		m_pwd(0), m_buf_len(1024)
+		m_pwd(NULL), m_buf_len(1024)
 {
 #if defined(_SC_GETPW_R_SIZE_MAX) && defined(HAVE_UNISTD_H)
 	m_buf_len = sysconf(_SC_GETPW_R_SIZE_MAX) + 1;
@@ -36,16 +36,16 @@ OOBase::POSIX::pw_info::pw_info(uid_t uid) :
 	if (m_buf_len <= 0)
 		m_buf_len = 1024;
 
-	OOBASE_NEW(m_buffer,char[m_buf_len]);
+	m_buffer = static_cast<char*>(OOBase::HeapAllocate(m_buf_len));
 	if (!m_buffer)
-		OOBase_OutOfMemory();
+		OOBase_CallCriticalFailure(ENOMEM);
 
 	if (::getpwuid_r(uid,&m_pwd2,m_buffer,m_buf_len,&m_pwd) != 0)
-		m_pwd = 0;
+		m_pwd = NULL;
 }
 
 OOBase::POSIX::pw_info::pw_info(const char* uname) :
-		m_pwd(0), m_buf_len(1024)
+		m_pwd(NULL), m_buf_len(1024)
 {
 #if defined(_SC_GETPW_R_SIZE_MAX) && defined(HAVE_UNISTD_H)
 	m_buf_len = sysconf(_SC_GETPW_R_SIZE_MAX) + 1;
@@ -57,12 +57,12 @@ OOBase::POSIX::pw_info::pw_info(const char* uname) :
 	if (m_buf_len <= 0)
 		m_buf_len = 1024;
 
-	OOBASE_NEW(m_buffer,char[m_buf_len]);
+	m_buffer = static_cast<char*>(OOBase::HeapAllocate(m_buf_len));
 	if (!m_buffer)
-		OOBase_OutOfMemory();
+		OOBase_CallCriticalFailure(ENOMEM);
 
 	if (::getpwnam_r(uname,&m_pwd2,m_buffer,m_buf_len,&m_pwd) != 0)
-		m_pwd = 0;
+		m_pwd = NULL;
 }
 
 #endif

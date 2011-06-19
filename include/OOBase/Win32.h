@@ -24,7 +24,7 @@
 
 #include "../config-base.h"
 
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(DOXYGEN)
 
 namespace OOBase
 {
@@ -75,7 +75,7 @@ namespace OOBase
 
 			bool is_valid() const
 			{
-				return (m_handle != 0 && m_handle != INVALID_HANDLE_VALUE);
+				return (m_handle != NULL && m_handle != INVALID_HANDLE_VALUE);
 			}
 
 			HANDLE* operator &()
@@ -100,6 +100,7 @@ namespace OOBase
 			HANDLE m_handle;
 		};	
 
+#if !defined(DOXYGEN)
 		class rwmutex_t
 		{
 		public:
@@ -135,7 +136,21 @@ namespace OOBase
 			SmartHandle      m_sema;
 			SmartHandle      m_waiters_done;
 		};
+#endif // !defined(DOXYGEN)
+	}
+}
 
+#if !defined(DOXYGEN)
+
+#if (WINVER < 0x0600)
+	typedef OOBase::Win32::condition_variable_t* CONDITION_VARIABLE;
+	typedef OOBase::Win32::rwmutex_t* SRWLOCK;
+#endif
+
+namespace OOBase
+{
+	namespace Win32
+	{
 		class condition_mutex_t
 		{
 			// We need private access in this function
@@ -158,6 +173,7 @@ namespace OOBase
 		};
 	}
 }
+#endif // !defined(DOXYGEN)
 
 #endif // defined(_WIN32)
 

@@ -25,7 +25,7 @@
 #include "../config-base.h"
 #include "SmartPtr.h"
 
-#if defined(HAVE_UNISTD_H)
+#if defined(HAVE_UNISTD_H) || defined(DOXYGEN)
 
 #include <pwd.h>
 
@@ -48,7 +48,7 @@ namespace OOBase
 
 			inline bool operator !() const
 			{
-				return (m_pwd==0);
+				return (m_pwd == NULL);
 			}
 
 		private:
@@ -58,7 +58,7 @@ namespace OOBase
 			struct passwd  m_pwd2;
 			size_t         m_buf_len;
 
-			OOBase::SmartPtr<char,OOBase::ArrayDestructor<char> > m_buffer;
+			OOBase::SmartPtr<char,OOBase::HeapDestructor> m_buffer;
 		};
 	}
 }

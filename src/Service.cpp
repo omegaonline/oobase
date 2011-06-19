@@ -22,6 +22,7 @@
 #include "../include/OOSvrBase/Service.h"
 #include "../include/OOSvrBase/Logger.h"
 #include "../include/OOBase/Singleton.h"
+#include "../include/OOBase/String.h"
 #include "../include/OOBase/Posix.h"
 #include "Win32Impl.h"
 
@@ -30,6 +31,15 @@
 #endif
 
 #if defined(_WIN32)
+
+namespace OOBase
+{
+	// The discrimination type for singleton scoping for this module
+	struct Module
+	{
+		int unused;
+	};
+}
 
 namespace
 {
@@ -46,7 +56,7 @@ namespace
 		OOBase::Condition        m_condition;
 		int                      m_result;
 	};
-	typedef OOBase::Singleton<QuitData> QUIT;
+	typedef OOBase::Singleton<QuitData,OOBase::Module> QUIT;
 
 	BOOL WINAPI control_c(DWORD evt)
 	{
@@ -57,7 +67,7 @@ namespace
 	QuitData::QuitData() : m_result(-1)
 	{
 		if (!SetConsoleCtrlHandler(control_c,TRUE))
-			LOG_ERROR(("SetConsoleCtrlHandler failed: %s",OOBase::Win32::FormatMessage().c_str()));
+			LOG_ERROR(("SetConsoleCtrlHandler failed: %s",OOBase::system_error_text()));
 	}
 
 	void QuitData::signal(int how)
@@ -114,9 +124,9 @@ void OOSvrBase::Server::quit()
 
 namespace
 {
-	static SERVICE_STATUS_HANDLE s_ssh = 0;
+	static SERVICE_STATUS_HANDLE s_ssh = (SERVICE_STATUS_HANDLE)NULL;
 
-	static VOID WINAPI ServiceCtrl(DWORD dwControl)
+	VOID WINAPI ServiceCtrl(DWORD dwControl)
 	{
 		SERVICE_STATUS ss = {0};
 		ss.dwControlsAccepted = SERVICE_ACCEPT_STOP|SERVICE_ACCEPT_SHUTDOWN;
@@ -158,7 +168,7 @@ namespace
 		}
 	}
 
-	static VOID WINAPI ServiceMain(DWORD /*dwArgc*/, LPWSTR* lpszArgv)
+	VOID WINAPI ServiceMain(DWORD /*dwArgc*/, LPWSTR* lpszArgv)
 	{
 		SERVICE_STATUS ss = {0};
 		ss.dwControlsAccepted = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN | SERVICE_ACCEPT_PARAMCHANGE;
@@ -167,7 +177,7 @@ namespace
 		// Register the service ctrl handler.
 		s_ssh = RegisterServiceCtrlHandlerW(lpszArgv[0],&ServiceCtrl);
 		if (!s_ssh)
-			LOG_ERROR(("RegisterServiceCtrlHandlerW failed: %s",OOBase::Win32::FormatMessage().c_str()));
+			LOG_ERROR(("RegisterServiceCtrlHandlerW failed: %s",OOBase::system_error_text()));
 		else
 		{
 			ss.dwCurrentState = SERVICE_RUNNING;
@@ -211,7 +221,7 @@ int OOSvrBase::Service::wait_for_quit()
 			return Server::wait_for_quit();
 		}
 		else
-			LOG_ERROR(("StartServiceCtrlDispatcherW failed: %s",OOBase::Win32::FormatMessage().c_str()));
+			LOG_ERROR(("StartServiceCtrlDispatcherW failed: %s",OOBase::system_error_text()));
 	}
 
 	// By the time we get here, it's all over
@@ -229,7 +239,7 @@ OOSvrBase::Server::Server()
 
 	int err = pthread_sigmask(SIG_BLOCK, &m_set, NULL);
 	if (err != 0)
-		LOG_ERROR(("pthread_sigmask failed: %s",OOBase::system_error_text(err).c_str()));
+		LOG_ERROR(("pthread_sigmask failed: %s",OOBase::system_error_text(err)));
 }
 
 int OOSvrBase::Server::wait_for_quit()
@@ -262,11 +272,11 @@ bool OOSvrBase::Service::pid_file(const char* pszPidFile)
 
 	int fd = open(pszPidFile, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 	if (fd < 0)
-		LOG_ERROR_RETURN(("Failed to open %s: %s",pszPidFile,OOBase::system_error_text(errno).c_str()),false);
+		LOG_ERROR_RETURN(("Failed to open %s: %s",pszPidFile,OOBase::system_error_text()),false);
 
 	int err = OOBase::POSIX::set_close_on_exec(fd,true);
 	if (err != 0)
-		LOG_ERROR_RETURN(("Failed to set close_on_exec %s: %s",pszPidFile,OOBase::system_error_text(err).c_str()),false);
+		LOG_ERROR_RETURN(("Failed to set close_on_exec %s: %s",pszPidFile,OOBase::system_error_text(err)),false);
 
 	struct flock fl = {0};
 	fl.l_type = F_WRLCK;
@@ -282,15 +292,17 @@ bool OOSvrBase::Service::pid_file(const char* pszPidFile)
 			return false;
 		}
 		else
-			LOG_ERROR_RETURN(("Failed to lock %s: %s",pszPidFile,OOBase::system_error_text(errno).c_str()),false);
+			LOG_ERROR_RETURN(("Failed to lock %s: %s",pszPidFile,OOBase::system_error_text()),false);
 	}
 
 	ftruncate(fd,0);
 
-	OOBase::ostringstream os;
-	os << getpid();
-	OOBase::string str = os.str();
-	write(fd,str.c_str(),str.size()+1);
+	OOBase::LocalString str;
+	err = str.printf("%d",getpid());
+	if (err != 0)
+		LOG_ERROR_RETURN(("Failed to allocate string: %s",OOBase::system_error_text(err)),false);
+
+	write(fd,str.c_str(),str.length()+1);
 
 	return true;
 #endif

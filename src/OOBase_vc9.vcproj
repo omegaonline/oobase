@@ -313,6 +313,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\String.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Thread.cpp"
 				>
 			</File>
@@ -347,11 +351,11 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath="..\include\OOBase\Allocator.h"
+				RelativePath="..\include\OOBase\Atomic.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\Atomic.h"
+				RelativePath="..\include\OOBase\BoundedQueue.h"
 				>
 			</File>
 			<File
@@ -387,6 +391,18 @@
 				>
 			</File>
 			<File
+				RelativePath="..\include\OOBase\HandleTable.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\HashTable.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\Memory.h"
+				>
+			</File>
+			<File
 				RelativePath="..\include\OOBase\Mutex.h"
 				>
 			</File>
@@ -416,6 +432,18 @@
 			</File>
 			<File
 				RelativePath="..\include\OOBase\Socket.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\Stack.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\String.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\Table.h"
 				>
 			</File>
 			<File

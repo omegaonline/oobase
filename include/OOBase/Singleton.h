@@ -22,11 +22,12 @@
 #ifndef OOBASE_SINGLETON_H_INCLUDED_
 #define OOBASE_SINGLETON_H_INCLUDED_
 
+#include "Memory.h"
 #include "Destructor.h"
 
 namespace OOBase
 {
-	template <typename T, typename DLL = OOBase::Module>
+	template <typename T, typename DLL>
 	class Singleton
 	{
 	public:
@@ -50,22 +51,32 @@ namespace OOBase
 
 		static void init()
 		{
-			OOBASE_NEW_T_CRITICAL(T,s_instance,T());
+			void* p = OOBase::HeapAllocate(sizeof(T));
+			if (!p)
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 			
-			DLLDestructor<DLL>::add_destructor(&destroy,0);
+			s_instance = ::new (p) T();
+			
+			DLLDestructor<DLL>::add_destructor(&destroy,NULL);
 		}
 
-		static void destroy(void* = 0)
+		static void destroy(void*)
 		{
 			assert(s_instance != reinterpret_cast<T*>((uintptr_t)0xdeadbeef));
 
-			OOBASE_DELETE(T,s_instance);
+			T* p = s_instance;
 			s_instance = reinterpret_cast<T*>((uintptr_t)0xdeadbeef);
+			
+			if (p)
+			{
+				p->~T();
+				OOBase::HeapFree(p);
+			}
 		}
 	};
 
 	template <typename T, typename DLL>
-	T* Singleton<T,DLL>::s_instance = 0;
+	T* Singleton<T,DLL>::s_instance;
 }
 
 #endif // OOBASE_SINGLETON_H_INCLUDED_

@@ -22,6 +22,7 @@
 #ifndef OOBASE_SMARTPTR_H_INCLUDED_
 #define OOBASE_SMARTPTR_H_INCLUDED_
 
+#include "Memory.h"
 #include "Atomic.h"
 
 namespace OOBase
@@ -32,17 +33,25 @@ namespace OOBase
 	public:
 		static void destroy(T* ptr)
 		{
-			OOBASE_DELETE(T,ptr);
+			delete ptr;
 		}
 	};
 
-	template <int T>
-	class FreeDestructor
+	class HeapDestructor
 	{
 	public:
 		static void destroy(void* ptr)
 		{
-			::OOBase::Free(ptr,T);
+			OOBase::HeapFree(ptr);
+		}
+	};
+
+	class LocalDestructor
+	{
+	public:
+		static void destroy(void* ptr)
+		{
+			OOBase::LocalFree(ptr);
 		}
 	};
 
@@ -54,10 +63,14 @@ namespace OOBase
 			class SmartPtrNode
 			{
 			public:
-				SmartPtrNode(T* data = 0) :
-						m_data(data),
-						m_refcount(1)
-				{}
+				static SmartPtrNode* create(T* data = NULL)
+				{
+					void* p = OOBase::HeapAllocate(sizeof(SmartPtrNode));
+					if (!p)
+						OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+					
+					return ::new (p) SmartPtrNode(data);
+				}
 
 				void addref()
 				{
@@ -67,7 +80,11 @@ namespace OOBase
 				void release()
 				{
 					if (--m_refcount == 0)
-						OOBASE_DELETE(SmartPtrNode,this);
+					{
+						void* p = this;
+						this->~SmartPtrNode();
+						OOBase::HeapFree(p);
+					}
 				}
 
 				T* value()
@@ -83,11 +100,16 @@ namespace OOBase
 				T* detach()
 				{
 					T* d = m_data;
-					m_data = 0;
+					m_data = NULL;
 					return d;
 				}
 
 			private:
+				SmartPtrNode(T* data = NULL) :
+						m_data(data),
+						m_refcount(1)
+				{}
+					
 				~SmartPtrNode()
 				{
 					Destructor::destroy(m_data);
@@ -98,10 +120,10 @@ namespace OOBase
 			};
 
 		public:
-			SmartPtrImpl(T* ptr = 0) : m_node(0)
+			SmartPtrImpl(T* ptr = NULL) : m_node(0)
 			{
 				if (ptr)
-					OOBASE_NEW_T_CRITICAL(SmartPtrNode,m_node,SmartPtrNode(ptr));
+					m_node = SmartPtrNode::create(ptr);
 			}
 
 			SmartPtrImpl(const SmartPtrImpl& rhs) : m_node(rhs.m_node)
@@ -115,11 +137,11 @@ namespace OOBase
 				if (m_node)
 				{
 					m_node->release();
-					m_node = 0;
+					m_node = NULL;
 				}
 
 				if (ptr)
-					OOBASE_NEW_T_CRITICAL(SmartPtrNode,m_node,SmartPtrNode(ptr));
+					m_node = SmartPtrNode::create(ptr);
 				
 				return *this;
 			}
@@ -131,7 +153,7 @@ namespace OOBase
 					if (m_node)
 					{
 						m_node->release();
-						m_node = 0;
+						m_node = NULL;
 					}
 
 					m_node = rhs.m_node;
@@ -150,12 +172,12 @@ namespace OOBase
 
 			T* detach()
 			{
-				T* v = 0;
+				T* v = NULL;
 				if (m_node)
 				{
 					v = m_node->detach();
 					m_node->release();
-					m_node = 0;
+					m_node = NULL;
 				}
 				return v;
 			}
@@ -173,12 +195,12 @@ namespace OOBase
 		protected:
 			T* value()
 			{
-				return (m_node ? m_node->value() : 0);
+				return (m_node ? m_node->value() : NULL);
 			}
 
 			const T* value() const
 			{
-				return (m_node ? m_node->value() : 0);
+				return (m_node ? m_node->value() : NULL);
 			}
 
 		private:
@@ -190,8 +212,9 @@ namespace OOBase
 	class SmartPtr : public detail::SmartPtrImpl<T,Destructor>
 	{
 		typedef detail::SmartPtrImpl<T,Destructor> baseClass;
+
 	public:
-		SmartPtr(T* ptr = 0) : baseClass(ptr)
+		SmartPtr(T* ptr = NULL) : baseClass(ptr)
 		{}
 
 		SmartPtr(const SmartPtr& rhs) : baseClass(rhs)
@@ -213,14 +236,14 @@ namespace OOBase
 
 		T* operator ->()
 		{
-			assert(baseClass::value() != 0);
+			assert(baseClass::value() != NULL);
 
 			return baseClass::value();
 		}
 
 		const T* operator ->() const
 		{
-			assert(baseClass::value() != 0);
+			assert(baseClass::value() != NULL);
 
 			return baseClass::value();
 		}
@@ -231,7 +254,7 @@ namespace OOBase
 	{
 		typedef detail::SmartPtrImpl<void,Destructor> baseClass;
 	public:
-		SmartPtr(void* ptr = 0) : baseClass(ptr)
+		SmartPtr(void* ptr = NULL) : baseClass(ptr)
 		{}
 
 		SmartPtr(const SmartPtr& rhs) : baseClass(rhs)

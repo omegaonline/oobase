@@ -22,14 +22,12 @@
 #include "../include/OOBase/Singleton.h"
 #include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/tr24731.h"
+#include "../include/OOBase/String.h"
 
 #include "../include/OOSvrBase/Logger.h"
 #include "../include/OOSvrBase/SecurityWin32.h"
 
-#include <stdio.h>
-
 #if defined(_WIN32)
-#include <io.h>
 #define getpid GetCurrentProcessId
 #endif // _WIN32
 
@@ -46,6 +44,15 @@
 #include <syslog.h>
 #endif // HAVE_ASL_H/HAVE_SYSLOG_H
 
+namespace OOBase
+{
+	// The discrimination type for singleton scoping for this module
+	struct Module
+	{
+		int unused;
+	};
+}
+
 namespace
 {
 #if defined(_WIN32)
@@ -56,7 +63,7 @@ namespace
 		~Win32Logger();
 
 		void open(const char* name);
-		void log(OOSvrBase::Logger::Priority priority, const char* fmt, va_list args);
+		void log(OOSvrBase::Logger::Priority priority, const char* msg);
 
 	private:
 		OOBase::Mutex m_lock;
@@ -65,7 +72,7 @@ namespace
 #endif
 
 #if defined(HAVE_ASL_H)
-	
+
 	class ASLLogger
 	{
 #error Fix me!
@@ -79,7 +86,7 @@ namespace
 		~SysLogLogger();
 
 		void open(const char* name);
-		void log(OOSvrBase::Logger::Priority priority, const char* fmt, va_list args);
+		void log(OOSvrBase::Logger::Priority priority, const char* msg);
 
 	private:
 		OOBase::Mutex m_lock;
@@ -91,35 +98,9 @@ namespace
 	public:
 		static void destroy(void* ptr)
 		{
-			::free(ptr);
+			OOBase::CrtAllocator::free(ptr);
 		}
 	};
-
-	std::string string_printf(const char* fmt, va_list args)
-	{
-		for (size_t len=256;;)
-		{
-			OOBase::SmartPtr<char,CrtFreeDestructor> buf = static_cast<char*>(::malloc(len));
-			if (!buf)
-				OOBase::CallCriticalFailureMem(__FILE__,__LINE__-2);
-
-			int len2 = vsnprintf_s(buf,len,fmt,args);
-			if (len2 < 0)
-				OOBase_CallCriticalFailure("vsnprintf_s failed");
-
-			try
-			{
-				if (static_cast<size_t>(len2) < len)
-					return std::string(buf,len2);
-			}
-			catch (std::exception& e)
-			{
-				OOBase_CallCriticalFailure(e.what());
-			}
-
-			len = len2 + 1;
-		}
-	}
 
 	/** \typedef LOGGER
 	 *  The logger singleton.
@@ -127,11 +108,11 @@ namespace
 	 *  e.g. \link Win32Logger \endlink , \link ASLLogger \endlink or \link SysLogLogger \endlink
 	 */
 #if defined(_WIN32)
-	typedef OOBase::Singleton<Win32Logger> LOGGER;
+	typedef OOBase::Singleton<Win32Logger,OOBase::Module> LOGGER;
 #elif defined(HAVE_ASL_H)
-	typedef OOBase::Singleton<ASLLogger> LOGGER;
+	typedef OOBase::Singleton<ASLLogger,OOBase::Module> LOGGER;
 #elif defined(HAVE_SYSLOG_H)
-	typedef OOBase::Singleton<SysLogLogger> LOGGER;
+	typedef OOBase::Singleton<SysLogLogger,OOBase::Module> LOGGER;
 #else
 #error Fix me!
 #endif
@@ -164,16 +145,13 @@ namespace
 			return;
 
 		// Create the relevant registry keys if they don't already exist
-		std::string strName;
-		try
-		{
-			strName = "SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\";
-			strName += name;
-		}
-		catch (std::exception& e)
-		{
-			OOBase_CallCriticalFailure(e.what());
-		}
+		OOBase::LocalString strName;
+		int err = strName.assign("SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\");
+		if (err == 0)
+			err = strName.append(name);
+
+		if (err != 0)
+			OOBase_CallCriticalFailure(err);
 
 		HKEY hk;
 		DWORD dwDisp;
@@ -191,7 +169,7 @@ namespace
 		m_hLog = RegisterEventSourceA(NULL,name);
 	}
 
-	void Win32Logger::log(OOSvrBase::Logger::Priority priority, const char* fmt, va_list args)
+	void Win32Logger::log(OOSvrBase::Logger::Priority priority, const char* msg)
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
@@ -214,22 +192,20 @@ namespace
 			break;
 		}
 
-		std::string msg = string_printf(fmt,args);
-
 #if !defined(_DEBUG)
 		if (m_hLog && priority != OOSvrBase::Logger::Debug)
 		{
-			const char* arrBufs[2] = { msg.c_str(), 0 };
+			const char* arrBufs[2] = { msg, NULL };
 
+			OOBase::SmartPtr<TOKEN_USER,CrtFreeDestructor> ptrSIDProcess;
 			PSID psid = NULL;
 			OOBase::Win32::SmartHandle hProcessToken;
-			
+
 			if (OpenProcessToken(GetCurrentProcess(),TOKEN_QUERY,&hProcessToken))
 			{
-				OOBase::SmartPtr<TOKEN_USER,CrtFreeDestructor> ptrSIDProcess;
 				for (DWORD dwLen = 256;;)
 				{
-					ptrSIDProcess = static_cast<TOKEN_USER*>(::malloc(dwLen));
+					ptrSIDProcess = static_cast<TOKEN_USER*>(OOBase::CrtAllocator::allocate(dwLen));
 					if (!ptrSIDProcess)
 						break;
 
@@ -238,10 +214,10 @@ namespace
 
 					DWORD err = GetLastError();
 
-					ptrSIDProcess = 0;
+					ptrSIDProcess = NULL;
 
 					SetLastError(err);
-						
+
 					if (err != ERROR_INSUFFICIENT_BUFFER)
 						break;
 				}
@@ -256,7 +232,7 @@ namespace
 		if (priority == OOSvrBase::Logger::Debug)
 #endif
 		{
-			OutputDebugStringA(msg.c_str());
+			OutputDebugStringA(msg);
 			OutputDebugStringA("\n");
 		}
 
@@ -280,7 +256,7 @@ namespace
 		default:
 			break;
 		}
-		fputs(msg.c_str(),out_file);
+		fputs(msg,out_file);
 		fputs("\n",out_file);
 		fflush(out_file);
 	}
@@ -303,7 +279,7 @@ namespace
 		openlog(name,LOG_NDELAY,LOG_DAEMON);
 	}
 
-	void SysLogLogger::log(OOSvrBase::Logger::Priority priority, const char* fmt, va_list args)
+	void SysLogLogger::log(OOSvrBase::Logger::Priority priority, const char* msg)
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
@@ -351,7 +327,7 @@ namespace
 			break;
 		}
 
-		fputs(string_printf(fmt,args).c_str(),out_file);
+		fputs(msg,out_file);
 		fputs("\n",out_file);
 		fflush(out_file);
 	}
@@ -370,9 +346,13 @@ void OOSvrBase::Logger::log(Priority priority, const char* fmt, ...)
 	va_list args;
 	va_start(args,fmt);
 
-	LOGGER::instance().log(priority,fmt,args);
+	OOBase::LocalString msg;
+	int err = msg.vprintf(fmt,args);
 
 	va_end(args);
+
+	if (err == 0)
+		LOGGER::instance().log(priority,msg.c_str());
 }
 
 void OOSvrBase::Logger::filenum_t::log(const char* fmt, ...)
@@ -380,17 +360,15 @@ void OOSvrBase::Logger::filenum_t::log(const char* fmt, ...)
 	va_list args;
 	va_start(args,fmt);
 
-	try
-	{
-		std::ostringstream out;
-		out << "[" << getpid() << "] " << m_pszFilename << "(" << m_nLine << "): " << fmt;
-
-		LOGGER::instance().log(m_priority,out.str().c_str(),args);
-	}
-	catch (std::exception& e)
-	{
-		OOBase_CallCriticalFailure(e.what());
-	}
+	OOBase::LocalString msg;
+	int err = msg.vprintf(fmt,args);
 
 	va_end(args);
+
+	if (err == 0)
+	{
+		OOBase::LocalString header;
+		if (header.printf("[%u] %s(%u): %s",getpid(),m_pszFilename,m_nLine,msg.c_str()) == 0)
+			LOGGER::instance().log(m_priority,header.c_str());
+	}
 }

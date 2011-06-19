@@ -19,18 +19,20 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/SmartPtr.h"
-#include "../include/OOBase/Destructor.h"
-#include "Win32Impl.h"
+#include "../include/OOBase/CustomNew.h"
 
 #if defined(_WIN32)
 
+#include "../include/OOBase/Destructor.h"
+#include "Win32Impl.h"
+
 namespace OOBase
 {
-	namespace Win32
+	// The discrimination type for singleton scoping for this module
+	struct Module
 	{
-		BOOL InitOnceExecuteOnce_Internal(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context);
-	}
+		int unused;
+	};
 }
 
 namespace
@@ -45,8 +47,7 @@ namespace
 		typedef BOOL (__stdcall *pfn_InitOnceExecuteOnce)(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context);
 		pfn_InitOnceExecuteOnce m_InitOnceExecuteOnce;
 		static BOOL __stdcall impl_InitOnceExecuteOnce(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context);
-		static BOOL InitOnceExecuteOnce_Internal(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context);
-
+		
 		typedef void (__stdcall *pfn_InitializeSRWLock)(SRWLOCK* SRWLock);
 		pfn_InitializeSRWLock m_InitializeSRWLock;
 		static void __stdcall impl_InitializeSRWLock(SRWLOCK* SRWLock);
@@ -86,20 +87,20 @@ namespace
 		pfn_BindIoCompletionCallback m_BindIoCompletionCallback;
 
 		HMODULE m_hKernel32;
-
+		
 	private:
-		void init_low_frag_heap();
+		void init_low_frag_heap(HANDLE hHeap);
 
-		static volatile Win32Thunk* s_instance;
+		static Win32Thunk* s_instance;
 
 		static BOOL __stdcall init(INIT_ONCE*,void*,void**);
 		static void destroy(void*);
 	};
 
-	volatile Win32Thunk* Win32Thunk::s_instance = 0;
+	Win32Thunk* Win32Thunk::s_instance = NULL;
 
 	Win32Thunk::Win32Thunk() :
-			m_hKernel32(0)
+			m_hKernel32(NULL)
 	{
 		m_hKernel32 = GetModuleHandleW(L"Kernel32.dll");
 		if (!m_hKernel32)
@@ -139,50 +140,44 @@ namespace
 				!m_WakeAllConditionVariable)
 		{
 			m_InitializeConditionVariable = impl_InitializeConditionVariable;
-			m_SleepConditionVariableCS = 0;
+			m_SleepConditionVariableCS = NULL;
 			m_WakeConditionVariable = impl_WakeConditionVariable;
 			m_WakeAllConditionVariable = impl_WakeAllConditionVariable;
 		}
 
 		m_BindIoCompletionCallback = (pfn_BindIoCompletionCallback)(GetProcAddress(m_hKernel32,"BindIoCompletionCallback"));
 
-		init_low_frag_heap();
-	}
-
-	BOOL Win32Thunk::InitOnceExecuteOnce_Internal(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context)
-	{
-		static pfn_InitOnceExecuteOnce fn = (pfn_InitOnceExecuteOnce)(GetProcAddress(GetModuleHandleW(L"Kernel32.dll"),"InitOnceExecuteOnce"));
-
-		BOOL bRet;
-		if (fn)
-			bRet = (*fn)(InitOnce,InitFn,Parameter,Context);
-		else
-			bRet = impl_InitOnceExecuteOnce(InitOnce,InitFn,Parameter,Context);
-
-		return bRet;
+		init_low_frag_heap(GetProcessHeap());
+#if (WINVER >= 0x0501)
+		init_low_frag_heap((HANDLE)_get_heap_handle());
+#endif
 	}
 
 	Win32Thunk& Win32Thunk::instance()
 	{
-		if (!s_instance)
-		{
-			static INIT_ONCE key = {0};
-			if (!InitOnceExecuteOnce_Internal(&key,&init,0,0))
-				OOBase_CallCriticalFailure(GetLastError());
-		}
-
+		static INIT_ONCE key = {0};
+		if (!impl_InitOnceExecuteOnce(&key,&init,NULL,NULL))
+			OOBase_CallCriticalFailure(GetLastError());
+		
 		assert(s_instance != reinterpret_cast<Win32Thunk*>((uintptr_t)0xdeadbeef));
 		return *const_cast<Win32Thunk*>(s_instance);
 	}
 
 	BOOL Win32Thunk::init(INIT_ONCE*,void*,void**)
 	{
-		// Ensure s_instance is fully constructed before assignment...
-		Win32Thunk* instance;
-		OOBASE_NEW_T_CRITICAL(Win32Thunk,instance,Win32Thunk());
-		s_instance = instance;
+		if (!s_instance)
+		{
+			void* p = ::HeapAlloc(GetProcessHeap(),0,sizeof(Win32Thunk));
+			if (!p)
+				OOBase_CallCriticalFailure(GetLastError());
+
+			// Placement new...
+			s_instance = ::new (p) Win32Thunk();
+			
+			// This will call us again on Win32
+			OOBase::DLLDestructor<OOBase::Module>::add_destructor(&destroy,NULL);
+		}
 		
-		OOBase::DLLDestructor<OOBase::Module>::add_destructor(&destroy,0);
 		return TRUE;
 	}
 
@@ -194,21 +189,20 @@ namespace
 
 		s_instance = reinterpret_cast<Win32Thunk*>((uintptr_t)0xdeadbeef);
 
-		OOBASE_DELETE(Win32Thunk,instance);
+		instance->~Win32Thunk();
+		::HeapFree(GetProcessHeap(),0,instance);
 	}
 
-	void Win32Thunk::init_low_frag_heap()
+	void Win32Thunk::init_low_frag_heap(HANDLE hHeap)
 	{
-#if (WINVER >= 0x0501)
 		typedef BOOL (__stdcall *pfn_HeapSetInformation)(HANDLE HeapHandle, HEAP_INFORMATION_CLASS HeapInformationClass, void* HeapInformation, SIZE_T HeapInformationLength);
 
 		pfn_HeapSetInformation pfn = (pfn_HeapSetInformation)(GetProcAddress(m_hKernel32,"HeapSetInformation"));
 		if (pfn)
 		{
 			ULONG ulEnableLFH = 2;
-			(*pfn)((HANDLE)_get_heap_handle(),HeapCompatibilityInformation,&ulEnableLFH, sizeof(ulEnableLFH));
+			(*pfn)(hHeap,HeapCompatibilityInformation,&ulEnableLFH, sizeof(ulEnableLFH));
 		}
-#endif
 	}
 
 	static HANDLE get_mutex(void* v)
@@ -231,7 +225,7 @@ namespace
 		// *check == 2  <- Init failed...
 		// *check == 3  <- Init succeeded...
 
-		LONG* check = reinterpret_cast<LONG*>(InitOnce);
+		LONG* check = reinterpret_cast<LONG*>(&InitOnce->Ptr);
 		switch (InterlockedCompareExchange(check,1,0))
 		{
 		case 2:
@@ -253,13 +247,14 @@ namespace
 
 		if (*check == 1)
 		{
+			// Assume success (this avoids recursion)
+			InterlockedExchange(check,3);
+
 			// First in...
 			try
 			{
 				if (!(*InitFn)(InitOnce,Parameter,Context))
 					InterlockedExchange(check,2);
-				else
-					InterlockedExchange(check,3);
 			}
 			catch (...)
 			{
@@ -285,7 +280,7 @@ namespace
 	{
 		OOBase::Win32::rwmutex_t** mtx = reinterpret_cast<OOBase::Win32::rwmutex_t**>(SRWLock);
 
-		OOBASE_NEW_T_CRITICAL(OOBase::Win32::rwmutex_t,(*mtx),OOBase::Win32::rwmutex_t());
+		*mtx = new (OOBase::critical) OOBase::Win32::rwmutex_t();
 	}
 
 	void Win32Thunk::impl_AcquireSRWLockShared(SRWLOCK* SRWLock)
@@ -312,7 +307,7 @@ namespace
 	{
 		OOBase::Win32::condition_variable_t** var = reinterpret_cast<OOBase::Win32::condition_variable_t**>(ConditionVariable);
 
-		OOBASE_NEW_T_CRITICAL(OOBase::Win32::condition_variable_t,(*var),OOBase::Win32::condition_variable_t());
+		*var = new (OOBase::critical) OOBase::Win32::condition_variable_t();
 	}
 
 	void Win32Thunk::impl_WakeConditionVariable(CONDITION_VARIABLE* ConditionVariable)
@@ -324,11 +319,6 @@ namespace
 	{
 		(*reinterpret_cast<OOBase::Win32::condition_variable_t**>(ConditionVariable))->broadcast();
 	}
-}
-
-BOOL OOBase::Win32::InitOnceExecuteOnce_Internal(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context)
-{
-	return Win32Thunk::InitOnceExecuteOnce_Internal(InitOnce,InitFn,Parameter,Context);
 }
 
 BOOL OOBase::Win32::InitOnceExecuteOnce(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context)
@@ -368,7 +358,7 @@ void OOBase::Win32::ReleaseSRWLockExclusive(SRWLOCK* SRWLock)
 void OOBase::Win32::DeleteSRWLock(SRWLOCK* SRWLock)
 {
 	if (Win32Thunk::instance().m_InitializeSRWLock == Win32Thunk::impl_InitializeSRWLock)
-		OOBASE_DELETE(rwmutex_t,(*reinterpret_cast<rwmutex_t**>(SRWLock)));
+		delete *reinterpret_cast<rwmutex_t**>(SRWLock);
 }
 
 OOBase::Win32::rwmutex_t::rwmutex_t() :
@@ -450,7 +440,7 @@ void OOBase::Win32::InitializeConditionVariable(CONDITION_VARIABLE* ConditionVar
 
 BOOL OOBase::Win32::SleepConditionVariable(CONDITION_VARIABLE* ConditionVariable, condition_mutex_t* Mutex, DWORD dwMilliseconds)
 {
-	if (Win32Thunk::instance().m_SleepConditionVariableCS == 0)
+	if (!Win32Thunk::instance().m_SleepConditionVariableCS)
 		return (*reinterpret_cast<condition_variable_t**>(ConditionVariable))->wait(Mutex->u.m_mutex,dwMilliseconds) ? TRUE : FALSE;
 	else
 		return (*Win32Thunk::instance().m_SleepConditionVariableCS)(ConditionVariable,&Mutex->u.m_cs,dwMilliseconds);
@@ -469,7 +459,7 @@ void OOBase::Win32::WakeAllConditionVariable(CONDITION_VARIABLE* ConditionVariab
 void OOBase::Win32::DeleteConditionVariable(CONDITION_VARIABLE* ConditionVariable)
 {
 	if (Win32Thunk::instance().m_InitializeConditionVariable == Win32Thunk::impl_InitializeConditionVariable)
-		OOBASE_DELETE(condition_variable_t,(*reinterpret_cast<condition_variable_t**>(ConditionVariable)));
+		delete *reinterpret_cast<condition_variable_t**>(ConditionVariable);
 }
 
 BOOL OOBase::Win32::BindIoCompletionCallback(HANDLE FileHandle, LPOVERLAPPED_COMPLETION_ROUTINE Function, ULONG Flags)
@@ -657,7 +647,7 @@ void OOBase::Win32::condition_variable_t::signal()
 	LeaveCriticalSection(&m_waiters_lock);
 
 	// If there aren't any waiters, then this is a no-op.
-	if (have_waiters && !ReleaseSemaphore(m_sema,1,0))
+	if (have_waiters && !ReleaseSemaphore(m_sema,1,NULL))
 		OOBase_CallCriticalFailure(GetLastError());
 }
 
@@ -704,51 +694,19 @@ void OOBase::Win32::condition_variable_t::broadcast()
 		LeaveCriticalSection(&m_waiters_lock);
 }
 
-namespace
+void* OOBase::CrtAllocator::allocate(size_t len)
 {
-	OOBase::string format_msg(DWORD dwErr, HMODULE hModule)
-	{
-		DWORD dwFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK;
-		if (hModule)
-			dwFlags |= FORMAT_MESSAGE_FROM_HMODULE;
-		else
-			dwFlags |= FORMAT_MESSAGE_FROM_SYSTEM;
-
-		LPVOID lpBuf;
-		if (::FormatMessageA(
-					dwFlags,
-					hModule,
-					dwErr,
-					0,
-					(LPSTR)&lpBuf,
-					0,  NULL))
-		{
-			OOBase::SmartPtr<char,OOBase::Win32::LocalAllocDestructor<char> > lpMsgBuf = static_cast<char*>(lpBuf);
-			OOBase::string res((LPCSTR)lpMsgBuf);
-			while (*res.rbegin() == '\r' || *res.rbegin() == '\n')
-				res = res.substr(0,res.size()-1);
-
-			return res;
-		}
-		else
-		{
-			return "Unknown error";
-		}
-	}
+	return ::HeapAlloc(::GetProcessHeap(),0,len);
 }
 
-OOBase::string OOBase::Win32::FormatMessage(DWORD dwErr)
+void* OOBase::CrtAllocator::reallocate(void* ptr, size_t len)
 {
-	ostringstream ret;
-	ret.setf(std::ios_base::hex,std::ios_base::basefield);
-	ret << "(0x" << dwErr << ") ";
+	return ::HeapReAlloc(::GetProcessHeap(),0,ptr,len);
+}
 
-	if (!(dwErr & 0xC0000000))
-		ret << format_msg(dwErr,NULL);
-	else
-		ret << format_msg(dwErr,GetModuleHandleW(L"NTDLL.DLL"));
-
-	return ret.str();
+void OOBase::CrtAllocator::free(void* ptr)
+{
+	::HeapFree(::GetProcessHeap(),0,ptr);
 }
 
 #endif // _WIN32

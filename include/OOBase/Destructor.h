@@ -22,20 +22,14 @@
 #ifndef OOBASE_DESTRUCTOR_H_INCLUDED_
 #define OOBASE_DESTRUCTOR_H_INCLUDED_
 
+#include "Memory.h"
 #include "Mutex.h"
 #include "Once.h"
 #include "SmartPtr.h"
-#include "Allocator.h"
-
-#include <list>
+#include "Stack.h"
 
 namespace OOBase
 {
-	namespace Once
-	{
-		void Run_Internal(once_t* key, pfn_once fn);
-	}
-
 	template <typename DLL>
 	class DLLDestructor
 	{
@@ -46,14 +40,17 @@ namespace OOBase
 		{
 			DLLDestructor& inst = instance();
 			Guard<SpinLock> guard(inst.m_lock);
-			inst.m_list.push_front(std::pair<pfn_destructor,void*>(pfn,p));
+			
+			int err = inst.m_list.push(Node(pfn,p));
+			if (err != 0)
+				OOBase_CallCriticalFailure(err);
 		}
 
 		static void remove_destructor(pfn_destructor pfn, void* p)
 		{
 			DLLDestructor& inst = instance();
 			Guard<SpinLock> guard(inst.m_lock);
-			inst.m_list.remove(std::pair<pfn_destructor,void*>(pfn,p));
+			inst.m_list.erase(Node(pfn,p));
 		}
 
 	private:
@@ -61,35 +58,48 @@ namespace OOBase
 		DLLDestructor(const DLLDestructor&);
 		DLLDestructor& operator = (const DLLDestructor&);
 
+		struct Node
+		{
+			Node(pfn_destructor pfn, void* p) : m_pfn(pfn), m_param(p)
+			{}
+
+			bool operator == (const Node& rhs) const
+			{
+				return (m_pfn == rhs.m_pfn && m_param == rhs.m_param);
+			}
+
+			pfn_destructor m_pfn;
+			void*          m_param;
+		};
+
+		SpinLock                 m_lock;
+		Stack<Node,CrtAllocator> m_list;
+
 		~DLLDestructor()
 		{
 			Guard<SpinLock> guard(m_lock);
 
-			for (listType::iterator i=m_list.begin(); i!=m_list.end(); ++i)
+			for (Node node(NULL,NULL);m_list.pop(&node);)
 			{
+				guard.release();
+
 				try
 				{
-					(*(i->first))(i->second);
+					(*node.m_pfn)(node.m_param);
 				}
 				catch (...)
 				{}
+
+				guard.acquire();
 			}
 		}
 
-		SpinLock m_lock;
-
-		typedef std::list<std::pair<pfn_destructor,void*>,OOBase::CriticalAllocator<std::pair<pfn_destructor,void*> > > listType;
-		listType m_list;
-
 		static DLLDestructor& instance()
 		{
-			if (!s_instance)
-			{
-				static Once::once_t key = ONCE_T_INIT;
-				Once::Run_Internal(&key,&init);
-			}
-
-			return *const_cast<DLLDestructor*>(s_instance);
+			static Once::once_t key = ONCE_T_INIT;
+			Once::Run(&key,&init);
+			
+			return *s_instance;
 		}
 
 		static void init()
@@ -98,11 +108,11 @@ namespace OOBase
 			s_instance = &inst;
 		}
 
-		static volatile DLLDestructor* s_instance;
+		static DLLDestructor* s_instance;
 	};
 
 	template <typename DLL>
-	volatile DLLDestructor<DLL>* DLLDestructor<DLL>::s_instance = 0;
+	DLLDestructor<DLL>* DLLDestructor<DLL>::s_instance;
 }
 
 #endif // OOBASE_DESTRUCTOR_H_INCLUDED_

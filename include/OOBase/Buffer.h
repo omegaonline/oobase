@@ -23,6 +23,7 @@
 #define OOBASE_BUFFER_H_INCLUDED_
 
 #include "Atomic.h"
+#include "Memory.h"
 
 namespace OOBase
 {
@@ -48,8 +49,8 @@ namespace OOBase
 	class Buffer
 	{
 	public:
-		/// The constructor allocates the internal buffer to size \p cbSize.
-		Buffer(size_t cbSize = 256, size_t align = 1);
+		/// The factory function allocates the internal buffer to size \p cbSize.
+		static Buffer* create(size_t cbSize = 256, size_t align = 1);
 
 		/// Return a reference counted copy
 		Buffer* addref();
@@ -103,21 +104,20 @@ namespace OOBase
 		void mark_wr_ptr(size_t mark);
 
 	private:
+		/// The constructor allocates the internal buffer to size \p cbSize.
+		Buffer(size_t cbSize = 256, size_t align = 1);
+
+		// Prevent copying
 		Buffer(const Buffer& rhs);
 		Buffer& operator = (const Buffer& rhs);
 
 		~Buffer();
 
-		Atomic<size_t> m_refcount; ///< The reference count.
-
+		size_t  m_refcount; ///< The reference count.
 		size_t  m_capacity; ///< The total allocated bytes for \p m_buffer.
 		char*   m_buffer;   ///< The actual underlying buffer.
 		char*   m_wr_ptr;   ///< The current write pointer.
 		char*   m_rd_ptr;   ///< The current read pointer.
-
-		static int priv_malloc(char*& ptr, size_t& bytes);
-		static int priv_realloc(char*& ptr, size_t& bytes);
-		static void priv_free(char* ptr);
 	};
 }
 

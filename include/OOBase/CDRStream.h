@@ -24,6 +24,7 @@
 
 #include "Buffer.h"
 #include "ByteSwap.h"
+#include "String.h"
 
 namespace OOBase
 {
@@ -33,45 +34,50 @@ namespace OOBase
 		static const int MaxAlignment = 8;
 
 		CDRStream(size_t len = 256) :
-				m_buffer(0),
-#if (OMEGA_BYTE_ORDER == OMEGA_BIG_ENDIAN)
+				m_buffer(NULL),
+#if (OOBASE_BYTE_ORDER == OMEGA_BIG_ENDIAN)
 				m_big_endian(true),
 #else
 				m_big_endian(false),
 #endif
 				m_last_error(0)
 		{
-			OOBASE_NEW_T(Buffer,m_buffer,Buffer(len,MaxAlignment));
+			m_buffer = Buffer::create(len,MaxAlignment);
 			if (!m_buffer)
-				OOBase::CallCriticalFailureMem(__FILE__,__LINE__-2);
+				m_last_error = ERROR_OUTOFMEMORY;
 		}
 
 		CDRStream(Buffer* buffer) :
-				m_buffer(0),
-#if (OMEGA_BYTE_ORDER == OMEGA_BIG_ENDIAN)
+				m_buffer(NULL),
+#if (OOBASE_BYTE_ORDER == OMEGA_BIG_ENDIAN)
 				m_big_endian(true),
 #else
 				m_big_endian(false),
 #endif
 				m_last_error(0)
 		{
-			m_buffer = buffer->duplicate();
+			m_buffer = buffer->addref();
 		}
 
-		CDRStream(const CDRStream& rhs) :
-				m_buffer(0),
+		CDRStream(CDRStream& rhs) :
+				m_buffer(NULL),
 				m_big_endian(rhs.m_big_endian),
 				m_last_error(rhs.m_last_error)
 		{
-			m_buffer = rhs.m_buffer->duplicate();
+			if (rhs.m_buffer)
+				m_buffer = rhs.m_buffer->addref();
 		}
 
-		CDRStream& operator = (const CDRStream& rhs)
+		CDRStream& operator = (CDRStream& rhs)
 		{
 			if (&rhs != this)
 			{
-				m_buffer->release();
-				m_buffer = rhs.m_buffer->duplicate();
+				if (m_buffer)
+					m_buffer->release();
+
+				if (rhs.m_buffer)
+					m_buffer = rhs.m_buffer->addref();
+
 				m_big_endian = rhs.m_big_endian;
 				m_last_error = rhs.m_last_error;
 			}
@@ -80,7 +86,8 @@ namespace OOBase
 
 		~CDRStream()
 		{
-			m_buffer->release();
+			if (m_buffer)
+				m_buffer->release();
 		}
 
 		const Buffer* buffer() const
@@ -95,13 +102,15 @@ namespace OOBase
 
 		int reset()
 		{
-			m_last_error = m_buffer->reset(MaxAlignment);
+			if (!m_last_error && m_buffer)
+				m_last_error = m_buffer->reset(MaxAlignment);
 			return m_last_error;
 		}
 
 		int compact()
 		{
-			m_last_error = m_buffer->compact(MaxAlignment);
+			if (!m_last_error && m_buffer)
+				m_last_error = m_buffer->compact(MaxAlignment);
 			return m_last_error;
 		}
 
@@ -123,7 +132,7 @@ namespace OOBase
 		template <typename T>
 		T byte_swap(const T& val) const
 		{
-#if (OMEGA_BYTE_ORDER == OMEGA_BIG_ENDIAN)
+#if (OOBASE_BYTE_ORDER == OMEGA_BIG_ENDIAN)
 			return (m_big_endian ? val : OOBase::byte_swap(val));
 #else
 			return (!m_big_endian ? val : OOBase::byte_swap(val));
@@ -137,7 +146,7 @@ namespace OOBase
 		template <typename T>
 		bool read(T& val)
 		{
-			if (m_last_error != 0)
+			if (m_last_error != 0 || !m_buffer)
 				return false;
 
 			m_buffer->align_rd_ptr(sizeof(T));
@@ -158,12 +167,11 @@ namespace OOBase
 			return true;
 		}
 
-		/** A specialization of read() for type \p std::basic_string.
+		/** A specialization of read() for type \p LocalString.
 		 */
-		template <typename Alloc>
-		bool read(std::basic_string<char,std::char_traits<char>,Alloc>& val)
+		bool read(LocalString& val)
 		{
-			if (m_last_error != 0)
+			if (m_last_error != 0 || !m_buffer)
 				return false;
 
 			// We do this because we haven't got a safe uint32_t type
@@ -188,20 +196,21 @@ namespace OOBase
 			}
 
 			if (len == 0)
-				val.empty();
+				val.clear();
 			else
 			{
-				val.assign(m_buffer->rd_ptr(),len);
-				m_buffer->rd_ptr(len);
+				m_last_error = val.assign(m_buffer->rd_ptr(),len);
+				if (m_last_error == 0)
+					m_buffer->rd_ptr(len);				
 			}
-			return true;
+			return (m_last_error == 0);
 		}
 
 		/** A specialization of read() for type \p bool.
 		 */
 		bool read(bool& val)
 		{
-			if (m_last_error != 0)
+			if (m_last_error != 0 || !m_buffer)
 				return false;
 
 			if (m_buffer->length() < 1)
@@ -223,7 +232,7 @@ namespace OOBase
 
 		size_t read_bytes(unsigned char* buffer, size_t count)
 		{
-			if (m_last_error != 0)
+			if (m_last_error != 0 || !m_buffer)
 				return 0;
 
 			if (count > m_buffer->length())
@@ -242,7 +251,7 @@ namespace OOBase
 		template <typename T>
 		bool write(const T& val)
 		{
-			if (m_last_error != 0)
+			if (m_last_error != 0 || !m_buffer)
 				return false;
 
 			m_last_error = m_buffer->align_wr_ptr(sizeof(T));
@@ -262,10 +271,12 @@ namespace OOBase
 		/// A specialization of write() for type \p const char*.
 		bool write(const char* pszText, size_t len = (size_t)-1)
 		{
-			if (m_last_error != 0)
+			if (m_last_error != 0 || !m_buffer)
 				return false;
 
-			if (len == (size_t)-1)
+			if (!pszText)
+				len = 0;
+			else if (len == (size_t)-1)
 				len = strlen(pszText);
 
 			if (len >= 0xFFFFFFFF)
@@ -312,17 +323,10 @@ namespace OOBase
 			return true;
 		}
 
-		/// A specialization of write() for type \p std::basic_string.
-		template <typename Alloc>
-		bool write(const std::basic_string<char,std::char_traits<char>,Alloc>& strText)
-		{
-			return write(strText.data(),strText.size());
-		}
-
 		/// A specialization of write() for type \p bool.
 		bool write(bool val)
 		{
-			if (m_last_error != 0)
+			if (m_last_error != 0 || !m_buffer)
 				return false;
 
 			m_last_error = m_buffer->space(1);
@@ -336,7 +340,7 @@ namespace OOBase
 
 		bool write_bytes(const unsigned char* buffer, size_t count)
 		{
-			if (m_last_error != 0)
+			if (m_last_error != 0 || !m_buffer)
 				return false;
 
 			m_last_error = m_buffer->space(count);
@@ -350,7 +354,7 @@ namespace OOBase
 
 		size_t write_buffer(const Buffer* buffer)
 		{
-			if (m_last_error != 0)
+			if (m_last_error != 0 || !m_buffer)
 				return 0;
 
 			size_t count = buffer->length();
@@ -371,10 +375,13 @@ namespace OOBase
 		template <typename T>
 		void replace(const T& val, size_t mark)
 		{
-			size_t mark_cur = m_buffer->mark_wr_ptr();
-			m_buffer->mark_wr_ptr(mark);
-			write(val);
-			m_buffer->mark_wr_ptr(mark_cur);
+			if (m_buffer)
+			{
+				size_t mark_cur = m_buffer->mark_wr_ptr();
+				m_buffer->mark_wr_ptr(mark);
+				write(val);
+				m_buffer->mark_wr_ptr(mark_cur);
+			}
 		}
 
 	private:

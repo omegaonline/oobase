@@ -19,6 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/OOBase/CustomNew.h"
 #include "../include/OOBase/Posix.h"
 #include "BSDSocket.h"
 #include "Win32Socket.h"
@@ -384,11 +385,10 @@ OOBase::SmartPtr<OOBase::Socket> OOBase::Socket::connect(const char* address, co
 	if (sock == INVALID_SOCKET)
 		return 0;
 
-	::Socket* pSocket;
-	OOBASE_NEW_T(::Socket,pSocket,::Socket(sock));
+	::Socket* pSocket = new (std::nothrow) ::Socket(sock);
 	if (!pSocket)
 	{
-		*perr = ENOMEM;
+		*perr = ERROR_OUTOFMEMORY;
 		closesocket(sock);
 		return 0;
 	}
@@ -407,8 +407,7 @@ OOBase::SmartPtr<OOBase::Socket> OOBase::Socket::connect_local(const char* path,
 
 	sockaddr_un addr;
 	addr.sun_family = AF_UNIX;
-	memset(addr.sun_path,0,sizeof(addr.sun_path));
-	path.copy(addr.sun_path,sizeof(addr.sun_path)-1);
+	strncpy(addr.sun_path,path,sizeof(addr.sun_path)-1);
 
 	if ((*perr = connect_i(sock,(sockaddr*)(&addr),sizeof(addr),timeout)) != 0)
 	{
@@ -416,11 +415,10 @@ OOBase::SmartPtr<OOBase::Socket> OOBase::Socket::connect_local(const char* path,
 		return 0;
 	}
 
-	::Socket* pSocket;
-	OOBASE_NEW_T(::Socket,pSocket,::Socket(sock));
+	::Socket* pSocket = new (std::nothrow) ::Socket(sock);
 	if (!pSocket)
 	{
-		*perr = ENOMEM;
+		*perr = ERROR_OUTOFMEMORY;
 		::close(sock);
 		return 0;
 	}

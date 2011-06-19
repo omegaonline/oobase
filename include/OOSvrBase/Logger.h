@@ -39,6 +39,7 @@ namespace OOSvrBase
 		void open(const char* name);
 		void log(Priority priority, const char* fmt, ...);
 		
+#if !defined(DOXYGEN)
 		struct filenum_t
 		{
 			filenum_t(Priority priority, const char* pszFilename, unsigned int nLine) :
@@ -53,12 +54,24 @@ namespace OOSvrBase
 			const char*  m_pszFilename;
 			unsigned int m_nLine;
 		};
+#endif // !defined(DOXYGEN)
 	}
 }
 
+#if defined(DOXYGEN)
+/// Log a Debug message including file and line number
+#define LOG_DEBUG(expr)
+/// Log a Warning message including file and line number
+#define LOG_WARNING(expr)
+/// Log an Error message including file and line number
+#define LOG_ERROR(expr)
+/// Log an Error message including file and line number, and return ret_val.
+#define LOG_ERROR_RETURN(expr,ret_val)
+#else
 #define LOG_DEBUG(expr) OOSvrBase::Logger::filenum_t(OOSvrBase::Logger::Debug,__FILE__,__LINE__).log expr
 #define LOG_WARNING(expr) OOSvrBase::Logger::filenum_t(OOSvrBase::Logger::Warning,__FILE__,__LINE__).log expr
 #define LOG_ERROR(expr) OOSvrBase::Logger::filenum_t(OOSvrBase::Logger::Error,__FILE__,__LINE__).log expr
 #define LOG_ERROR_RETURN(expr,ret_val) return (LOG_ERROR(expr),ret_val)
+#endif
 
 #endif // OOSVRBASE_LOGGER_H_INCLUDED_

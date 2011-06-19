@@ -19,10 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/config-base.h"
-
-#include <stdio.h>
-#include <stdarg.h>
+#include "../include/OOBase/tr24731.h"
 
 #if !defined(HAVE_TR_24731)
 

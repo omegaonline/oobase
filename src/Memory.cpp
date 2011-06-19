@@ -19,59 +19,146 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/config-base.h"
+#include "../include/OOBase/CustomNew.h"
 #include "../include/OOBase/Destructor.h"
+
+const OOBase::critical_t OOBase::critical = {0};
+
+#if !defined(_WIN32)
+
+void* OOBase::CrtAllocator::allocate(size_t len)
+{
+	return ::malloc(len);
+}
+
+void* OOBase::CrtAllocator::reallocate(void* ptr, size_t len)
+{
+	return ::realloc(ptr,len);
+}
+
+void OOBase::CrtAllocator::free(void* ptr)
+{
+	::free(ptr);
+}
+
+#endif
+
+void* operator new(size_t size)
+{
+	void* p = OOBase::HeapAllocate(size);
+	if (!p)
+		throw std::bad_alloc();
+
+	return p;
+}
+
+void* operator new[](size_t size)
+{
+	void* p = OOBase::HeapAllocate(size);
+	if (!p)
+		throw std::bad_alloc();
+
+	return p;
+}
+
+void* operator new(size_t size, const std::nothrow_t&)
+{
+	return OOBase::HeapAllocate(size);
+}
+
+void* operator new[](size_t size, const std::nothrow_t&)
+{
+	return OOBase::HeapAllocate(size);
+}
+
+void* operator new(size_t size, const OOBase::critical_t&)
+{
+	void* p = OOBase::HeapAllocate(size);
+	if (!p)
+		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+
+	return p;
+}
+
+void* operator new[](size_t size, const OOBase::critical_t&)
+{
+	void* p = OOBase::HeapAllocate(size);
+	if (!p)
+		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+
+	return p;
+}
+
+void operator delete(void* p)
+{
+	return OOBase::HeapFree(p);
+}
+
+void operator delete(void* p, const std::nothrow_t&)
+{
+	return OOBase::HeapFree(p);
+}
+
+void operator delete(void* p, const OOBase::critical_t&)
+{
+	return OOBase::HeapFree(p);
+}
+
+void operator delete[](void* p)
+{
+	return OOBase::HeapFree(p);
+}
+
+void operator delete[](void* p, const std::nothrow_t&)
+{
+	return OOBase::HeapFree(p);
+}
+
+void operator delete[](void* p, const OOBase::critical_t&)
+{
+	return OOBase::HeapFree(p);
+}
+
+namespace OOBase
+{
+	// The discrimination type for singleton scoping for this module
+	struct Module
+	{
+		int unused;
+	};
+}
 
 namespace
 {
-	class CrtAllocator
-	{
-	public:
-		static void* allocate(size_t len, int /*flags*/, const char* /*file*/, unsigned int /*line*/)
-		{
-			return ::malloc(len);
-		}
-
-		static void* reallocate(void* ptr, size_t len, const char* /*file*/, unsigned int /*line*/)
-		{
-			return ::realloc(ptr,len);
-		}
-
-		static void free(void* ptr, int /*flags*/)
-		{
-			::free(ptr);
-		}	
-	};
-
 	template <typename T>
 	class MemoryManager
 	{
 	public:
-		static void* allocate(size_t len, int flags, const char* file, unsigned int line)
+		static void* allocate(size_t len)
 		{
 			Instance& i = instance();
 
-			void* p = i.inst.allocate(len,flags,file,line);
+			void* p = i.inst.allocate(len);
 			if (p)
 				++i.refcount;
 			return p;
 		}
 
-		static void* reallocate(void* ptr, size_t len, const char* file, unsigned int line)
+		static void* reallocate(void* ptr, size_t len)
 		{
 			if (!ptr)
-				return allocate(len,1,file,line);
+				return allocate(len);
 			else
-				return instance().inst.reallocate(ptr,len,file,line);
+				return instance().inst.reallocate(ptr,len);
 		}
-			
-		static void free(void* ptr, int flags)
+
+		static void free(void* ptr)
 		{
 			if (ptr)
 			{
 				Instance& i = instance();
 
-				i.inst.free(ptr,flags);
+				i.inst.free(ptr);
 				if (--i.refcount == 0)
 					term(const_cast<Instance*>(s_instance));
 			}
@@ -84,35 +171,41 @@ namespace
 			OOBase::Atomic<size_t> refcount;
 		};
 
-		static volatile Instance* s_instance;
+		static Instance* s_instance;
 
 		static Instance& instance()
 		{
 			if (!s_instance)
 			{
 				static OOBase::Once::once_t key = ONCE_T_INIT;
-				OOBase::Once::Run_Internal(&key,&init);
+				OOBase::Once::Run(&key,&init);
 			}
 
 			assert(s_instance != reinterpret_cast<Instance*>((uintptr_t)0xdeadbeef));
-			return *const_cast<Instance*>(s_instance);
+			return *s_instance;
 		}
 
 		static void init()
 		{
 			// Use crt malloc here...
-			Instance* instance = new (std::nothrow) Instance();
+			Instance* instance = static_cast<Instance*>(OOBase::CrtAllocator::allocate(sizeof(Instance)));
+			if (!instance)
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+
+			// Placement new
+			new (instance) Instance();
 			instance->refcount = 1;
 
 			s_instance = instance;
 
-			OOBase::DLLDestructor<OOBase::Module>::add_destructor(deref,0);
+			OOBase::DLLDestructor<OOBase::Module>::add_destructor(deref,NULL);
 		}
 
 		static void term(Instance* i)
 		{
 			s_instance = reinterpret_cast<Instance*>((uintptr_t)0xdeadbeef);
-			delete i;
+			i->~Instance();
+			OOBase::CrtAllocator::free(i);
 		}
 
 		static void deref(void*)
@@ -127,13 +220,15 @@ namespace
 	};
 
 	template <typename T>
-	volatile typename MemoryManager<T>::Instance* MemoryManager<T>::s_instance = 0;
+	typename MemoryManager<T>::Instance* MemoryManager<T>::s_instance = NULL;
 }
 
 
 #if defined(_DEBUG)
 
-#include <set>
+#include "../include/OOBase/HashTable.h"
+
+#include <stdio.h>
 
 namespace
 {
@@ -141,107 +236,97 @@ namespace
 	class MemWatcher
 	{
 	public:
-		void* allocate(size_t len, int flags, const char* file, unsigned int line)
+		~MemWatcher()
 		{
-			/*if (flags == 2)
-			{
-		#if defined(_MSC_VER)
-				return _malloca(len);
-		#else
-				flags = 1;
-		#endif
-			}*/
-			
-			//std::ostringstream os;
-			//os << "Alloc(" << flags << ") " << p << " " << len << " " << file << " " << line << std::endl;
-			//OutputDebugString(os.str().c_str());
+			if (!m_setEntries.empty())
+				printf("****************** MEM LEAKS! *****************\n");
+		}
 
-			void* p = CrtAllocator::allocate(len,flags,file,line);
+		void* allocate(size_t len)
+		{
+			void* p = OOBase::CrtAllocator::allocate(len);
 
 			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-			m_setEntries.insert(p);
+			m_setEntries.insert(p,len);
 
 			return p;
 		}
 
-		void* reallocate(void* ptr, size_t len, const char* file, unsigned int line)
+		void* reallocate(void* ptr, size_t len)
 		{
-			void* p = CrtAllocator::reallocate(ptr,len,file,line);
+			void* p = OOBase::CrtAllocator::reallocate(ptr,len);
 
 			if (p != ptr)
 			{
 				OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-				size_t c = m_setEntries.erase(ptr);
-				assert(c == 1);
+				bool e = m_setEntries.erase(ptr);
+				assert(e);
 
-				m_setEntries.insert(p);
+				m_setEntries.insert(p,len);
 			}
 
 			return p;
 		}
 
-		void free(void* ptr, int flags)
+		void free(void* ptr)
 		{
-			//std::ostringstream os;
-			//os << "Free(" << flags << ")  " << mem << std::endl;
-			//OutputDebugString(os.str().c_str());
-			/*if (flags == 2)
-			{
-		#if defined(_MSC_VER)
-				_freea(mem);
-				return;
-		#else
-				flags = 1;
-		#endif
-			}*/
-
 			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-			size_t c = m_setEntries.erase(ptr);
-			assert(c == 1);
+			bool e = m_setEntries.erase(ptr);
+			assert(e);
 
-			CrtAllocator::free(ptr,flags);
+			OOBase::CrtAllocator::free(ptr);
 		}
 
 	private:
 		OOBase::SpinLock   m_lock;
-		std::set<void*>    m_setEntries;
+		OOBase::HashTable<void*,size_t,OOBase::CrtAllocator> m_setEntries;
 	};
 }
 
 #endif // _DEBUG
 
-
-
-// flags: 0 - C++ object - align to size, no reallocation
-//        1 - Buffer - align 32, reallocation
-//        2 - Stack-local buffer - align 32, no reallocation
-void* OOBase::Allocate(size_t len, int flags, const char* file, unsigned int line)
+void* OOBase::HeapAllocate(size_t bytes)
 {
 #if defined(_DEBUG)
-	return MemoryManager<MemWatcher>::allocate(len,flags,file,line);
+	return MemoryManager<MemWatcher>::allocate(bytes);
 #else
-	return MemoryManager<CrtAllocator>::allocate(len,flags,file,line);
+	return MemoryManager<CrtAllocator>::allocate(bytes);
 #endif
 }
 
-// ptr must be alloc'ed with flag = 1 or NULL causing alloc with type 1
-void* OOBase::Reallocate(void* ptr, size_t len, const char* file, unsigned int line)
+void* OOBase::HeapReallocate(void* p, size_t bytes)
 {
 #if defined(_DEBUG)
-	return MemoryManager<MemWatcher>::reallocate(ptr,len,file,line);
+	return MemoryManager<MemWatcher>::reallocate(p,bytes);
 #else
-	return MemoryManager<CrtAllocator>::reallocate(ptr,len,file,line);
+	return MemoryManager<CrtAllocator>::reallocate(p,bytes);
 #endif
 }
 
-void OOBase::Free(void* ptr, int flags)
+void OOBase::HeapFree(void* p)
 {
 #if defined(_DEBUG)
-	MemoryManager<MemWatcher>::free(ptr,flags);
+	MemoryManager<MemWatcher>::free(p);
 #else
-	MemoryManager<CrtAllocator>::free(ptr,flags);
-#endif	
+	MemoryManager<CrtAllocator>::free(p);
+#endif
 }
+
+void* OOBase::LocalAllocate(size_t bytes)
+{
+	return OOBase::HeapAllocate(bytes);
+}
+
+void* OOBase::LocalReallocate(void* p, size_t bytes)
+{
+	return OOBase::HeapReallocate(p,bytes);
+}
+
+void OOBase::LocalFree(void* p)
+{
+	return OOBase::HeapFree(p);
+}
+

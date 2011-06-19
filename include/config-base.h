@@ -24,38 +24,9 @@
 
 #if defined(_MSC_VER)
 	#include "oobase-msvc.h"
-#else
+#elif !defined(DOXYGEN)
 	// Autoconf
 	#include <oobase-autoconf.h>
-#endif
-
-////////////////////////////////////////
-// Bring in C standard libraries
-//
-#define __STDC_WANT_LIB_EXT1__ 1
-#define __STDC_WANT_SECURE_LIB__ 1
-#include <string.h>
-
-#include <stdlib.h>
-#include <wchar.h>
-#include <errno.h>
-#include <assert.h>
-#include <math.h>
-
-////////////////////////////////////////
-// Bring in C++ standard libraries
-//
-#ifdef __cplusplus
-#include <limits>
-
-#if defined(max)
-#undef max
-#endif
-
-#include <string>
-#include <sstream>
-#include <iomanip>
-#include <locale>
 #endif
 
 ////////////////////////////////////////
@@ -123,40 +94,61 @@
 	#endif
 
 	// Check pthreads
-	#if defined (HAVE_PTHREADS_H) && !defined(_POSIX_THREADS)
+	#if defined (HAVE_PTHREAD)
+	#include <pthread.h>
+	#if !defined(_POSIX_THREADS)
 	#error Your pthreads does not appears to be POSIX compliant?
+	#endif
 	#endif
 #endif
 
 ////////////////////////////////////////
+// Some standard headers.
+#include <assert.h>
+#include <errno.h>
+#include <stdarg.h>
+
+////////////////////////////////////////
+// Define some standard errors to avoid lots of #ifdefs.
+
+#if !defined(_WIN32) && !defined(DOXYGEN)
+#define ERROR_OUTOFMEMORY ENOMEM
+#endif
+
+////////////////////////////////////////
 // Byte-order (endian-ness) determination.
-# if defined(BYTE_ORDER)
+
+/// if (OOBASE_BYTE_ORDER == OOBASE_LITTLE_ENDIAN) then the current machine is little-endian
+#define OOBASE_LITTLE_ENDIAN 0x0123
+
+/// if (OOBASE_BYTE_ORDER == OOBASE_BIG_ENDIAN) then the current machine is big-endian
+#define OOBASE_BIG_ENDIAN 0x3210
+
+#if defined(DOXYGEN)
+/// Defines the current byte order
+#define OOBASE_BYTE_ORDER
+
+#elif defined(BYTE_ORDER)
 #   if (BYTE_ORDER == LITTLE_ENDIAN)
-#     define OMEGA_LITTLE_ENDIAN 0x0123
-#     define OMEGA_BYTE_ORDER OMEGA_LITTLE_ENDIAN
+#     define OOBASE_BYTE_ORDER OOBASE_LITTLE_ENDIAN
 #   elif (BYTE_ORDER == BIG_ENDIAN)
-#     define OMEGA_BIG_ENDIAN 0x3210
-#     define OMEGA_BYTE_ORDER OMEGA_BIG_ENDIAN
+#     define OOBASE_BYTE_ORDER OOBASE_BIG_ENDIAN
 #   else
 #     error: unknown BYTE_ORDER!
 #   endif /* BYTE_ORDER */
 # elif defined(_BYTE_ORDER)
 #   if (_BYTE_ORDER == _LITTLE_ENDIAN)
-#     define OMEGA_LITTLE_ENDIAN 0x0123
-#     define OMEGA_BYTE_ORDER OMEGA_LITTLE_ENDIAN
+#     define OOBASE_BYTE_ORDER OOBASE_LITTLE_ENDIAN
 #   elif (_BYTE_ORDER == _BIG_ENDIAN)
-#     define OMEGA_BIG_ENDIAN 0x3210
-#     define OMEGA_BYTE_ORDER OMEGA_BIG_ENDIAN
+#     define OOBASE_BYTE_ORDER OOBASE_BIG_ENDIAN
 #   else
 #     error: unknown _BYTE_ORDER!
 #   endif /* _BYTE_ORDER */
 # elif defined(__BYTE_ORDER)
 #   if (__BYTE_ORDER == __LITTLE_ENDIAN)
-#     define OMEGA_LITTLE_ENDIAN 0x0123
-#     define OMEGA_BYTE_ORDER OMEGA_LITTLE_ENDIAN
+#     define OOBASE_BYTE_ORDER OOBASE_LITTLE_ENDIAN
 #   elif (__BYTE_ORDER == __BIG_ENDIAN)
-#     define OMEGA_BIG_ENDIAN 0x3210
-#     define OMEGA_BYTE_ORDER OMEGA_BIG_ENDIAN
+#     define OOBASE_BYTE_ORDER OOBASE_BIG_ENDIAN
 #   else
 #     error: unknown __BYTE_ORDER!
 #   endif /* __BYTE_ORDER */
@@ -167,12 +159,10 @@
      defined(ARM) || defined(_M_IA64) || \
      defined(_M_AMD64) || defined(__amd64)
     // We know these are little endian.
-#     define OMEGA_LITTLE_ENDIAN 0x0123
-#     define OMEGA_BYTE_ORDER OMEGA_LITTLE_ENDIAN
+#     define OOBASE_BYTE_ORDER OOBASE_LITTLE_ENDIAN
 #   else
     // Otherwise, we assume big endian.
-#     define OMEGA_BIG_ENDIAN 0x3210
-#     define OMEGA_BYTE_ORDER OMEGA_BIG_ENDIAN
+#     define OOBASE_BYTE_ORDER OOBASE_BIG_ENDIAN
 #   endif
 # endif /* ! BYTE_ORDER && ! __BYTE_ORDER */
 
@@ -181,65 +171,28 @@
 
 #ifdef __cplusplus
 
+/// Call OOBase::CallCriticalFailure passing __FILE__ and __LINE__
 #define OOBase_CallCriticalFailure(expr) \
 	OOBase::CallCriticalFailure(__FILE__,__LINE__,expr)
 
-#define OOBASE_NEW_T_CRITICAL(TYPE,POINTER,CONSTRUCTOR) \
-	do { \
-		void* OOBASE_NEW_ptr = ::OOBase::Allocate(sizeof(TYPE),0,__FILE__,__LINE__); \
-		if (!OOBASE_NEW_ptr) { ::OOBase::CallCriticalFailureMem(__FILE__,__LINE__); } \
-		try { POINTER = new (OOBASE_NEW_ptr) CONSTRUCTOR; } catch (...) { ::OOBase::Free(OOBASE_NEW_ptr,0); throw; } \
-	} while ((void)0,false)
-
-#define OOBASE_NEW_T2(TYPE,POINTER,CONSTRUCTOR) \
-	POINTER = new (::OOBase::Allocate(sizeof(TYPE),0,__FILE__,__LINE__)) CONSTRUCTOR
-
-#define OOBASE_NEW_T(TYPE,POINTER,CONSTRUCTOR) \
-	do { \
-		void* OOBASE_NEW_ptr = ::OOBase::Allocate(sizeof(TYPE),0,__FILE__,__LINE__); \
-		try { POINTER = new (OOBASE_NEW_ptr) CONSTRUCTOR; } catch (...) { ::OOBase::Free(OOBASE_NEW_ptr,0); throw; } \
-	} while ((void)0,false)
-
-#define OOBASE_NEW_T_RETURN(TYPE,CONSTRUCTOR) \
-	do { \
-		void* OOBASE_NEW_ptr = ::OOBase::Allocate(sizeof(TYPE),0,__FILE__,__LINE__); \
-		try { return new (OOBASE_NEW_ptr) CONSTRUCTOR; } catch (...) { ::OOBase::Free(OOBASE_NEW_ptr,0); throw; } \
-	} while ((void)0,false)
-
-#define OOBASE_DELETE(TYPE,POINTER) \
-	do { \
-		if (POINTER) \
-		{ \
-			POINTER->~TYPE(); \
-			::OOBase::Free(POINTER,0); \
-		} \
-	} while ((void)0,false)
-
 namespace OOBase
 {
-	// The discrimination type for singleton scoping
-	struct Module
-	{
-		int unused;
-	};
-
 	void CallCriticalFailure(const char* pszFile, unsigned int nLine, const char*);
 	void CallCriticalFailure(const char* pszFile, unsigned int nLine, int);
 
-	// flags: 0 - C++ object - align to size, no reallocation
-	//        1 - Buffer - align 32, reallocation
-	//        2 - Stack-local buffer - align 32, no reallocation
-	void* Allocate(size_t len, int flags, const char* file = 0, unsigned int line = 0);
+	/// Return the system supplied error string from error code 'err' . If err == -1, use errno or GetLastError()
+	const char* system_error_text(int err = -1);
 
-	// ptr must be alloc'ed with flag = 1 or NULL causing alloc with type 1
-	void* Reallocate(void* ptr, size_t len, const char* file = 0, unsigned int line = 0);
+	typedef bool (*OnCriticalFailure)(const char*);
 
-	void Free(void* ptr, int flags);
-
-	void CallCriticalFailureMem(const char* pszFile, unsigned int nLine);
+	/// Override the default critical failure behaviour
+	OnCriticalFailure SetCriticalFailure(OnCriticalFailure pfn);
 }
 
-#if !defined(HAVE_STATIC_ASSERT)
+#if defined(DOXYGEN)
+/// Compile time assertion, assert that expr == true
+#define static_assert(expr,msg)
+#elif !defined(HAVE_STATIC_ASSERT)
 #define static_assert(expr,msg) \
 	{ struct oobase_static_assert { char static_check[expr ? 1 : -1]; }; }
 #endif

@@ -22,25 +22,25 @@
 #ifndef OOBASE_TLS_SINGLETON_H_INCLUDED_
 #define OOBASE_TLS_SINGLETON_H_INCLUDED_
 
-#include "../config-base.h"
+#include "Memory.h"
 
 namespace OOBase
 {
 	namespace TLS
 	{
 		bool Get(const void* key, void** val);
-		void Set(const void* key, void* val, void (*destructor)(void*) = 0);
+		int Set(const void* key, void* val, void (*destructor)(void*) = NULL);
 		
 		void ThreadExit();
 	}
 
-	template <typename T, typename DLL = OOBase::Module>
+	template <typename T, typename DLL>
 	class TLSSingleton
 	{
 	public:
 		static T* instance()
 		{
-			void* inst = 0;
+			void* inst = NULL;
 			if (!TLS::Get(&s_sentinal,&inst))
 				inst = init();
 
@@ -54,26 +54,35 @@ namespace OOBase
 		TLSSingleton& operator = (const TLSSingleton&);
 		~TLSSingleton();
 
-		static const size_t s_sentinal;
+		static size_t s_sentinal;
 
 		static void* init()
 		{
-			T* pThis;
-			OOBASE_NEW_T_CRITICAL(T,pThis,T());
+			void* p = OOBase::HeapAllocate(sizeof(T));
+			if (!p)
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 			
-			TLS::Set(&s_sentinal,pThis,&destroy);
+			T* pThis = ::new (p) T();
+									
+			int err = TLS::Set(&s_sentinal,pThis,&destroy);
+			if (err != 0)
+				OOBase_CallCriticalFailure(err);
 
 			return pThis;
 		}
 
 		static void destroy(void* p)
 		{
-			OOBASE_DELETE(T,reinterpret_cast<T*>(p));
+			if (p)
+			{
+				static_cast<T*>(p)->~T();
+				OOBase::HeapFree(p);
+			}
 		}
 	};
 
 	template <typename T, typename DLL>
-	const size_t TLSSingleton<T,DLL>::s_sentinal = 0;
+	size_t TLSSingleton<T,DLL>::s_sentinal = 1;
 }
 
 #endif // OOBASE_TLS_SINGLETON_H_INCLUDED_

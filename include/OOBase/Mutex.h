@@ -35,7 +35,7 @@ namespace OOBase
 		~Mutex();
 
 		bool tryacquire();
-		bool acquire(const timeval_t* timeout = 0);
+		bool acquire(const timeval_t* wait = NULL);
 		void release();
 
 	private:
@@ -60,12 +60,12 @@ namespace OOBase
 #endif
 	};
 
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(DOXYGEN)
 	/// A non-recursive mutex that spins in user-mode before acquiring the kernel mutex
 	class SpinLock
 	{
 	public:
-		SpinLock(unsigned int max_spin = 4001);
+		SpinLock(unsigned int max_spin = 401);
 		~SpinLock();
 
 		bool tryacquire();
@@ -77,14 +77,7 @@ namespace OOBase
 		SpinLock(const SpinLock&);
 		SpinLock& operator = (const SpinLock&);
 
-		/** \var m_cs
-		 *  The platform specific spin-lock variable.
-		 */
 		CRITICAL_SECTION m_cs;
-
-#if defined(_DEBUG)
-		size_t m_recursive;
-#endif
 	};
 #else
 	class SpinLock : public Mutex
@@ -116,14 +109,7 @@ namespace OOBase
 		RWMutex(const RWMutex&);
 		RWMutex& operator = (const RWMutex&);
 
-		/** \var m_lock
-		 *  The platform specific read/write lock variable.
-		 */
 #if defined(_WIN32)
-	#if (WINVER < 0x0600)
-		typedef OOBase::Win32::rwmutex_t* SRWLOCK;
-	#endif
-
 		SRWLOCK          m_lock;
 #elif defined(HAVE_PTHREAD)
 		pthread_rwlock_t m_mutex;

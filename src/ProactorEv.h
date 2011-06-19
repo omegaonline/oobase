@@ -53,8 +53,8 @@ namespace OOSvrBase
 			OOBase::SmartPtr<OOBase::Socket> accept_local(Acceptor<AsyncLocalSocket>* handler, const char* path, int* perr, SECURITY_ATTRIBUTES* psa);
 			OOBase::SmartPtr<OOBase::Socket> accept_remote(Acceptor<AsyncSocket>* handler, const char* address, const char* port, int* perr);
 
-			AsyncSocketPtr attach_socket(OOBase::socket_t sock, int* perr);
-			AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int* perr);
+			AsyncSocketPtr attach_socket(OOBase::Socket::socket_t sock, int* perr);
+			AsyncLocalSocketPtr attach_local_socket(OOBase::Socket::socket_t sock, int* perr);
 
 			AsyncLocalSocketPtr connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* timeout);
 
@@ -66,9 +66,9 @@ namespace OOSvrBase
 			void init_watcher(io_watcher* watcher, int fd, int events);
 			void start_watcher(io_watcher* watcher);
 			void stop_watcher(io_watcher* watcher);
-						
+
 		private:
-			typedef std::deque<io_watcher*,OOBase::CriticalAllocator<io_watcher*> > dequeType;
+			typedef std::deque<io_watcher*> dequeType;
 
 			// The following vars all use this lock
 			OOBase::Mutex m_ev_lock;
@@ -83,7 +83,7 @@ namespace OOSvrBase
 			dequeType        m_stop_queue;
 
 			// The following vars don't...
-			typedef std::deque<OOBase::SmartPtr<OOBase::Thread>,OOBase::CriticalAllocator<OOBase::SmartPtr<OOBase::Thread> > > workerDeque;
+			typedef std::deque<OOBase::SmartPtr<OOBase::Thread> > workerDeque;
 			workerDeque m_workers;
 			ev_async    m_alert;
 

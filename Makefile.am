@@ -8,9 +8,6 @@ EXTRA_DIST = \
 ####################################
 # Some helper targets
 
-gitbundle:
-	git bundle create oobase.git --all
-
 astyle:
 	astyle -A1 -T4 -K -N -w -U -c -n -R $(srcdir)/*.h
 	astyle -A1 -T4 -K -N -w -U -c -n -R $(srcdir)/*.inl
@@ -50,25 +47,33 @@ dist-hook:
 
 noinst_LTLIBRARIES = liboobase.la liboosvrbase.la
 
-liboobase_la_CFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
-liboobase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(LTDLINCL)
-liboobase_la_LDFLAGS = $(PTHREAD_LIBS) $(LIBLTDL)
+liboobase_la_CFLAGS = $(PTHREAD_CFLAGS)
+liboobase_la_CXXFLAGS = $(PTHREAD_CFLAGS)
+liboobase_la_LDFLAGS = $(PTHREAD_LIBS)
 
 if WIN32
-liboobase_la_LDFLAGS += -lws2_32
+liboobase_la_LIBADD = -lws2_32
+else
+liboobase_la_CFLAGS += $(LTDLINCL)
+liboobase_la_CXXFLAGS += $(LTDLINCL)
+liboobase_la_LIBADD = $(LIBLTDL)
 endif 
 
 liboobase_la_SOURCES = \
 	include/config-base.h \
 	include/config-msvc.h \
-	include/OOBase/Allocator.h \
 	include/OOBase/Atomic.h \
+	include/OOBase/BoundedQueue.h \
 	include/OOBase/Buffer.h \
 	include/OOBase/ByteSwap.h \
 	include/OOBase/CDRStream.h \
 	include/OOBase/Condition.h \
+	include/OOBase/CustomNew.h \
 	include/OOBase/Destructor.h \
 	include/OOBase/DLL.h \
+	include/OOBase/HandleTable.h \
+	include/OOBase/HashTable.h \
+	include/OOBase/Memory.h \
 	include/OOBase/Mutex.h \
 	include/OOBase/Once.h \
 	include/OOBase/Posix.h \
@@ -76,15 +81,18 @@ liboobase_la_SOURCES = \
 	include/OOBase/Singleton.h \
 	include/OOBase/SmartPtr.h \
 	include/OOBase/Socket.h \
+	include/OOBase/Stack.h \
+	include/OOBase/String.h \
+	include/OOBase/Table.h \
 	include/OOBase/Thread.h \
 	include/OOBase/TimeVal.h \
 	include/OOBase/TLSSingleton.h \
 	include/OOBase/tr24731.h \
 	include/OOBase/utf8.h \
 	include/OOBase/Win32.h \
-	include/OOBase/internal/BSDSocket.h \
-	include/OOBase/internal/Win32Impl.h \
-	include/OOBase/internal/Win32Socket.h \
+	src/BSDSocket.h \
+	src/Win32Impl.h \
+	src/Win32Socket.h \
 	src/BSDSocket.cpp \
 	src/Buffer.cpp \
 	src/Condition.cpp \
@@ -94,21 +102,25 @@ liboobase_la_SOURCES = \
 	src/Mutex.cpp \
 	src/Once.cpp \
 	src/Posix.cpp \
+	src/String.cpp \
 	src/Thread.cpp \
 	src/TimeVal.cpp \
 	src/TLS.cpp \
 	src/tr24731.cpp \
 	src/utf8.cpp \
 	src/Win32.cpp \
-	src/Win32Socket.cpp	\
+	src/Win32Socket.cpp \
 	src/Win32Socket2.cpp	
 
 liboosvrbase_la_CFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
 liboosvrbase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
-liboosvrbase_la_LDFLAGS = $(PTHREAD_LIBS) $(EV_LIBS)
+liboosvrbase_la_LDFLAGS = $(PTHREAD_LIBS)
+liboosvrbase_la_LIBADD = $(SQLITE3_LIBS)
 
 if WIN32
-liboosvrbase_la_LDFLAGS += -lnetapi32 -luserenv -lshlwapi
+liboosvrbase_la_LIBADD += -lnetapi32 -luserenv
+else
+liboosvrbase_la_LIBADD += $(EV_LIBS)
 endif
 
 liboosvrbase_la_SOURCES = \
@@ -116,12 +128,11 @@ liboosvrbase_la_SOURCES = \
 	include/OOSvrBase/Database.h \
 	include/OOSvrBase/Logger.h \
 	include/OOSvrBase/Proactor.h \
-	include/OOSvrBase/pw_info.h \
 	include/OOSvrBase/SecurityWin32.h \
 	include/OOSvrBase/Service.h \
-	include/OOSvrBase/internal/ProactorEv.h \
-	include/OOSvrBase/internal/ProactorImpl.h \
-	include/OOSvrBase/internal/ProactorWin32.h \
+	src/ProactorEv.h \
+	src/ProactorImpl.h \
+	src/ProactorWin32.h \
 	src/CmdArgs.cpp \
 	src/Database.cpp \
 	src/Logger.cpp \

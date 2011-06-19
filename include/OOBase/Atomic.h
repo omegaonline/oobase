@@ -24,27 +24,7 @@
 
 #include "Mutex.h"
 
-#if defined(DOXYGEN)
-
-/* Define if you have atomic compare-and-swap for 32bit values */
-#define ATOMIC_CAS_32(t,v)
-
-/* Define if you have atomic inc and dec for 32bit values */
-#define ATOMIC_INC_32(t)
-#define ATOMIC_DEC_32(t)
-#define ATOMIC_ADD_32(t,v)
-#define ATOMIC_SUB_32(t,v)
-
-/* Define if you have atomic compare-and-swap for 64bit values */
-#define ATOMIC_CAS_64(t,v)
-
-/* Define if you have atomic compare-and-swap for 64bit values */
-#define ATOMIC_INC_64(t)
-#define ATOMIC_DEC_64(t)
-#define ATOMIC_ADD_64(t,v)
-#define ATOMIC_SUB_64(t,v)
-
-#elif defined(_MSC_VER)
+#if defined(_MSC_VER)
 
 #include <intrin.h>
 
@@ -119,10 +99,10 @@ namespace OOBase
 {
 	namespace detail
 	{
-		template <typename T, const size_t S> 
+		template <typename T, const size_t S>
 		struct AtomicImpl;
 	}
-		
+
 	template <typename T>
 	class Atomic
 	{
@@ -153,7 +133,7 @@ namespace OOBase
 
 		T Exchange(const T newVal)
 		{
-			return Exchange(m_val,newVal);			
+			return Exchange(m_val,newVal);
 		}
 
 		static T CompareAndSwap(T& val, const T oldVal, const T newVal)
@@ -236,7 +216,7 @@ namespace OOBase
 	private:
 		T m_val;
 	};
-	
+
 	namespace detail
 	{
 		template <typename T>
@@ -255,9 +235,9 @@ namespace OOBase
 				return (T)ATOMIC_EXCH_32(&val,newVal);
 			#else
 				T oldVal(val);
-				while (CompareAndSwap(val,oldVal,newVal)) != oldVal)
+				while (CompareAndSwap(val,oldVal,newVal) != oldVal)
 					oldVal = val;
-			
+
 				return oldVal;
 			#endif
 			}
@@ -315,7 +295,7 @@ namespace OOBase
 				T oldVal(val);
 				while (CompareAndSwap(val,oldVal,newVal) != oldVal)
 					oldVal = val;
-			
+
 				return oldVal;
 			#endif
 			}

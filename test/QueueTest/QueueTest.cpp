@@ -168,11 +168,6 @@ bool run_test(pfnTest t, const char* pszName)
 			return true;
 		}
 	}
-	catch (std::exception& e)
-	{
-		++exception_count;
-		output("[Unhandled std::exception]\n\nWhat:\t%s\n",e.what());
-	}
 	catch (...)
 	{
 		++exception_count;

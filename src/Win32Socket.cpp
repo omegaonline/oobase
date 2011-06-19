@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Singleton.h"
+#include "../include/OOBase/CustomNew.h"
 #include "Win32Socket.h"
 
 #if defined(_WIN32)
@@ -385,9 +385,17 @@ size_t WinSocket::recv(void* buf, size_t len, bool bAll, int* perr, const OOBase
 		wsabuf.buf = const_cast<char*>(static_cast<const char*>(buf));
 		wsabuf.len = len;
 
-		return recv_i(&wsabuf,1,bAll,perr,timeout);
+	std::string pipe_name;
+	try
+	{
+		pipe_name.assign("\\\\.\\pipe\\");
+		pipe_name += path;
 	}
-}
+	catch (std::exception&)
+	{
+		*perr = ERROR_OUTOFMEMORY;
+		return NULL;
+	}
 
 size_t WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, int* perr, const OOBase::timeval_t* timeout)
 {
