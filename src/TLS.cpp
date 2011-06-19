@@ -73,6 +73,10 @@ namespace
 		Win32TLSGlobal();
 		~Win32TLSGlobal();
 
+		TLSMap* Get();
+		void Set(TLSMap* inst);
+
+	private:
 		DWORD         m_key;
 	};
 
@@ -93,6 +97,17 @@ namespace
 			TlsFree(m_key);
 	}
 
+	TLSMap* Win32TLSGlobal::Get()
+	{
+		return static_cast<TLSMap*>(TlsGetValue(m_key));
+	}
+
+	void Win32TLSGlobal::Set(TLSMap* inst)
+	{
+		if (!TlsSetValue(m_key,inst))
+			OOBase_CallCriticalFailure(GetLastError());
+	}
+
 	/** \typedef TLS_GLOBAL
 	 *  The TLS singleton.
 	 *  The singleton is specialised by the platform specific implementation
@@ -109,6 +124,10 @@ namespace
 		PthreadTLSGlobal();
 		~PthreadTLSGlobal();
 
+		TLSMap* Get();
+		void Set(TLSMap* inst);
+
+	private:
 		pthread_key_t m_key;
 	};
 
@@ -126,38 +145,30 @@ namespace
 			OOBase_CallCriticalFailure(err);
 	}
 
+	TLSMap* PthreadTLSGlobal::Get()
+	{
+		return static_cast<TLSMap*>(pthread_getspecific(m_key));
+	}
+
+	void PthreadTLSGlobal::Set(TLSMap* inst)
+	{
+		int err = pthread_setspecific(m_key,inst);
+		if (err != 0)
+			OOBase_CallCriticalFailure(err);
+	}
+
 	typedef OOBase::Singleton<PthreadTLSGlobal,OOBase::Module> TLS_GLOBAL;
 
 #endif // HAVE_PTHREAD
 
 	TLSMap* TLSMap::instance(bool create)
 	{
-		TLSMap* inst = NULL;
-#if defined(_WIN32)
-		inst = static_cast<TLSMap*>(TlsGetValue(TLS_GLOBAL::instance().m_key));
-#elif defined(HAVE_PTHREAD)
-		inst = static_cast<TLSMap*>(pthread_getspecific(TLS_GLOBAL::instance().m_key));
-#else
-#error Fix me!
-#endif
+		TLSMap* inst = TLS_GLOBAL::instance().Get();
 		if (!inst && create)
 		{
 			inst = new (OOBase::critical) TLSMap();
-			
-#if defined(_WIN32)
 			OOBase::DLLDestructor<OOBase::Module>::add_destructor(destroy,inst);
-
-			if (!TlsSetValue(TLS_GLOBAL::instance().m_key,inst))
-				OOBase_CallCriticalFailure(GetLastError());
-
-#elif defined(HAVE_PTHREAD)
-
-			int err = pthread_setspecific(TLS_GLOBAL::instance().m_key,inst);
-			if (err != 0)
-				OOBase_CallCriticalFailure(err);
-#else
-#error Fix me!
-#endif
+			TLS_GLOBAL::instance().Set(inst);
 		}
 		return inst;
 	}
@@ -173,21 +184,12 @@ namespace
 				if (val.m_destructor)
 					(*val.m_destructor)(val.m_val);
 			}
-						
+
 			delete inst;
 		}
 
-#if defined(_WIN32)
 		// Now set NULL back in place...
-		if (!TlsSetValue(TLS_GLOBAL::instance().m_key,NULL))
-			OOBase_CallCriticalFailure(GetLastError());
-#elif defined(HAVE_PTHREAD)
-		int err = pthread_setspecific(TLS_GLOBAL::instance().m_key,NULL);
-		if (err != 0)
-			OOBase_CallCriticalFailure(err);
-#else
-#error Fix me!
-#endif
+		TLS_GLOBAL::instance().Set(NULL);
 	}
 }
 
@@ -214,7 +216,7 @@ int OOBase::TLS::Set(const void* key, void* val, void (*destructor)(void*))
 	TLSMap::tls_val* pv = inst->m_mapVals.find(key);
 	if (!pv)
 		return inst->m_mapVals.insert(key,v);
-	
+
 	*pv = v;
 	return true;
 }
@@ -224,9 +226,7 @@ void OOBase::TLS::ThreadExit()
 	TLSMap* inst = TLSMap::instance(false);
 	if (inst)
 	{
-#if defined(_WIN32)
 		OOBase::DLLDestructor<OOBase::Module>::remove_destructor(TLSMap::destroy,inst);
-#endif
 		TLSMap::destroy(inst);
 	}
 }
