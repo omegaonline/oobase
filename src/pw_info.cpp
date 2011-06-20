@@ -26,7 +26,7 @@
 OOBase::POSIX::pw_info::pw_info(uid_t uid) :
 		m_pwd(NULL), m_buf_len(1024)
 {
-#if defined(_SC_GETPW_R_SIZE_MAX) && defined(HAVE_UNISTD_H)
+#if defined(_SC_GETPW_R_SIZE_MAX)
 	m_buf_len = sysconf(_SC_GETPW_R_SIZE_MAX) + 1;
 #endif
 
@@ -47,7 +47,7 @@ OOBase::POSIX::pw_info::pw_info(uid_t uid) :
 OOBase::POSIX::pw_info::pw_info(const char* uname) :
 		m_pwd(NULL), m_buf_len(1024)
 {
-#if defined(_SC_GETPW_R_SIZE_MAX) && defined(HAVE_UNISTD_H)
+#if defined(_SC_GETPW_R_SIZE_MAX)
 	m_buf_len = sysconf(_SC_GETPW_R_SIZE_MAX) + 1;
 #endif
 
