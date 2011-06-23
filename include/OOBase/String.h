@@ -233,10 +233,10 @@ namespace OOBase
 	{
 		int err = 0;
 	#if defined(_WIN32)
-		if (str.c_str()[str.length()-1] != '\\' && str.c_str()[str.length()-1] != '/')
+		if (str[str.length()-1] != '\\' && str[str.length()-1] != '/')
 			err = str.append("\\",1);
 	#else
-		if (str.c_str()[str.length()-1] != '/')
+		if (str[str.length()-1] != '/')
 			err = str.append("/",1);
 	#endif
 		return err;
