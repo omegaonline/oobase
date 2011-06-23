@@ -227,6 +227,20 @@ namespace OOBase
 		static void node_release(Node* node);
 		static Node* node_allocate(size_t len);
 	};
+	
+	template <typename T>
+	inline int AppendDirSeparator(T& str)
+	{
+		int err = 0;
+	#if defined(_WIN32)
+		if (str.c_str()[str.length()-1] != '\\' && str.c_str()[str.length()-1] != '/')
+			err = str.append("\\",1);
+	#else
+		if (str.c_str()[str.length()-1] != '/')
+			err = str.append("/",1);
+	#endif
+		return err;
+	}
 }
 
 #endif // OOBASE_STRING_H_INCLUDED_
