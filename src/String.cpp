@@ -130,6 +130,24 @@ int OOBase::LocalString::printf(const char* format, ...)
 	return err;
 }
 
+int OOBase::LocalString::getenv(const char* envvar)
+{
+#if defined(_MSC_VER) && defined(_CRT_INSECURE_DEPRECATE)
+	char* buf = 0;
+	size_t len = 0;
+	int err = _dupenv_s(&buf,&len,val);
+	if (err == 0)
+	{
+		if (len)
+			err = str.assign(buf,len-1);
+		free(buf);
+	}
+	return err;
+#else
+	return assign(::getenv(envvar));
+#endif
+}
+
 size_t OOBase::LocalString::find(char c, size_t start) const
 {
 	if (start >= length())
