@@ -16,7 +16,7 @@ namespace OOBase
 
 int main(int argc, char* argv[])
 {
-	OOSvrBase::CmdArgs cmd_args;
+	OOBase::CmdArgs cmd_args;
 	cmd_args.add_option("a",'a');
 	cmd_args.add_option("b",'b');
 	cmd_args.add_option("c",'c',"long-c",true);
