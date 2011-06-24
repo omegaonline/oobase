@@ -33,8 +33,7 @@ int OOSvrBase::CmdArgs::add_option(const char* id, char short_opt, bool has_valu
 		return err;
 
 	assert(!strId.empty());
-	assert(m_map_args.find(strId) == m_map_args.npos);
-
+	
 	Option opt;
 	opt.m_short_opt = short_opt;
 	if (long_opt)
@@ -47,21 +46,12 @@ int OOSvrBase::CmdArgs::add_option(const char* id, char short_opt, bool has_valu
 	return m_map_opts.insert(strId,opt);
 }
 
-int OOSvrBase::CmdArgs::add_argument(const char* id, int position)
+int OOSvrBase::CmdArgs::parse(int argc, char* argv[], results_t& results, int skip) const
 {
-	OOBase::String strId;
-	int err = strId.assign(id);
-	if (err != 0)
-		return err;
-
-	assert(!strId.empty());
-	assert(m_map_opts.find(strId) == m_map_opts.npos);
-	assert(m_map_args.find(strId) == m_map_args.npos);
-
-	return m_map_args.insert(strId,position);
+	return parse(argc,(const char**)argv,results,skip);
 }
 
-int OOSvrBase::CmdArgs::parse(int argc, char* argv[], results_t& results, int skip) const
+int OOSvrBase::CmdArgs::parse(int argc, const char* argv[], results_t& results, int skip) const
 {
 	bool bEndOfOpts = false;
 	int pos = 0;
@@ -99,7 +89,7 @@ int OOSvrBase::CmdArgs::parse(int argc, char* argv[], results_t& results, int sk
 	return err;
 }
 
-int OOSvrBase::CmdArgs::parse_long_option(const char* name, results_t& results, char** argv, int& arg, int argc) const
+int OOSvrBase::CmdArgs::parse_long_option(const char* name, results_t& results, const char** argv, int& arg, int argc) const
 {
 	for (size_t i=0; i < m_map_opts.size(); ++i)
 	{
@@ -141,9 +131,9 @@ int OOSvrBase::CmdArgs::parse_long_option(const char* name, results_t& results, 
 	LOG_ERROR_RETURN(("%s - Unrecognised option %s",name,argv[arg]),EINVAL);
 }
 
-int OOSvrBase::CmdArgs::parse_short_options(const char* name, results_t& results, char** argv, int& arg, int argc) const
+int OOSvrBase::CmdArgs::parse_short_options(const char* name, results_t& results, const char** argv, int& arg, int argc) const
 {
-	for (char* c = argv[arg]+1; *c!='\0'; ++c)
+	for (const char* c = argv[arg]+1; *c!='\0'; ++c)
 	{
 		size_t i;
 		for (i = 0; i < m_map_opts.size(); ++i)
@@ -202,14 +192,8 @@ int OOSvrBase::CmdArgs::parse_arg(results_t& results, const char* arg, int posit
 	if (err != 0)
 		return err;
 
-	for (size_t i=0; i < m_map_args.size(); ++i)
-	{
-		if (position == *m_map_args.at(i))
-			return results.insert(*m_map_args.key_at(i),strArg);
-	}
-
 	OOBase::String strResult;
-	err = strResult.printf("@d",position);
+	err = strResult.printf("@%d",position);
 	if (err != 0)
 		return err;
 

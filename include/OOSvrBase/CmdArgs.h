@@ -32,10 +32,10 @@ namespace OOSvrBase
 	{
 	public:
 		int add_option(const char* id, char short_opt = 0, bool has_value = false, const char* long_opt = NULL);
-		int add_argument(const char* id, int position);
-
+		
 		typedef OOBase::Table<OOBase::String,OOBase::String> results_t;
 		int parse(int argc, char* argv[], results_t& results, int skip = 1) const;
+		int parse(int argc, const char* argv[], results_t& results, int skip = 1) const;
 
 	private:
 		struct Option
@@ -46,10 +46,9 @@ namespace OOSvrBase
 		};
 
 		OOBase::Table<OOBase::String,Option> m_map_opts;
-		OOBase::Table<OOBase::String,int>    m_map_args;
-
-		int parse_long_option(const char* name, results_t& results, char** argv, int& arg, int argc) const;
-		int parse_short_options(const char* name, results_t& results, char** argv, int& arg, int argc) const;
+		
+		int parse_long_option(const char* name, results_t& results, const char** argv, int& arg, int argc) const;
+		int parse_short_options(const char* name, results_t& results, const char** argv, int& arg, int argc) const;
 		int parse_arg(results_t& results, const char* opt, int position) const;
 	};
 }

@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
 	cmd_args.add_option("c",'c',"long-c",true);
 
 	std::map<std::string,std::string> results;
-	TEST(cmd_args.parse(argc,argv,results));
+	TEST(cmd_args.parse(argc,argv,results) == 0);
 
 	for (std::map<std::string,std::string>::iterator i=results.begin(); i!=results.end(); ++i)
 	{
