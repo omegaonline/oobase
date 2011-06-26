@@ -23,6 +23,8 @@
 
 #if defined(_WIN32)
 
+#include "../include/OOBase/CustomNew.h"
+
 #include <shlwapi.h>
 
 namespace
