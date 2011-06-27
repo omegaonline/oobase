@@ -40,8 +40,6 @@ namespace
 	class Win32Thunk
 	{
 	public:
-		Win32Thunk();
-		
 		static Win32Thunk& instance();
 
 		typedef BOOL (__stdcall *pfn_InitOnceExecuteOnce)(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitFn, void* Parameter, void** Context);
@@ -89,115 +87,84 @@ namespace
 		HMODULE m_hKernel32;
 		
 	private:
-		void init_low_frag_heap(HANDLE hHeap);
-
-		static Win32Thunk* s_instance;
-
-		static BOOL __stdcall init(INIT_ONCE*,void*,void**);
-		static void destroy(void*);
+		Win32Thunk() : m_hKernel32(NULL) 
+		{}
+		
+		static BOOL __stdcall init(INIT_ONCE*, void* i, void**);
+		static void init_low_frag_heap(HMODULE hKernel32, HANDLE hHeap);
 	};
 
-	Win32Thunk* Win32Thunk::s_instance = NULL;
-
-	Win32Thunk::Win32Thunk() :
-			m_hKernel32(NULL)
+	BOOL Win32Thunk::init(INIT_ONCE*, void* i, void**)
 	{
-		m_hKernel32 = GetModuleHandleW(L"Kernel32.dll");
-		if (!m_hKernel32)
+		Win32Thunk* instance = static_cast<Win32Thunk*>(i);
+		
+		instance->m_hKernel32 = GetModuleHandleW(L"Kernel32.dll");
+		if (!instance->m_hKernel32)
 			OOBase_CallCriticalFailure(GetLastError());
 
-		m_InitOnceExecuteOnce = (pfn_InitOnceExecuteOnce)(GetProcAddress(m_hKernel32,"InitOnceExecuteOnce"));
-		if (!m_InitOnceExecuteOnce)
-			m_InitOnceExecuteOnce = impl_InitOnceExecuteOnce;
+		instance->m_InitOnceExecuteOnce = (pfn_InitOnceExecuteOnce)(GetProcAddress(instance->m_hKernel32,"InitOnceExecuteOnce"));
+		if (!instance->m_InitOnceExecuteOnce)
+			instance->m_InitOnceExecuteOnce = impl_InitOnceExecuteOnce;
 
-		m_InitializeSRWLock = (pfn_InitializeSRWLock)(GetProcAddress(m_hKernel32,"InitializeSRWLock"));
-		m_AcquireSRWLockShared = (pfn_AcquireSRWLockShared)(GetProcAddress(m_hKernel32,"AcquireSRWLockShared"));
-		m_AcquireSRWLockExclusive = (pfn_AcquireSRWLockExclusive)(GetProcAddress(m_hKernel32,"AcquireSRWLockExclusive"));
-		m_ReleaseSRWLockShared = (pfn_ReleaseSRWLockShared)(GetProcAddress(m_hKernel32,"ReleaseSRWLockShared"));
-		m_ReleaseSRWLockExclusive = (pfn_ReleaseSRWLockExclusive)(GetProcAddress(m_hKernel32,"ReleaseSRWLockExclusive"));
+		instance->m_InitializeSRWLock = (pfn_InitializeSRWLock)(GetProcAddress(instance->m_hKernel32,"InitializeSRWLock"));
+		instance->m_AcquireSRWLockShared = (pfn_AcquireSRWLockShared)(GetProcAddress(instance->m_hKernel32,"AcquireSRWLockShared"));
+		instance->m_AcquireSRWLockExclusive = (pfn_AcquireSRWLockExclusive)(GetProcAddress(instance->m_hKernel32,"AcquireSRWLockExclusive"));
+		instance->m_ReleaseSRWLockShared = (pfn_ReleaseSRWLockShared)(GetProcAddress(instance->m_hKernel32,"ReleaseSRWLockShared"));
+		instance->m_ReleaseSRWLockExclusive = (pfn_ReleaseSRWLockExclusive)(GetProcAddress(instance->m_hKernel32,"ReleaseSRWLockExclusive"));
 
-		if (!m_InitializeSRWLock ||
-				!m_AcquireSRWLockShared ||
-				!m_AcquireSRWLockExclusive ||
-				!m_ReleaseSRWLockShared ||
-				!m_ReleaseSRWLockExclusive)
+		if (!instance->m_InitializeSRWLock ||
+				!instance->m_AcquireSRWLockShared ||
+				!instance->m_AcquireSRWLockExclusive ||
+				!instance->m_ReleaseSRWLockShared ||
+				!instance->m_ReleaseSRWLockExclusive)
 		{
-			m_InitializeSRWLock = impl_InitializeSRWLock;
-			m_AcquireSRWLockShared = impl_AcquireSRWLockShared;
-			m_AcquireSRWLockExclusive = impl_AcquireSRWLockExclusive;
-			m_ReleaseSRWLockShared = impl_ReleaseSRWLockShared;
-			m_ReleaseSRWLockExclusive = impl_ReleaseSRWLockExclusive;
+			instance->m_InitializeSRWLock = impl_InitializeSRWLock;
+			instance->m_AcquireSRWLockShared = impl_AcquireSRWLockShared;
+			instance->m_AcquireSRWLockExclusive = impl_AcquireSRWLockExclusive;
+			instance->m_ReleaseSRWLockShared = impl_ReleaseSRWLockShared;
+			instance->m_ReleaseSRWLockExclusive = impl_ReleaseSRWLockExclusive;
 		}
 
-		m_InitializeConditionVariable = (pfn_InitializeConditionVariable)(GetProcAddress(m_hKernel32,"InitializeConditionVariable"));
-		m_SleepConditionVariableCS = (pfn_SleepConditionVariableCS)(GetProcAddress(m_hKernel32,"SleepConditionVariableCS"));
-		m_WakeConditionVariable = (pfn_WakeConditionVariable)(GetProcAddress(m_hKernel32,"WakeConditionVariable"));
-		m_WakeAllConditionVariable = (pfn_WakeAllConditionVariable)(GetProcAddress(m_hKernel32,"WakeAllConditionVariable"));
+		instance->m_InitializeConditionVariable = (pfn_InitializeConditionVariable)(GetProcAddress(instance->m_hKernel32,"InitializeConditionVariable"));
+		instance->m_SleepConditionVariableCS = (pfn_SleepConditionVariableCS)(GetProcAddress(instance->m_hKernel32,"SleepConditionVariableCS"));
+		instance->m_WakeConditionVariable = (pfn_WakeConditionVariable)(GetProcAddress(instance->m_hKernel32,"WakeConditionVariable"));
+		instance->m_WakeAllConditionVariable = (pfn_WakeAllConditionVariable)(GetProcAddress(instance->m_hKernel32,"WakeAllConditionVariable"));
 
-		if (!m_InitializeConditionVariable ||
-				!m_SleepConditionVariableCS ||
-				!m_WakeConditionVariable ||
-				!m_WakeAllConditionVariable)
+		if (!instance->m_InitializeConditionVariable ||
+				!instance->m_SleepConditionVariableCS ||
+				!instance->m_WakeConditionVariable ||
+				!instance->m_WakeAllConditionVariable)
 		{
-			m_InitializeConditionVariable = impl_InitializeConditionVariable;
-			m_SleepConditionVariableCS = NULL;
-			m_WakeConditionVariable = impl_WakeConditionVariable;
-			m_WakeAllConditionVariable = impl_WakeAllConditionVariable;
+			instance->m_InitializeConditionVariable = impl_InitializeConditionVariable;
+			instance->m_SleepConditionVariableCS = NULL;
+			instance->m_WakeConditionVariable = impl_WakeConditionVariable;
+			instance->m_WakeAllConditionVariable = impl_WakeAllConditionVariable;
 		}
 
-		m_BindIoCompletionCallback = (pfn_BindIoCompletionCallback)(GetProcAddress(m_hKernel32,"BindIoCompletionCallback"));
+		instance->m_BindIoCompletionCallback = (pfn_BindIoCompletionCallback)(GetProcAddress(instance->m_hKernel32,"BindIoCompletionCallback"));
 
-		init_low_frag_heap(GetProcessHeap());
+		init_low_frag_heap(instance->m_hKernel32,GetProcessHeap());
 #if (WINVER >= 0x0501)
-		init_low_frag_heap((HANDLE)_get_heap_handle());
+		init_low_frag_heap(instance->m_hKernel32,(HANDLE)_get_heap_handle());
 #endif
+		return TRUE;
 	}
 
 	Win32Thunk& Win32Thunk::instance()
 	{
+		static Win32Thunk s_instance;
 		static INIT_ONCE key = {0};
-		if (!impl_InitOnceExecuteOnce(&key,&init,NULL,NULL))
+		if (!impl_InitOnceExecuteOnce(&key,&init,&s_instance,NULL))
 			OOBase_CallCriticalFailure(GetLastError());
 		
-		assert(s_instance != reinterpret_cast<Win32Thunk*>((uintptr_t)0xdeadbeef));
-		return *const_cast<Win32Thunk*>(s_instance);
+		return s_instance;
 	}
 
-	BOOL Win32Thunk::init(INIT_ONCE*,void*,void**)
-	{
-		if (!s_instance)
-		{
-			void* p = ::HeapAlloc(GetProcessHeap(),0,sizeof(Win32Thunk));
-			if (!p)
-				OOBase_CallCriticalFailure(GetLastError());
-
-			// Placement new...
-			s_instance = ::new (p) Win32Thunk();
-			
-			// This will call us again on Win32
-			OOBase::DLLDestructor<OOBase::Module>::add_destructor(&destroy,NULL);
-		}
-		
-		return TRUE;
-	}
-
-	void Win32Thunk::destroy(void*)
-	{
-		assert(s_instance != reinterpret_cast<Win32Thunk*>((uintptr_t)0xdeadbeef));
-
-		Win32Thunk* instance = const_cast<Win32Thunk*>(s_instance);
-
-		s_instance = reinterpret_cast<Win32Thunk*>((uintptr_t)0xdeadbeef);
-
-		instance->~Win32Thunk();
-		::HeapFree(GetProcessHeap(),0,instance);
-	}
-
-	void Win32Thunk::init_low_frag_heap(HANDLE hHeap)
+	void Win32Thunk::init_low_frag_heap(HMODULE hKernel32, HANDLE hHeap)
 	{
 		typedef BOOL (__stdcall *pfn_HeapSetInformation)(HANDLE HeapHandle, HEAP_INFORMATION_CLASS HeapInformationClass, void* HeapInformation, SIZE_T HeapInformationLength);
 
-		pfn_HeapSetInformation pfn = (pfn_HeapSetInformation)(GetProcAddress(m_hKernel32,"HeapSetInformation"));
+		pfn_HeapSetInformation pfn = (pfn_HeapSetInformation)(GetProcAddress(hKernel32,"HeapSetInformation"));
 		if (pfn)
 		{
 			ULONG ulEnableLFH = 2;
@@ -205,7 +172,7 @@ namespace
 		}
 	}
 
-	static HANDLE get_mutex(void* v)
+	HANDLE get_mutex(void* v)
 	{
 		wchar_t buf[256] = {0};
 		wsprintfW(buf,L"Local\\OOBase__Win32Thunk__Once__Mutex__%lu__%p",GetCurrentProcessId(),v);
