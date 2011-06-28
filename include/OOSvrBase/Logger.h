@@ -36,18 +36,13 @@ namespace OOSvrBase
 			Debug
 		};
 
-		void open(const char* name);
+		void open(const char* name, const char* pszSrcFile = NULL);
 		void log(Priority priority, const char* fmt, ...);
 		
 #if !defined(DOXYGEN)
 		struct filenum_t
 		{
-			filenum_t(Priority priority, const char* pszFilename, unsigned int nLine) :
-					m_priority(priority),
-					m_pszFilename(pszFilename),
-					m_nLine(nLine)
-			{}
-
+			filenum_t(Priority priority, const char* pszFilename, unsigned int nLine);
 			void log(const char* fmt, ...);
 
 			Priority     m_priority;

@@ -179,9 +179,23 @@ void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, const 
 
 	if (pszFile)
 	{
+		static const char szOurFile[] = __FILE__;
+		size_t s=0;
+		for (;;)
+		{
+			size_t s1 = s;
+			while (szOurFile[s1] == pszFile[s1] && szOurFile[s1] != '\\' && szOurFile[s1] != '/')
+				++s1;
+
+			if (szOurFile[s1] == '\\' || szOurFile[s1] == '/')
+				s = s1+1;
+			else
+				break;
+		}
+
 		snprintf_s(szBuf,sizeof(szBuf),
 			"Critical error '%s' has occurred in the application at %s(%u).  "
-			"The application will now terminate.\n",msg,pszFile,nLine);
+			"The application will now terminate.\n",msg,pszFile+s,nLine);
 	}
 	else
 	{
