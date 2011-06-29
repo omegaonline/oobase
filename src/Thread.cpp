@@ -40,11 +40,10 @@ namespace
 		Win32Thread();
 		virtual ~Win32Thread();
 
-		void run(Thread* pThread, bool bAutodelete, int (*thread_fn)(void*), void* param);
-
-		virtual bool join(const OOBase::timeval_t* wait = NULL);
-		virtual void abort();
-		virtual bool is_running();
+		int run(Thread* pThread, bool bAutodelete, int (*thread_fn)(void*), void* param);
+		bool join(const OOBase::timeval_t* wait = NULL);
+		void abort();
+		bool is_running();
 
 	private:
 		struct wrapper
@@ -92,7 +91,7 @@ namespace
 		return false;
 	}
 
-	void Win32Thread::run(Thread* pThread, bool bAutodelete, int (*thread_fn)(void*), void* param)
+	int Win32Thread::run(Thread* pThread, bool bAutodelete, int (*thread_fn)(void*), void* param)
 	{
 		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
@@ -106,12 +105,12 @@ namespace
 		wrap.m_pThread = pThread;
 		wrap.m_bAutodelete = bAutodelete;
 		if (!wrap.m_hEvent)
-			OOBase_CallCriticalFailure(GetLastError());
+			return GetLastError();
 
 		// Start the thread
 		m_hThread = reinterpret_cast<HANDLE>(_beginthreadex(NULL,0,&oobase_thread_fn,&wrap,0,NULL));
 		if (!m_hThread)
-			OOBase_CallCriticalFailure(GetLastError());
+			return GetLastError();
 
 		// Wait for the started signal or the thread terminating early
 		HANDLE handles[2] =
@@ -122,17 +121,19 @@ namespace
 		DWORD dwWait = WaitForMultipleObjects(2,handles,FALSE,INFINITE);
 
 		if (dwWait != WAIT_OBJECT_0 && dwWait != WAIT_OBJECT_0+1)
-			OOBase_CallCriticalFailure(GetLastError());
+			return GetLastError();
+
+		return 0;
 	}
 
-	bool Win32Thread::join(const OOBase::timeval_t* wait)
+	bool Win32Thread::join(const OOBase::timeval_t* timeout)
 	{
 		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 		if (!m_hThread.is_valid())
 			return true;
 
-		DWORD dwWait = WaitForSingleObject(m_hThread,(wait ? wait->msec() : INFINITE));
+		DWORD dwWait = WaitForSingleObject(m_hThread,(timeout ? timeout->msec() : INFINITE));
 		if (dwWait == WAIT_OBJECT_0)
 		{
 			m_hThread.close();
@@ -190,10 +191,10 @@ namespace
 		PthreadThread();
 		virtual ~PthreadThread();
 
-		virtual void run(Thread* pThread, bool bAutodelete, int (*thread_fn)(void*), void* param);
-		virtual bool join(const OOBase::timeval_t* wait = NULL);
-		virtual void abort();
-		virtual bool is_running();
+		int run(Thread* pThread, bool bAutodelete, int (*thread_fn)(void*), void* param);
+		bool join(const OOBase::timeval_t* wait = NULL);
+		void abort();
+		bool is_running();
 
 	private:
 		struct wrapper
@@ -236,7 +237,7 @@ namespace
 		return m_running;
 	}
 
-	void PthreadThread::run(Thread* pThread, bool bAutodelete, int (*thread_fn)(void*), void* param)
+	int PthreadThread::run(Thread* pThread, bool bAutodelete, int (*thread_fn)(void*), void* param)
 	{
 		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
@@ -252,12 +253,12 @@ namespace
 		pthread_attr_t attr;
 		int err = pthread_attr_init(&attr);
 		if (err)
-			OOBase_CallCriticalFailure(err);
+			return err;
 
 		// Start the thread
 		err = pthread_create(&m_thread,NULL,&oobase_thread_fn,&wrap);
 		if (err)
-			OOBase_CallCriticalFailure(err);
+			return err;
 
 		pthread_mutex_t start_mutex = PTHREAD_MUTEX_INITIALIZER;
 		err = pthread_mutex_lock(&start_mutex);
@@ -273,13 +274,15 @@ namespace
 		}
 
 		pthread_mutex_unlock(&start_mutex);
+
+		return 0;
 	}
 
-	bool PthreadThread::join(const OOBase::timeval_t* wait)
+	bool PthreadThread::join(const OOBase::timeval_t* timeout)
 	{
 		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-		if (wait)
+		if (timeout)
 		{
 			pthread_mutex_t join_mutex = PTHREAD_MUTEX_INITIALIZER;
 			int err = pthread_mutex_lock(&join_mutex);
@@ -291,7 +294,7 @@ namespace
 			{
 				timespec wt;
 				OOBase::timeval_t now = OOBase::timeval_t::gettimeofday();
-				now += *wait;
+				now += *timeout;
 				wt.tv_sec = now.tv_sec();
 				wt.tv_nsec = now.tv_usec() * 1000;
 				err = pthread_cond_timedwait(&m_condition,&join_mutex,&wt);
@@ -399,7 +402,7 @@ OOBase::Thread::~Thread()
 	delete m_impl;
 }
 
-void OOBase::Thread::run(int (*thread_fn)(void*), void* param)
+int OOBase::Thread::run(int (*thread_fn)(void*), void* param)
 {
 	assert(this != self());
 	assert(!is_running());
@@ -407,11 +410,11 @@ void OOBase::Thread::run(int (*thread_fn)(void*), void* param)
 	return m_impl->run(this,m_bAutodelete,thread_fn,param);
 }
 
-bool OOBase::Thread::join(const timeval_t* wait)
+bool OOBase::Thread::join(const timeval_t* timeout)
 {
 	assert(this != self());
 
-	return m_impl->join(wait);
+	return m_impl->join(timeout);
 }
 
 void OOBase::Thread::abort()
@@ -440,17 +443,17 @@ void OOBase::Thread::yield()
 #endif
 }
 
-void OOBase::Thread::sleep(const timeval_t& wait)
+void OOBase::Thread::sleep(const timeval_t& timeout)
 {
-	if (wait == timeval_t::Zero)
+	if (timeout == timeval_t::Zero)
 		return Thread::yield();
 
 #if defined(_WIN32)
-	::Sleep(wait.msec());
+	::Sleep(timeout.msec());
 #else
 	timespec wt;
-	wt.tv_sec = wait.tv_sec();
-	wt.tv_nsec = wait.tv_usec() * 1000;
+	wt.tv_sec = timeout.tv_sec();
+	wt.tv_nsec = timeout.tv_usec() * 1000;
 
 	for (;;)
 	{
@@ -468,4 +471,116 @@ OOBase::Thread* OOBase::Thread::self()
 	void* v = NULL;
 	OOBase::TLS::Get(&s_sentinal,&v);
 	return static_cast<OOBase::Thread*>(v);
+}
+
+OOBase::ThreadPool::ThreadPool()
+{
+}
+
+OOBase::ThreadPool::~ThreadPool()
+{
+	abort();
+}
+
+int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads)
+{
+	for (size_t i=0;i<threads;++i)
+	{
+		Thread* pThread = new (std::nothrow) Thread(false);
+		if (!pThread)
+			return ERROR_OUTOFMEMORY;
+
+		Guard<SpinLock> guard(m_lock);
+
+		bool bAdd = true;
+		for (size_t i = 0;i<m_threads.size();++i)
+		{
+			Thread** ppThread = m_threads.at(i);
+			if (!*ppThread || !(*ppThread)->is_running())
+			{
+				delete *ppThread;
+				if (!bAdd)
+				{
+					*ppThread = pThread;
+					bAdd = false;
+				}
+				else
+					*ppThread = NULL;
+			}
+		}
+		if (bAdd)
+		{
+			int err = m_threads.push(pThread);
+			if (err != 0)
+				return err;
+		}
+
+		guard.release();
+
+		int err = pThread->run(thread_fn,param);
+		if (err != 0)
+			return err;
+	}
+		
+	return 0;
+}
+
+void OOBase::ThreadPool::join()
+{
+	for (;;)
+	{
+		Guard<SpinLock> guard(m_lock);
+
+		if (m_threads.empty())
+			break;
+		
+		Thread* pThread = *m_threads.at(m_threads.size()-1);
+		if (pThread)
+		{
+			guard.release();
+
+			pThread->join();
+
+			guard.acquire();
+		
+			if (!m_threads.empty() && pThread == *m_threads.at(m_threads.size()-1))
+			{
+				m_threads.pop();
+				delete pThread;
+			}
+		}
+		else
+			m_threads.pop();
+	}
+}
+
+void OOBase::ThreadPool::abort()
+{
+	for (;;)
+	{
+		Guard<SpinLock> guard(m_lock);
+
+		Thread* pThread = NULL;
+		if (!m_threads.pop(&pThread))
+			break;
+
+		if (pThread)
+			pThread->abort();
+		delete pThread;
+	}
+}
+
+size_t OOBase::ThreadPool::number_running()
+{
+	Guard<SpinLock> guard(m_lock);
+
+	size_t count = 0;
+	for (size_t i=0;i<m_threads.size();++i)
+	{
+		Thread* pThread = *m_threads.at(i);
+		if (pThread && pThread->is_running())
+			++count;
+	}
+
+	return count;
 }

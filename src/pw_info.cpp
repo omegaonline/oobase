@@ -23,6 +23,8 @@
 
 #if defined(HAVE_UNISTD_H)
 
+#include "../include/OOBase/CustomNew.h"
+
 OOBase::POSIX::pw_info::pw_info(uid_t uid) :
 		m_pwd(NULL), m_buf_len(1024)
 {

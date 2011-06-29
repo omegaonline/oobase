@@ -23,6 +23,7 @@
 #define OOBASE_THREAD_H_INCLUDED_
 
 #include "Mutex.h"
+#include "Stack.h"
 
 namespace OOBase
 {
@@ -32,13 +33,13 @@ namespace OOBase
 		Thread(bool bAutodelete);
 		virtual ~Thread();
 
-		void run(int (*thread_fn)(void*), void* param);
+		int run(int (*thread_fn)(void*), void* param);
 
 		virtual bool join(const timeval_t* wait = NULL);
 		virtual void abort();
 		virtual bool is_running();
 
-		static void sleep(const timeval_t& wait);
+		static void sleep(const timeval_t& timeout);
 		static void yield();
 
 		static Thread* self();
@@ -46,7 +47,7 @@ namespace OOBase
 	protected:
 		explicit Thread(bool,bool);
 
-		virtual void run(Thread* /*pThread*/, bool /*bAutodelete*/, int (* /*thread_fn*/)(void*), void* /*param*/) { assert(false); };
+		virtual int run(Thread* /*pThread*/, bool /*bAutodelete*/, int (* /*thread_fn*/)(void*), void* /*param*/) { assert(false); return false; };
 
 		static size_t s_sentinal;
 
@@ -56,6 +57,22 @@ namespace OOBase
 
 		Thread*    m_impl;
 		const bool m_bAutodelete;
+	};
+
+	class ThreadPool
+	{
+	public:
+		ThreadPool();
+		~ThreadPool();
+
+		int run(int (*thread_fn)(void*), void* param, size_t threads);
+		void join();
+		void abort();
+		size_t number_running();
+
+	private:
+		SpinLock       m_lock;
+		Stack<Thread*> m_threads;
 	};
 }
 

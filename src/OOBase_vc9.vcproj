@@ -337,11 +337,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\Win32Socket.cpp"
+				RelativePath=".\Win32Pipe.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Win32Socket2.cpp"
+				RelativePath=".\Win32Socket.cpp"
 				>
 			</File>
 		</Filter>

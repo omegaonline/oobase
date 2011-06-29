@@ -50,13 +50,13 @@ namespace OOSvrBase
 			ProactorImpl();
 			~ProactorImpl();
 
-			OOBase::Socket* accept_local(Acceptor<AsyncLocalSocket>* handler, const char* path, int* perr, SECURITY_ATTRIBUTES* psa);
-			OOBase::Socket* accept_remote(Acceptor<AsyncSocket>* handler, const char* address, const char* port, int* perr);
+			OOBase::SmartPtr<OOBase::Socket> accept_local(Acceptor<AsyncLocalSocket>* handler, const char* path, int* perr, SECURITY_ATTRIBUTES* psa);
+			OOBase::SmartPtr<OOBase::Socket> accept_remote(Acceptor<AsyncSocket>* handler, const char* address, const char* port, int* perr);
 
 			AsyncSocketPtr attach_socket(OOBase::Socket::socket_t sock, int* perr);
 			AsyncLocalSocketPtr attach_local_socket(OOBase::Socket::socket_t sock, int* perr);
 
-			AsyncLocalSocketPtr connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* wait);
+			AsyncLocalSocketPtr connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* timeout);
 
 			struct io_watcher : public ev_io
 			{

@@ -22,9 +22,6 @@
 #ifndef OOBASE_WIN32_IMPL_H_INCLUDED_
 #define OOBASE_WIN32_IMPL_H_INCLUDED_
 
-#include "../include/OOBase/Once.h"
-#include "../include/OOBase/Mutex.h"
-
 #if defined(_WIN32)
 
 #if (WINVER < 0x0600)

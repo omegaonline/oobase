@@ -19,6 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/OOBase/CustomNew.h"
 #include "../include/OOBase/Singleton.h"
 #include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/tr24731.h"
@@ -62,12 +63,14 @@ namespace
 		Win32Logger();
 		~Win32Logger();
 
-		void open(const char* name);
+		void open(const char* name, const char* pszSrcFile);
 		void log(OOSvrBase::Logger::Priority priority, const char* msg);
+		const char* src() const { return m_pszSrcFile; }
 
 	private:
 		OOBase::Mutex m_lock;
 		HANDLE        m_hLog;
+		const char*   m_pszSrcFile;
 	};
 #endif
 
@@ -85,11 +88,13 @@ namespace
 	public:
 		~SysLogLogger();
 
-		void open(const char* name);
+		void open(const char* name, const char* pszSrcFile);
 		void log(OOSvrBase::Logger::Priority priority, const char* msg);
+		const char* src() const { return m_pszSrcFile; }
 
 	private:
 		OOBase::Mutex m_lock;
+		const char*   m_pszSrcFile;
 	};
 #endif
 
@@ -120,7 +125,8 @@ namespace
 #if defined(_WIN32)
 
 	Win32Logger::Win32Logger() :
-			m_hLog(NULL)
+			m_hLog(NULL),
+			m_pszSrcFile("")
 	{
 	}
 
@@ -130,9 +136,12 @@ namespace
 			DeregisterEventSource(m_hLog);
 	}
 
-	void Win32Logger::open(const char* name)
+	void Win32Logger::open(const char* name, const char* pszSrcFile)
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
+
+		if (pszSrcFile)
+			m_pszSrcFile = pszSrcFile;
 
 		if (m_hLog)
 		{
@@ -269,13 +278,20 @@ namespace
 
 #elif defined(HAVE_SYSLOG_H)
 
+	SysLogLogger::SysLogLogger() :
+			m_pszSrcFile("")
+	{}
+
 	SysLogLogger::~SysLogLogger()
 	{
 		closelog();
 	}
 
-	void SysLogLogger::open(const char* name)
+	void SysLogLogger::open(const char* name, const char* pszSrcFile)
 	{
+		if (pszSrcFile)
+			m_pszSrcFile = pszSrcFile;
+
 		openlog(name,LOG_NDELAY,LOG_DAEMON);
 	}
 
@@ -336,9 +352,9 @@ namespace
 
 } // Anonymous namespace
 
-void OOSvrBase::Logger::open(const char* name)
+void OOSvrBase::Logger::open(const char* name, const char* pszSrcFile)
 {
-	LOGGER::instance().open(name);
+	LOGGER::instance().open(name,pszSrcFile);
 }
 
 void OOSvrBase::Logger::log(Priority priority, const char* fmt, ...)
@@ -355,6 +371,13 @@ void OOSvrBase::Logger::log(Priority priority, const char* fmt, ...)
 		LOGGER::instance().log(priority,msg.c_str());
 }
 
+OOSvrBase::Logger::filenum_t::filenum_t(Priority priority, const char* pszFilename, unsigned int nLine) :
+		m_priority(priority),
+		m_pszFilename(pszFilename),
+		m_nLine(nLine)
+{
+}
+
 void OOSvrBase::Logger::filenum_t::log(const char* fmt, ...)
 {
 	va_list args;
@@ -367,8 +390,26 @@ void OOSvrBase::Logger::filenum_t::log(const char* fmt, ...)
 
 	if (err == 0)
 	{
+		if (m_pszFilename)
+		{
+			const char* pszSrcFile = LOGGER::instance().src();
+			size_t s=0;
+			for (;;)
+			{
+				size_t s1 = s;
+				while (pszSrcFile[s1] == m_pszFilename[s1] && pszSrcFile[s1] != '\\' && pszSrcFile[s1] != '/')
+					++s1;
+
+				if (pszSrcFile[s1] == '\\' || pszSrcFile[s1] == '/')
+					s = s1+1;
+				else
+					break;
+			}
+			m_pszFilename += s;
+		}
+
 		OOBase::LocalString header;
-		if (header.printf("[%u] %s(%u): %s",getpid(),m_pszFilename,m_nLine,msg.c_str()) == 0)
+		if (header.printf("%s(%u): %s",m_pszFilename,m_nLine,msg.c_str()) == 0)
 			LOGGER::instance().log(m_priority,header.c_str());
 	}
 }
