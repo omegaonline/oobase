@@ -299,8 +299,7 @@ bool OOSvrBase::Service::pid_file(const char* pszPidFile)
 	ftruncate(fd,0);
 
 	OOBase::LocalString str;
-	err = str.printf("%d",getpid());
-	if (err != 0)
+	if ((err = str.printf("%d",getpid())) != 0)
 		LOG_ERROR_RETURN(("Failed to allocate string: %s",OOBase::system_error_text(err)),false);
 
 	write(fd,str.c_str(),str.length()+1);

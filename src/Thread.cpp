@@ -356,8 +356,7 @@ namespace
 		pThis->m_running = true;
 
 		// Set the event, meaning we have started
-		err = pthread_cond_signal(&pThis->m_condition);
-		if (err)
+		if ((err = pthread_cond_signal(&pThis->m_condition)) != 0)
 			OOBase_CallCriticalFailure(err);
 
 		int ret = (*thread_fn)(p);
