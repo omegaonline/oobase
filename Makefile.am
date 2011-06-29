@@ -67,6 +67,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/Buffer.h \
 	include/OOBase/ByteSwap.h \
 	include/OOBase/CDRStream.h \
+	include/OOBase/CmdArgs.h \
 	include/OOBase/Condition.h \
 	include/OOBase/CustomNew.h \
 	include/OOBase/Destructor.h \
@@ -95,6 +96,7 @@ liboobase_la_SOURCES = \
 	src/Win32Socket.h \
 	src/BSDSocket.cpp \
 	src/Buffer.cpp \
+	src/CmdArgs.cpp \
 	src/Condition.cpp \
 	src/DLL.cpp \
 	src/Error.cpp \
@@ -123,7 +125,6 @@ liboosvrbase_la_LIBADD += $(EV_LIBS)
 endif
 
 liboosvrbase_la_SOURCES = \
-	include/OOSvrBase/CmdArgs.h \
 	include/OOSvrBase/Database.h \
 	include/OOSvrBase/Logger.h \
 	include/OOSvrBase/Proactor.h \
@@ -132,7 +133,6 @@ liboosvrbase_la_SOURCES = \
 	src/ProactorEv.h \
 	src/ProactorImpl.h \
 	src/ProactorWin32.h \
-	src/CmdArgs.cpp \
 	src/Database.cpp \
 	src/Logger.cpp \
 	src/Proactor.cpp \

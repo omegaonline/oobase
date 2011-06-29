@@ -46,6 +46,7 @@ namespace OOBase
 		void replace(char from, char to);
 		int printf(const char* format, ...);
 		int vprintf(const char* format, va_list args);
+		int getenv(const char* envvar);
 
 		int concat(const char* sz1, const char* sz2)
 		{
@@ -226,6 +227,20 @@ namespace OOBase
 		static void node_release(Node* node);
 		static Node* node_allocate(size_t len);
 	};
+	
+	template <typename T>
+	inline int AppendDirSeparator(T& str)
+	{
+		int err = 0;
+	#if defined(_WIN32)
+		if (str[str.length()-1] != '\\' && str[str.length()-1] != '/')
+			err = str.append("\\",1);
+	#else
+		if (str[str.length()-1] != '/')
+			err = str.append("/",1);
+	#endif
+		return err;
+	}
 }
 
 #endif // OOBASE_STRING_H_INCLUDED_
