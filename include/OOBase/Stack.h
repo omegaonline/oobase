@@ -79,7 +79,7 @@ namespace OOBase
 			for(--m_top;pos < m_top;++pos)
 				m_data[pos] = m_data[pos+1];
 			
-			m_data[pos].~T();
+			m_data[m_top].~T();
 			
 			return true;
 		}
