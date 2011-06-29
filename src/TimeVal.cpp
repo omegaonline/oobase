@@ -97,7 +97,7 @@ OOBase::timeval_t& OOBase::timeval_t::operator -= (const timeval_t& rhs)
 		r.m_tv_sec -= nsec;
 	}
 
-	/* Compute the time remaining to timeout.
+	/* Compute the time remaining to wait.
 	 m_tv_usec is certainly positive. */
 	m_tv_sec -= r.m_tv_sec;
 	m_tv_usec -= r.m_tv_usec;
@@ -142,22 +142,22 @@ OOBase::timeval_t OOBase::timeval_t::deadline(unsigned long msec)
 	return v;
 }
 
-OOBase::Countdown::Countdown(timeval_t* timeout) :
+OOBase::Countdown::Countdown(timeval_t* wait) :
 		m_start(timeval_t::gettimeofday()),
-		m_timeout(timeout)
+		m_wait(wait)
 {
-	assert(timeout);
+	assert(wait);
 }
 
 void OOBase::Countdown::update()
 {
 	timeval_t now = timeval_t::gettimeofday();
 	timeval_t diff = (now - m_start);
-	if (diff >= *m_timeout)
-		*m_timeout = timeval_t::Zero;
+	if (diff >= *m_wait)
+		*m_wait = timeval_t::Zero;
 	else
 	{
 		m_start = now;
-		*m_timeout -= diff;
+		*m_wait -= diff;
 	}
 }

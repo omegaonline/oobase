@@ -28,9 +28,9 @@ namespace OOBase
 {
 	namespace BSD
 	{
-		socket_t create_socket(int family, int socktype, int protocol, int* perr);
+		Socket::socket_t create_socket(int family, int socktype, int protocol, int* perr);
 
-		int set_non_blocking(socket_t sock, bool set);
+		int set_non_blocking(Socket::socket_t sock, bool set);
 	}
 }
 

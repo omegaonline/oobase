@@ -33,8 +33,7 @@
 
 #include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/Thread.h"
-
-#include "Win32Socket.h"
+#include "ProactorImpl.h"
 #include "ProactorWin32.h"
 #include "Win32Impl.h"
 
@@ -1026,36 +1025,20 @@ OOBase::Socket* OOSvrBase::Win32::ProactorImpl::accept_remote(Acceptor<AsyncSock
 
 OOSvrBase::AsyncSocketPtr OOSvrBase::Win32::ProactorImpl::attach_socket(OOBase::Socket::socket_t sock, int* perr)
 {
-	void* TODO; // Use a free-list here
-	
-	pOv = new (std::nothrow) Overlapped;
-	if (!pOv)
-		return ERROR_OUTOFMEMORY;
-	
-	pOv->Internal = 0;
-	pOv->InternalHigh = 0;
-	pOv->Offset = 0;
-	pOv->OffsetHigh = 0;
-	pOv->Pointer = NULL;
-	pOv->hEvent = NULL;
-	pOv->m_callback = callback;
-	pOv->m_extras[0] = 0;
-	pOv->m_extras[1] = 0;
-	pOv->m_extras[2] = 0;
-	pOv->m_extras[3] = 0;
-	pOv->m_extras[4] = 0;
-	
-	return 0;
+	// The socket must have been opened as WSA_FLAG_OVERLAPPED!!!
+	return ::AsyncSocket::Create(this,sock,*perr);
 }
 
-void OOSvrBase::Win32::ProactorImpl::delete_overlapped(OOSvrBase::Win32::ProactorImpl::Overlapped* pOv)
+OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Win32::ProactorImpl::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)
 {
-	void* TODO; // Use a free-list here
-	
-	delete pOv;
+	// Wrap socket
+	DWORD dwErr = 0;
+	OOSvrBase::AsyncLocalSocketPtr ptrSocket = ::AsyncLocalSocket::Create(this,(HANDLE)sock,dwErr);
+	*perr = dwErr;	
+	return ptrSocket;
 }
 
-int OOSvrBase::Win32::ProactorImpl::bind(HANDLE hFile)
+OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Win32::ProactorImpl::connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* wait)
 {
 	assert(perr);
 	*perr = 0;
@@ -1111,7 +1094,12 @@ int OOSvrBase::Win32::ProactorImpl::bind(HANDLE hFile)
 		hPipe.detach();
 	else
 		hPipe.close();
-
+	
+	return ptrSocket;
 }
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 #endif // _WIN32

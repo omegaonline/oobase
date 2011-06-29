@@ -30,10 +30,20 @@ namespace OOBase
 {
 	namespace Win32
 	{
-		void WSAStartup();
+		class Socket : public OOBase::Socket
+		{
+		public:
+			Socket(HANDLE handle);
+			virtual ~Socket();
 
-		BOOL WSAAcceptEx(SOCKET sListenSocket, SOCKET sAcceptSocket, void* lpOutputBuffer, DWORD dwReceiveDataLength, DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped);
-		void WSAGetAcceptExSockAddrs(void* lpOutputBuffer, DWORD dwReceiveDataLength, DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, struct sockaddr **LocalSockaddr, int* LocalSockaddrLength, struct sockaddr **RemoteSockaddr, int* RemoteSockaddrLength);
+			size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* wait = 0);
+			int send(const void* buf, size_t len, const OOBase::timeval_t* wait = 0);
+						
+		protected:
+			OOBase::Win32::SmartHandle m_handle;
+			OOBase::Win32::SmartHandle m_hReadEvent;
+			OOBase::Win32::SmartHandle m_hWriteEvent;
+		};
 	}
 }
 

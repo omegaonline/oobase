@@ -22,7 +22,16 @@
 #include "../include/OOBase/CustomNew.h"
 #include "../include/OOBase/Posix.h"
 #include "BSDSocket.h"
-#include "Win32Socket.h"
+
+#if defined(_WIN32)
+namespace OOBase
+{
+	namespace Win32
+	{
+		void WSAStartup();
+	}
+}
+#endif
 
 #if defined(_MSC_VER)
 #pragma warning(disable: 4127)
@@ -59,7 +68,7 @@ namespace
 	class Socket : public OOBase::Socket
 	{
 	public:
-		Socket(OOBase::socket_t sock);
+		Socket(OOBase::Socket::socket_t sock);
 		virtual ~Socket();
 
 		int send(const void* buf, size_t len, const OOBase::timeval_t* timeout = 0);
@@ -67,10 +76,10 @@ namespace
 		void shutdown(bool bSend, bool bRecv);
 
 	private:
-		OOBase::socket_t  m_sock;
+		OOBase::Socket::socket_t  m_sock;
 	};
 
-	Socket::Socket(OOBase::socket_t sock) :
+	Socket::Socket(OOBase::Socket::socket_t sock) :
 			m_sock(sock)
 	{
 	}
@@ -80,15 +89,15 @@ namespace
 		closesocket(m_sock);
 	}
 
-	int Socket::send(const void* buf, size_t len, const OOBase::timeval_t* timeout)
+	int Socket::send(const void* buf, size_t len, const OOBase::timeval_t* wait)
 	{
 		const char* cbuf = static_cast<const char*>(buf);
 
 		::timeval tv;
-		if (timeout)
+		if (wait)
 		{
-			tv.tv_sec = static_cast<long>(timeout->tv_sec());
-			tv.tv_usec = timeout->tv_usec();
+			tv.tv_sec = static_cast<long>(wait->tv_sec());
+			tv.tv_usec = wait->tv_usec();
 		}
 
 		fd_set wfds;
@@ -116,7 +125,7 @@ namespace
 				FD_ZERO(&efds);
 				FD_SET(m_sock,&wfds);
 				FD_SET(m_sock,&efds);
-				int count = select(static_cast<int>(m_sock+1),0,&wfds,&efds,timeout ? &tv : 0);
+				int count = select(static_cast<int>(m_sock+1),0,&wfds,&efds,wait ? &tv : 0);
 				if (count == -1)
 				{
 					err = socket_errno;
@@ -141,16 +150,16 @@ namespace
 		}
 	}
 
-	size_t Socket::recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout)
+	size_t Socket::recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* wait)
 	{
 		char* cbuf = static_cast<char*>(buf);
 		size_t total_recv = 0;
 
 		::timeval tv;
-		if (timeout)
+		if (wait)
 		{
-			tv.tv_sec = static_cast<long>(timeout->tv_sec());
-			tv.tv_usec = timeout->tv_usec();
+			tv.tv_sec = static_cast<long>(wait->tv_sec());
+			tv.tv_usec = wait->tv_usec();
 		}
 
 		fd_set rfds;
@@ -180,7 +189,7 @@ namespace
 				FD_ZERO(&efds);
 				FD_SET(m_sock,&rfds);
 				FD_SET(m_sock,&efds);
-				int count = select(static_cast<int>(m_sock+1),&rfds,0,&efds,timeout ? &tv : 0);
+				int count = select(static_cast<int>(m_sock+1),&rfds,0,&efds,wait ? &tv : 0);
 				if (count == -1)
 				{
 					*perr = socket_errno;
@@ -217,7 +226,7 @@ namespace
 			::shutdown(m_sock,how);
 	}
 
-	int connect_i(OOBase::socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* timeout)
+	int connect_i(OOBase::Socket::socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* wait)
 	{
 		// Do the connect
 		if (::connect(sock,addr,static_cast<int>(addrlen)) != -1)
@@ -230,10 +239,10 @@ namespace
 
 		// Wait for the connect to go ahead - by select()ing on write
 		::timeval tv;
-		if (timeout)
+		if (wait)
 		{
-			tv.tv_sec = static_cast<long>(timeout->tv_sec());
-			tv.tv_usec = timeout->tv_usec();
+			tv.tv_sec = static_cast<long>(wait->tv_sec());
+			tv.tv_usec = wait->tv_usec();
 		}
 
 		fd_set wfds;
@@ -246,7 +255,7 @@ namespace
 			FD_SET(sock,&wfds);
 			FD_SET(sock,&efds);
 
-			int count = select(static_cast<int>(sock+1),0,&wfds,&efds,timeout ? &tv : 0);
+			int count = select(static_cast<int>(sock+1),0,&wfds,&efds,wait ? &tv : 0);
 			if (count == -1)
 			{
 				err = socket_errno;
@@ -267,11 +276,11 @@ namespace
 		}
 	}
 
-	OOBase::socket_t connect_i(const char* address, const char* port, int* perr, const OOBase::timeval_t* timeout)
+	OOBase::Socket::socket_t connect_i(const char* address, const char* port, int* perr, const OOBase::timeval_t* wait)
 	{
 		// Start a countdown
-		OOBase::timeval_t timeout2 = (timeout ? *timeout : OOBase::timeval_t::MaxTime);
-		OOBase::Countdown countdown(&timeout2);
+		OOBase::timeval_t wait2 = (wait ? *wait : OOBase::timeval_t::MaxTime);
+		OOBase::Countdown countdown(&wait2);
 
 		// Resolve the passed in addresses...
 		addrinfo hints = {0};
@@ -287,23 +296,23 @@ namespace
 
 		// Took too long to resolve...
 		countdown.update();
-		if (timeout2 == OOBase::timeval_t::Zero)
+		if (wait2 == OOBase::timeval_t::Zero)
 			return ETIMEDOUT;
 
 		// Loop trying to connect on each address until one succeeds
-		OOBase::socket_t sock = INVALID_SOCKET;
+		OOBase::Socket::socket_t sock = INVALID_SOCKET;
 		for (addrinfo* pAddr = pResults; pAddr != 0; pAddr = pAddr->ai_next)
 		{
 			if ((sock = OOBase::BSD::create_socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,perr)) != INVALID_SOCKET)
 			{
-				if ((*perr = connect_i(sock,pAddr->ai_addr,pAddr->ai_addrlen,&timeout2)) != 0)
+				if ((*perr = connect_i(sock,pAddr->ai_addr,pAddr->ai_addrlen,&wait2)) != 0)
 					closesocket(sock);
 				else
 					break;
 			}
 
 			countdown.update();
-			if (timeout2 == OOBase::timeval_t::Zero)
+			if (wait2 == OOBase::timeval_t::Zero)
 				return ETIMEDOUT;
 		}
 
@@ -318,7 +327,7 @@ namespace
 	}
 }
 
-OOBase::socket_t OOBase::BSD::create_socket(int family, int socktype, int protocol, int* perr)
+OOBase::Socket::socket_t OOBase::BSD::create_socket(int family, int socktype, int protocol, int* perr)
 {
 #if defined(_WIN32)
 	Win32::WSAStartup();
@@ -326,7 +335,7 @@ OOBase::socket_t OOBase::BSD::create_socket(int family, int socktype, int protoc
 
 	*perr = 0;
 
-	OOBase::socket_t sock = ::socket(family,socktype,protocol);
+	OOBase::Socket::socket_t sock = ::socket(family,socktype,protocol);
 	if (sock == INVALID_SOCKET)
 	{
 		*perr = socket_errno;
@@ -352,7 +361,7 @@ OOBase::socket_t OOBase::BSD::create_socket(int family, int socktype, int protoc
 	return sock;
 }
 
-int OOBase::BSD::set_non_blocking(socket_t sock, bool set)
+int OOBase::BSD::set_non_blocking(Socket::socket_t sock, bool set)
 {
 #if defined (_WIN32)
 	u_long v = (set ? 1 : 0);
@@ -373,15 +382,15 @@ int OOBase::BSD::set_non_blocking(socket_t sock, bool set)
 }
 
 // Win32 native sockets are probably faster...
-#if !defined(_WIN32)
-OOBase::SmartPtr<OOBase::Socket> OOBase::Socket::connect(const char* address, const char* port, int* perr, const timeval_t* timeout)
+//#if !defined(_WIN32)
+OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, int* perr, const timeval_t* wait)
 {
 #if defined(_WIN32)
 	// Ensure we have winsock loaded
 	Win32::WSAStartup();
 #endif
 
-	socket_t sock = connect_i(address,port,perr,timeout);
+	Socket::socket_t sock = connect_i(address,port,perr,wait);
 	if (sock == INVALID_SOCKET)
 		return 0;
 
@@ -395,13 +404,13 @@ OOBase::SmartPtr<OOBase::Socket> OOBase::Socket::connect(const char* address, co
 
 	return pSocket;
 }
-#endif
+//#endif
 
 #if defined(HAVE_UNISTD_H)
 
-OOBase::SmartPtr<OOBase::Socket> OOBase::Socket::connect_local(const char* path, int* perr, const timeval_t* timeout)
+OOBase::Socket* OOBase::Socket::connect_local(const char* path, int* perr, const timeval_t* wait)
 {
-	OOBase::socket_t sock = OOBase::BSD::create_socket(AF_UNIX,SOCK_STREAM,0,perr);
+	OOBase::Socket::socket_t sock = OOBase::BSD::create_socket(AF_UNIX,SOCK_STREAM,0,perr);
 	if (sock == -1)
 		return 0;
 
@@ -409,7 +418,7 @@ OOBase::SmartPtr<OOBase::Socket> OOBase::Socket::connect_local(const char* path,
 	addr.sun_family = AF_UNIX;
 	strncpy(addr.sun_path,path,sizeof(addr.sun_path)-1);
 
-	if ((*perr = connect_i(sock,(sockaddr*)(&addr),sizeof(addr),timeout)) != 0)
+	if ((*perr = connect_i(sock,(sockaddr*)(&addr),sizeof(addr),wait)) != 0)
 	{
 		::close(sock);
 		return 0;

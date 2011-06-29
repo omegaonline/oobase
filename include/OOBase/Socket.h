@@ -23,7 +23,6 @@
 #define OOBASE_SOCKET_H_INCLUDED_
 
 #include "Buffer.h"
-#include "SmartPtr.h"
 
 #if defined(_WIN32)
 #include <winsock2.h>
@@ -33,62 +32,62 @@
 #include <sys/socket.h>
 #endif
 
-namespace OOBase
-{
-	/** \typedef socket_t
-	 *  The platform specific socket type.
-	 */
-#if defined(_WIN32)
-	typedef SOCKET socket_t;
-#else
-	typedef int socket_t;
+// Try to align winsock and BSD ;)
+#if !defined(_WIN32)
+#define INVALID_SOCKET (-1)
 #endif
 
+namespace OOBase
+{
 	class Socket
 	{
 	public:
-		static OOBase::SmartPtr<OOBase::Socket> connect(const char* address, const char* port, int* perr, const timeval_t* timeout = 0);
-		static OOBase::SmartPtr<OOBase::Socket> connect_local(const char* path, int* perr, const timeval_t* timeout = 0);
+		/** \typedef socket_t
+		 *  The platform specific socket type.
+		 */
+#if defined(_WIN32)
+		typedef SOCKET socket_t;
+#else
+		typedef int socket_t;
+#endif
 
-		virtual size_t send(const void* buf, size_t len, int* perr, const timeval_t* timeout = 0) = 0;
-		virtual size_t send_v(Buffer* buffers[], size_t count, int* perr, const timeval_t* timeout = 0) = 0;
-				
+		virtual size_t recv(void* buf, size_t len, int* perr, const timeval_t* timeout = 0) = 0;
+		virtual int send(const void* buf, size_t len, const timeval_t* timeout = 0) = 0;
+		virtual void shutdown(bool bSend, bool bRecv) = 0;
+
+		static Socket* connect(const char* address, const char* port, int* perr, const timeval_t* wait = 0);
+		static Socket* connect_local(const char* path, int* perr, const timeval_t* wait = 0);
+
+		// Helpers
 		template <typename T>
 		int send(const T& val, const timeval_t* timeout = 0)
 		{
-			int err = 0;
-			send(&val,sizeof(T),&err,timeout);
-			return err;
+			return send(&val,sizeof(T),timeout);
 		}
 
-		int send(Buffer* buffer, const timeval_t* timeout = 0)
+		int send_buffer(const Buffer* buffer, const timeval_t* timeout = 0)
 		{
-			int err = 0;
-			size_t len = send(buffer->rd_ptr(),buffer->length(),&err,timeout);
-			buffer->rd_ptr(len);
-			return err;
+			return send(buffer->rd_ptr(),buffer->length(),timeout);
 		}
-
-		virtual size_t recv(void* buf, size_t len, bool bAll, int* perr, const timeval_t* timeout = 0) = 0;
-		virtual size_t recv_v(Buffer* buffers[], size_t count, int* perr, const timeval_t* timeout = 0) = 0;
 
 		template <typename T>
 		int recv(T& val, const timeval_t* timeout = 0)
 		{
 			int err = 0;
-			recv(&val,sizeof(T),true,&err,timeout);
+			recv(&val,sizeof(T),&err,timeout);
 			return err;
 		}
 
-		int recv(Buffer* buffer, bool bAll, const timeval_t* timeout = 0)
+		size_t recv(Buffer* buffer, size_t len, int* perr, const timeval_t* timeout = 0)
 		{
-			int err = 0;
-			size_t len = recv(buffer->wr_ptr(),buffer->space(),bAll,&err,timeout);
-			buffer->wr_ptr(len);
-			return err;
-		}
+			*perr = buffer->space(len);
+			if (*perr != 0)
+				return 0;
 
-		virtual void shutdown(bool bSend, bool bRecv) = 0;
+			len = recv(buffer->wr_ptr(),len,perr,timeout);
+			buffer->wr_ptr(len);
+			return len;
+		}
 
 		virtual ~Socket() {};
 
@@ -100,9 +99,5 @@ namespace OOBase
 		Socket& operator = (const Socket&);
 	};
 }
-
-#if !defined(INVALID_SOCKET)
-#define INVALID_SOCKET (OOBase::socket_t(-1))
-#endif
 
 #endif // OOBASE_SOCKET_H_INCLUDED_

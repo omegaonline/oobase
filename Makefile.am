@@ -111,7 +111,8 @@ liboobase_la_SOURCES = \
 	src/tr24731.cpp \
 	src/utf8.cpp \
 	src/Win32.cpp \
-	src/Win32Socket.cpp	
+	src/Win32Socket.cpp \
+	src/Win32Socket2.cpp	
 
 liboosvrbase_la_CFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
 liboosvrbase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)

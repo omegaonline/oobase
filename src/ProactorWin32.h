@@ -22,7 +22,13 @@
 #ifndef OOSVRBASE_PROACTOR_WIN32_H_INCLUDED_
 #define OOSVRBASE_PROACTOR_WIN32_H_INCLUDED_
 
-#include "../include/OOSvrBase/Proactor.h"
+#if !defined(OOSVRBASE_PROACTOR_H_INCLUDED_)
+#error include "Proactor.h" instead
+#endif
+
+#if !defined(_WIN32)
+#error Includes have got confused, check Proactor.cpp
+#endif
 
 namespace OOSvrBase
 {
@@ -34,30 +40,19 @@ namespace OOSvrBase
 			ProactorImpl();
 			virtual ~ProactorImpl();
 
-			AsyncSocket* attach_socket(OOBase::socket_t sock, int& err);
-			AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int& err);
+			OOBase::Socket* accept_local(Acceptor<AsyncLocalSocket>* handler, const char* path, int* perr, SECURITY_ATTRIBUTES* psa);
+			OOBase::Socket* accept_remote(Acceptor<AsyncSocket>* handler, const char* address, const char* port, int* perr);
 
-			AsyncSocket* connect_socket(const struct sockaddr* addr, size_t addr_len, int& err, const OOBase::timeval_t* timeout);
-			AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout);
-		
-			struct Overlapped : public OVERLAPPED
-			{
-				void (*m_callback)(HANDLE handle, DWORD dwBytes, DWORD dwErr, Overlapped* pOv);
-				ULONG_PTR m_extras[5];				
-			};
-			typedef void (*pfnCompletion_t)(HANDLE handle, DWORD dwBytes, DWORD dwErr, Overlapped* pOv);
-		
-			int new_overlapped(Overlapped*& pOv, pfnCompletion_t callback);
-			void delete_overlapped(Overlapped* pOv);
-			
-			int bind(HANDLE hFile);
+			AsyncSocketPtr attach_socket(OOBase::Socket::socket_t sock, int* perr);
+			AsyncLocalSocketPtr attach_local_socket(OOBase::Socket::socket_t sock, int* perr);
 
-		protected:
-			Acceptor* accept_local(void* param, void (*callback)(void* param, AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa);
-			Acceptor* accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const struct sockaddr* addr, size_t addr_len, int err), const struct sockaddr* addr, size_t addr_len, int& err);
+			AsyncLocalSocketPtr connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* wait);
+
+			void addref();
+			void release();
 
 		private:
-			size_t m_refcount;
+			OOBase::Atomic<size_t> m_refcount;
 		};
 	}
 }

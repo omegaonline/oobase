@@ -22,7 +22,7 @@
 #include "../include/OOBase/CustomNew.h"
 #include "../include/OOSvrBase/Proactor.h"
 
-//#include "ProactorImpl.h"
+#include "ProactorImpl.h"
 
 #if defined(HAVE_EV_H)
 #include "ProactorEv.h"
@@ -38,28 +38,6 @@
 #else
 #define ERROR_OUTOFMEMORY ENOMEM
 #endif
-
-namespace
-{
-	struct WaitCallback
-	{
-		OOBase::Condition        m_condition;
-		OOBase::Condition::Mutex m_lock;
-		bool                     m_complete;
-		int                      m_err;
-
-		static void callback(void* param, OOBase::Buffer*, int err)
-		{
-			WaitCallback* pThis = static_cast<WaitCallback*>(param);
-
-			OOBase::Guard<OOBase::Condition::Mutex> guard(pThis->m_lock);
-
-			pThis->m_err = err;
-			pThis->m_complete = true;
-			pThis->m_condition.signal();
-		}
-	};
-}
 
 OOSvrBase::Proactor::Proactor() :
 		m_impl(0)
@@ -83,22 +61,27 @@ OOSvrBase::Proactor::~Proactor()
 	delete m_impl;
 }
 
-OOSvrBase::Acceptor* OOSvrBase::Proactor::accept_local(void* param, void (*callback)(void* param, AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa)
+OOBase::Socket* OOSvrBase::Proactor::accept_local(Acceptor<AsyncLocalSocket>* handler, const char* path, int* perr, SECURITY_ATTRIBUTES* psa)
 {
-	return m_impl->accept_local(param,callback,path,err,psa);
+	return m_impl->accept_local(handler,path,perr,psa);
 }
 
-OOSvrBase::Acceptor* OOSvrBase::Proactor::accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const struct sockaddr* addr, size_t addr_len, int err), const struct sockaddr* addr, size_t addr_len, int& err)
+OOBase::Socket* OOSvrBase::Proactor::accept_remote(Acceptor<AsyncSocket>* handler, const char* address, const char* port, int* perr)
 {
-	return m_impl->accept_remote(param,callback,addr,addr_len,err);
+	return m_impl->accept_remote(handler,address,port,perr);
 }
 
-OOSvrBase::AsyncSocket* OOSvrBase::Proactor::attach_socket(OOBase::socket_t sock, int& err)
+OOSvrBase::AsyncSocketPtr OOSvrBase::Proactor::attach_socket(OOBase::Socket::socket_t sock, int* perr)
 {
-	return m_impl->attach_socket(sock,err);
+	return m_impl->attach_socket(sock,perr);
 }
 
-OOSvrBase::AsyncLocalSocket* OOSvrBase::Proactor::attach_local_socket(OOBase::socket_t sock, int& err)
+OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Proactor::attach_local_socket(OOBase::Socket::socket_t sock, int* perr)
+{
+	return m_impl->attach_local_socket(sock,perr);
+}
+
+OOSvrBase::AsyncLocalSocketPtr OOSvrBase::Proactor::connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* wait)
 {
 	return m_impl->connect_local_socket(path,perr,wait);
 }
@@ -156,16 +139,23 @@ void OOSvrBase::detail::AsyncQueued::shutdown()
 	}
 }
 
-OOSvrBase::AsyncLocalSocket* OOSvrBase::Proactor::connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout)
+int OOSvrBase::detail::AsyncQueued::async_op(OOBase::Buffer* buffer, size_t len)
 {
-	return m_impl->connect_local_socket(path,err,timeout);
+	assert(buffer);
+
+	if (len > 0)
+	{
+		int err = buffer->space(len);
+		if (err != 0)
+			return err;
+	}
+
+	return async_op(buffer,len,0);
 }
 
-int OOSvrBase::AsyncSocket::recv(OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout)
+int OOSvrBase::detail::AsyncQueued::async_op(OOBase::Buffer* buffer, size_t len, BlockingInfo* param)
 {
-	WaitCallback wait;
-	wait.m_complete = false;
-	wait.m_err = 0;
+	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 	if (m_closed)
 		return ENOTCONN;
@@ -203,23 +193,61 @@ int OOSvrBase::AsyncSocket::recv(OOBase::Buffer* buffer, size_t bytes, const OOB
 void OOSvrBase::detail::AsyncQueued::issue_next(OOBase::Guard<OOBase::SpinLock>& guard)
 {
 	// Lock is assumed to be held...
-	int err = recv(&wait,&WaitCallback::callback,buffer,bytes,timeout);
-	if (err == 0)
-	{
-		while (!wait.m_complete)
-			wait.m_condition.wait(wait.m_lock);
-		
-		err = wait.m_err;
-	}
 
-	return err;
+	while (!m_ops.empty())
+	{
+		AsyncIOHelper::AsyncOp* op = m_ops.front();
+		
+		if (op)
+		{
+			// Release the lock, because errors will synchronously call the handler...
+			guard.release();
+
+			// If we have an op... perform it
+			if (m_sender)
+				return m_helper->send(op);
+			else
+				return m_helper->recv(op);
+		}
+
+		// This is a shutdown message
+		m_helper->shutdown(m_sender,!m_sender);
+
+		m_ops.pop();
+	}
+		
+	if (m_closed)
+	{
+		// Only receiver emits on_closed...
+		if (!m_sender && m_handler)
+		{
+			// And let waiter know we have an empty queue...
+			guard.release();
+
+			// Now notify handler that we have closed and finished all ops
+			m_handler->on_closed();
+		}
+		else if (m_sender)
+		{
+			// Issue a close, which will abort any pending recv's...
+			m_helper->close();
+		}
+	}
 }
 
-int OOSvrBase::AsyncSocket::send(OOBase::Buffer* buffer)
+bool OOSvrBase::detail::AsyncQueued::notify_async(AsyncIOHelper::AsyncOp* op, int err, bool bLast)
 {
-	WaitCallback wait;
-	wait.m_complete = false;
-	wait.m_err = 0;
+	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+
+	bool bRelease = true;
+	if (op->param)
+	{
+		BlockingInfo* block_info = static_cast<BlockingInfo*>(op->param);
+
+		// Block recv complete
+		if (block_info->cancelled)
+		{
+			// But was cancelled...
 
 			// It's our responsibility to delete param, as the waiter has gone...
 			delete block_info;
@@ -231,13 +259,23 @@ int OOSvrBase::AsyncSocket::send(OOBase::Buffer* buffer)
 			block_info->ev.set();	
 		}
 
-	int err = send(&wait,&WaitCallback::callback,buffer);
-	if (err == 0)
+		// This is a sync op, caller need not release() us
+		bRelease = false;
+	}
+	else if (m_handler)
 	{
-		while (!wait.m_complete)
-			wait.m_condition.wait(wait.m_lock);
+		guard.release();
+
+		// Be aware that the handler can delete itself in the notification... 
+		// so don't use m_handler again after the callback without re-aquiring the lock
+
+		if (m_sender)
+			m_handler->on_sent(op->buffer,err);
+		else if (!bLast || op->buffer->length())
+			m_handler->on_recv(op->buffer,err);
 		
-		err = wait.m_err;
+		// Acquire lock... we need it for issue_next
+		guard.acquire();
 	}
 
 	// Done with our copy of the op
@@ -374,3 +412,13 @@ int OOSvrBase::detail::AsyncSocketImpl::async_send(OOBase::Buffer* buffer)
 	return err;
 }
 
+void OOSvrBase::detail::AsyncSocketImpl::on_sent(AsyncIOHelper::AsyncOp* send_op, int err)
+{
+	if (m_sender.notify_async(send_op,err,false))
+		release();
+}
+			
+int OOSvrBase::detail::AsyncSocketImpl::send(OOBase::Buffer* buffer, const OOBase::timeval_t* timeout)
+{
+	return m_sender.sync_op(buffer,0,timeout);
+}

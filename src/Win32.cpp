@@ -233,7 +233,7 @@ namespace
 		else
 		{
 			// If we get here then we are not the first thread in, and the first thread failed!
-			bReturn = (*check == 3 ? TRUE : FALSE);
+			bReturn = (*check == 3);
 		}
 									
 		// And release

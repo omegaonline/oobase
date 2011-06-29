@@ -126,14 +126,14 @@ namespace
 		return 0;
 	}
 
-	bool Win32Thread::join(const OOBase::timeval_t* timeout)
+	bool Win32Thread::join(const OOBase::timeval_t* wait)
 	{
 		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 		if (!m_hThread.is_valid())
 			return true;
 
-		DWORD dwWait = WaitForSingleObject(m_hThread,(timeout ? timeout->msec() : INFINITE));
+		DWORD dwWait = WaitForSingleObject(m_hThread,(wait ? wait->msec() : INFINITE));
 		if (dwWait == WAIT_OBJECT_0)
 		{
 			m_hThread.close();
@@ -278,11 +278,11 @@ namespace
 		return 0;
 	}
 
-	bool PthreadThread::join(const OOBase::timeval_t* timeout)
+	bool PthreadThread::join(const OOBase::timeval_t* wait)
 	{
 		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-		if (timeout)
+		if (wait)
 		{
 			pthread_mutex_t join_mutex = PTHREAD_MUTEX_INITIALIZER;
 			int err = pthread_mutex_lock(&join_mutex);
@@ -294,7 +294,7 @@ namespace
 			{
 				timespec wt;
 				OOBase::timeval_t now = OOBase::timeval_t::gettimeofday();
-				now += *timeout;
+				now += *wait;
 				wt.tv_sec = now.tv_sec();
 				wt.tv_nsec = now.tv_usec() * 1000;
 				err = pthread_cond_timedwait(&m_condition,&join_mutex,&wt);
@@ -410,11 +410,11 @@ int OOBase::Thread::run(int (*thread_fn)(void*), void* param)
 	return m_impl->run(this,m_bAutodelete,thread_fn,param);
 }
 
-bool OOBase::Thread::join(const timeval_t* timeout)
+bool OOBase::Thread::join(const timeval_t* wait)
 {
 	assert(this != self());
 
-	return m_impl->join(timeout);
+	return m_impl->join(wait);
 }
 
 void OOBase::Thread::abort()
@@ -443,17 +443,17 @@ void OOBase::Thread::yield()
 #endif
 }
 
-void OOBase::Thread::sleep(const timeval_t& timeout)
+void OOBase::Thread::sleep(const timeval_t& wait)
 {
-	if (timeout == timeval_t::Zero)
+	if (wait == timeval_t::Zero)
 		return Thread::yield();
 
 #if defined(_WIN32)
-	::Sleep(timeout.msec());
+	::Sleep(wait.msec());
 #else
 	timespec wt;
-	wt.tv_sec = timeout.tv_sec();
-	wt.tv_nsec = timeout.tv_usec() * 1000;
+	wt.tv_sec = wait.tv_sec();
+	wt.tv_nsec = wait.tv_usec() * 1000;
 
 	for (;;)
 	{
