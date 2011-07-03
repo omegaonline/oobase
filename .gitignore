@@ -38,7 +38,9 @@ lt-*.c
 # msvc stuff
 *.obj
 *.[ip]db
+*.ipch
 *.lib
+*.sdf
 *.intermediate.manifest
 *.embed.manifest
 *.pch
