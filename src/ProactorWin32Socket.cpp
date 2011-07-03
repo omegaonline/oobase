@@ -33,7 +33,7 @@
 
 namespace
 {
-	class AsyncSocket : public OOSvrBase::AsyncSocket, public OOBase::CustomNew<OOBase::HeapAllocator>
+	class AsyncSocket : public OOSvrBase::AsyncSocket
 	{
 	public:
 		AsyncSocket(OOSvrBase::detail::ProactorWin32* pProactor, SOCKET hSocket);
@@ -41,8 +41,6 @@ namespace
 		int recv(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout);
 		int send(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer);
 		int send_v(void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count);
-
-		void shutdown(bool bSend, bool bRecv);
 	
 	private:
 		virtual ~AsyncSocket();
@@ -312,23 +310,9 @@ void AsyncSocket::on_send_v(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase
 	delete [] buffers;
 }
 
-void AsyncSocket::shutdown(bool bSend, bool bRecv)
-{
-	int how = -1;
-	if (bSend && bRecv)
-		how = SD_BOTH;
-	else if (bSend)
-		how = SD_SEND;
-	else if (bRecv)
-		how = SD_RECEIVE;
-	
-	if (how != -1)
-		::shutdown(m_hSocket,how);
-}
-
 namespace
 {
-	class SocketAcceptor : public OOSvrBase::Acceptor, public OOBase::CustomNew<OOBase::HeapAllocator>
+	class SocketAcceptor : public OOSvrBase::Acceptor
 	{
 	public:
 		typedef void (*callback_t)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err);

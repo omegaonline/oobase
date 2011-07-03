@@ -50,7 +50,7 @@ namespace
 		size_t send(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout);
 		size_t send_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout);
 		
-		void shutdown(bool bSend, bool bRecv);
+		void close();
 					
 	private:
 		OOBase::Win32::SmartHandle m_handle;
@@ -60,7 +60,7 @@ namespace
 		OOBase::Win32::SmartHandle m_send_event;
 		bool                       m_send_allowed;
 		bool                       m_recv_allowed;
-
+		
 		size_t recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout);
 		size_t send_i(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout);
 	};
@@ -158,6 +158,9 @@ size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::timeval
 		
 		cbuf += dwWritten;
 		total -= dwWritten;
+
+		if (!m_send_allowed)
+			return (len - total);
 	}
 
 	err = 0;
@@ -260,27 +263,31 @@ size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::ti
 
 		if (!bAll && dwRead > 0)
 			break;
+
+		if (!m_recv_allowed)
+			break;
 	}
 
 	err = 0;
 	return (len - total);
 }
 
-void Pipe::shutdown(bool bSend, bool bRecv)
+void Pipe::close()
 {
-	if (bRecv)
-	{
-		OOBase::Guard<OOBase::Mutex> guard(m_recv_lock);
-
-		m_recv_allowed = false;
-	}
+	m_send_allowed = false;
+	m_recv_allowed = false;
 	
-	if (bSend)
-	{
-		OOBase::Guard<OOBase::Mutex> guard(m_send_lock);
+	// This will halt all recv's
+	if (m_recv_event.is_valid())
+		SetEvent(m_recv_event);
 
-		m_send_allowed = false;
-	}
+	// This will halt all send's
+	if (m_send_event.is_valid())
+		SetEvent(m_send_event);
+	
+	// This ensures there are no other sends or recvs in progress...
+	OOBase::Guard<OOBase::Mutex> guard1(m_recv_lock);
+	OOBase::Guard<OOBase::Mutex> guard2(m_send_lock);
 }
 
 OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const timeval_t* timeout)

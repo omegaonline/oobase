@@ -110,7 +110,7 @@ namespace OOBase
 			return err;
 		}
 
-		virtual void shutdown(bool bSend, bool bRecv) = 0;
+		virtual void close() = 0;
 
 		virtual ~Socket() {};
 

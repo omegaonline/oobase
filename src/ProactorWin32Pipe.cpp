@@ -48,7 +48,7 @@ namespace
 		return err;
 	}
 
-	class AsyncPipe : public OOSvrBase::AsyncLocalSocket, public OOBase::CustomNew<OOBase::HeapAllocator>
+	class AsyncPipe : public OOSvrBase::AsyncLocalSocket
 	{
 	public:
 		AsyncPipe(OOSvrBase::detail::ProactorWin32* pProactor, HANDLE hPipe);
@@ -57,8 +57,6 @@ namespace
 		int send(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer);
 		int send_v(void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count);
 
-		void shutdown(bool bSend, bool bRecv);
-
 		int get_uid(uid_t& uid);
 	
 	private:
@@ -66,9 +64,7 @@ namespace
 
 		OOSvrBase::detail::ProactorWin32* m_pProactor;
 		OOBase::Win32::SmartHandle        m_hPipe;
-		bool                              m_bOpenSend;
-		bool                              m_bOpenRecv;
-			
+					
 		static void on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv);
 		static void on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv);
 		static void on_send_v(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv);
@@ -80,9 +76,7 @@ namespace
 
 AsyncPipe::AsyncPipe(OOSvrBase::detail::ProactorWin32* pProactor, HANDLE hPipe) :
 		m_pProactor(pProactor),
-		m_hPipe(hPipe),
-		m_bOpenSend(true),
-		m_bOpenRecv(true)
+		m_hPipe(hPipe)
 { }
 
 AsyncPipe::~AsyncPipe()
@@ -146,9 +140,7 @@ int AsyncPipe::recv(void* param, void (*callback)(void* param, OOBase::Buffer* b
 	
 	void* TODO; // Add timeout support!
 	
-	if (!m_bOpenRecv)
-		err = WSAESHUTDOWN;
-	else if (!ReadFile(m_hPipe,buffer->wr_ptr(),static_cast<DWORD>(bytes),NULL,pOv))
+	if (!ReadFile(m_hPipe,buffer->wr_ptr(),static_cast<DWORD>(bytes),NULL,pOv))
 	{
 		err = GetLastError();
 		if (err == ERROR_IO_PENDING)
@@ -203,9 +195,7 @@ int AsyncPipe::send(void* param, void (*callback)(void* param, OOBase::Buffer* b
 	pOv->m_extras[3] = reinterpret_cast<ULONG_PTR>(buffer);
 	buffer->addref();
 	
-	if (!m_bOpenSend)
-		dwErr = WSAESHUTDOWN;
-	else if (!WriteFile(m_hPipe,buffer->rd_ptr(),static_cast<DWORD>(bytes),NULL,pOv))
+	if (!WriteFile(m_hPipe,buffer->rd_ptr(),static_cast<DWORD>(bytes),NULL,pOv))
 	{
 		dwErr = GetLastError();
 		if (dwErr == ERROR_IO_PENDING)
@@ -285,9 +275,7 @@ int AsyncPipe::send_v(void* param, void (*callback)(void* param, OOBase::Buffer*
 	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(callback);
 	pOv->m_extras[3] = reinterpret_cast<ULONG_PTR>(buffer.addref());
 		
-	if (!m_bOpenSend)
-		dwErr = WSAESHUTDOWN;
-	else if (!WriteFile(m_hPipe,buffer->rd_ptr(),static_cast<DWORD>(total),NULL,pOv))
+	if (!WriteFile(m_hPipe,buffer->rd_ptr(),static_cast<DWORD>(total),NULL,pOv))
 	{
 		dwErr = GetLastError();
 		if (dwErr == ERROR_IO_PENDING)
@@ -337,15 +325,6 @@ void AsyncPipe::on_send_v(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOSvrBa
 	buffer->release();
 }
 
-void AsyncPipe::shutdown(bool bSend, bool bRecv)
-{
-	if (bSend)
-		m_bOpenSend = false;
-	
-	if (bRecv)
-		m_bOpenRecv = false;
-}
-
 int AsyncPipe::get_uid(OOSvrBase::AsyncLocalSocket::uid_t& uid)
 {
 	if (!ImpersonateNamedPipeClient(m_hPipe))
@@ -370,7 +349,7 @@ int AsyncPipe::get_uid(OOSvrBase::AsyncLocalSocket::uid_t& uid)
 
 namespace
 {	
-	class PipeAcceptor : public OOSvrBase::Acceptor, public OOBase::CustomNew<OOBase::HeapAllocator>
+	class PipeAcceptor : public OOSvrBase::Acceptor
 	{
 	public:
 		typedef void (*callback_t)(void* param, OOSvrBase::AsyncLocalSocket* pSocket, int err);
@@ -625,10 +604,11 @@ bool PipeAcceptor::Acceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, 
 		guard.release();
 		
 		// Wrap the handle
-		OOSvrBase::AsyncLocalSocket* pSocket = NULL;
+		OOBase::RefPtr<OOSvrBase::AsyncLocalSocket> pSocket;
+
 		if (dwErr == 0)
 		{
-			pSocket = new (std::nothrow) AsyncPipe(m_pProactor,hPipe);
+			pSocket.attach(new (std::nothrow) AsyncPipe(m_pProactor,hPipe));
 			if (!pSocket)
 			{
 				dwErr = ERROR_OUTOFMEMORY;
@@ -636,16 +616,8 @@ bool PipeAcceptor::Acceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, 
 			}
 		}
 	
-		try
-		{
-			(*m_callback)(m_param,pSocket,dwErr);
-		}
-		catch (...)
-		{
-			delete pSocket;
-			throw;
-		}
-	
+		(*m_callback)(m_param,pSocket,dwErr);
+			
 		guard.acquire();
 		
 		if (bAgain)

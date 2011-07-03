@@ -98,15 +98,6 @@ namespace
 	};
 #endif
 
-	class CrtFreeDestructor
-	{
-	public:
-		static void destroy(void* ptr)
-		{
-			OOBase::CrtAllocator::free(ptr);
-		}
-	};
-
 	/** \typedef LOGGER
 	 *  The logger singleton.
 	 *  The singleton is specialised by the platform specific implementation
@@ -206,7 +197,7 @@ namespace
 		{
 			const char* arrBufs[2] = { msg, NULL };
 
-			OOBase::SmartPtr<TOKEN_USER,CrtFreeDestructor> ptrSIDProcess;
+			OOBase::SmartPtr<TOKEN_USER,OOBase::CrtAllocator> ptrSIDProcess;
 			PSID psid = NULL;
 			OOBase::Win32::SmartHandle hProcessToken;
 

@@ -30,11 +30,10 @@ namespace OOBase
 {
 	namespace Win32
 	{
-		template <typename T>
 		class LocalAllocDestructor
 		{
 		public:
-			static void free(T* ptr)
+			static void free(void* ptr)
 			{
 				::LocalFree(ptr);
 			}

@@ -44,7 +44,7 @@ namespace OOSvrBase
 			if (!thunk)
 				return ERROR_OUTOFMEMORY;
 			
-			return recv(thunk,&Thunk<T>::callback,buffer,bytes,timeout);
+			return recv(thunk,&Thunk<T>::fn,buffer,bytes,timeout);
 		}
 
 		template <typename T>
@@ -54,7 +54,7 @@ namespace OOSvrBase
 			if (!thunk)
 				return ERROR_OUTOFMEMORY;
 			
-			return send(thunk,&Thunk<T>::callback,buffer);
+			return send(thunk,&Thunk<T>::fn,buffer);
 		}
 
 		template <typename T>
@@ -64,13 +64,11 @@ namespace OOSvrBase
 			if (!thunk)
 				return ERROR_OUTOFMEMORY;
 			
-			return send_v(thunk,&ThunkV<T>::callback,buffers,count);
+			return send_v(thunk,&ThunkV<T>::fn,buffers,count);
 		}
 
 		int recv(OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout = NULL);
 		int send(OOBase::Buffer* buffer);
-
-		virtual void shutdown(bool bSend, bool bRecv) = 0;
 
 	protected:
 		AsyncSocket() {}
@@ -90,7 +88,7 @@ namespace OOSvrBase
 			Thunk(T* param, void (T::*callback)(OOBase::Buffer*,int)) : m_param(param), m_callback(callback)
 			{}
 		
-			static void callback(void* param, OOBase::Buffer* buffer, int err)
+			static void fn(void* param, OOBase::Buffer* buffer, int err)
 			{
 				Thunk thunk = *static_cast<Thunk*>(param);
 				delete static_cast<Thunk*>(param);
@@ -108,7 +106,7 @@ namespace OOSvrBase
 			ThunkV(T* param, void (T::*callback)(OOBase::Buffer* buffers[],size_t,int)) : m_param(param), m_callback(callback)
 			{}
 		
-			static void callback(void* param, OOBase::Buffer* buffers[], size_t count, int err)
+			static void fn(void* param, OOBase::Buffer* buffers[], size_t count, int err)
 			{
 				ThunkV thunk = *static_cast<ThunkV*>(param);
 				delete static_cast<ThunkV*>(param);
@@ -132,6 +130,10 @@ namespace OOSvrBase
 #error Fix me!
 #endif
 		virtual int get_uid(uid_t& uid) = 0;
+
+	protected:
+		AsyncLocalSocket() {}
+		virtual ~AsyncLocalSocket() {}
 	};
 	
 	class Acceptor : public OOBase::RefCounted
@@ -161,7 +163,7 @@ namespace OOSvrBase
 				return NULL;
 			}
 			
-			return accept_local(thunk,&ThunkL<T>::callback,path,err,psa);
+			return accept_local(thunk,&ThunkL<T>::fn,path,err,psa);
 		}
 		
 		template <typename T>
@@ -174,7 +176,7 @@ namespace OOSvrBase
 				return NULL;
 			}
 
-			return accept_remote(thunk,&ThunkA<T>::callback,addr,addr_len,err);
+			return accept_remote(thunk,&ThunkA<T>::fn,addr,addr_len,err);
 		}
 
 		virtual AsyncSocket* attach_socket(OOBase::socket_t sock, int& err);
@@ -207,7 +209,7 @@ namespace OOSvrBase
 			ThunkA(T* param, void (T::*callback)(AsyncSocket*,const sockaddr*,size_t,int)) : m_param(param), m_callback(callback)
 			{}
 		
-			static void callback(void* param, AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err)
+			static void fn(void* param, AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err)
 			{
 				ThunkA thunk = *static_cast<ThunkA*>(param);
 				//delete static_cast<ThunkA*>(param);
@@ -225,7 +227,7 @@ namespace OOSvrBase
 			ThunkL(T* param, void (T::*callback)(AsyncLocalSocket*,int)) : m_param(param), m_callback(callback)
 			{}
 		
-			static void callback(void* param, AsyncLocalSocket* pSocket, int err)
+			static void fn(void* param, AsyncLocalSocket* pSocket, int err)
 			{
 				ThunkL thunk = *static_cast<ThunkL*>(param);
 				//delete static_cast<ThunkL*>(param);

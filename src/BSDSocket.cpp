@@ -139,7 +139,7 @@ namespace
 
 		int send(const void* buf, size_t len, const OOBase::timeval_t* timeout = NULL);
 		size_t recv(void* buf, size_t len, int& err, const OOBase::timeval_t* timeout = NULL);
-		void shutdown(bool bSend, bool bRecv);
+		void close();
 
 	private:
 		int  m_sock;
@@ -280,16 +280,9 @@ namespace
 		}
 	}
 
-	void Socket::shutdown(bool bSend, bool bRecv)
+	void Socket::close()
 	{
-		int how = -1;
-		if (bSend)
-			how = (bRecv ? SHUT_RDWR : SHUT_WR);
-		else if (bRecv)
-			how = SHUT_RD;
-
-		if (how != -1)
-			::shutdown(m_sock,how);
+		::shutdown(m_sock,SHUT_RDWR);
 	}
 
 	int connect_i(const char* address, const char* port, int& err, const OOBase::timeval_t* timeout)

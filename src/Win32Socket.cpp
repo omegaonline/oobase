@@ -256,7 +256,7 @@ namespace
 		size_t send(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout = NULL);
 		size_t send_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout = NULL);
 
-		void shutdown(bool bSend, bool bRecv);
+		void close();
 					
 	private:
 		SOCKET                     m_socket;
@@ -683,18 +683,12 @@ size_t WinSocket::recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int& err, const
 	return total;
 }
 
-void WinSocket::shutdown(bool bSend, bool bRecv)
+void WinSocket::close()
 {
-	int how = 0;
-	if (bRecv && bSend)
-		how = SD_BOTH;
-	else if (bRecv)
-		how = SD_RECEIVE;
-	else if (bSend)
-		how = SD_SEND;
+	// This may not cancel any outstanding recvs
+	void* CHECK_ME;
 
-	if (bSend || bRecv)
-		::shutdown(m_socket,how);
+	::shutdown(m_socket,SD_BOTH);
 }
 
 OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, int& err, const timeval_t* timeout)

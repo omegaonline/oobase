@@ -62,7 +62,7 @@ namespace
 					(LPSTR)&lpBuf,
 					0,  NULL))
 		{
-			OOBase::SmartPtr<char,OOBase::Win32::LocalAllocDestructor<char> > buf = static_cast<char*>(lpBuf);
+			OOBase::SmartPtr<char,OOBase::Win32::LocalAllocDestructor> buf = static_cast<char*>(lpBuf);
 			size_t len = strlen(buf);
 			while (len > 0 && (buf[len-1]=='\r' || buf[len-1]=='\n'))
 				--len;

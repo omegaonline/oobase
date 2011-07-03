@@ -37,8 +37,6 @@ namespace
 		int send(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer);
 		int send_v(void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count);
 
-		void shutdown(bool bSend, bool bRecv);
-	
 		int get_uid(uid_t& uid);
 	
 	private:
@@ -79,20 +77,6 @@ int AsyncSocket::send(void* param, void (*callback)(void* param, OOBase::Buffer*
 int AsyncSocket::send_v(void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count)
 {
 	return m_pProactor->send_v(m_fd,param,callback,buffers,count);
-}
-
-void AsyncSocket::shutdown(bool bSend, bool bRecv)
-{
-	int how = -1;
-	if (bSend && bRecv)
-		how = SHUT_RW;
-	else if (bSend)
-		how = SHUT_WR;
-	else if (bRecv)
-		how = SHUT_RD;
-	
-	if (how != -1)
-		::shutdown(m_fd,how);
 }
 
 int AsyncSocket::get_uid(OOSvrBase::AsyncLocalSocket::uid_t& uid)

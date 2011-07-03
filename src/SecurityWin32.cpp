@@ -225,7 +225,7 @@ DWORD OOSvrBase::Win32::EnableUserAccessToDir(const wchar_t* pszPath, const TOKE
 	if (dwRes != ERROR_SUCCESS)
 		return dwRes;
 
-	OOBase::SmartPtr<void,OOBase::Win32::LocalAllocDestructor<void> > ptrSD = pSD;
+	OOBase::SmartPtr<void,OOBase::Win32::LocalAllocDestructor> ptrSD = pSD;
 
 	EXPLICIT_ACCESSW ea = {0};
 
@@ -242,7 +242,7 @@ DWORD OOSvrBase::Win32::EnableUserAccessToDir(const wchar_t* pszPath, const TOKE
 	if (dwRes != ERROR_SUCCESS)
 		return dwRes;
 
-	OOBase::SmartPtr<ACL,OOBase::Win32::LocalAllocDestructor<ACL> > ptrACLNew = pACLNew;
+	OOBase::SmartPtr<ACL,OOBase::Win32::LocalAllocDestructor> ptrACLNew = pACLNew;
 
 	return SetNamedSecurityInfoW(szPath,SE_FILE_OBJECT,DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,NULL,NULL,pACLNew,NULL);
 }

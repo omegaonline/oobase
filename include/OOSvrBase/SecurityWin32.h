@@ -105,8 +105,8 @@ namespace OOSvrBase
 			}
 
 		private:
-			OOBase::SmartPtr<ACL,OOBase::Win32::LocalAllocDestructor<ACL> >   m_pACL;
-			OOBase::SmartPtr<void,OOBase::Win32::LocalAllocDestructor<void> > m_psd;
+			OOBase::SmartPtr<ACL,OOBase::Win32::LocalAllocDestructor>  m_pACL;
+			OOBase::SmartPtr<void,OOBase::Win32::LocalAllocDestructor> m_psd;
 		};
 
 		DWORD RestrictToken(HANDLE& hToken);

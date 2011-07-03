@@ -683,7 +683,7 @@ void* OOBase::CrtAllocator::reallocate(void* ptr, size_t len)
 	return ::HeapReAlloc(hHeap,0,ptr,len);
 }
 
-void OOBase::CrtAllocator::free(void* ptr)
+bool OOBase::CrtAllocator::free(void* ptr)
 {
 	HANDLE hHeap = ::GetProcessHeap();
 	if (!hHeap)
@@ -691,7 +691,7 @@ void OOBase::CrtAllocator::free(void* ptr)
 
 	//assert(::HeapValidate(hHeap,0,NULL));
 
-	::HeapFree(hHeap,0,ptr);
+	return (::HeapFree(hHeap,0,ptr) == TRUE);
 }
 
 #endif // _WIN32
