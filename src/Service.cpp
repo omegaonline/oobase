@@ -21,7 +21,7 @@
 
 #include "../include/OOSvrBase/Service.h"
 #include "../include/OOSvrBase/Logger.h"
-#include "../include/OOBase/CustomNew.h"
+#include "../include/OOBase/GlobalNew.h"
 #include "../include/OOBase/Singleton.h"
 #include "../include/OOBase/String.h"
 #include "../include/OOBase/Posix.h"

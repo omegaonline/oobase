@@ -23,6 +23,7 @@
 #define OOBASE_STRING_H_INCLUDED_
 
 #include "Memory.h"
+#include "Atomic.h"
 
 #include <string.h>
 
@@ -218,8 +219,8 @@ namespace OOBase
 	private:
 		struct Node
 		{
-			size_t m_refcount;
-			char   m_data[1];
+			Atomic<size_t> m_refcount;
+			char           m_data[1];
 		};
 		Node* m_node;
 

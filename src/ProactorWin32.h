@@ -23,22 +23,24 @@
 #define OOSVRBASE_PROACTOR_WIN32_H_INCLUDED_
 
 #include "../include/OOSvrBase/Proactor.h"
+#include "../include/OOBase/Win32.h"
+#include "Win32Socket.h"
 
 namespace OOSvrBase
 {
-	namespace Win32
+	namespace detail
 	{
-		class ProactorImpl : public Proactor
+		class ProactorWin32 : public OOSvrBase::Proactor
 		{
 		public:
-			ProactorImpl();
-			virtual ~ProactorImpl();
+			ProactorWin32();
+			virtual ~ProactorWin32();
 
-			AsyncSocket* attach_socket(OOBase::socket_t sock, int& err);
-			AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int& err);
+			OOSvrBase::AsyncSocket* attach_socket(OOBase::socket_t sock, int& err);
+			OOSvrBase::AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int& err);
 
-			AsyncSocket* connect_socket(const struct sockaddr* addr, size_t addr_len, int& err, const OOBase::timeval_t* timeout);
-			AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout);
+			OOSvrBase::AsyncSocket* connect_socket(const sockaddr* addr, size_t addr_len, int& err, const OOBase::timeval_t* timeout);
+			OOSvrBase::AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout);
 		
 			struct Overlapped : public OVERLAPPED
 			{
@@ -51,13 +53,15 @@ namespace OOSvrBase
 			void delete_overlapped(Overlapped* pOv);
 			
 			int bind(HANDLE hFile);
+			int run(int& err, const OOBase::timeval_t* timeout = NULL);
 
 		protected:
-			Acceptor* accept_local(void* param, void (*callback)(void* param, AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa);
-			Acceptor* accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const struct sockaddr* addr, size_t addr_len, int err), const struct sockaddr* addr, size_t addr_len, int& err);
+			OOSvrBase::Acceptor* accept_local(void* param, void (*callback)(void* param, OOSvrBase::AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa);
+			OOSvrBase::Acceptor* accept_remote(void* param, void (*callback)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err), const sockaddr* addr, size_t addr_len, int& err);
 
 		private:
-			size_t m_refcount;
+			HANDLE           m_hPort;
+			OOBase::SpinLock m_lock;
 		};
 	}
 }

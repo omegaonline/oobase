@@ -28,7 +28,8 @@ namespace OOBase
 {
 	namespace BSD
 	{
-		socket_t create_socket(int family, int socktype, int protocol, int* perr);
+		socket_t create_socket(int family, int socktype, int protocol, int& err);
+		int connect(int sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* timeout);
 
 		int set_non_blocking(socket_t sock, bool set);
 	}

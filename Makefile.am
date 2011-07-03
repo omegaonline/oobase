@@ -69,9 +69,9 @@ liboobase_la_SOURCES = \
 	include/OOBase/CDRStream.h \
 	include/OOBase/CmdArgs.h \
 	include/OOBase/Condition.h \
-	include/OOBase/CustomNew.h \
 	include/OOBase/Destructor.h \
 	include/OOBase/DLL.h \
+	include/OOBase/GlobalNew.h \
 	include/OOBase/HandleTable.h \
 	include/OOBase/HashTable.h \
 	include/OOBase/Memory.h \
@@ -79,6 +79,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/Once.h \
 	include/OOBase/Posix.h \
 	include/OOBase/Queue.h \
+	include/OOBase/RefCount.h \
 	include/OOBase/Singleton.h \
 	include/OOBase/SmartPtr.h \
 	include/OOBase/Socket.h \
@@ -111,6 +112,7 @@ liboobase_la_SOURCES = \
 	src/tr24731.cpp \
 	src/utf8.cpp \
 	src/Win32.cpp \
+	src/Win32Pipe.cpp \
 	src/Win32Socket.cpp	
 
 liboosvrbase_la_CFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
@@ -131,13 +133,15 @@ liboosvrbase_la_SOURCES = \
 	include/OOSvrBase/SecurityWin32.h \
 	include/OOSvrBase/Service.h \
 	src/ProactorEv.h \
-	src/ProactorImpl.h \
 	src/ProactorWin32.h \
 	src/Database.cpp \
 	src/Logger.cpp \
 	src/Proactor.cpp \
 	src/ProactorEv.cpp \
+	src/ProactorEvSocket.cpp \
 	src/ProactorWin32.cpp \
+	src/ProactorWin32Pipe.cpp \
+	src/ProactorWin32Socket.cpp \
 	src/pw_info.cpp \
 	src/SecurityWin32.cpp \
 	src/Service.cpp \

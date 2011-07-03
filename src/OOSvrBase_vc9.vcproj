@@ -84,7 +84,7 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|x64"
-			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(PlatformName)\$(ConfigurationName)_Svr"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_Svr"
 			ConfigurationType="4"
 			CharacterSet="0"
@@ -216,7 +216,7 @@
 		</Configuration>
 		<Configuration
 			Name="Release|x64"
-			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(PlatformName)\$(ConfigurationName)_Svr"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_Svr"
 			ConfigurationType="4"
 			CharacterSet="0"
@@ -376,10 +376,6 @@
 			</File>
 			<File
 				RelativePath=".\ProactorEv.h"
-				>
-			</File>
-			<File
-				RelativePath=".\ProactorImpl.h"
 				>
 			</File>
 			<File

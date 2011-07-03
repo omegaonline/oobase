@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/CustomNew.h"
+#include "../include/OOBase/GlobalNew.h"
 #include "../include/OOBase/Singleton.h"
 #include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/tr24731.h"

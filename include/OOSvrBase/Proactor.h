@@ -22,7 +22,7 @@
 #ifndef OOSVRBASE_PROACTOR_H_INCLUDED_
 #define OOSVRBASE_PROACTOR_H_INCLUDED_
 
-#include "../OOBase/SmartPtr.h"
+#include "../OOBase/GlobalNew.h"
 #include "../OOBase/Socket.h"
 
 #if !defined(_WIN32)
@@ -34,75 +34,86 @@ typedef struct
 
 namespace OOSvrBase
 {
-	class AsyncSocket
+	class AsyncSocket : public OOBase::RefCounted
 	{
 	public:
-		virtual ~AsyncSocket() {}
-			
 		template <typename T>
-		int recv(T* param, void (T::*callback)(OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout)
+		int recv(T* param, void (T::*callback)(OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout = NULL)
 		{
-			Thunk<T>* thunk = new Thunk<T>(param,callback);
+			Thunk<T>* thunk = new (std::nothrow) Thunk<T>(param,callback);
+			if (!thunk)
+				return ERROR_OUTOFMEMORY;
+			
 			return recv(thunk,&Thunk<T>::callback,buffer,bytes,timeout);
 		}
 
 		template <typename T>
 		int send(T* param, void (T::*callback)(OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer)
 		{
-			Thunk<T>* thunk = new Thunk<T>(param,callback);
+			Thunk<T>* thunk = new (std::nothrow) Thunk<T>(param,callback);
+			if (!thunk)
+				return ERROR_OUTOFMEMORY;
+			
 			return send(thunk,&Thunk<T>::callback,buffer);
 		}
 
 		template <typename T>
 		int send_v(T* param, void (T::*callback)(OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count)
 		{
-			ThunkV<T>* thunk = new ThunkV<T>(param,callback);
+			ThunkV<T>* thunk = new (std::nothrow) ThunkV<T>(param,callback);
+			if (!thunk)
+				return ERROR_OUTOFMEMORY;
+			
 			return send_v(thunk,&ThunkV<T>::callback,buffers,count);
 		}
 
-		int recv(OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout);
+		int recv(OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout = NULL);
 		int send(OOBase::Buffer* buffer);
 
 		virtual void shutdown(bool bSend, bool bRecv) = 0;
 
 	protected:
 		AsyncSocket() {}
-		
+		virtual ~AsyncSocket() {}
+
 		virtual int recv(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout) = 0;
 		virtual int send(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer) = 0;
 		virtual int send_v(void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count) = 0;
 
 	private:
-		AsyncSocket(const AsyncSocket&);
-		AsyncSocket& operator = (const AsyncSocket&);
-			
 		template <typename T>
-		struct Thunk
+		struct Thunk : public OOBase::CustomNew<OOBase::HeapAllocator>
 		{
 			T* m_param;
 			void (T::*m_callback)(OOBase::Buffer* buffer, int err);
+
+			Thunk(T* param, void (T::*callback)(OOBase::Buffer*,int)) : m_param(param), m_callback(callback)
+			{}
 		
 			static void callback(void* param, OOBase::Buffer* buffer, int err)
 			{
 				Thunk thunk = *static_cast<Thunk*>(param);
 				delete static_cast<Thunk*>(param);
 				
-				thunk.m_param->(*thunk.m_callback)(buffer,err);
+				(thunk.m_param->*thunk.m_callback)(buffer,err);
 			}
 		};
 		
 		template <typename T>
-		struct ThunkV
+		struct ThunkV : public OOBase::CustomNew<OOBase::HeapAllocator>
 		{
 			T* m_param;
 			void (T::*m_callback)(OOBase::Buffer* buffers[], size_t count, int err);
+
+			ThunkV(T* param, void (T::*callback)(OOBase::Buffer* buffers[],size_t,int)) : m_param(param), m_callback(callback)
+			{}
 		
 			static void callback(void* param, OOBase::Buffer* buffers[], size_t count, int err)
 			{
 				ThunkV thunk = *static_cast<ThunkV*>(param);
 				delete static_cast<ThunkV*>(param);
 				
-				thunk.m_param->(*thunk.m_callback)(buffers,count,err);
+				(thunk.m_param->*thunk.m_callback)(buffers,count,err);
 			}
 		};
 	};
@@ -123,20 +134,15 @@ namespace OOSvrBase
 		virtual int get_uid(uid_t& uid) = 0;
 	};
 	
-	class Acceptor
+	class Acceptor : public OOBase::RefCounted
 	{
 	public:
-		virtual ~Acceptor() {}
-			
 		virtual int listen(size_t backlog = SOMAXCONN) = 0;
 		virtual int stop() = 0;
 			
 	protected:
 		Acceptor() {}
-				
-	private:
-		Acceptor(const Acceptor&);
-		Acceptor& operator = (const Acceptor&);
+		virtual ~Acceptor() {}
 	};
 
 	class Proactor
@@ -146,49 +152,85 @@ namespace OOSvrBase
 		virtual ~Proactor();
 
 		template <typename T>
-		Acceptor* accept_local(T* param, void (T::*callback)(AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa = 0)
+		Acceptor* accept_local(T* param, void (T::*callback)(AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa = NULL)
 		{
-			ThunkA<T,AsyncLocalSocket> thunk = { param, callback };
-			return accept_local(thunk,&ThunkA<T,AsyncLocalSocket>::callback,path,perr,psa);
+			ThunkL<T>* thunk = new (std::nothrow) ThunkL<T>(param,callback);
+			if (!thunk)
+			{
+				err = ERROR_OUTOFMEMORY;
+				return NULL;
+			}
+			
+			return accept_local(thunk,&ThunkL<T>::callback,path,err,psa);
 		}
 		
 		template <typename T>
-		Acceptor* accept_remote(T* param, void (T::*callback)(AsyncSocket* handler, const struct sockaddr* addr, size_t addr_len, int err), const struct sockaddr* addr, size_t addr_len, int& err)
+		Acceptor* accept_remote(T* param, void (T::*callback)(AsyncSocket* handler, const sockaddr* addr, size_t addr_len, int err), const sockaddr* addr, size_t addr_len, int& err)
 		{
-			ThunkA<T,AsyncSocket> thunk = { param, callback };
-			return accept_remote(thunk,&ThunkA<T,AsyncSocket>::callback,addr,addr_len,perr);
+			ThunkA<T>* thunk = new (std::nothrow) ThunkA<T>(param,callback);
+			if (!thunk)
+			{
+				err = ERROR_OUTOFMEMORY;
+				return NULL;
+			}
+
+			return accept_remote(thunk,&ThunkA<T>::callback,addr,addr_len,err);
 		}
 
 		virtual AsyncSocket* attach_socket(OOBase::socket_t sock, int& err);
 		virtual AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int& err);
 
-		virtual AsyncSocket* connect_socket(const struct sockaddr* addr, size_t addr_len, int& err, const OOBase::timeval_t* timeout = 0);
-		virtual AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout = 0);
+		virtual AsyncSocket* connect_socket(const sockaddr* addr, size_t addr_len, int& err, const OOBase::timeval_t* timeout = NULL);
+		virtual AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout = NULL);
+
+		virtual int run(int& err, const OOBase::timeval_t* timeout = NULL);
 
 	protected:
 		explicit Proactor(bool);
 
 		virtual Acceptor* accept_local(void* param, void (*callback)(void* param, AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa);
-		virtual Acceptor* accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const struct sockaddr* addr, size_t addr_len, int err), const struct sockaddr* addr, size_t addr_len, int& err);
+		virtual Acceptor* accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err), const sockaddr* addr, size_t addr_len, int& err);
 
 	private:
+		// Don't copy or assign proactors, they're just too big
 		Proactor(const Proactor&);
 		Proactor& operator = (const Proactor&);
 
 		Proactor* m_impl;
-
-		template <typename T, typename S>
+		
+		template <typename T>
 		struct ThunkA
 		{
 			T* m_param;
-			void (T::*m_callback)(S* pSocket, const char* strAddress, int err);
+			void (T::*m_callback)(AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err);
+
+			ThunkA(T* param, void (T::*callback)(AsyncSocket*,const sockaddr*,size_t,int)) : m_param(param), m_callback(callback)
+			{}
 		
-			static void callback(void* param, S* pSocket, const char* strAddress, int err)
+			static void callback(void* param, AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err)
 			{
 				ThunkA thunk = *static_cast<ThunkA*>(param);
-				delete static_cast<ThunkA*>(param);
+				//delete static_cast<ThunkA*>(param);
 				
-				thunk.m_param->(*thunk.m_callback)(pSocket,strAddress,err);
+				(thunk.m_param->*thunk.m_callback)(pSocket,addr,addr_len,err);
+			}
+		};
+
+		template <typename T>
+		struct ThunkL
+		{
+			T* m_param;
+			void (T::*m_callback)(AsyncLocalSocket* pSocket, int err);
+
+			ThunkL(T* param, void (T::*callback)(AsyncLocalSocket*,int)) : m_param(param), m_callback(callback)
+			{}
+		
+			static void callback(void* param, AsyncLocalSocket* pSocket, int err)
+			{
+				ThunkL thunk = *static_cast<ThunkL*>(param);
+				//delete static_cast<ThunkL*>(param);
+				
+				(thunk.m_param->*thunk.m_callback)(pSocket,err);
 			}
 		};
 	};

@@ -137,11 +137,11 @@ int OOBase::LocalString::getenv(const char* envvar)
 #if defined(_MSC_VER) && defined(_CRT_INSECURE_DEPRECATE)
 	char* buf = 0;
 	size_t len = 0;
-	int err = _dupenv_s(&buf,&len,val);
+	int err = _dupenv_s(&buf,&len,envvar);
 	if (err == 0)
 	{
 		if (len)
-			err = str.assign(buf,len-1);
+			err = assign(buf,len-1);
 		free(buf);
 	}
 	return err;

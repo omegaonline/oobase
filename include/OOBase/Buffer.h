@@ -22,7 +22,7 @@
 #ifndef OOBASE_BUFFER_H_INCLUDED_
 #define OOBASE_BUFFER_H_INCLUDED_
 
-#include "Atomic.h"
+#include "RefCount.h"
 #include "Memory.h"
 
 namespace OOBase
@@ -46,17 +46,19 @@ namespace OOBase
 	                         length()        space()      \endverbatim
 	 *  \warning This class is not thread-safe.
 	 */
-	class Buffer
+	class Buffer : public RefCounted, public CustomNew<HeapAllocator>
 	{
 	public:
+		/// The constructor allocates the internal buffer to size \p cbSize.
+		Buffer(size_t cbSize = 256, size_t align = 1);
+
 		/// The factory function allocates the internal buffer to size \p cbSize.
-		static Buffer* create(size_t cbSize = 256, size_t align = 1);
-
-		/// Return a reference counted copy
-		Buffer* addref();
-
-		/// Release a reference
-		void release();
+		static RefPtr<Buffer> create(size_t cbSize = 256, size_t align = 1)
+		{
+			RefPtr<Buffer> ret;
+			ret.attach(new (std::nothrow) Buffer(cbSize,align));
+			return ret;
+		}
 
 		/// Get the current read pointer value.
 		const char* rd_ptr() const;
@@ -104,16 +106,8 @@ namespace OOBase
 		void mark_wr_ptr(size_t mark);
 
 	private:
-		/// The constructor allocates the internal buffer to size \p cbSize.
-		Buffer(size_t cbSize = 256, size_t align = 1);
-
-		// Prevent copying
-		Buffer(const Buffer& rhs);
-		Buffer& operator = (const Buffer& rhs);
-
 		~Buffer();
 
-		size_t  m_refcount; ///< The reference count.
 		size_t  m_capacity; ///< The total allocated bytes for \p m_buffer.
 		char*   m_buffer;   ///< The actual underlying buffer.
 		char*   m_wr_ptr;   ///< The current write pointer.

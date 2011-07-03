@@ -21,13 +21,17 @@
 
 #include "ProactorEv.h"
 
+#if defined(HAVE_EV_H) && !defined(_WIN32)
+
 namespace
 {
-	class AsyncSocket : public OOSvrBase::AsyncSocket
+	class AsyncSocket : public OOSvrBase::AsyncLocalSocket
 	{
 	public:
-		AsyncSocket(OOSvrBase::Win32::ProactorImpl* pProactor, int fd);
+		AsyncSocket(OOSvrBase::detail::ProactorEv* pProactor);
 		virtual ~AsyncSocket();
+	
+		int bind(int fd);
 
 		int recv(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout);
 		int send(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer);
@@ -35,12 +39,163 @@ namespace
 
 		void shutdown(bool bSend, bool bRecv);
 	
+		int get_uid(uid_t& uid);
+	
 	private:
-		OOSvrBase::Win32::ProactorImpl* m_pProactor;
-		int                             m_fd;
-					
-		
+		OOSvrBase::detail::ProactorEv* m_pProactor;
+		int                            m_fd;		
 	};
+}
+
+AsyncSocket::AsyncSocket(OOSvrBase::detail::ProactorEv* pProactor) :
+		m_pProactor(pProactor),
+		m_fd(-1)
+{ }
+
+AsyncSocket::~AsyncSocket()
+{
+	m_pProactor->unbind_fd(m_fd);
+}
+
+int AsyncSocket::bind(int fd)
+{
+	int err = m_pProactor->bind_fd(fd);
+	if (err == 0)
+		m_fd = fd;
+	
+	return err;
+}
+
+int AsyncSocket::recv(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout)
+{
+	return m_pProactor->recv(m_fd,param,callback,buffer,bytes,timeout);
+}
+
+int AsyncSocket::send(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer)
+{
+	return m_pProactor->send(m_fd,param,callback,buffer);
+}
+
+int AsyncSocket::send_v(void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count)
+{
+	return m_pProactor->send_v(m_fd,param,callback,buffers,count);
+}
+
+void AsyncSocket::shutdown(bool bSend, bool bRecv)
+{
+	int how = -1;
+	if (bSend && bRecv)
+		how = SHUT_RW;
+	else if (bSend)
+		how = SHUT_WR;
+	else if (bRecv)
+		how = SHUT_RD;
+	
+	if (how != -1)
+		::shutdown(m_fd,how);
+}
+
+int AsyncSocket::get_uid(OOSvrBase::AsyncLocalSocket::uid_t& uid)
+{
+	void* TODO; // Shift this to its own file for licensing reasons
+	
+#if defined(HAVE_GETPEEREID)
+	/* OpenBSD style:  */
+	gid_t gid;
+	if (getpeereid(m_fd, &uid, &gid) != 0)
+	{
+		/* We didn't get a valid credentials struct. */
+		return errno;
+	}
+	return 0;
+
+#elif defined(HAVE_SO_PEERCRED)
+	/* Linux style: use getsockopt(SO_PEERCRED) */
+	ucred peercred;
+	socklen_t so_len = sizeof(peercred);
+
+	if (getsockopt(m_fd, SOL_SOCKET, SO_PEERCRED, &peercred, &so_len) != 0 || so_len != sizeof(peercred))
+	{
+		/* We didn't get a valid credentials struct. */
+		return errno;
+	}
+	uid = peercred.uid;
+	return 0;
+
+#elif defined(HAVE_GETPEERUCRED)
+	/* Solaris > 10 */
+	ucred_t* ucred = NULL; /* must be initialized to NULL */
+	if (getpeerucred(m_fd, &ucred) != 0)
+	{
+		/* We didn't get a valid credentials struct. */
+		return errno;
+	}
+
+	if ((uid = ucred_geteuid(ucred)) == -1)
+	{
+		int err = errno;
+		ucred_free(ucred);
+		return err;
+	}
+	return 0;
+
+#elif (defined(HAVE_STRUCT_CMSGCRED) || defined(HAVE_STRUCT_FCRED) || defined(HAVE_STRUCT_SOCKCRED)) && defined(HAVE_LOCAL_CREDS)
+
+	/*
+	* Receive credentials on next message receipt, BSD/OS,
+	* NetBSD. We need to set this before the client sends the
+	* next packet.
+	*/
+	int on = 1;
+	if (setsockopt(m_fd, 0, LOCAL_CREDS, &on, sizeof(on)) != 0)
+		return errno;
+
+	/* Credentials structure */
+#if defined(HAVE_STRUCT_CMSGCRED)
+	typedef cmsgcred Cred;
+	#define cruid cmcred_uid
+#elif defined(HAVE_STRUCT_FCRED)
+	typedef fcred Cred;
+	#define cruid fc_uid
+#elif defined(HAVE_STRUCT_SOCKCRED)
+	typedef sockcred Cred;
+	#define cruid sc_uid
+#endif
+	/* Compute size without padding */
+	char cmsgmem[ALIGN(sizeof(struct cmsghdr)) + ALIGN(sizeof(Cred))];   /* for NetBSD */
+
+	/* Point to start of first structure */
+	struct cmsghdr* cmsg = (struct cmsghdr*)cmsgmem;
+	struct iovec iov;
+
+	msghdr msg;
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+	msg.msg_control = (char *) cmsg;
+	msg.msg_controllen = sizeof(cmsgmem);
+	memset(cmsg, 0, sizeof(cmsgmem));
+
+	/*
+	 * The one character which is received here is not meaningful; its
+	 * purposes is only to make sure that recvmsg() blocks long enough for the
+	 * other side to send its credentials.
+	 */
+	char buf;
+	iov.iov_base = &buf;
+	iov.iov_len = 1;
+
+	if (recvmsg(m_fd, &msg, 0) < 0 || cmsg->cmsg_len < sizeof(cmsgmem) || cmsg->cmsg_type != SCM_CREDS)
+		return errno;
+
+	Cred* cred = (Cred*)CMSG_DATA(cmsg);
+	uid = cred->cruid;
+	return 0;
+
+#else
+	// We can't handle this situation
+	#error Fix me!
+#endif
 }
 
 namespace
@@ -48,51 +203,152 @@ namespace
 	class SocketAcceptor : public OOSvrBase::Acceptor
 	{
 	public:
-		SocketAcceptor(OOSvrBase::Win32::ProactorImpl* pProactor, int fd, void* param, void (*callback)(void* param, OOSvrBase::AsyncSocket* pSocket, const struct sockaddr* addr, size_t addr_len, int err));
+		typedef void (*callback_t)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err);
+		typedef void (*callback_local_t)(void* param, OOSvrBase::AsyncLocalSocket* pSocket, int err);
+	
+		SocketAcceptor();
 		virtual ~SocketAcceptor();
 
 		int listen(size_t backlog);
 		int stop();
+		int bind(OOSvrBase::detail::ProactorEv* pProactor, void* param, const sockaddr* addr, size_t addr_len, callback_t callback);
+		int bind(OOSvrBase::detail::ProactorEv* pProactor, void* param, const sockaddr* addr, size_t addr_len, mode_t mode, callback_local_t callback);
 	
 	private:
-		OOSvrBase::Win32::ProactorImpl*  m_pProactor;
-		OOBase::Condition::Mutex         m_lock;
-		OOBase::Condition                m_condition;
-		struct sockaddr*                 m_addr;
-		size_t                           m_addr_len;
-		size_t                           m_backlog;
-		size_t                           m_pending;
-		void*                            m_param;
-		void (*m_callback)(void* param, OOSvrBase::AsyncLocalSocket* pSocket, const struct sockaddr* addr, size_t addr_len, int err);
-		
-		static void on_completion(HANDLE hSocket, DWORD dwBytes, DWORD dwErr, OOSvrBase::Win32::ProactorImpl::Overlapped* pOv);
-		static void CALLBACK accept_ready(PVOID lpParameter, BOOLEAN TimerOrWaitFired);
+		class Acceptor
+		{
+		public:
+			SocketAcceptor(OOSvrBase::detail::ProactorEv* pProactor, void* param, mode_t mode);
+			virtual ~SocketAcceptor();
 
-		void on_accept(HANDLE hSocket, bool bRemove, DWORD dwErr);
-		int bind(const struct sockaddr* addr, size_t addr_len);
+			int listen(size_t backlog);
+			int stop(bool destroy);
+		
+			int bind(const sockaddr* addr, size_t addr_len);
+			void set_callback(callback_t callback);
+			void set_callback(callback_local_t callback);
+		
+		private:	
+			OOSvrBase::detail::ProactorEv*   m_pProactor;
+			int                              m_fd;
+			OOBase::Condition::Mutex         m_lock;
+			OOBase::Condition                m_condition;
+			sockaddr*                        m_addr;
+			size_t                           m_addr_len;
+			bool                             m_listening;
+			bool                             m_in_progress;
+			size_t                           m_refcount;
+			void*                            m_param;
+			callback_t                       m_callback;
+			callback_local_t                 m_callback_local;
+			mode_t                           m_mode;
+		
+			~Acceptor();
+			
+			static void on_accept(int fd, int events, OOSvrBase::detail::ProactorEv::param_t params[]);
+			void do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard);
+		}
+		Acceptor* m_pAcceptor;
 	};
 }
 
-SocketAcceptor::SocketAcceptor(OOSvrBase::Win32::ProactorImpl* pProactor, SOCKET sock, void* param, void (*callback)(void* param, OOSvrBase::AsyncSocket* pSocket, const struct sockaddr* addr, size_t addr_len, int err)) :
-		m_pProactor(pProactor),
-		m_addr(NULL),
-		m_addr_len(0),
-		m_backlog(0),
-		m_pending(0),
-		m_param(param),
-		m_callback(callback)
+SocketAcceptor::SocketAcceptor() : 
+		m_pAcceptor(NULL),
+		m_fd(-1)
 { }
 
 SocketAcceptor::~SocketAcceptor()
 {
-	stop();
+	if (m_pAcceptor)
+		m_pAcceptor->stop(true);
 }
 
-int SocketAcceptor::bind(const struct sockaddr* addr, size_t addr_len)
+int SocketAcceptor::listen(size_t backlog)
 {
-	m_addr = (struct sockaddr*)OOBase::malloc(addr_len);
+	if (!m_pAcceptor)
+		return EBADF;
+	
+	return m_pAcceptor->listen(backlog);
+}
+
+int SocketAcceptor::stop()
+{
+	if (!m_pAcceptor)
+		return EBADF;
+	
+	return m_pAcceptor->stop(false);
+}
+
+int SocketAcceptor::bind(OOSvrBase::detail::ProactorEv* pProactor, void* param, const sockaddr* addr, size_t addr_len, callback_t callback)
+{
+	m_pAcceptor = new (std::nothrow) SocketAcceptor::Acceptor(pProactor,param);
+	if (!m_pAcceptor)
+		return ENOMEM;
+	
+	int err = m_pAcceptor->bind(addr,addr_len);
+	if (err != 0)
+	{
+		delete m_pAcceptor;
+		m_pAcceptor = NULL;
+	}
+	else
+		m_pAcceptor->set_callback(callback);	
+		
+	return err;
+}
+
+int SocketAcceptor::bind(OOSvrBase::detail::ProactorEv* pProactor, void* param, const sockaddr* addr, size_t addr_len, mode_t mode, callback_local_t callback)
+{
+	m_pAcceptor = new (std::nothrow) SocketAcceptor::Acceptor(pProactor,param);
+	if (!m_pAcceptor)
+		return ENOMEM;
+	
+	int err = m_pAcceptor->bind(addr,addr_len);
+	if (err != 0)
+	{
+		delete m_pAcceptor;
+		m_pAcceptor = NULL;
+	}
+	else
+		m_pAcceptor->set_callback(callback,mode);	
+		
+	return err;
+}
+
+SocketAcceptor::Acceptor::Acceptor(OOSvrBase::detail::ProactorEv* pProactor, void* param, mode_t mode) :
+		m_pProactor(pProactor),
+		m_addr(NULL),
+		m_addr_len(0),
+		m_listening(false),
+		m_in_progress(false),
+		m_refcount(1),
+		m_param(param),
+		m_callback(NULL),
+		m_callback_local(NULL),		
+		m_mode(0)
+{ }
+
+SocketAcceptor::Acceptor::~Acceptor()
+{
+	OOBase::free(m_addr);
+}
+
+void SocketAcceptor::Acceptor::set_callback(callback_t callback)
+{
+	m_callback = callback;
+}
+
+void SocketAcceptor::Acceptor::set_callback(callback_local_t callback, mode_t mode)
+{
+	m_callback_local = callback;
+	m_mode = mode;
+}
+
+int SocketAcceptor::Acceptor::bind(const sockaddr* addr, size_t addr_len)
+{
+	m_addr = (sockaddr*)OOBase::allocate(addr_len);
 	if (!m_addr)
-		return ERROR_OUTOFMEMORY;
+		return ENOMEM;
 	
 	memcpy(m_addr,addr,addr_len);
 	m_addr_len = addr_len;
@@ -100,78 +356,82 @@ int SocketAcceptor::bind(const struct sockaddr* addr, size_t addr_len)
 	return 0;
 }
 
-int SocketAcceptor::listen(size_t backlog)
+int SocketAcceptor::Acceptor::listen(size_t backlog)
 {
 	OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 	
-	if (backlog > 8 || backlog == 0)
-		backlog = 8;
-	
-	if (m_backlog != 0)
+	if (!m_listening)
 	{
-		m_backlog = backlog;
-		return 0;
-	}
-	else
-	{
-		m_backlog = backlog;
-		
-		return init_accept(guard);
+		m_listening = true;
+		return init_accept(guard,backlog);
 	}
 }
 
-void SocketAcceptor::stop()
+int SocketAcceptor::Acceptor::stop(bool destroy)
 {
 	OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 	
-	if (m_backlog != 0)
+	if (m_listening)
 	{
-		m_backlog = 0;
+		m_listening = false;
 		
-		m_pProactor->close_watcher(m_watcher);
-		m_watcher = NULL;
+		if (m_fd != -1)
+		{
+			m_pProactor->close_watcher(m_fd);
+			m_fd = -1;
+		}
 	}
 	
 	// Wait for all pending operations to complete
-	while (m_pending != 0 && m_backlog == 0)
+	while (m_in_progress && !m_listening)
 	{
-		m_condition.wait(m_lock);
+		int err = m_condition.wait(m_lock);
+		if (err != 0)
+			return err;
 	}
+	
+	if (destroy && --m_refcount == 0)
+	{
+		guard.release();
+		delete this;
+	}
+
+	return 0;
 }
 
-int SocketAcceptor::init_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
+int SocketAcceptor::Acceptor::init_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, size_t backlog)
 {
 	// Create a new socket
 	int err = 0;
-	int sock = -1;
-	if ((sock = create_socket(m_addr->sa_family,SOCK_STREAM,0,err)) == -1)
+	int fd = -1;
+	if ((fd = OOBase::BSD::create_socket(m_addr->sa_family,SOCK_STREAM,0,err)) == -1)
 		return err;
 		
 	// Bind to the address
 	int err = 0;
-	if (::bind(sock,m_addr,m_addr_len) == -1)
+	if (::bind(fd,m_addr,m_addr_len) == -1)
 	{
 		err = errno;
-		close(sock);
+		close(fd);
 	}
 	else
 	{
 		// Create a watcher
-		m_watcher = m_pProactor->new_watcher(sock,EV_READ | EV_ERROR,this,&on_accept,err);
+		err = m_pProactor->new_watcher(fd,EV_READ,this,&on_accept);
 		if (err != 0)
-			close(sock);
+			close(fd);
 		else
 		{
 			// Start the socket listening...
-			if (::listen(sock,m_backlog) == -1)
-				err = errno;
-			else
-				err = do_accept(guard,sock);
-			
-			if (err != 0)
+			if (::listen(fd,backlog) == -1)
 			{
-				m_pProactor->close_watcher(m_watcher);
-				m_watcher = NULL;
+				err = errno;
+				m_pProactor->close_watcher(fd);
+			}
+			else
+			{
+				m_fd = fd;
+				do_accept(guard);
 			}
 		}
 	}
@@ -179,49 +439,107 @@ int SocketAcceptor::init_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 	return err;
 }
 
-void SocketAcceptor::on_accept(void* param, int fd, int /*events*/)
+void SocketAcceptor::Acceptor::on_accept(int fd, int /*events*/, void* param)
 {
 	SocketAcceptor* pThis = static_cast<SocketAcceptor*>(param);
 	
 	OOBase::Guard<OOBase::Condition::Mutex> guard(pThis->m_lock);
 	
-	pThis->do_accept(guard,fd);
+	pThis->m_in_progress = false;
+	
+	pThis->do_accept(guard);
 }
 
-void SocketAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, int fd)
+void SocketAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 {
-	int err = 0;
-	do
+	while (m_listening)
 	{
-		struct sockaddr_storage addr = {0};
+		OOSvrBase::AsyncSocket* pSocket = NULL;
+		sockaddr_storage addr = {0};
 		socklen_t addr_len = 0;
 		
-		int new_fd = ::accept(fd,(struct sockaddr*)&addr,&addr_len);
+		int err = 0;
+		int new_fd = ::accept(fd,(sockaddr*)&addr,&addr_len);
 		if (new_fd == -1)
 		{
 			err = errno;
-			if (err != EAGAIN && err != EWOULDBLOCK)
-				break;
-			
-			// Will complete later...
-			err = m_pProactor->start_watcher(m_watcher);
-			if (err != 0)
-				break;
-			
-			// Will complete later...
-			++m_pending;
-			return;
+			if (err == EAGAIN || err == EWOULDBLOCK)
+			{
+				// Will complete later...
+				err = m_pProactor->start_watcher(m_fd);
+				if (err == 0)
+				{
+					m_in_progress = true;
+					return;
+				}
+			}
 		}
 		
-		err = OOBase::BSD::set_non_blocking(new_fd,true);
-		if (!err)
-			err = OOBase::POSIX::set_close_on_exec(new_fd,true);
+		// Keep us alive while the callbacks fire
+		++m_refcount;
 		
+		guard.release();
+		
+		if (new_fd != -1)
+		{
+			err = OOBase::POSIX::set_close_on_exec(new_fd,true);
+			if (err == 0 && m_callback)
+			{
+				if (getpeername(new_fd,(sockaddr*)&addr,&addr_len) != 0)
+					err = errno;
+			}
+			
+			if (err == 0)
+				err = OOBase::BSD::set_non_blocking(new_fd,true);
+					
+			if (err == 0)
+			{
+				// Wrap the handle
+				pSocket = new (std::nothrow) ::AsyncSocket(m_pProactor);
+				if (!pSocket)
+					err = ENOMEM;
+				
+				err = pSocket->bind_fd(new_fd);
+				if (err != 0)
+					delete pSocket;
+			}
+			
+			if (err != 0)
+				close(new_fd);
+		}
+		
+		try
+		{
+			if (m_callback_local)
+				(*m_callback_local)(m_param,err ? NULL : pSocket,0);
+			else
+			{
+				if (err == 0)
+					(*m_callback)(m_param,pSocket,(sockaddr*)&addr,remote_addr_len,0);
+				else
+					(*m_callback)(m_param,NULL,NULL,0,err);
+			}
+		}
+		catch (...)
+		{
+			assert((0,"Unhandled exception"));
+			
+			delete pSocket;
+		}	
+		
+		guard.acquire();
+		
+		// See if we have been killed in the callback
+		if (--m_refcount == 0)
+		{
+			guard.release();
+			delete this;
+			break;
+		}
 	}
-	while (m_pending < m_backlog);
 }
 
-OOSvrBase::Acceptor* OOSvrBase::Ev::ProactorImpl::accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const struct sockaddr* addr, size_t addr_len, int err), const struct sockaddr* addr, size_t addr_len, int& err)
+OOSvrBase::Acceptor* OOSvrBase::detail::ProactorEv::accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err), const sockaddr* addr, size_t addr_len, int& err)
 {
 	// Make sure we have valid inputs
 	if (!callback || !addr || addr_len == 0)
@@ -231,12 +549,12 @@ OOSvrBase::Acceptor* OOSvrBase::Ev::ProactorImpl::accept_remote(void* param, voi
 		return NULL;
 	}
 	
-	SocketAcceptor* pAcceptor = new (std::no_throw) SocketAcceptor(this,param,callback);
+	SocketAcceptor* pAcceptor = new (std::nothrow) SocketAcceptor();
 	if (!pAcceptor)
 		err = ENOMEM;
 	else
 	{
-		err = pAcceptor->bind(addr,addr_len);
+		err = pAcceptor->bind(this,param,addr,addr_len,callback);
 		if (err != 0)
 		{
 			delete pAcceptor;
@@ -247,39 +565,174 @@ OOSvrBase::Acceptor* OOSvrBase::Ev::ProactorImpl::accept_remote(void* param, voi
 	return pAcceptor;
 }
 
-OOSvrBase::AsyncSocket* OOSvrBase::Ev::ProactorImpl::connect_socket(const struct sockaddr* addr, size_t addr_len, int& err, const OOBase::timeval_t* timeout)
+OOSvrBase::Acceptor* OOSvrBase::detail::ProactorEv::accept_local(void* param, void (*callback)(void* param, OOSvrBase::AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa)
 {
-	int sock = -1;
-	if ((sock = create_socket(addr->sa_family,SOCK_STREAM,0,err)) == -1)
-		return NULL;
-	
-	if (::connect(sock,addr,addr_len) == -1)
+	// Make sure we have valid inputs
+	if (!callback || !path)
 	{
-		err = errno;
-		close(sock);
+		assert((0,"Invalid parameters"));
+		err = EINVAL;
 		return NULL;
 	}
 	
-	AsyncSocket* pSocket = new (std::no_throw) AsyncSocket(m_pProactor,sock);
+	SocketAcceptor* pAcceptor = NULL;
+	
+#if defined(HAVE_UNISTD_H)
+	pAcceptor = new (std::nothrow) SocketAcceptor();
+	if (!pAcceptor)
+		err = ENOMEM;
+	else
+	{
+		mode_t mode = 0666;
+		if (psa)
+			mode = psa->mode;
+	
+		// Compose filename
+		sockaddr_un addr = {0};
+		socklen_t addr_len;
+		OOBase::POSIX::create_unix_socket(addr,addr_len,path);
+				
+		err = pAcceptor->bind(this,param,(sockaddr*)&addr,addr_len,mode,callback);
+		if (err != 0)
+		{
+			delete pAcceptor;
+			pAcceptor = NULL;
+		}
+	}
+#else
+	// If we don't have UNIX sockets, we can't do much, use Win32 Proactor instead
+	err = ENOENT;
+
+	(void)param;
+	(void)psa;
+#endif
+
+	return pAcceptor;
+}
+
+OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorEv::connect_socket(const sockaddr* addr, size_t addr_len, int& err, const OOBase::timeval_t* timeout)
+{
+	int fd = -1;
+	if ((fd = OOBase::BSD::create_socket(addr->sa_family,SOCK_STREAM,0,err)) == -1)
+		return NULL;
+	
+	if ((err = OOBase::BSD::connect(fd,addr,addr_len,timeout)) != 0)
+	{
+		close(fd);
+		return NULL;
+	}
+	
+	OOSvrBase::AsyncSocket* pSocket = new (std::nothrow) ::AsyncSocket(m_pProactor,fd);
 	if (!pSocket)
 	{
-		close(sock);
-		err = ERROR_OUTOFMEMORY;
+		close(fd);
+		err = ENOMEM;
 	}
-		
+	else
+	{
+		err = pSocket->bind_fd(fd);
+		if (err != 0)
+		{
+			delete pSocket;
+			pSocket = NULL;
+		}
+	}
+	
 	return pSocket;
 }
 
-OOSvrBase::AsyncSocket* OOSvrBase::Ev::ProactorImpl::attach_socket(OOBase::socket_t sock, int& err)
+OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorEv::connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout)
+{	
+#if defined(HAVE_UNISTD_H)
+		
+	int fd = -1;
+	if ((fd = OOBase::BSD::create_socket(AF_UNIX,SOCK_STREAM,0,err)) == -1)
+		return NULL;
+	
+	// Compose filename
+	sockaddr_un addr = {0};
+	socklen_t addr_len;
+	OOBase::POSIX::create_unix_socket(addr,addr_len,path);
+		
+	if ((err = OOBase::BSD::connect(fd,(sockaddr*)&addr,addr_len,timeout)) != 0)
+	{
+		close(fd);
+		return NULL;
+	}
+
+	OOSvrBase::AsyncLocalSocket* pSocket = new (std::nothrow) ::AsyncSocket(m_pProactor);
+	if (!pSocket)
+	{
+		close(fd);
+		err = ENOMEM;
+		return NULL;
+	}
+	
+	err = pSocket->bind_fd(fd);
+	if (err != 0)
+	{
+		delete pSocket;
+		return NULL;
+	}
+
+	return pSocket;
+	
+#else
+	
+	// If we don't have UNIX sockets, we can't do much, use Win32 Proactor instead
+	err = ENOENT;
+
+	(void)path;
+
+	return NULL;
+
+#endif
+}
+
+OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorEv::attach_socket(OOBase::socket_t sock, int& err)
 {
 	// Set non-blocking...
 	err = OOBase::BSD::set_non_blocking(sock,true);
 	if (err)
 		return NULL;
 	
-	AsyncSocket* pSocket = new (std::nothrow) AsyncSocket(m_pProactor,sock);
+	OOSvrBase::AsyncSocket* pSocket = new (std::nothrow) ::AsyncSocket(m_pProactor,sock);
 	if (!pSocket)
-		err = ERROR_OUTOFMEMORY;
+		err = ENOMEM;
+	else
+	{
+		err = pSocket->bind_fd(sock);
+		if (err != 0)
+		{
+			delete pSocket;
+			pSocket = NULL;
+		}
+	}
 		
 	return pSocket;
 }
+
+OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorEv::attach_local_socket(OOBase::socket_t sock, int& err)
+{
+	// Set non-blocking...
+	err = OOBase::BSD::set_non_blocking(sock,true);
+	if (err)
+		return NULL;
+	
+	OOSvrBase::AsyncSocket* pSocket = new (std::nothrow) ::AsyncSocket(m_pProactor,sock);
+	if (!pSocket)
+		err = ENOMEM;
+	else
+	{
+		err = pSocket->bind_fd(sock);
+		if (err != 0)
+		{
+			delete pSocket;
+			pSocket = NULL;
+		}
+	}
+		
+	return pSocket;
+}
+
+#endif // defined(HAVE_EV_H)

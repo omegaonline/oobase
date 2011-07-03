@@ -47,44 +47,66 @@ namespace OOBase
 	class Socket
 	{
 	public:
-		static OOBase::SmartPtr<OOBase::Socket> connect(const char* address, const char* port, int* perr, const timeval_t* timeout = 0);
-		static OOBase::SmartPtr<OOBase::Socket> connect_local(const char* path, int* perr, const timeval_t* timeout = 0);
+		static Socket* connect(const char* address, const char* port, int& err, const timeval_t* timeout = NULL);
+		static Socket* connect_local(const char* path, int& err, const timeval_t* timeout = NULL);
 
-		virtual size_t send(const void* buf, size_t len, int* perr, const timeval_t* timeout = 0) = 0;
-		virtual size_t send_v(Buffer* buffers[], size_t count, int* perr, const timeval_t* timeout = 0) = 0;
+		virtual size_t send(const void* buf, size_t len, int& err, const timeval_t* timeout = NULL) = 0;
+		virtual size_t send_v(Buffer* buffers[], size_t count, int& err, const timeval_t* timeout = NULL) = 0;
 				
 		template <typename T>
-		int send(const T& val, const timeval_t* timeout = 0)
+		int send(const T& val, const timeval_t* timeout = NULL)
 		{
 			int err = 0;
-			send(&val,sizeof(T),&err,timeout);
+			send(&val,sizeof(T),err,timeout);
 			return err;
 		}
 
-		int send(Buffer* buffer, const timeval_t* timeout = 0)
+		// Do not send pointers!
+		template <typename T>
+		int send(T*, const timeval_t* = NULL);
+		
+		int send(Buffer* buffer, const timeval_t* timeout = NULL)
 		{
 			int err = 0;
-			size_t len = send(buffer->rd_ptr(),buffer->length(),&err,timeout);
+			size_t len = send(buffer->rd_ptr(),buffer->length(),err,timeout);
 			buffer->rd_ptr(len);
 			return err;
 		}
 
-		virtual size_t recv(void* buf, size_t len, bool bAll, int* perr, const timeval_t* timeout = 0) = 0;
-		virtual size_t recv_v(Buffer* buffers[], size_t count, int* perr, const timeval_t* timeout = 0) = 0;
+		virtual size_t recv(void* buf, size_t len, bool bAll, int& err, const timeval_t* timeout = NULL) = 0;
+		virtual size_t recv_v(Buffer* buffers[], size_t count, int& err, const timeval_t* timeout = NULL) = 0;
 
 		template <typename T>
-		int recv(T& val, const timeval_t* timeout = 0)
+		int recv(T& val, const timeval_t* timeout = NULL)
 		{
 			int err = 0;
-			recv(&val,sizeof(T),true,&err,timeout);
+			recv(&val,sizeof(T),true,err,timeout);
 			return err;
 		}
 
-		int recv(Buffer* buffer, bool bAll, const timeval_t* timeout = 0)
+		// Do not recv pointers!
+		template <typename T>
+		int recv(T*, const timeval_t* = NULL);
+
+		int recv(Buffer* buffer, const timeval_t* timeout = NULL)
 		{
 			int err = 0;
-			size_t len = recv(buffer->wr_ptr(),buffer->space(),bAll,&err,timeout);
+			size_t len = recv(buffer->wr_ptr(),buffer->space(),false,err,timeout);
 			buffer->wr_ptr(len);
+			return err;
+		}
+
+		int recv(Buffer* buffer, size_t len, const timeval_t* timeout = NULL)
+		{
+			if (len == 0)
+				return 0;
+
+			int err = buffer->space(len);
+			if (err == 0)
+			{
+				size_t len2 = recv(buffer->wr_ptr(),len,true,err,timeout);
+				buffer->wr_ptr(len2);
+			}
 			return err;
 		}
 

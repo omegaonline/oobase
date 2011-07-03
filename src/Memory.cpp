@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/CustomNew.h"
+#include "../include/OOBase/GlobalNew.h"
 #include "../include/OOBase/Destructor.h"
 
 const OOBase::critical_t OOBase::critical = {0};
@@ -36,9 +36,10 @@ void* OOBase::CrtAllocator::reallocate(void* ptr, size_t len)
 	return ::realloc(ptr,len);
 }
 
-void OOBase::CrtAllocator::free(void* ptr)
+bool OOBase::CrtAllocator::free(void* ptr)
 {
 	::free(ptr);
+	return true;
 }
 
 #endif
@@ -141,6 +142,7 @@ namespace
 			void* p = i.inst.allocate(len);
 			if (p)
 				++i.refcount;
+			
 			return p;
 		}
 
@@ -148,8 +150,8 @@ namespace
 		{
 			if (!ptr)
 				return allocate(len);
-			else
-				return instance().inst.reallocate(ptr,len);
+			
+			return instance().inst.reallocate(ptr,len);
 		}
 
 		static void free(void* ptr)
@@ -158,9 +160,8 @@ namespace
 			{
 				Instance& i = instance();
 
-				i.inst.free(ptr);
-				if (--i.refcount == 0)
-					term(const_cast<Instance*>(s_instance));
+				if (i.inst.free(ptr) && --i.refcount == 0)
+					term();
 			}
 		}
 
@@ -175,47 +176,36 @@ namespace
 
 		static Instance& instance()
 		{
-			if (!s_instance)
-			{
-				static OOBase::Once::once_t key = ONCE_T_INIT;
-				OOBase::Once::Run(&key,&init);
-			}
-
-			assert(s_instance != reinterpret_cast<Instance*>((uintptr_t)0xdeadbeef));
+			static OOBase::Once::once_t key = ONCE_T_INIT;
+			OOBase::Once::Run(&key,&init);
+			
 			return *s_instance;
 		}
 
 		static void init()
 		{
 			// Use crt malloc here...
-			Instance* instance = static_cast<Instance*>(OOBase::CrtAllocator::allocate(sizeof(Instance)));
-			if (!instance)
+			s_instance = static_cast<Instance*>(OOBase::CrtAllocator::allocate(sizeof(Instance)));
+			if (!s_instance)
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
 			// Placement new
-			new (instance) Instance();
-			instance->refcount = 1;
-
-			s_instance = instance;
+			::new (s_instance) Instance();
+			s_instance->refcount = 1;
 
 			OOBase::DLLDestructor<OOBase::Module>::add_destructor(deref,NULL);
 		}
 
-		static void term(Instance* i)
+		static void term()
 		{
-			s_instance = reinterpret_cast<Instance*>((uintptr_t)0xdeadbeef);
-			i->~Instance();
-			OOBase::CrtAllocator::free(i);
+			s_instance->~Instance();
+			OOBase::CrtAllocator::free(s_instance);
 		}
 
 		static void deref(void*)
 		{
-			assert(s_instance != reinterpret_cast<Instance*>((uintptr_t)0xdeadbeef));
-
-			Instance* i = const_cast<Instance*>(s_instance);
-
-			if (i && --i->refcount == 0)
-				term(i);
+			if (--s_instance->refcount == 0)
+				term();
 		}
 	};
 
@@ -270,14 +260,18 @@ namespace
 			return p;
 		}
 
-		void free(void* ptr)
+		bool free(void* ptr)
 		{
 			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 			bool e = m_setEntries.erase(ptr);
 			assert(e);
 
-			OOBase::CrtAllocator::free(ptr);
+			guard.release();
+
+			if (e)
+				OOBase::CrtAllocator::free(ptr);
+			return e;
 		}
 
 	private:

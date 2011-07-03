@@ -40,7 +40,7 @@ void* operator new[](size_t size, const std::nothrow_t&);
 void operator delete(void* p, const std::nothrow_t&);
 void operator delete[](void* p, const std::nothrow_t&);
 
-// Call the OOBase::OnCiriticalError handler on failure
+// Call the OOBase::OnCriticalError handler on failure
 void* operator new(size_t size, const OOBase::critical_t&);
 void* operator new[](size_t size, const OOBase::critical_t&);
 void operator delete(void* p, const OOBase::critical_t&);

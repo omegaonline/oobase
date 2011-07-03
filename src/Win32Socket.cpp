@@ -19,17 +19,15 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/CustomNew.h"
-#include "Win32Socket.h"
+#include "../include/OOBase/GlobalNew.h"
 
 #if defined(_WIN32)
 
+#include "../include/OOBase/Singleton.h"
+#include "Win32Socket.h"
+
 #include <Ws2tcpip.h>
 #include <mswsock.h>
-
-#if defined(max)
-#undef max
-#endif
 
 #if !defined(WSAID_ACCEPTEX)
 
@@ -54,9 +52,9 @@ typedef VOID (PASCAL* LPFN_GETACCEPTEXSOCKADDRS)(
     DWORD dwReceiveDataLength,
     DWORD dwLocalAddressLength,
     DWORD dwRemoteAddressLength,
-    struct sockaddr **LocalSockaddr,
+    sockaddr **LocalSockaddr,
     LPINT LocalSockaddrLength,
-    struct sockaddr **RemoteSockaddr,
+    sockaddr **RemoteSockaddr,
     LPINT RemoteSockaddrLength
     );
 
@@ -64,20 +62,44 @@ typedef VOID (PASCAL* LPFN_GETACCEPTEXSOCKADDRS)(
 
 #endif // !defined(WSAID_GETACCEPTEXSOCKADDRS)
 
+#if !defined(WSAID_CONNECTEX)
+
+typedef BOOL (PASCAL * LPFN_CONNECTEX)(
+    SOCKET s,
+    const sockaddr *name,
+    int namelen,
+    PVOID lpSendBuffer,
+    DWORD dwSendDataLength,
+    LPDWORD lpdwBytesSent,
+    LPOVERLAPPED lpOverlapped
+    );
+
+#define WSAID_CONNECTEX {0x25a207b9,0xddf3,0x4660,{0x8e,0xe9,0x76,0xe5,0x8c,0x74,0x06,0x3e}}
+
+#if !defined(SO_UPDATE_CONNECT_CONTEXT)
+#define SO_UPDATE_CONNECT_CONTEXT   0x7010
+#endif
+
+#endif // !defined(WSAID_CONNECTEX)
+
 namespace
 {
-	class WSA
+	void DoWSACleanup(void*)
 	{
-	public:
-		WSA();
-		~WSA();
+		WSACleanup();
+	}
+}
 
-		LPFN_ACCEPTEX             m_lpfnAcceptEx;
-		LPFN_GETACCEPTEXSOCKADDRS m_lpfnGetAcceptExSockAddrs;
+namespace OOBase
+{
+	// The discrimination type for singleton scoping for this module
+	struct Module
+	{
+		int unused;
 	};
 }
 
-WSA::WSA()
+void OOBase::Win32::WSAStartup()
 {
 	// Start Winsock
 	WSADATA wsa;
@@ -91,6 +113,11 @@ WSA::WSA()
 		OOBase_CallCriticalFailure("Very old Winsock dll");
 	}
 
+	OOBase::DLLDestructor<OOBase::Module>::add_destructor(&DoWSACleanup,NULL);
+}
+
+BOOL OOBase::Win32::WSAAcceptEx(SOCKET sListenSocket, SOCKET sAcceptSocket, void* lpOutputBuffer, DWORD dwReceiveDataLength, DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped)
+{
 	//----------------------------------------
 	// Load the AcceptEx function into memory using WSAIoctl.
 	// The WSAIoctl function is an extension of the ioctlsocket()
@@ -99,69 +126,120 @@ WSA::WSA()
 	// we pass the pointer to our AcceptEx function. This is used
 	// so that we can call the AcceptEx function directly, rather
 	// than refer to the Mswsock.lib library.
-	const GUID guid_AcceptEx = WSAID_ACCEPTEX;
-	const GUID guid_GetAcceptExSockAddrs = WSAID_GETACCEPTEXSOCKADDRS;
+	static const GUID guid_AcceptEx = WSAID_ACCEPTEX;
 
-	// We need a socket
-	SOCKET sock = socket(AF_INET,SOCK_STREAM,PF_INET);
-	if (sock == INVALID_SOCKET)
-	{
-		WSACleanup();
-		OOBase_CallCriticalFailure("Failed create socket");
-	}
-
-	DWORD dwBytes;
-	if (WSAIoctl(sock, 
+	LPFN_ACCEPTEX lpfnAcceptEx = NULL;
+	DWORD dwBytes = 0;
+	if (WSAIoctl(sListenSocket, 
 		SIO_GET_EXTENSION_FUNCTION_POINTER, 
 		(void*)&guid_AcceptEx, 
 		sizeof(guid_AcceptEx),
-		&m_lpfnAcceptEx, 
-		sizeof(m_lpfnAcceptEx), 
+		&lpfnAcceptEx, 
+		sizeof(lpfnAcceptEx), 
 		&dwBytes, 
 		NULL, 
 		NULL) != 0)
 	{
-		closesocket(sock);
-		WSACleanup();
 		OOBase_CallCriticalFailure("Failed to load address of AcceptEx");
 	}
 
-	if (WSAIoctl(sock, 
+	return (*lpfnAcceptEx)(sListenSocket,sAcceptSocket,lpOutputBuffer,dwReceiveDataLength,dwLocalAddressLength,dwRemoteAddressLength,lpdwBytesReceived,lpOverlapped);
+}
+
+void OOBase::Win32::WSAGetAcceptExSockAddrs(SOCKET sListenSocket, void* lpOutputBuffer, DWORD dwReceiveDataLength, DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, sockaddr **LocalSockaddr, int* LocalSockaddrLength, sockaddr **RemoteSockaddr, int* RemoteSockaddrLength)
+{
+	static const GUID guid_GetAcceptExSockAddrs = WSAID_GETACCEPTEXSOCKADDRS;
+
+	LPFN_GETACCEPTEXSOCKADDRS lpfnGetAcceptExSockAddrs = NULL;
+	DWORD dwBytes = 0;
+	if (WSAIoctl(sListenSocket, 
 		SIO_GET_EXTENSION_FUNCTION_POINTER, 
 		(void*)&guid_GetAcceptExSockAddrs, 
 		sizeof(guid_GetAcceptExSockAddrs),
-		&m_lpfnGetAcceptExSockAddrs, 
-		sizeof(m_lpfnGetAcceptExSockAddrs), 
+		&lpfnGetAcceptExSockAddrs, 
+		sizeof(lpfnGetAcceptExSockAddrs), 
 		&dwBytes, 
 		NULL, 
 		NULL) != 0)
 	{
-		closesocket(sock);
-		WSACleanup();
 		OOBase_CallCriticalFailure("Failed to load address of GetAcceptExSockAddrs");
 	}
 
-	closesocket(sock);
+	return (*lpfnGetAcceptExSockAddrs)(lpOutputBuffer,dwReceiveDataLength,dwLocalAddressLength,dwRemoteAddressLength,LocalSockaddr,LocalSockaddrLength,RemoteSockaddr,RemoteSockaddrLength);
 }
 
-WSA::~WSA()
+SOCKET OOBase::Win32::create_socket(int family, int socktype, int protocol, int& err)
 {
-	WSACleanup();
+	Win32::WSAStartup();
+
+	err = 0;
+
+	SOCKET sock = WSASocket(family,socktype,protocol,NULL,0,WSA_FLAG_OVERLAPPED);
+	if (sock == INVALID_SOCKET)
+		err = WSAGetLastError();
+
+	return sock;
 }
 
-void OOBase::Win32::WSAStartup()
+int OOBase::Win32::connect(SOCKET sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* timeout)
 {
-	OOBase::Singleton<WSA>::instance();
-}
+	static const GUID guid_ConnectEx = WSAID_CONNECTEX;
 
-BOOL OOBase::Win32::WSAAcceptEx(SOCKET sListenSocket, SOCKET sAcceptSocket, void* lpOutputBuffer, DWORD dwReceiveDataLength, DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped)
-{
-	return (*OOBase::Singleton<WSA>::instance().m_lpfnAcceptEx)(sListenSocket,sAcceptSocket,lpOutputBuffer,dwReceiveDataLength,dwLocalAddressLength,dwRemoteAddressLength,lpdwBytesReceived,lpOverlapped);
-}
+	LPFN_CONNECTEX lpfnConnectEx = NULL;
 
-void OOBase::Win32::WSAGetAcceptExSockAddrs(void* lpOutputBuffer, DWORD dwReceiveDataLength, DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, struct sockaddr **LocalSockaddr, int* LocalSockaddrLength, struct sockaddr **RemoteSockaddr, int* RemoteSockaddrLength)
-{
-	return (*OOBase::Singleton<WSA>::instance().m_lpfnGetAcceptExSockAddrs)(lpOutputBuffer,dwReceiveDataLength,dwLocalAddressLength,dwRemoteAddressLength,LocalSockaddr,LocalSockaddrLength,RemoteSockaddr,RemoteSockaddrLength);
+	if (timeout)
+	{
+		DWORD dwBytes = 0;
+		WSAIoctl(sock, 
+			SIO_GET_EXTENSION_FUNCTION_POINTER, 
+			(void*)&guid_ConnectEx, 
+			sizeof(guid_ConnectEx),
+			&lpfnConnectEx, 
+			sizeof(lpfnConnectEx), 
+			&dwBytes, 
+			NULL, 
+			NULL);
+	}
+
+	if (lpfnConnectEx && timeout)
+	{
+		WSAOVERLAPPED ov = {0};
+		ov.hEvent = CreateEventW(NULL,TRUE,FALSE,NULL);
+		if (!ov.hEvent)
+			return GetLastError();
+		
+		if (!(*lpfnConnectEx)(sock,addr,addrlen,NULL,0,NULL,&ov))
+		{
+			DWORD dwErr = WSAGetLastError();
+			if (dwErr != ERROR_IO_PENDING)
+				return dwErr;
+
+			DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout->msec());
+			if (dwWait == WAIT_TIMEOUT)
+			{
+				CancelIo((HANDLE)sock);
+				return WSAETIMEDOUT;
+			}
+			else if (dwWait != WAIT_OBJECT_0)
+			{
+				dwErr = GetLastError();
+				CancelIo((HANDLE)sock);
+				return dwErr;
+			}
+		}
+
+		setsockopt(sock,SOL_SOCKET,SO_UPDATE_CONNECT_CONTEXT,NULL,0);
+
+		return 0;
+	}
+	else
+	{
+		// Do the connect
+		if (connect(sock,addr,static_cast<int>(addrlen)) != SOCKET_ERROR)
+			return 0;
+		else
+			return WSAGetLastError();
+	}
 }
 
 namespace
@@ -172,11 +250,11 @@ namespace
 		WinSocket(SOCKET sock);
 		virtual ~WinSocket();
 
-		size_t recv(void* buf, size_t len, bool bAll, int* perr, const OOBase::timeval_t* timeout = 0);
-		size_t recv_v(OOBase::Buffer* buffers[], size_t count, int* perr, const OOBase::timeval_t* timeout = 0);
+		size_t recv(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout = NULL);
+		size_t recv_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout = NULL);
 		
-		size_t send(const void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout = 0);
-		size_t send_v(OOBase::Buffer* buffers[], size_t count, int* perr, const OOBase::timeval_t* timeout = 0);
+		size_t send(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout = NULL);
+		size_t send_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout = NULL);
 
 		void shutdown(bool bSend, bool bRecv);
 					
@@ -187,9 +265,66 @@ namespace
 		OOBase::Win32::SmartHandle m_recv_event;
 		OOBase::Win32::SmartHandle m_send_event;
 
-		size_t send_i(WSABUF* wsabuf, DWORD count, int* perr, const OOBase::timeval_t* timeout);
-		size_t recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int* perr, const OOBase::timeval_t* timeout);
+		size_t send_i(WSABUF* wsabuf, DWORD count, int& err, const OOBase::timeval_t* timeout);
+		size_t recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int& err, const OOBase::timeval_t* timeout);
 	};
+
+	SOCKET connect_i(const char* address, const char* port, int& err, const OOBase::timeval_t* timeout)
+	{
+		// Start a countdown
+		OOBase::timeval_t timeout2 = (timeout ? *timeout : OOBase::timeval_t::MaxTime);
+		OOBase::Countdown countdown(&timeout2);
+
+		// Resolve the passed in addresses...
+		addrinfo hints = {0};
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = SOCK_STREAM;
+
+		addrinfo* pResults = NULL;
+		if (getaddrinfo(address,port,&hints,&pResults) != 0)
+		{
+			err = WSAGetLastError();
+			return INVALID_SOCKET;
+		}
+		
+		SOCKET sock = INVALID_SOCKET;
+
+		// Took too long to resolve...
+		countdown.update();
+		if (timeout2 == OOBase::timeval_t::Zero)
+			err = WSAETIMEDOUT;
+		else
+		{
+			// Loop trying to connect on each address until one succeeds
+			for (addrinfo* pAddr = pResults; pAddr != NULL; pAddr = pAddr->ai_next)
+			{
+				// Clear error
+				err = 0;
+				sock = OOBase::Win32::create_socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,err);
+				if (sock == INVALID_SOCKET)
+					break;
+				else
+				{
+					if ((err = OOBase::Win32::connect(sock,pAddr->ai_addr,pAddr->ai_addrlen,timeout ? &timeout2 : NULL)) != 0)
+						closesocket(sock);
+					else
+						break;
+				}
+
+				countdown.update();
+				if (timeout2 == OOBase::timeval_t::Zero)
+				{
+					err = WSAETIMEDOUT;
+					break;
+				}
+			}
+		}
+
+		// Done with address info
+		freeaddrinfo(pResults);
+
+		return sock;
+	}
 }
 
 WinSocket::WinSocket(SOCKET sock) :
@@ -203,11 +338,11 @@ WinSocket::~WinSocket()
 	closesocket(m_socket);
 }
 
-size_t WinSocket::send(const void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout)
+size_t WinSocket::send(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout)
 {
 	if (len > 0xFFFFFFFF)
 	{
-		*perr = E2BIG;
+		err = E2BIG;
 		return 0;
 	}
 	else
@@ -216,11 +351,11 @@ size_t WinSocket::send(const void* buf, size_t len, int* perr, const OOBase::tim
 		wsabuf.buf = const_cast<char*>(static_cast<const char*>(buf));
 		wsabuf.len = len;
 
-		return send_i(&wsabuf,1,perr,timeout);
+		return send_i(&wsabuf,1,err,timeout);
 	}
 }
 
-size_t WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, int* perr, const OOBase::timeval_t* timeout)
+size_t WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout)
 {
 	if (count == 0)
 		return 0;
@@ -230,21 +365,21 @@ size_t WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, int* perr, con
 	
 	if (count > sizeof(static_bufs)/sizeof(static_bufs[0]))
 	{
-		bufs = static_cast<WSABUF*>(OOBase::Allocate(count * sizeof(WSABUF),1,__FILE__,__LINE__));
+		bufs = static_cast<WSABUF*>(OOBase::LocalAllocate(count * sizeof(WSABUF)));
 		if (!bufs)
 		{
-			*perr = ERROR_OUTOFMEMORY;
+			err = ERROR_OUTOFMEMORY;
 			return 0;
 		}
 	}
 
-	*perr = 0;
+	err = 0;
 	for (size_t i=0;i<count;++i)
 	{
 		size_t len = buffers[i]->length();
 		if (len > 0xFFFFFFFF)
 		{
-			*perr = E2BIG;
+			err = E2BIG;
 			break;
 		}
 		
@@ -253,9 +388,9 @@ size_t WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, int* perr, con
 	}
 
 	size_t total = 0;
-	if (*perr == 0)
+	if (err == 0)
 	{
-		size_t len = send_i(bufs,count,perr,timeout);
+		size_t len = send_i(bufs,count,err,timeout);
 
 		total = len;
 		
@@ -276,12 +411,12 @@ size_t WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, int* perr, con
 	}
 
 	if (bufs != static_bufs)
-		OOBase::Free(bufs,1);
+		OOBase::LocalFree(bufs);
 
 	return total;
 }
 
-size_t WinSocket::send_i(WSABUF* wsabuf, DWORD count, int* perr, const OOBase::timeval_t* timeout)
+size_t WinSocket::send_i(WSABUF* wsabuf, DWORD count, int& err, const OOBase::timeval_t* timeout)
 {
 	OOBase::Guard<OOBase::Mutex> guard(m_send_lock);
 
@@ -293,7 +428,7 @@ size_t WinSocket::send_i(WSABUF* wsabuf, DWORD count, int* perr, const OOBase::t
 			m_send_event = CreateEventW(NULL,TRUE,FALSE,NULL);
 			if (!m_send_event.is_valid())
 			{
-				*perr = GetLastError();
+				err = GetLastError();
 				return 0;
 			}
 		}
@@ -308,8 +443,8 @@ size_t WinSocket::send_i(WSABUF* wsabuf, DWORD count, int* perr, const OOBase::t
 		{
 			if (WSASend(m_socket,wsabuf,count,&dwWritten,0,NULL,NULL) != 0)
 			{
-				*perr = WSAGetLastError();
-				if (*perr != ERROR_OPERATION_ABORTED)
+				err = WSAGetLastError();
+				if (err != ERROR_OPERATION_ABORTED)
 					return total;
 			}
 		}
@@ -317,32 +452,33 @@ size_t WinSocket::send_i(WSABUF* wsabuf, DWORD count, int* perr, const OOBase::t
 		{
 			if (WSASend(m_socket,wsabuf,count,&dwWritten,0,&ov,NULL) != 0)
 			{
-				*perr = WSAGetLastError();
-				if (*perr != ERROR_OPERATION_ABORTED)
+				err = WSAGetLastError();
+				if (err != ERROR_OPERATION_ABORTED)
 				{
-					if (*perr != WSA_IO_PENDING)
+					if (err != WSA_IO_PENDING)
 						return total;
 
-					*perr = 0;
+					err = 0;
 					DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout->msec());
 					if (dwWait == WAIT_TIMEOUT)
 					{
 						CancelIo(reinterpret_cast<HANDLE>(m_socket));
-						*perr = WAIT_TIMEOUT;
+						err = WAIT_TIMEOUT;
 					}
 					else if (dwWait != WAIT_OBJECT_0)
 					{
-						*perr = GetLastError();
+						err = GetLastError();
 						CancelIo(reinterpret_cast<HANDLE>(m_socket));
 					}
 				
-					if (!WSAGetOverlappedResult(m_socket,&ov,&dwWritten,TRUE,NULL))
+					DWORD dwFlags = 0;
+					if (!WSAGetOverlappedResult(m_socket,&ov,&dwWritten,TRUE,&dwFlags))
 					{
 						int dwErr = WSAGetLastError();
-						if (*perr == 0 && dwErr != ERROR_OPERATION_ABORTED)
-							*perr = dwErr;
+						if (err == 0 && dwErr != ERROR_OPERATION_ABORTED)
+							err = dwErr;
 
-						if (*perr != 0)
+						if (err != 0)
 							return total;
 					}
 				}
@@ -368,15 +504,15 @@ size_t WinSocket::send_i(WSABUF* wsabuf, DWORD count, int* perr, const OOBase::t
 		while (count > 0);
 	}
 
-	*perr = 0;
+	err = 0;
 	return total;
 }
 
-size_t WinSocket::recv(void* buf, size_t len, bool bAll, int* perr, const OOBase::timeval_t* timeout)
+size_t WinSocket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout)
 {
 	if (len > 0xFFFFFFFF)
 	{
-		*perr = E2BIG;
+		err = E2BIG;
 		return 0;
 	}
 	else
@@ -385,19 +521,11 @@ size_t WinSocket::recv(void* buf, size_t len, bool bAll, int* perr, const OOBase
 		wsabuf.buf = const_cast<char*>(static_cast<const char*>(buf));
 		wsabuf.len = len;
 
-	std::string pipe_name;
-	try
-	{
-		pipe_name.assign("\\\\.\\pipe\\");
-		pipe_name += path;
+		return recv_i(&wsabuf,1,bAll,err,timeout);
 	}
-	catch (std::exception&)
-	{
-		*perr = ERROR_OUTOFMEMORY;
-		return NULL;
-	}
+}
 
-size_t WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, int* perr, const OOBase::timeval_t* timeout)
+size_t WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout)
 {
 	if (count == 0)
 		return 0;
@@ -407,21 +535,21 @@ size_t WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, int* perr, con
 	
 	if (count > sizeof(static_bufs)/sizeof(static_bufs[0]))
 	{
-		bufs = static_cast<WSABUF*>(OOBase::Allocate(count * sizeof(WSABUF),1,__FILE__,__LINE__));
+		bufs = static_cast<WSABUF*>(OOBase::LocalAllocate(count * sizeof(WSABUF)));
 		if (!bufs)
 		{
-			*perr = ERROR_OUTOFMEMORY;
+			err = ERROR_OUTOFMEMORY;
 			return 0;
 		}
 	}
 
-	*perr = 0;
+	err = 0;
 	for (size_t i=0;i<count;++i)
 	{
 		size_t len = buffers[i]->space();
 		if (len > 0xFFFFFFFF)
 		{
-			*perr = E2BIG;
+			err = E2BIG;
 			break;
 		}
 		
@@ -430,9 +558,9 @@ size_t WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, int* perr, con
 	}
 
 	size_t total = 0;
-	if (*perr == 0)
+	if (err == 0)
 	{
-		size_t len = recv_i(bufs,count,true,perr,timeout);
+		size_t len = recv_i(bufs,count,true,err,timeout);
 
 		total = len;
 		
@@ -453,15 +581,14 @@ size_t WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, int* perr, con
 	}
 
 	if (bufs != static_bufs)
-		OOBase::Free(bufs,1);
+		OOBase::LocalFree(bufs);
 
 	return total;
 }
 
-size_t WinSocket::recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int* perr, const OOBase::timeval_t* timeout)
+size_t WinSocket::recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int& err, const OOBase::timeval_t* timeout)
 {
-	assert(perr);
-	*perr = 0;
+	err = 0;
 
 	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock);
 
@@ -473,7 +600,7 @@ size_t WinSocket::recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int* perr, cons
 			m_recv_event = CreateEventW(NULL,TRUE,FALSE,NULL);
 			if (!m_recv_event.is_valid())
 			{
-				*perr = GetLastError();
+				err = GetLastError();
 				return 0;
 			}
 		}
@@ -483,46 +610,47 @@ size_t WinSocket::recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int* perr, cons
 	size_t total = 0;
 	while (count > 0)
 	{
+		DWORD dwFlags = 0;
 		DWORD dwRead = 0;
 		if (!timeout)
 		{
-			if (WSARecv(m_socket,wsabuf,count,&dwRead,NULL,NULL,NULL) != 0)
+			if (WSARecv(m_socket,wsabuf,count,&dwRead,&dwFlags,NULL,NULL) != 0)
 			{
-				*perr = WSAGetLastError();
-				if (*perr != ERROR_OPERATION_ABORTED)
+				err = WSAGetLastError();
+				if (err != ERROR_OPERATION_ABORTED)
 					return total;
 			}
 		}
 		else
 		{
-			if (WSARecv(m_socket,wsabuf,count,&dwRead,NULL,&ov,NULL) != 0)
+			if (WSARecv(m_socket,wsabuf,count,&dwRead,&dwFlags,&ov,NULL) != 0)
 			{
-				*perr = WSAGetLastError();
-				if (*perr != ERROR_OPERATION_ABORTED)
+				err = WSAGetLastError();
+				if (err != ERROR_OPERATION_ABORTED)
 				{
-					if (*perr != WSA_IO_PENDING)
+					if (err != WSA_IO_PENDING)
 						return total;
 
-					*perr = 0;
+					err = 0;
 					DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout->msec());
 					if (dwWait == WAIT_TIMEOUT)
 					{
 						CancelIo(reinterpret_cast<HANDLE>(m_socket));
-						*perr = WAIT_TIMEOUT;
+						err = WAIT_TIMEOUT;
 					}
 					else if (dwWait != WAIT_OBJECT_0)
 					{
-						*perr = GetLastError();
+						err = GetLastError();
 						CancelIo(reinterpret_cast<HANDLE>(m_socket));
 					}
 					
-					if (!WSAGetOverlappedResult(m_socket,&ov,&dwRead,TRUE,NULL))
+					if (!WSAGetOverlappedResult(m_socket,&ov,&dwRead,TRUE,&dwFlags))
 					{
 						int dwErr = WSAGetLastError();
-						if (*perr == 0 && dwErr != ERROR_OPERATION_ABORTED)
-							*perr = dwErr;
+						if (err == 0 && dwErr != ERROR_OPERATION_ABORTED)
+							err = dwErr;
 
-						if (*perr != 0)
+						if (err != 0)
 							return total;
 					}
 				}
@@ -551,7 +679,7 @@ size_t WinSocket::recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int* perr, cons
 			break;
 	}
 
-	*perr = 0;
+	err = 0;
 	return total;
 }
 
@@ -569,37 +697,23 @@ void WinSocket::shutdown(bool bSend, bool bRecv)
 		::shutdown(m_socket,how);
 }
 
-#if 0
-OOBase::SmartPtr<OOBase::Socket> OOBase::Socket::connect(const char* address, const char* port, int* perr, const timeval_t* timeout)
+OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, int& err, const timeval_t* timeout)
 {
 	// Ensure we have winsock loaded
 	Win32::WSAStartup();
 
-	SOCKET create_socket(int family, int socktype, int protocol, int* perr)
-	{
-		*perr = 0;
-		SOCKET sock = WSASocket(family,socktype,protocol,NULL,0,WSA_FLAG_OVERLAPPED);
-		if (sock == INVALID_SOCKET)
-			*perr = WSAGetLastError();
-
-		return sock;
-	}
-
-	OOBase::socket_t sock = OOBase::BSD::connect(address,port,perr,wait);
+	SOCKET sock = connect_i(address,port,err,timeout);
 	if (sock == INVALID_SOCKET)
-		return 0;
+		return NULL;
 
-	OOBase::SmartPtr<OOBase::Socket> ptrSocket;
-	OOBASE_NEW_T(WinSocket,ptrSocket,WinSocket(sock));
-	if (!ptrSocket)
+	OOBase::Socket* pSocket = new (std::nothrow) WinSocket(sock);
+	if (!pSocket)
 	{
-		*perr = ERROR_OUTOFMEMORY;
+		err = ERROR_OUTOFMEMORY;
 		closesocket(sock);
-		return 0;
 	}
 
-	return ptrSocket;
+	return pSocket;
 }
-#endif
 
 #endif // _WIN32

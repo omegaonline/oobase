@@ -22,8 +22,8 @@
 #ifndef OOBASE_SMARTPTR_H_INCLUDED_
 #define OOBASE_SMARTPTR_H_INCLUDED_
 
+#include "RefCount.h"
 #include "Memory.h"
-#include "Atomic.h"
 
 namespace OOBase
 {
@@ -60,32 +60,13 @@ namespace OOBase
 		template <typename T, typename Destructor>
 		class SmartPtrImpl
 		{
-			class SmartPtrNode
+			class SmartPtrNode : public RefCounted, public CustomNew<HeapAllocator>
 			{
 			public:
-				static SmartPtrNode* create(T* data = NULL)
-				{
-					void* p = OOBase::HeapAllocate(sizeof(SmartPtrNode));
-					if (!p)
-						OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-					
-					return ::new (p) SmartPtrNode(data);
-				}
-
-				void addref()
-				{
-					++m_refcount;
-				}
-
-				void release()
-				{
-					if (--m_refcount == 0)
-					{
-						void* p = this;
-						this->~SmartPtrNode();
-						OOBase::HeapFree(p);
-					}
-				}
+				SmartPtrNode(T* data = NULL) :
+						RefCounted(),
+						m_data(data)
+				{}
 
 				T* value()
 				{
@@ -105,25 +86,19 @@ namespace OOBase
 				}
 
 			private:
-				SmartPtrNode(T* data = NULL) :
-						m_data(data),
-						m_refcount(1)
-				{}
-					
 				~SmartPtrNode()
 				{
 					Destructor::destroy(m_data);
 				}
 
 				T*             m_data;
-				Atomic<size_t> m_refcount;
 			};
 
 		public:
-			SmartPtrImpl(T* ptr = NULL) : m_node(0)
+			SmartPtrImpl(T* ptr = NULL) : m_node(NULL)
 			{
 				if (ptr)
-					m_node = SmartPtrNode::create(ptr);
+					m_node = new (critical) SmartPtrNode(ptr);
 			}
 
 			SmartPtrImpl(const SmartPtrImpl& rhs) : m_node(rhs.m_node)
@@ -141,7 +116,7 @@ namespace OOBase
 				}
 
 				if (ptr)
-					m_node = SmartPtrNode::create(ptr);
+					m_node = new (critical) SmartPtrNode(ptr);
 				
 				return *this;
 			}

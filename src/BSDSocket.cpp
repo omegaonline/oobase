@@ -19,14 +19,13 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/CustomNew.h"
-#include "../include/OOBase/Posix.h"
-#include "BSDSocket.h"
-#include "Win32Socket.h"
+#include "../include/OOBase/GlobalNew.h"
 
-#if defined(_MSC_VER)
-#pragma warning(disable: 4127)
-#endif
+#if !defined(_WIN32)
+
+#include "../include/OOBase/Posix.h"
+
+#include "BSDSocket.h"
 
 #if defined(HAVE_UNISTD_H)
 #include <fcntl.h>
@@ -34,25 +33,101 @@
 #include <sys/un.h>
 #endif
 
-#if defined(_WIN32)
-#include <ws2tcpip.h>
+OOBase::socket_t OOBase::BSD::create_socket(int family, int socktype, int protocol, int& err)
+{
+	err = 0;
+	OOBase::socket_t sock = ::socket(family,socktype,protocol);
+	if (sock == -1)
+	{
+		err = errno;
+		return sock;
+	}
 
-#define SHUT_RDWR SD_BOTH
-#define SHUT_RD   SD_RECEIVE
-#define SHUT_WR   SD_SEND
-#define ETIMEDOUT WSAETIMEDOUT
-#define EINPROGRESS WSAEWOULDBLOCK
-#define ssize_t int
-#define socket_errno WSAGetLastError()
-#define SOCKET_WOULD_BLOCK WSAEWOULDBLOCK
+	err = OOBase::BSD::set_non_blocking(sock,true);
+	if (err != 0)
+	{
+		::close(sock);
+		return -1;
+	}
 
-#else
+#if defined(HAVE_UNISTD_H)
+	err = OOBase::POSIX::set_close_on_exec(sock,true);
+	if (err != 0)
+	{
+		::close(sock);
+		return -1;
+	}
+#endif
 
-#define socket_errno (errno)
-#define SOCKET_WOULD_BLOCK EAGAIN
-#define closesocket(s) ::close(s)
+	return sock;
+}
+
+int OOBase::BSD::set_non_blocking(socket_t sock, bool set)
+{
+#if defined(HAVE_UNISTD_H)
+
+	int flags = fcntl(sock,F_GETFL);
+	if (flags == -1)
+		return errno;
+
+	flags = (set ? flags | O_NONBLOCK : flags & ~O_NONBLOCK);
+	if (fcntl(sock,F_SETFL,flags) == -1)
+		return errno;
 
 #endif
+
+	return 0;
+}
+
+int OOBase::BSD::connect(int sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* timeout)
+{
+	// Do the connect
+	if (::connect(sock,addr,static_cast<int>(addrlen)) != -1)
+		return 0;
+
+	// Check to see if we actually have an error
+	int err = errno;
+	if (err != EINPROGRESS)
+		return err;
+
+	// Wait for the connect to go ahead - by select()ing on write
+	::timeval tv;
+	if (timeout)
+	{
+		tv.tv_sec = static_cast<long>(timeout->tv_sec());
+		tv.tv_usec = timeout->tv_usec();
+	}
+
+	fd_set wfds;
+	fd_set efds; // Annoyingly Winsock uses the exceptions not just the writes
+
+	for (;;)
+	{
+		FD_ZERO(&wfds);
+		FD_ZERO(&efds);
+		FD_SET(sock,&wfds);
+		FD_SET(sock,&efds);
+
+		int count = select(static_cast<int>(sock+1),NULL,&wfds,&efds,timeout ? &tv : NULL);
+		if (count == -1)
+		{
+			err = errno;
+			if (err != EINTR)
+				return err;
+		}
+		else if (count == 1)
+		{
+			// If connect() did something...
+			socklen_t len = sizeof(err);
+			if (getsockopt(sock,SOL_SOCKET,SO_ERROR,(char*)&err,&len) == -1)
+				return errno;
+
+			return err;
+		}
+		else
+			return ETIMEDOUT;
+	}
+}
 
 namespace
 {
@@ -62,22 +137,22 @@ namespace
 		Socket(OOBase::socket_t sock);
 		virtual ~Socket();
 
-		int send(const void* buf, size_t len, const OOBase::timeval_t* timeout = 0);
-		size_t recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout = 0);
+		int send(const void* buf, size_t len, const OOBase::timeval_t* timeout = NULL);
+		size_t recv(void* buf, size_t len, int& err, const OOBase::timeval_t* timeout = NULL);
 		void shutdown(bool bSend, bool bRecv);
 
 	private:
-		OOBase::socket_t  m_sock;
+		int  m_sock;
 	};
 
-	Socket::Socket(OOBase::socket_t sock) :
+	Socket::Socket(int sock) :
 			m_sock(sock)
 	{
 	}
 
 	Socket::~Socket()
 	{
-		closesocket(m_sock);
+		::close(m_sock);
 	}
 
 	int Socket::send(const void* buf, size_t len, const OOBase::timeval_t* timeout)
@@ -105,10 +180,10 @@ namespace
 			}
 			else
 			{
-				int err = socket_errno;
+				int err = errno;
 				if (err == EINTR)
 					continue;
-				else if (err != SOCKET_WOULD_BLOCK)
+				else if (err != EAGAIN)
 					return err;
 
 				// Do the select...
@@ -116,10 +191,10 @@ namespace
 				FD_ZERO(&efds);
 				FD_SET(m_sock,&wfds);
 				FD_SET(m_sock,&efds);
-				int count = select(static_cast<int>(m_sock+1),0,&wfds,&efds,timeout ? &tv : 0);
+				int count = select(static_cast<int>(m_sock+1),NULL,&wfds,&efds,timeout ? &tv : NULL);
 				if (count == -1)
 				{
-					err = socket_errno;
+					err = errno;
 					if (err != EINTR)
 						return err;
 				}
@@ -130,7 +205,7 @@ namespace
 						// Error
 						socklen_t len = sizeof(err);
 						if (getsockopt(m_sock,SOL_SOCKET,SO_ERROR,(char*)&err,&len) == -1)
-							return socket_errno;
+							return errno;
 
 						return err;
 					}
@@ -141,7 +216,7 @@ namespace
 		}
 	}
 
-	size_t Socket::recv(void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout)
+	size_t Socket::recv(void* buf, size_t len, int& err, const OOBase::timeval_t* timeout)
 	{
 		char* cbuf = static_cast<char*>(buf);
 		size_t total_recv = 0;
@@ -160,7 +235,7 @@ namespace
 			ssize_t recvd = ::recv(m_sock,cbuf,static_cast<int>(len),0);
 			if (recvd != -1)
 			{
-				*perr = 0;
+				err = 0;
 				total_recv += recvd;
 				cbuf += recvd;
 				len -= recvd;
@@ -169,10 +244,10 @@ namespace
 			}
 			else
 			{
-				*perr = socket_errno;
-				if (*perr == EINTR)
+				err = errno;
+				if (err == EINTR)
 					continue;
-				else if (*perr != SOCKET_WOULD_BLOCK)
+				else if (err != EAGAIN)
 					return total_recv;
 
 				// Do the select...
@@ -180,11 +255,11 @@ namespace
 				FD_ZERO(&efds);
 				FD_SET(m_sock,&rfds);
 				FD_SET(m_sock,&efds);
-				int count = select(static_cast<int>(m_sock+1),&rfds,0,&efds,timeout ? &tv : 0);
+				int count = select(static_cast<int>(m_sock+1),&rfds,NULL,&efds,timeout ? &tv : NULL);
 				if (count == -1)
 				{
-					*perr = socket_errno;
-					if (*perr != EINTR)
+					err = errno;
+					if (err != EINTR)
 						return total_recv;
 				}
 				else if (count == 1)
@@ -192,9 +267,9 @@ namespace
 					if (FD_ISSET(m_sock,&efds))
 					{
 						// Error
-						socklen_t len = sizeof(*perr);
-						if (getsockopt(m_sock,SOL_SOCKET,SO_ERROR,(char*)perr,&len) == -1)
-							*perr = socket_errno;
+						socklen_t len = sizeof(err);
+						if (getsockopt(m_sock,SOL_SOCKET,SO_ERROR,(char*)&err,&len) == -1)
+							err = errno;
 
 						return total_recv;
 					}
@@ -217,57 +292,7 @@ namespace
 			::shutdown(m_sock,how);
 	}
 
-	int connect_i(OOBase::socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* timeout)
-	{
-		// Do the connect
-		if (::connect(sock,addr,static_cast<int>(addrlen)) != -1)
-			return 0;
-
-		// Check to see if we actually have an error
-		int err = socket_errno;
-		if (err != EINPROGRESS)
-			return err;
-
-		// Wait for the connect to go ahead - by select()ing on write
-		::timeval tv;
-		if (timeout)
-		{
-			tv.tv_sec = static_cast<long>(timeout->tv_sec());
-			tv.tv_usec = timeout->tv_usec();
-		}
-
-		fd_set wfds;
-		fd_set efds; // Annoyingly Winsock uses the exceptions not just the writes
-
-		for (;;)
-		{
-			FD_ZERO(&wfds);
-			FD_ZERO(&efds);
-			FD_SET(sock,&wfds);
-			FD_SET(sock,&efds);
-
-			int count = select(static_cast<int>(sock+1),0,&wfds,&efds,timeout ? &tv : 0);
-			if (count == -1)
-			{
-				err = socket_errno;
-				if (err != EINTR)
-					return err;
-			}
-			else if (count == 1)
-			{
-				// If connect() did something...
-				socklen_t len = sizeof(err);
-				if (getsockopt(sock,SOL_SOCKET,SO_ERROR,(char*)&err,&len) == -1)
-					return socket_errno;
-
-				return err;
-			}
-			else
-				return ETIMEDOUT;
-		}
-	}
-
-	OOBase::socket_t connect_i(const char* address, const char* port, int* perr, const OOBase::timeval_t* timeout)
+	int connect_i(const char* address, const char* port, int& err, const OOBase::timeval_t* timeout)
 	{
 		// Start a countdown
 		OOBase::timeval_t timeout2 = (timeout ? *timeout : OOBase::timeval_t::MaxTime);
@@ -278,152 +303,114 @@ namespace
 		hints.ai_family = AF_UNSPEC;
 		hints.ai_socktype = SOCK_STREAM;
 
-		addrinfo* pResults = 0;
+		addrinfo* pResults = NULL;
 		if (getaddrinfo(address,port,&hints,&pResults) != 0)
 		{
-			*perr = socket_errno;
-			return INVALID_SOCKET;
+			err = errno;
+			return -1;
 		}
+		
+		int sock = -1;
 
 		// Took too long to resolve...
 		countdown.update();
 		if (timeout2 == OOBase::timeval_t::Zero)
-			return ETIMEDOUT;
-
-		// Loop trying to connect on each address until one succeeds
-		OOBase::socket_t sock = INVALID_SOCKET;
-		for (addrinfo* pAddr = pResults; pAddr != 0; pAddr = pAddr->ai_next)
+			err = ETIMEDOUT;
+		else
 		{
-			if ((sock = OOBase::BSD::create_socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,perr)) != INVALID_SOCKET)
+			// Loop trying to connect on each address until one succeeds
+			for (addrinfo* pAddr = pResults; pAddr != NULL; pAddr = pAddr->ai_next)
 			{
-				if ((*perr = connect_i(sock,pAddr->ai_addr,pAddr->ai_addrlen,&timeout2)) != 0)
-					closesocket(sock);
-				else
+				// Clear error
+				err = 0;
+				sock = OOBase::BSD::create_socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,err);
+				if (sock == -1)
 					break;
-			}
+				else
+				{
+					if ((err = OOBase::BSD::connect(sock,pAddr->ai_addr,pAddr->ai_addrlen,&timeout2)) != 0)
+						::close(sock);
+					else
+						break;
+				}
 
-			countdown.update();
-			if (timeout2 == OOBase::timeval_t::Zero)
-				return ETIMEDOUT;
+				countdown.update();
+				if (timeout2 == OOBase::timeval_t::Zero)
+				{
+					err = ETIMEDOUT;
+					break;
+				}
+			}
 		}
 
 		// Done with address info
 		freeaddrinfo(pResults);
 
-		// Clear error
-		if (sock != INVALID_SOCKET)
-			*perr = 0;
-
 		return sock;
 	}
 }
 
-OOBase::socket_t OOBase::BSD::create_socket(int family, int socktype, int protocol, int* perr)
+OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, int& err, const timeval_t* timeout)
 {
-#if defined(_WIN32)
-	Win32::WSAStartup();
-#endif
+	socket_t sock = connect_i(address,port,err,timeout);
+	if (sock == -1)
+		return NULL;
 
-	*perr = 0;
-
-	OOBase::socket_t sock = ::socket(family,socktype,protocol);
-	if (sock == INVALID_SOCKET)
-	{
-		*perr = socket_errno;
-		return sock;
-	}
-
-	*perr = OOBase::BSD::set_non_blocking(sock,true);
-	if (*perr != 0)
-	{
-		closesocket(sock);
-		return INVALID_SOCKET;
-	}
-
-#if defined (HAVE_UNISTD_H)
-	*perr = OOBase::POSIX::set_close_on_exec(sock,true);
-	if (*perr != 0)
-	{
-		closesocket(sock);
-		return INVALID_SOCKET;
-	}
-#endif
-
-	return sock;
-}
-
-int OOBase::BSD::set_non_blocking(socket_t sock, bool set)
-{
-#if defined (_WIN32)
-	u_long v = (set ? 1 : 0);
-	if (ioctlsocket(sock,FIONBIO,&v) == -1)
-		return socket_errno;
-
-#elif defined(HAVE_UNISTD_H)
-	int flags = fcntl(sock,F_GETFL);
-	if (flags == -1)
-		return errno;
-
-	flags = (set ? flags | O_NONBLOCK : flags & ~O_NONBLOCK);
-	if (fcntl(sock,F_SETFL,flags) == -1)
-		return errno;
-#endif
-
-	return 0;
-}
-
-// Win32 native sockets are probably faster...
-#if !defined(_WIN32)
-OOBase::SmartPtr<OOBase::Socket> OOBase::Socket::connect(const char* address, const char* port, int* perr, const timeval_t* timeout)
-{
-#if defined(_WIN32)
-	// Ensure we have winsock loaded
-	Win32::WSAStartup();
-#endif
-
-	socket_t sock = connect_i(address,port,perr,timeout);
-	if (sock == INVALID_SOCKET)
-		return 0;
-
-	::Socket* pSocket = new (std::nothrow) ::Socket(sock);
+	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock);
 	if (!pSocket)
 	{
-		*perr = ERROR_OUTOFMEMORY;
-		closesocket(sock);
-		return 0;
+		err = ENOMEM;
+		::close(sock);
 	}
 
 	return pSocket;
 }
-#endif
 
 #if defined(HAVE_UNISTD_H)
 
-OOBase::SmartPtr<OOBase::Socket> OOBase::Socket::connect_local(const char* path, int* perr, const timeval_t* timeout)
+void OOBase::POSIX::create_unix_socket(sockaddr_un& addr, socklen_t& len, const char* path)
 {
-	OOBase::socket_t sock = OOBase::BSD::create_socket(AF_UNIX,SOCK_STREAM,0,perr);
+	addr.sun_family = AF_UNIX;
+	
+	if (path[0] = '\0')
+	{
+		addr.sun_path[0] = '\0';
+		strncpy(addr.sun_path+1,path+1,sizeof(addr.sun_path)-1);
+		len = offsetof(sockaddr_un, sun_path) + strlen(addr.sun_path+1) + 1;
+	}
+	else
+	{
+		strncpy(addr.sun_path,path,sizeof(addr.sun_path)-1);
+		addr.sun_path[sizeof(addr.sun_path)-1] = '\0';
+		len = offsetof(sockaddr_un, sun_path) + strlen(addr.sun_path);
+	}
+}
+
+OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const timeval_t* timeout)
+{
+	int sock = OOBase::BSD::create_socket(AF_UNIX,SOCK_STREAM,0,err);
 	if (sock == -1)
-		return 0;
+		return NULL;
 
 	sockaddr_un addr;
-	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path,path,sizeof(addr.sun_path)-1);
-
-	if ((*perr = connect_i(sock,(sockaddr*)(&addr),sizeof(addr),timeout)) != 0)
+	socklen_t addr_len = 0;
+	create_unix_socket(addr,addr_len,path);
+	
+	if ((err = connect_i(sock,(sockaddr*)(&addr),addr_len,timeout)) != 0)
 	{
 		::close(sock);
-		return 0;
+		return NULL;
 	}
 
-	::Socket* pSocket = new (std::nothrow) ::Socket(sock);
+	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock);
 	if (!pSocket)
 	{
-		*perr = ERROR_OUTOFMEMORY;
+		err = ENOMEM;
 		::close(sock);
-		return 0;
 	}
 
 	return pSocket;
 }
-
 #endif // defined(HAVE_UNISTD_H)
+
+#endif //  !defined(_WIN32)

@@ -86,6 +86,83 @@ namespace OOBase
 			OOBase::LocalFree(p);
 		}
 	};
+
+	template <typename Allocator>
+	class CustomNew
+	{
+	public:
+		void* operator new(size_t size)
+		{
+			void* p = Allocator::allocate(size);
+			if (!p)
+				throw std::bad_alloc();
+			return p;
+		}
+
+		void* operator new[](size_t size)
+		{
+			void* p = Allocator::allocate(size);
+			if (!p)
+				throw std::bad_alloc();
+			return p;
+		}
+
+		void operator delete(void* p)
+		{
+			Allocator::free(p);
+		}
+
+		void operator delete[](void* p)
+		{
+			Allocator::free(p);
+		}
+
+		void* operator new(size_t size, const std::nothrow_t&)
+		{
+			return Allocator::allocate(size);
+		}
+
+		void* operator new[](size_t size, const std::nothrow_t&)
+		{
+			return Allocator::allocate(size);
+		}
+
+		void operator delete(void* p, const std::nothrow_t&)
+		{
+			Allocator::free(p);
+		}
+
+		void operator delete[](void* p, const std::nothrow_t&)
+		{
+			Allocator::free(p);
+		}
+
+		void* operator new(size_t size, const OOBase::critical_t&)
+		{
+			void* p = Allocator::allocate(size);
+			if (!p)
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+			return p;
+		}
+
+		void* operator new[](size_t size, const OOBase::critical_t&)
+		{
+			void* p = Allocator::allocate(size);
+			if (!p)
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+			return p;
+		}
+
+		void operator delete(void* p, const OOBase::critical_t&)
+		{
+			Allocator::free(p);
+		}
+
+		void operator delete[](void* p, const OOBase::critical_t&)
+		{
+			Allocator::free(p);
+		}
+	};
 }
 
 #endif // OOBASE_MEMORY_H_INCLUDED_

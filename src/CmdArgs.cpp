@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/CustomNew.h"
+#include "../include/OOBase/GlobalNew.h"
 #include "../include/OOBase/CmdArgs.h"
 
 int OOBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, const char* long_opt)
@@ -132,7 +132,6 @@ int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, in
 			if (opt.m_has_value)
 				value = &argv[arg][opt.m_long_opt.length()+3];
 
-			String strVal;
 			int err = strVal.assign(value);
 			if (err != 0)
 				return err;

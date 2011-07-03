@@ -26,7 +26,8 @@
 
 OOBase::SpinLock::SpinLock(unsigned int max_spin)
 {
-	InitializeCriticalSectionAndSpinCount(&m_cs,max_spin);
+	if (!InitializeCriticalSectionAndSpinCount(&m_cs,max_spin))
+		OOBase_CallCriticalFailure(GetLastError());
 }
 
 OOBase::SpinLock::~SpinLock()

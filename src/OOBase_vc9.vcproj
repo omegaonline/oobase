@@ -391,6 +391,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\include\OOBase\GlobalNew.h"
+				>
+			</File>
+			<File
 				RelativePath="..\include\OOBase\HandleTable.h"
 				>
 			</File>
@@ -420,6 +424,10 @@
 			</File>
 			<File
 				RelativePath="..\include\OOBase\Queue.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\RefCount.h"
 				>
 			</File>
 			<File

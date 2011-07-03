@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/CustomNew.h"
+#include "../include/OOBase/GlobalNew.h"
 
 #if defined(_WIN32)
 
@@ -696,17 +696,35 @@ void OOBase::Win32::condition_variable_t::broadcast()
 
 void* OOBase::CrtAllocator::allocate(size_t len)
 {
-	return ::HeapAlloc(::GetProcessHeap(),0,len);
+	HANDLE hHeap = ::GetProcessHeap();
+	if (!hHeap)
+		OOBase_CallCriticalFailure(GetLastError());
+
+	//assert(::HeapValidate(hHeap,0,NULL));
+
+	return ::HeapAlloc(hHeap,0,len);
 }
 
 void* OOBase::CrtAllocator::reallocate(void* ptr, size_t len)
 {
-	return ::HeapReAlloc(::GetProcessHeap(),0,ptr,len);
+	HANDLE hHeap = ::GetProcessHeap();
+	if (!hHeap)
+		OOBase_CallCriticalFailure(GetLastError());
+
+	//assert(::HeapValidate(hHeap,0,NULL));
+
+	return ::HeapReAlloc(hHeap,0,ptr,len);
 }
 
 void OOBase::CrtAllocator::free(void* ptr)
 {
-	::HeapFree(::GetProcessHeap(),0,ptr);
+	HANDLE hHeap = ::GetProcessHeap();
+	if (!hHeap)
+		OOBase_CallCriticalFailure(GetLastError());
+
+	//assert(::HeapValidate(hHeap,0,NULL));
+
+	::HeapFree(hHeap,0,ptr);
 }
 
 #endif // _WIN32

@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/CustomNew.h"
+#include "../include/OOBase/GlobalNew.h"
 #include "../include/OOBase/TLSSingleton.h"
 #include "../include/OOBase/Thread.h"
 
@@ -426,7 +426,8 @@ void OOBase::Thread::abort()
 
 bool OOBase::Thread::is_running()
 {
-	assert(this != self());
+	if (this == self())
+		return true;
 
 	return m_impl->is_running();
 }
@@ -484,7 +485,7 @@ OOBase::ThreadPool::~ThreadPool()
 
 int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads)
 {
-	for (size_t i=0;i<threads;++i)
+	for (size_t j=0;j<threads;++j)
 	{
 		Thread* pThread = new (std::nothrow) Thread(false);
 		if (!pThread)

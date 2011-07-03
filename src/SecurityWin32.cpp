@@ -23,7 +23,7 @@
 
 #if defined(_WIN32)
 
-#include "../include/OOBase/CustomNew.h"
+#include "../include/OOBase/GlobalNew.h"
 
 #include <shlwapi.h>
 

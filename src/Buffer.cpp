@@ -19,18 +19,13 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/OOBase/GlobalNew.h"
 #include "../include/OOBase/Buffer.h"
-#include "../include/OOBase/CustomNew.h"
 
 #include <string.h>
 
-OOBase::Buffer* OOBase::Buffer::create(size_t cbSize, size_t align)
-{
-	return new (std::nothrow) Buffer(cbSize,align);
-}
-
 OOBase::Buffer::Buffer(size_t cbSize, size_t align) :
-		m_refcount(1),
+		RefCounted(),
 		m_capacity(0),
 		m_buffer(NULL),
 		m_wr_ptr(NULL),
@@ -46,18 +41,6 @@ OOBase::Buffer::Buffer(size_t cbSize, size_t align) :
 		m_capacity = cbSize;
 		reset(align);
 	}
-}
-
-OOBase::Buffer* OOBase::Buffer::addref()
-{
-	++m_refcount;
-	return this;
-}
-
-void OOBase::Buffer::release()
-{
-	if (--m_refcount == 0)
-		delete this;
 }
 
 OOBase::Buffer::~Buffer()

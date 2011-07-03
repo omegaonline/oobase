@@ -19,9 +19,13 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/OOBase/GlobalNew.h"
+
+#if defined(_WIN32)
+
+#include "../include/OOBase/String.h"
 #include "../include/OOBase/Socket.h"
 #include "../include/OOBase/Win32.h"
-#include "../include/OOBase/Allocator.h"
 
 namespace
 {
@@ -40,12 +44,12 @@ namespace
 		Pipe(HANDLE handle);
 		virtual ~Pipe();
 
-		size_t recv(void* buf, size_t len, bool bAll, int* perr, const OOBase::timeval_t* timeout = 0);
-		size_t recv_v(OOBase::Buffer* buffers[], size_t count, int* perr, const OOBase::timeval_t* timeout = 0);
+		size_t recv(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout);
+		size_t recv_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout);
 		
-		size_t send(const void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout = 0);
-		size_t send_v(OOBase::Buffer* buffers[], size_t count, int* perr, const OOBase::timeval_t* timeout = 0);
-
+		size_t send(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout);
+		size_t send_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout);
+		
 		void shutdown(bool bSend, bool bRecv);
 					
 	private:
@@ -57,8 +61,8 @@ namespace
 		bool                       m_send_allowed;
 		bool                       m_recv_allowed;
 
-		size_t recv_i(void* buf, size_t len, bool bAll, int* perr, const OOBase::timeval_t* timeout);
-		size_t send_i(const void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout);
+		size_t recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout);
+		size_t send_i(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout);
 	};
 }
 
@@ -73,39 +77,44 @@ Pipe::~Pipe()
 {
 }
 
-size_t Pipe::send(const void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout)
+size_t Pipe::send(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout)
 {
-	assert(perr);
-	*perr = 0;
-
 	OOBase::Guard<OOBase::Mutex> guard(m_send_lock);
 
-	return send_i(buf,len,perr,timeout);
+	return send_i(buf,len,err,timeout);
 }
 
-size_t Pipe::send_i(const void* buf, size_t len, int* perr, const OOBase::timeval_t* timeout)
+size_t Pipe::send_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout)
+{
+	if (count == 0)
+		return 0;
+
+	void* TODO;
+
+	return 0;
+}
+
+size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout)
 {
 	if (!m_send_allowed)
 	{
-		*perr = WSAESHUTDOWN;
+		err = WSAESHUTDOWN;
 		return 0;
 	}
 
-	OVERLAPPED ov = {0};
-	if (timeout)
+	if (!m_send_event.is_valid())
 	{
+		m_send_event = CreateEventW(NULL,TRUE,FALSE,NULL);
 		if (!m_send_event.is_valid())
 		{
-			m_send_event = CreateEventW(NULL,TRUE,FALSE,NULL);
-			if (!m_send_event.is_valid())
-			{
-				*perr = GetLastError();
-				return 0;
-			}
+			err = GetLastError();
+			return 0;
 		}
-		ov.hEvent = m_send_event;
 	}
-	
+
+	OVERLAPPED ov = {0};
+	ov.hEvent = m_send_event;
+		
 	const char* cbuf = static_cast<const char*>(buf);
 	size_t total = len;
 	while (total > 0)
@@ -113,35 +122,35 @@ size_t Pipe::send_i(const void* buf, size_t len, int* perr, const OOBase::timeva
 		DWORD dwWritten = 0;
 		if (!WriteFile(m_handle,cbuf,static_cast<DWORD>(total),&dwWritten,&ov))
 		{
-			*perr = GetLastError();
-			if (*perr != ERROR_OPERATION_ABORTED)
+			err = GetLastError();
+			if (err != ERROR_OPERATION_ABORTED)
 			{
-				if (*perr != ERROR_IO_PENDING)
+				if (err != ERROR_IO_PENDING)
 					return (len - total);
 
-				*perr = 0;
+				err = 0;
 				if (timeout)
 				{
 					DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout->msec());
 					if (dwWait == WAIT_TIMEOUT)
 					{
 						CancelIo(m_handle);
-						*perr = WAIT_TIMEOUT;
+						err = WAIT_TIMEOUT;
 					}
 					else if (dwWait != WAIT_OBJECT_0)
 					{
-						*perr = GetLastError();
+						err = GetLastError();
 						CancelIo(m_handle);
 					}
 				}
 			
 				if (!GetOverlappedResult(m_handle,&ov,&dwWritten,TRUE))
 				{
-					int dwErr = WSAGetLastError();
-					if (*perr == 0 && dwErr != ERROR_OPERATION_ABORTED)
-						*perr = dwErr;
+					int dwErr = GetLastError();
+					if (err == 0 && dwErr != ERROR_OPERATION_ABORTED)
+						err = dwErr;
 
-					if (*perr != 0)
+					if (err != 0)
 						return (len - total);
 				}
 			}
@@ -151,32 +160,28 @@ size_t Pipe::send_i(const void* buf, size_t len, int* perr, const OOBase::timeva
 		total -= dwWritten;
 	}
 
-	*perr = 0;
+	err = 0;
 	return len;
 }
 
-size_t Pipe::recv(void* buf, size_t len, bool bAll, int* perr, const OOBase::timeval_t* timeout)
+size_t Pipe::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout)
 {
-	assert(perr);
-	*perr = 0;
-
 	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock);
 
-	return recv_i(buf,len,bAll,perr,timeout);
+	return recv_i(buf,len,bAll,err,timeout);
 }
 
-size_t Pipe::recv_v(OOBase::Buffer* buffers[], size_t count, int* perr, const OOBase::timeval_t* timeout)
+size_t Pipe::recv_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout)
 {
-	assert(perr);
-	*perr = 0;
+	err = 0;
 
 	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock);
 
 	size_t total = 0;
-	for (size_t i=0;i<count && *perr == 0 ;++i)
+	for (size_t i=0;i<count && err == 0 ;++i)
 	{
 		size_t space = buffers[i]->space();
-		size_t len = recv(buffers[i]->wr_ptr(),space,true,perr,timeout);
+		size_t len = recv_i(buffers[i]->wr_ptr(),space,true,err,timeout);
 
 		buffers[i]->wr_ptr(len);
 
@@ -186,29 +191,27 @@ size_t Pipe::recv_v(OOBase::Buffer* buffers[], size_t count, int* perr, const OO
 	return total;
 }
 
-size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int* perr, const OOBase::timeval_t* timeout)
+size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout)
 {
 	if (!m_recv_allowed)
 	{
-		*perr = WSAESHUTDOWN;
+		err = WSAESHUTDOWN;
 		return 0;
 	}
 
-	OVERLAPPED ov = {0};
-	if (timeout)
+	if (!m_recv_event.is_valid())
 	{
+		m_recv_event = CreateEventW(NULL,TRUE,FALSE,NULL);
 		if (!m_recv_event.is_valid())
 		{
-			m_recv_event = CreateEventW(NULL,TRUE,FALSE,NULL);
-			if (!m_recv_event.is_valid())
-			{
-				*perr = GetLastError();
-				return 0;
-			}
+			err = GetLastError();
+			return 0;
 		}
-		ov.hEvent = m_recv_event;
 	}
-	
+
+	OVERLAPPED ov = {0};
+	ov.hEvent = m_recv_event;
+		
 	char* cbuf = static_cast<char*>(buf);
 	size_t total = len;
 	while (total > 0)
@@ -216,37 +219,37 @@ size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int* perr, const OOBase::t
 		DWORD dwRead = 0;
 		if (!ReadFile(m_handle,cbuf,static_cast<DWORD>(total),&dwRead,&ov))
 		{
-			*perr = GetLastError();
-			if (*perr == ERROR_MORE_DATA)
+			err = GetLastError();
+			if (err == ERROR_MORE_DATA)
 				dwRead = static_cast<DWORD>(total);
-			else if (*perr != ERROR_OPERATION_ABORTED)
+			else if (err != ERROR_OPERATION_ABORTED)
 			{
-				if (*perr != ERROR_IO_PENDING)
+				if (err != ERROR_IO_PENDING)
 					return (len - total);
 
-				*perr = 0;
+				err = 0;
 				if (timeout)
 				{
 					DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout->msec());
 					if (dwWait == WAIT_TIMEOUT)
 					{
 						CancelIo(m_handle);
-						*perr = WAIT_TIMEOUT;
+						err = WAIT_TIMEOUT;
 					}
 					else if (dwWait != WAIT_OBJECT_0)
 					{
-						*perr = GetLastError();
+						err = GetLastError();
 						CancelIo(m_handle);
 					}
 				}
 					
 				if (!GetOverlappedResult(m_handle,&ov,&dwRead,TRUE))
 				{
-					int dwErr = WSAGetLastError();
-					if (*perr == 0 && dwErr != ERROR_OPERATION_ABORTED)
-						*perr = dwErr;
+					int dwErr = GetLastError();
+					if (err == 0 && dwErr != ERROR_OPERATION_ABORTED)
+						err = dwErr;
 
-					if (*perr != 0)
+					if (err != 0)
 						return (len - total);
 				}
 			}
@@ -259,7 +262,7 @@ size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int* perr, const OOBase::t
 			break;
 	}
 
-	*perr = 0;
+	err = 0;
 	return (len - total);
 }
 
@@ -280,13 +283,14 @@ void Pipe::shutdown(bool bSend, bool bRecv)
 	}
 }
 
-OOBase::SmartPtr<OOBase::Socket> OOBase::Socket::connect_local(const char* path, int* perr, const timeval_t* timeout)
+OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const timeval_t* timeout)
 {
-	assert(perr);
-	*perr = 0;
-
-	OOBase::local_string pipe_name("\\\\.\\pipe\\");
-	pipe_name += path;
+	OOBase::LocalString pipe_name;
+	err = pipe_name.assign("\\\\.\\pipe\\");
+	if (err == 0)
+		err = pipe_name.append(path);
+	if (err != 0)
+		return NULL;
 
 	timeval_t timeout2 = (timeout ? *timeout : timeval_t::MaxTime);
 	Countdown countdown(&timeout2);
@@ -308,7 +312,7 @@ OOBase::SmartPtr<OOBase::Socket> OOBase::Socket::connect_local(const char* path,
 		DWORD dwErr = GetLastError();
 		if (dwErr != ERROR_PIPE_BUSY)
 		{
-			*perr = dwErr;
+			err = dwErr;
 			return 0;
 		}
 
@@ -322,23 +326,21 @@ OOBase::SmartPtr<OOBase::Socket> OOBase::Socket::connect_local(const char* path,
 
 		if (!WaitNamedPipeA(pipe_name.c_str(),dwWait))
 		{
-			*perr = GetLastError();
-			if (*perr == ERROR_SEM_TIMEOUT)
-				*perr = WSAETIMEDOUT;
+			err = GetLastError();
+			if (err == ERROR_SEM_TIMEOUT)
+				err = WSAETIMEDOUT;
 
 			return 0;
 		}
 	}
 
-	OOBase::SmartPtr<OOBase::Socket> ptrPipe;
-	OOBASE_NEW_T(Pipe,ptrPipe,Pipe(hPipe));
-	if (!ptrPipe)
-	{
-		*perr = ERROR_OUTOFMEMORY;
-		return 0;
-	}
+	OOBase::Socket* pPipe = new (std::nothrow) Pipe(hPipe);
+	if (!pPipe)
+		err = ERROR_OUTOFMEMORY;
+	else
+		hPipe.detach();
 
-	hPipe.detach();
-
-	return ptrPipe;
+	return pPipe;
 }
+
+#endif // _WIN32

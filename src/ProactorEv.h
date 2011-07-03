@@ -22,79 +22,109 @@
 #ifndef OOSVRBASE_PROACTOR_EV_H_INCLUDED_
 #define OOSVRBASE_PROACTOR_EV_H_INCLUDED_
 
-#if !defined(OOSVRBASE_PROACTOR_H_INCLUDED_)
-#error include "Proactor.h" instead
-#endif
+#include "../include/OOSvrBase/Proactor.h"
 
-#if !defined(HAVE_EV_H)
-#error Includes have got confused, check Proactor.cpp
-#endif
+#if defined(HAVE_EV_H) && !defined(_WIN32)
 
+#include "../include/OOBase/HandleTable.h"
+
+#define EV_COMPAT3 0
+#define EV_STANDALONE 1
 #include <ev.h>
-
-#include <deque>
-
-#include "../include/OOBase/Thread.h"
-#include "../include/OOBase/Condition.h"
-#include "../include/OOBase/SmartPtr.h"
 
 namespace OOSvrBase
 {
-	namespace Ev
+	namespace detail
 	{
-		typedef struct ev_loop ev_loop_t;
-
-		class ProactorImpl : public Proactor
+		class ProactorEv : public Proactor
 		{
 		public:
-			ProactorImpl();
-			~ProactorImpl();
+			ProactorEv();
+			virtual ~ProactorEv();
 
-			OOBase::SmartPtr<OOBase::Socket> accept_local(Acceptor<AsyncLocalSocket>* handler, const char* path, int* perr, SECURITY_ATTRIBUTES* psa);
-			OOBase::SmartPtr<OOBase::Socket> accept_remote(Acceptor<AsyncSocket>* handler, const char* address, const char* port, int* perr);
+			AsyncSocket* attach_socket(OOBase::socket_t sock, int& err);
+			AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int& err);
 
-			AsyncSocketPtr attach_socket(OOBase::Socket::socket_t sock, int* perr);
-			AsyncLocalSocketPtr attach_local_socket(OOBase::Socket::socket_t sock, int* perr);
-
-			AsyncLocalSocketPtr connect_local_socket(const char* path, int* perr, const OOBase::timeval_t* timeout);
-
-			struct io_watcher : public ev_io
-			{
-				void (*callback)(io_watcher*);
-			};
-
-			void init_watcher(io_watcher* watcher, int fd, int events);
-			void start_watcher(io_watcher* watcher);
-			void stop_watcher(io_watcher* watcher);
-
+			AsyncSocket* connect_socket(const sockaddr* addr, size_t addr_len, int& err, const OOBase::timeval_t* timeout);
+			AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout);
+				
+			int new_watcher(int fd, int events, void* param, void (*callback)(int fd, int events, void* param));
+			void close_watcher(int fd);
+			int start_watcher(int fd);
+			
+			int bind_fd(int fd);
+			int unbind_fd(int fd);
+				
+			int recv(int fd, void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout);
+			int send(int fd, void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer);
+			int send_v(int fd, void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count);
+		
+			int run(int& err, const OOBase::timeval_t* timeout = NULL);
+		
 		private:
-			typedef std::deque<io_watcher*> dequeType;
-
-			// The following vars all use this lock
-			OOBase::Mutex m_ev_lock;
-			ev_loop_t*    m_pLoop;
-			dequeType*    m_pIOQueue;
-			bool          m_bAsyncTriggered;
-
-			// The following vars all use this lock
 			OOBase::SpinLock m_lock;
-			bool             m_bStop;
-			dequeType        m_start_queue;
-			dequeType        m_stop_queue;
-
-			// The following vars don't...
-			typedef std::deque<OOBase::SmartPtr<OOBase::Thread> > workerDeque;
-			workerDeque m_workers;
-			ev_async    m_alert;
-
-			static int worker(void* param);
-			int worker_i();
-
-			static void on_alert(ev_loop_t*, ev_async* watcher, int);
-			static void on_io(ev_loop_t*, ev_io* watcher, int events);
-			void on_io_i(io_watcher* watcher, int events);
+			ev_loop*         m_pLoop;
+			ev_io            m_pipe_watcher;
+			int              m_pipe_fds[2];
+		
+			struct IOOp
+			{
+				size_t           m_count;
+				void*            m_param;
+				union
+				{
+					OOBase::Buffer** m_buffers;
+					OOBase::Buffer*  m_buffer;
+				};
+				union
+				{
+					void (*m_callback)(void* param, OOBase::Buffer* buffer, int err);
+					void (*m_callback_v)(void* param, OOBase::Buffer* buffers[], size_t count, int err);
+				};
+			};
+			
+			struct Watcher : public ev_io
+			{
+				void (*m_callback)(int fd, int events, void* param);
+				void* m_param;
+			};
+					
+			struct IOWatcher : public ev_io
+			{
+				OOBase::Queue<IOOp,OOBase::HeapAllocator> m_queueSend;
+				OOBase::Queue<IOOp,OOBase::HeapAllocator> m_queueRecv;
+				int                                       m_closed;
+			};
+					
+			struct IOEvent
+			{
+				enum
+				{
+					Watcher,
+					IOWatcher,
+					Timer
+					
+				}     m_type;
+				int   m_revents;
+				int   m_fd;
+				void* m_watcher;
+			};
+			
+			OOBase::Mutex                                       m_ev_lock;
+			OOBase::HashTable<int,ev_io*,OOBase::HeapAllocator> m_mapWatchers;
+			OOBase::Queue<IOEvent,OOBase::LocalAllocator>*      m_pIOQueue;
+					
+			static void pipe_callback(ev_loop*, ev_io* watcher, int);
+			static void watcher_callback(ev_loop* pLoop, ev_io* watcher, int revents);
+			static void iowatcher_callback(ev_loop* pLoop, ev_io* watcher, int revents);
+			
+			void pipe_callback();
+			void process_event(Watcher* watcher, int fd, int revents);
+			void process_event(IOWatcher* watcher, int fd, int revents);
 		};
 	}
 }
+
+#endif // defined(HAVE_EV_H)
 
 #endif // OOSVRBASE_PROACTOR_EV_H_INCLUDED_
