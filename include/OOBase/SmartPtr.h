@@ -31,33 +31,15 @@ namespace OOBase
 	class DeleteDestructor
 	{
 	public:
-		static void destroy(T* ptr)
+		static void free(T* ptr)
 		{
 			delete ptr;
 		}
 	};
 
-	class HeapDestructor
-	{
-	public:
-		static void destroy(void* ptr)
-		{
-			OOBase::HeapFree(ptr);
-		}
-	};
-
-	class LocalDestructor
-	{
-	public:
-		static void destroy(void* ptr)
-		{
-			OOBase::LocalFree(ptr);
-		}
-	};
-
 	namespace detail
 	{
-		template <typename T, typename Destructor>
+		template <typename T, typename Allocator>
 		class SmartPtrImpl
 		{
 			class SmartPtrNode : public RefCounted, public CustomNew<HeapAllocator>
@@ -88,7 +70,7 @@ namespace OOBase
 			private:
 				~SmartPtrNode()
 				{
-					Destructor::destroy(m_data);
+					Allocator::free(m_data);
 				}
 
 				T*             m_data;
@@ -183,10 +165,10 @@ namespace OOBase
 		};
 	}
 
-	template <typename T, typename Destructor = DeleteDestructor<T> >
-	class SmartPtr : public detail::SmartPtrImpl<T,Destructor>
+	template <typename T, typename Allocator = DeleteDestructor<T> >
+	class SmartPtr : public detail::SmartPtrImpl<T,Allocator>
 	{
-		typedef detail::SmartPtrImpl<T,Destructor> baseClass;
+		typedef detail::SmartPtrImpl<T,Allocator> baseClass;
 
 	public:
 		SmartPtr(T* ptr = NULL) : baseClass(ptr)
@@ -224,10 +206,10 @@ namespace OOBase
 		}
 	};
 
-	template <typename Destructor>
-	class SmartPtr<void,Destructor> : public detail::SmartPtrImpl<void,Destructor>
+	template <typename Allocator>
+	class SmartPtr<void,Allocator> : public detail::SmartPtrImpl<void,Allocator>
 	{
-		typedef detail::SmartPtrImpl<void,Destructor> baseClass;
+		typedef detail::SmartPtrImpl<void,Allocator> baseClass;
 	public:
 		SmartPtr(void* ptr = NULL) : baseClass(ptr)
 		{}

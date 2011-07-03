@@ -34,7 +34,7 @@ namespace OOBase
 		class LocalAllocDestructor
 		{
 		public:
-			static void destroy(T* ptr)
+			static void free(T* ptr)
 			{
 				::LocalFree(ptr);
 			}

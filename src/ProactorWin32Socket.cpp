@@ -209,6 +209,13 @@ int AsyncSocket::send_v(void* param, void (*callback)(void* param, OOBase::Buffe
 	if (err != 0)
 		return err;
 	
+	OOBase::SmartPtr<WSABUF,OOBase::HeapAllocator> wsa_bufs = static_cast<WSABUF*>(OOBase::HeapAllocator::allocate(sizeof(WSABUF) * count));
+	if (!wsa_bufs)
+	{
+		m_pProactor->delete_overlapped(pOv);
+		return ERROR_OUTOFMEMORY;
+	}
+
 	OOBase::Buffer** buffers_copy = new (std::nothrow) OOBase::Buffer*[count];
 	if (!buffers_copy)
 	{
@@ -216,8 +223,6 @@ int AsyncSocket::send_v(void* param, void (*callback)(void* param, OOBase::Buffe
 		return ERROR_OUTOFMEMORY;
 	}
 	
-	OOBase::SmartPtr<WSABUF> wsa_bufs = new (std::nothrow) WSABUF[count];
-
 	size_t total = 0;
 	for (size_t i=0;i<count;++i)
 	{
