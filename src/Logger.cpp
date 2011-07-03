@@ -86,6 +86,7 @@ namespace
 	class SysLogLogger
 	{
 	public:
+		SysLogLogger();
 		~SysLogLogger();
 
 		void open(const char* name, const char* pszSrcFile);
@@ -96,6 +97,7 @@ namespace
 		OOBase::Mutex m_lock;
 		const char*   m_pszSrcFile;
 	};
+
 #endif
 
 	class CrtFreeDestructor
