@@ -123,32 +123,41 @@ namespace
 
 const char* OOBase::system_error_text(int err)
 {
+	if (err == -1)
+	{
+#if defined(_WIN32)
+		err = GetLastError();
+#else
+		err = errno;
+#endif
+	}
+
 	static const char unknown_error[] = "Unknown error or error in processing";
 	bool ok = false;
 
 	size_t err_len = 0;
 	char* err_buf = OOBase::detail::get_error_buffer(err_len);
 
-	int offset = snprintf_s(err_buf,err_len,"(%x) ",err);
+	int offset = snprintf_s(err_buf,err_len,"(%d) ",err);
 	if (offset == -1)
 		offset = 0;
 
 #if defined(_WIN32)
-
-	if (err == -1)
-		err = GetLastError();
-
 	if (!(err & 0xC0000000))
 		ok = format_msg(err_buf+offset,err_len-offset,err,NULL);
 	else
 		ok = format_msg(err_buf+offset,err_len-offset,err,GetModuleHandleW(L"NTDLL.DLL"));
-
 #else
 
-	if (err == -1)
-		err = errno;
-
-#if defined(HAVE_PTHREAD)
+#if defined(_GNU_SOURCE)
+	char* s = strerror_r(err,err_buf+offset,err_len-offset);
+	if (s)
+	{
+		memcpy(err_buf+offset,s,err_len-offset);
+		err_buf[err_len-1] = '\0';
+		ok = true;
+	}
+#elif defined(HAVE_PTHREAD)
 	ok = (strerror_r(err,err_buf+offset,err_len-offset) == 0);
 #elif defined(HAVE_TR_24731)
 	ok = (strerror_s(err_buf+offset,err_len-offset,err) == 0);
