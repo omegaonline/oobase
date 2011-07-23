@@ -45,14 +45,15 @@ namespace OOSvrBase
 			struct Overlapped : public OVERLAPPED
 			{
 				void (*m_callback)(HANDLE handle, DWORD dwBytes, DWORD dwErr, Overlapped* pOv);
-				ULONG_PTR m_extras[5];				
+				ULONG_PTR m_extras[4];
 			};
 			typedef void (*pfnCompletion_t)(HANDLE handle, DWORD dwBytes, DWORD dwErr, Overlapped* pOv);
 		
 			int new_overlapped(Overlapped*& pOv, pfnCompletion_t callback);
-			void delete_overlapped(Overlapped* pOv);
-			
+						
 			int bind(HANDLE hFile);
+			void unbind(HANDLE hFile);
+
 			int run(int& err, const OOBase::timeval_t* timeout = NULL);
 
 		protected:
@@ -62,6 +63,7 @@ namespace OOSvrBase
 		private:
 			HANDLE           m_hPort;
 			OOBase::SpinLock m_lock;
+			size_t           m_outstanding;
 		};
 	}
 }

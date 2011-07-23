@@ -80,7 +80,9 @@ AsyncPipe::AsyncPipe(OOSvrBase::detail::ProactorWin32* pProactor, HANDLE hPipe) 
 { }
 
 AsyncPipe::~AsyncPipe()
-{ }
+{ 
+	m_pProactor->unbind(m_hPipe);
+}
 
 void AsyncPipe::translate_error(int& dwErr)
 {
@@ -132,10 +134,9 @@ int AsyncPipe::recv(void* param, void (*callback)(void* param, OOBase::Buffer* b
 	if (err != 0)
 		return err;
 	
-	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(m_pProactor);
-	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(param);
-	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(callback);
-	pOv->m_extras[3] = reinterpret_cast<ULONG_PTR>(buffer);
+	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
+	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
+	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer);
 	buffer->addref();
 	
 	void* TODO; // Add timeout support!
@@ -143,15 +144,8 @@ int AsyncPipe::recv(void* param, void (*callback)(void* param, OOBase::Buffer* b
 	if (!ReadFile(m_hPipe,buffer->wr_ptr(),static_cast<DWORD>(bytes),NULL,pOv))
 	{
 		err = GetLastError();
-		if (err == ERROR_IO_PENDING)
-		{
-			// Will complete later...
-			return 0;
-		}
-		
-		// Translate error codes...
-		translate_error(err);
-		on_recv(m_hPipe,static_cast<DWORD>(bytes),err,pOv);
+		if (err != ERROR_IO_PENDING)
+			on_recv(m_hPipe,static_cast<DWORD>(bytes),err,pOv);
 	}
 			
 	return 0;
@@ -161,15 +155,13 @@ void AsyncPipe::on_recv(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOSvrBase
 {
 	typedef void (*pfnCallback)(void* param, OOBase::Buffer* buffer, int err);
 	
-	OOSvrBase::detail::ProactorWin32* pProactor = reinterpret_cast<OOSvrBase::detail::ProactorWin32*>(pOv->m_extras[0]);
-	void* param = reinterpret_cast<void*>(pOv->m_extras[1]);
-	pfnCallback callback = reinterpret_cast<pfnCallback>(pOv->m_extras[2]);
+	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
+	pfnCallback callback = reinterpret_cast<pfnCallback>(pOv->m_extras[1]);
 
-	OOBase::RefPtr<OOBase::Buffer> buffer;
-	buffer.attach(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[3]));
+	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
 	buffer->wr_ptr(dwBytes);
 
-	pProactor->delete_overlapped(pOv);
+	delete pOv;
 	
 	// Translate error codes...
 	translate_error(dwErr);
@@ -189,24 +181,16 @@ int AsyncPipe::send(void* param, void (*callback)(void* param, OOBase::Buffer* b
 	if (dwErr != 0)
 		return dwErr;
 	
-	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(m_pProactor);
-	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(param);
-	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(callback);
-	pOv->m_extras[3] = reinterpret_cast<ULONG_PTR>(buffer);
+	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
+	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
+	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer);
 	buffer->addref();
 	
 	if (!WriteFile(m_hPipe,buffer->rd_ptr(),static_cast<DWORD>(bytes),NULL,pOv))
 	{
 		dwErr = GetLastError();
-		if (dwErr == ERROR_IO_PENDING)
-		{
-			// Will complete later...
-			return 0;
-		}
-		
-		// Translate error codes...
-		translate_error(dwErr);
-		on_send(m_hPipe,static_cast<DWORD>(bytes),dwErr,pOv);
+		if (dwErr != ERROR_IO_PENDING)
+			on_send(m_hPipe,static_cast<DWORD>(bytes),dwErr,pOv);
 	}
 		
 	return 0;
@@ -216,21 +200,22 @@ void AsyncPipe::on_send(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOSvrBase
 {
 	typedef void (*pfnCallback)(void* param, OOBase::Buffer* buffer, int err);
 	
-	OOSvrBase::detail::ProactorWin32* pProactor = reinterpret_cast<OOSvrBase::detail::ProactorWin32*>(pOv->m_extras[0]);
-	void* param = reinterpret_cast<void*>(pOv->m_extras[1]);
-	pfnCallback callback = reinterpret_cast<pfnCallback>(pOv->m_extras[2]);
-	OOBase::RefPtr<OOBase::Buffer> buffer;
-	buffer.attach(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[3]));
-	buffer->rd_ptr(dwBytes);
-	
-	pProactor->delete_overlapped(pOv);
-	
-	// Translate error codes...
-	translate_error(dwErr);
+	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
+	pfnCallback callback = reinterpret_cast<pfnCallback>(pOv->m_extras[1]);
+	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
 		
+	delete pOv;
+	
 	// Call callback
 	if (callback)
+	{
+		buffer->rd_ptr(dwBytes);
+
+		// Translate error codes...
+		translate_error(dwErr);
+
 		(*callback)(param,buffer,dwErr);
+	}
 }
 
 int AsyncPipe::send_v(void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count)
@@ -254,7 +239,7 @@ int AsyncPipe::send_v(void* param, void (*callback)(void* param, OOBase::Buffer*
 	if (total == 0)
 		return 0;
 	
-	OOBase::RefPtr<OOBase::Buffer> buffer = OOBase::Buffer::create(total);
+	OOBase::RefPtr<OOBase::Buffer> buffer = new (std::nothrow) OOBase::Buffer(total);
 	if (!buffer)
 		return ERROR_OUTOFMEMORY;
 	
@@ -270,23 +255,15 @@ int AsyncPipe::send_v(void* param, void (*callback)(void* param, OOBase::Buffer*
 	if (dwErr != 0)
 		return dwErr;
 	
-	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(m_pProactor);
-	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(param);
-	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(callback);
-	pOv->m_extras[3] = reinterpret_cast<ULONG_PTR>(buffer.addref());
+	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
+	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
+	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer.addref());
 		
 	if (!WriteFile(m_hPipe,buffer->rd_ptr(),static_cast<DWORD>(total),NULL,pOv))
 	{
 		dwErr = GetLastError();
-		if (dwErr == ERROR_IO_PENDING)
-		{
-			// Will complete later...
-			return 0;
-		}
-		
-		// Translate error codes...
-		translate_error(dwErr);
-		on_send_v(m_hPipe,static_cast<DWORD>(total),dwErr,pOv);
+		if (dwErr != ERROR_IO_PENDING)
+			on_send_v(m_hPipe,static_cast<DWORD>(total),dwErr,pOv);
 	}
 	
 	return 0;
@@ -296,21 +273,20 @@ void AsyncPipe::on_send_v(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOSvrBa
 {
 	typedef void (*pfnCallback)(void* param, OOBase::Buffer* buffer[], size_t count, int err);
 	
-	OOSvrBase::detail::ProactorWin32* pProactor = reinterpret_cast<OOSvrBase::detail::ProactorWin32*>(pOv->m_extras[0]);
-	void* param = reinterpret_cast<void*>(pOv->m_extras[1]);
-	pfnCallback callback = reinterpret_cast<pfnCallback>(pOv->m_extras[2]);
-	OOBase::Buffer* buffer = reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[3]);
+	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
+	pfnCallback callback = reinterpret_cast<pfnCallback>(pOv->m_extras[1]);
+	OOBase::Buffer* buffer = reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]);
 	
-	pProactor->delete_overlapped(pOv);
-	
-	// Translate error codes...
-	translate_error(dwErr);
-	
-	buffer->rd_ptr(dwBytes);
+	delete pOv;
 	
 	// Call callback
 	if (callback)
 	{
+		// Translate error codes...
+		translate_error(dwErr);
+
+		buffer->rd_ptr(dwBytes);
+
 		try
 		{
 			(*callback)(param,&buffer,1,dwErr);
@@ -470,18 +446,14 @@ int PipeAcceptor::Acceptor::stop(bool destroy)
 		m_backlog = 0;
 		
 		// Close all the pending handles
-		for (HANDLE h;m_stkPending.pop(&h);)
-			CloseHandle(h);
+		for (size_t i=0;i<m_stkPending.size();++i)
+			CloseHandle(*m_stkPending.at(i));
 	}
 	
 	// Wait for all pending operations to complete
 	while (!m_stkPending.empty() && m_backlog == 0)
-	{
-		int err = m_condition.wait(m_lock);
-		if (err != 0)
-			return err;
-	}
-	
+		m_condition.wait(m_lock);
+		
 	if (destroy && --m_refcount == 0)
 	{
 		guard.release();
@@ -495,7 +467,6 @@ int PipeAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& g
 {
 	DWORD dwErr = 0;
 	OOSvrBase::detail::ProactorWin32::Overlapped* pOv = NULL;
-	OOSvrBase::detail::ProactorWin32* pProactor = m_pProactor;
 	
 	while (m_stkPending.size() < m_backlog)
 	{
@@ -525,7 +496,10 @@ int PipeAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& g
 		{
 			dwErr = m_pProactor->new_overlapped(pOv,&on_completion);
 			if (dwErr != 0)
+			{
+				m_pProactor->unbind(hPipe);
 				break;
+			}
 			
 			// Set this pointer
 			pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(this);
@@ -547,7 +521,10 @@ int PipeAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& g
 			}
 			
 			if (dwErr != ERROR_PIPE_CONNECTED)
+			{
+				m_pProactor->unbind(hPipe);
 				break;
+			}
 			
 			dwErr = 0;
 		}
@@ -560,8 +537,7 @@ int PipeAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& g
 		}
 	}
 	
-	if (pOv)
-		pProactor->delete_overlapped(pOv);
+	delete pOv;
 	
 	return dwErr;
 }
@@ -570,15 +546,12 @@ void PipeAcceptor::Acceptor::on_completion(HANDLE hPipe, DWORD /*dwBytes*/, DWOR
 {	
 	PipeAcceptor::Acceptor* pThis = reinterpret_cast<PipeAcceptor::Acceptor*>(pOv->m_extras[0]);
 	
-	OOSvrBase::detail::ProactorWin32* pProactor = pThis->m_pProactor;
-	
 	OOBase::Guard<OOBase::Condition::Mutex> guard(pThis->m_lock);
 	
 	// Perform the callback
 	pThis->on_accept(hPipe,true,dwErr,guard);
 	
-	// Return the overlapped to the proactor
-	pProactor->delete_overlapped(pOv);
+	delete pOv;
 }
 
 bool PipeAcceptor::Acceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard)
@@ -596,7 +569,9 @@ bool PipeAcceptor::Acceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, 
 
 	// If we close the pipe with outstanding connects, we get a load of ERROR_BROKEN_PIPE,
 	// just ignore them
-	if (dwErr != ERROR_BROKEN_PIPE)
+	if (dwErr == ERROR_BROKEN_PIPE)
+		m_pProactor->unbind(hPipe);
+	else
 	{
 		// Keep us alive while the callbacks fire
 		++m_refcount;
@@ -608,10 +583,11 @@ bool PipeAcceptor::Acceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, 
 
 		if (dwErr == 0)
 		{
-			pSocket.attach(new (std::nothrow) AsyncPipe(m_pProactor,hPipe));
+			pSocket = new (std::nothrow) AsyncPipe(m_pProactor,hPipe);
 			if (!pSocket)
 			{
 				dwErr = ERROR_OUTOFMEMORY;
+				m_pProactor->unbind(hPipe);
 				CloseHandle(hPipe);
 			}
 		}
@@ -688,7 +664,10 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorWin32::attach_local_sock
 
 	AsyncPipe* pPipe = new (std::nothrow) AsyncPipe(this,(HANDLE)sock);
 	if (!pPipe)
+	{
+		unbind((HANDLE)sock);
 		err = ERROR_OUTOFMEMORY;
+	}
 		
 	return pPipe;
 }
@@ -745,7 +724,10 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorWin32::connect_local_soc
 	// Wrap socket
 	OOSvrBase::AsyncLocalSocket* pSocket = new (std::nothrow) AsyncPipe(this,hPipe);
 	if (!pSocket)
+	{
+		unbind(hPipe);
 		err = ERROR_OUTOFMEMORY;
+	}
 	else
 		hPipe.detach();
 	

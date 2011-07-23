@@ -368,12 +368,8 @@ int SocketAcceptor::Acceptor::stop(bool destroy)
 	
 	// Wait for all pending operations to complete
 	while (m_in_progress && !m_listening)
-	{
-		int err = m_condition.wait(m_lock);
-		if (err != 0)
-			return err;
-	}
-	
+		m_condition.wait(m_lock);
+		
 	if (destroy && --m_refcount == 0)
 	{
 		guard.release();

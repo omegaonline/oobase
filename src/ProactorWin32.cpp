@@ -28,7 +28,8 @@
 
 OOSvrBase::detail::ProactorWin32::ProactorWin32() :
 		Proactor(false),
-		m_hPort(NULL)
+		m_hPort(NULL),
+		m_outstanding(0)
 {
 	OOBase::Win32::WSAStartup();
 }
@@ -39,8 +40,6 @@ OOSvrBase::detail::ProactorWin32::~ProactorWin32()
 
 int OOSvrBase::detail::ProactorWin32::new_overlapped(Overlapped*& pOv, pfnCompletion_t callback)
 {
-	void* TODO; // Use a free-list here
-	
 	pOv = new (std::nothrow) Overlapped;
 	if (!pOv)
 		return ERROR_OUTOFMEMORY;
@@ -48,15 +47,8 @@ int OOSvrBase::detail::ProactorWin32::new_overlapped(Overlapped*& pOv, pfnComple
 	memset(pOv,0,sizeof(Overlapped));
 	
 	pOv->m_callback = callback;
-		
-	return 0;
-}
 
-void OOSvrBase::detail::ProactorWin32::delete_overlapped(Overlapped* pOv)
-{
-	void* TODO; // Use a free-list here
-	
-	delete pOv;
+	return 0;
 }
 
 int OOSvrBase::detail::ProactorWin32::bind(HANDLE hFile)
@@ -69,28 +61,40 @@ int OOSvrBase::detail::ProactorWin32::bind(HANDLE hFile)
 	if (!m_hPort)
 		m_hPort = hPort;
 
+	++m_outstanding;
+
 	return 0;
+}
+
+void OOSvrBase::detail::ProactorWin32::unbind(HANDLE /*hFile*/)
+{
+	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+
+	if (--m_outstanding == 0)
+	{
+		CloseHandle(m_hPort);
+		m_hPort = NULL;
+	}
 }
 
 int OOSvrBase::detail::ProactorWin32::run(int& err, const OOBase::timeval_t* timeout)
 {
+	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+
 	if (!m_hPort)
 	{
-		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
-
+		m_hPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE,NULL,0,0);
 		if (!m_hPort)
 		{
-			m_hPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE,NULL,0,0);
-			if (!m_hPort)
-			{
-				err = GetLastError();
-				return -1;
-			}
+			err = GetLastError();
+			return -1;
 		}
 	}
-
-	for (;;)
+	
+	do
 	{
+		guard.release();
+
 		DWORD dwErr = 0;
 		DWORD dwBytes = 0;
 		ULONG_PTR key = 0;
@@ -112,18 +116,16 @@ int OOSvrBase::detail::ProactorWin32::run(int& err, const OOBase::timeval_t* tim
 				return -1;
 			}
 		}
-		else if (!lpOv)
-		{
-			// Close
-			break;
-		}
 		else
 		{
 			// lpOV succeeded
 			Overlapped* pOv = static_cast<Overlapped*>(lpOv);
 			(*pOv->m_callback)((HANDLE)key,dwBytes,dwErr,pOv);
 		}
+
+		guard.acquire();
 	}
+	while (m_outstanding > 0);
 
 	err = 0;
 	return 1;
