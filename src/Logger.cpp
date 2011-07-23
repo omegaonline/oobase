@@ -388,7 +388,7 @@ void OOSvrBase::Logger::filenum_t::log(const char* fmt, ...)
 			for (;;)
 			{
 				size_t s1 = s;
-				while (pszSrcFile[s1] == m_pszFilename[s1] && pszSrcFile[s1] != '\\' && pszSrcFile[s1] != '/')
+				while (pszSrcFile[s1] == m_pszFilename[s1] && pszSrcFile[s1] != '\0' && pszSrcFile[s1] != '\\' && pszSrcFile[s1] != '/')
 					++s1;
 
 				if (pszSrcFile[s1] == '\\' || pszSrcFile[s1] == '/')
