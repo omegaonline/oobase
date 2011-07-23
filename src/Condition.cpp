@@ -36,7 +36,16 @@ OOBase::Condition::~Condition()
 
 bool OOBase::Condition::wait(Condition::Mutex& mutex, const timeval_t* timeout)
 {
-	return (Win32::SleepConditionVariable(&m_var,&mutex,timeout ? timeout->msec() : INFINITE) != FALSE);
+	if (!Win32::SleepConditionVariable(&m_var,&mutex,timeout ? timeout->msec() : INFINITE))
+	{
+		DWORD dwErr = GetLastError();
+		if (dwErr == ERROR_TIMEOUT)
+			return false;
+
+		OOBase_CallCriticalFailure(dwErr);
+	}
+
+	return true;
 }
 
 void OOBase::Condition::signal()

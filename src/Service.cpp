@@ -88,10 +88,8 @@ namespace
 		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 
 		while (m_result == -1)
-		{
 			m_condition.wait(m_lock);
-		}
-
+		
 		return m_result;
 	}
 
