@@ -52,14 +52,6 @@ namespace OOBase
 		/// The constructor allocates the internal buffer to size \p cbSize.
 		Buffer(size_t cbSize = 256, size_t align = 1);
 
-		/// The factory function allocates the internal buffer to size \p cbSize.
-		static RefPtr<Buffer> create(size_t cbSize = 256, size_t align = 1)
-		{
-			RefPtr<Buffer> ret;
-			ret.attach(new (std::nothrow) Buffer(cbSize,align));
-			return ret;
-		}
-
 		/// Get the current read pointer value.
 		const char* rd_ptr() const;
 

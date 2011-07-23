@@ -62,10 +62,7 @@ namespace OOBase
 	{
 	public:
 		RefPtr(T* ptr = NULL) : m_data(ptr)
-		{
-			if (m_data)
-				m_data->addref();
-		}
+		{ }
 
 		RefPtr(const RefPtr& rhs) : m_data(rhs.m_data)
 		{
@@ -73,16 +70,22 @@ namespace OOBase
 				m_data->addref();
 		}
 
+		RefPtr& operator = (T* ptr)
+		{
+			if (m_data)
+				m_data->release();
+			
+			m_data = ptr;
+			return *this;
+		}
+
 		RefPtr& operator = (const RefPtr& rhs)
 		{
 			if (this != &rhs)
 			{
 				if (m_data)
-				{
 					m_data->release();
-					m_data = NULL;
-				}
-
+				
 				m_data = rhs.m_data;
 
 				if (m_data)
@@ -103,23 +106,6 @@ namespace OOBase
 				m_data->addref();
 		
 			return m_data;
-		}
-
-		void attach(T* ptr)
-		{
-			if (m_data)
-			{
-				m_data->release();
-				m_data = NULL;
-			}
-
-			m_data = ptr;
-		}
-
-		T* detach()
-		{
-			T* v = m_data;
-			m_data = NULL;
 		}
 
 		T* operator ->()

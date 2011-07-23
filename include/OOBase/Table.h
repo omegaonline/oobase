@@ -115,8 +115,8 @@ namespace OOBase
 				m_data[--m_size].~Node();
 		}
 
-		template <typename T>
-		size_t find(T key, bool first = false) const
+		template <typename K1>
+		size_t find(K1 key, bool first = false) const
 		{
 			const Node* p = bsearch(key);
 			
@@ -127,8 +127,8 @@ namespace OOBase
 			return (p ? static_cast<size_t>(p - m_data) : npos);
 		}
 				
-		template <typename T>
-		bool find(T key, V& value, bool first = false) const
+		template <typename K1>
+		bool find(K1 key, V& value, bool first = false) const
 		{
 			size_t pos = find(key,first);
 			if (pos == npos)
@@ -244,8 +244,8 @@ namespace OOBase
 			return 0;
 		}
 					
-		template <typename T>
-		const Node* bsearch(const T& key) const
+		template <typename K1>
+		const Node* bsearch(K1 key) const
 		{
 			const Node* base = m_data;
 			for (size_t span = m_size; span > 0; span /= 2) 
@@ -262,7 +262,6 @@ namespace OOBase
 			}
 		    return NULL;
 		}
-
 	};
 }
 

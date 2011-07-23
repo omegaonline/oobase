@@ -108,11 +108,8 @@ namespace OOBase
 				if (this != &rhs)
 				{
 					if (m_node)
-					{
 						m_node->release();
-						m_node = NULL;
-					}
-
+					
 					m_node = rhs.m_node;
 
 					if (m_node)
