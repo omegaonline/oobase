@@ -34,7 +34,6 @@ namespace OOBase
 		static const int MaxAlignment = 8;
 
 		CDRStream(size_t len = 256) :
-				m_buffer(NULL),
 #if (OOBASE_BYTE_ORDER == OMEGA_BIG_ENDIAN)
 				m_big_endian(true),
 #else
@@ -68,21 +67,13 @@ namespace OOBase
 				m_big_endian(rhs.m_big_endian),
 				m_last_error(rhs.m_last_error)
 		{
-			if (m_buffer)
-				m_buffer->addref();
 		}
 
 		CDRStream& operator = (const CDRStream& rhs)
 		{
 			if (&rhs != this)
 			{
-				if (m_buffer)
-					m_buffer->release();
-
 				m_buffer = rhs.m_buffer;
-				if (m_buffer)
-					m_buffer->addref();
-
 				m_big_endian = rhs.m_big_endian;
 				m_last_error = rhs.m_last_error;
 			}
@@ -91,8 +82,6 @@ namespace OOBase
 
 		~CDRStream()
 		{ 
-			if (m_buffer)
-				m_buffer->release();
 		}
 
 		const Buffer* buffer() const
@@ -390,9 +379,9 @@ namespace OOBase
 		}
 
 	private:
-		Buffer* m_buffer;
-		bool    m_big_endian;
-		int     m_last_error;
+		RefPtr<Buffer> m_buffer;
+		bool           m_big_endian;
+		int            m_last_error;
 	};
 }
 

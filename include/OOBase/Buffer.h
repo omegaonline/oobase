@@ -98,7 +98,7 @@ namespace OOBase
 		void mark_wr_ptr(size_t mark);
 
 	private:
-		~Buffer();
+		virtual ~Buffer();
 
 		size_t  m_capacity; ///< The total allocated bytes for \p m_buffer.
 		char*   m_buffer;   ///< The actual underlying buffer.
