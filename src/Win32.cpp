@@ -85,9 +85,10 @@ namespace
 		pfn_BindIoCompletionCallback m_BindIoCompletionCallback;
 
 		HMODULE m_hKernel32;
+		HANDLE  m_hHeap;
 		
 	private:
-		Win32Thunk() : m_hKernel32(NULL) 
+		Win32Thunk() : m_hKernel32(NULL), m_hHeap(NULL)
 		{}
 		
 		static BOOL __stdcall init(INIT_ONCE*, void* i, void**);
@@ -143,7 +144,11 @@ namespace
 
 		instance->m_BindIoCompletionCallback = (pfn_BindIoCompletionCallback)(GetProcAddress(instance->m_hKernel32,"BindIoCompletionCallback"));
 
-		init_low_frag_heap(instance->m_hKernel32,GetProcessHeap());
+		instance->m_hHeap = HeapCreate(0,0,0);
+		if (!instance->m_hHeap)
+			OOBase_CallCriticalFailure(GetLastError());
+
+		init_low_frag_heap(instance->m_hKernel32,instance->m_hHeap);
 #if (WINVER >= 0x0501)
 		init_low_frag_heap(instance->m_hKernel32,(HANDLE)_get_heap_handle());
 #endif
@@ -663,35 +668,17 @@ void OOBase::Win32::condition_variable_t::broadcast()
 
 void* OOBase::CrtAllocator::allocate(size_t len)
 {
-	HANDLE hHeap = ::GetProcessHeap();
-	if (!hHeap)
-		OOBase_CallCriticalFailure(GetLastError());
-
-	//assert(::HeapValidate(hHeap,0,NULL));
-
-	return ::HeapAlloc(hHeap,0,len);
+	return ::HeapAlloc(Win32Thunk::instance().m_hHeap,0,len);
 }
 
 void* OOBase::CrtAllocator::reallocate(void* ptr, size_t len)
 {
-	HANDLE hHeap = ::GetProcessHeap();
-	if (!hHeap)
-		OOBase_CallCriticalFailure(GetLastError());
-
-	//assert(::HeapValidate(hHeap,0,NULL));
-
-	return ::HeapReAlloc(hHeap,0,ptr,len);
+	return ::HeapReAlloc(Win32Thunk::instance().m_hHeap,0,ptr,len);
 }
 
 bool OOBase::CrtAllocator::free(void* ptr)
 {
-	HANDLE hHeap = ::GetProcessHeap();
-	if (!hHeap)
-		OOBase_CallCriticalFailure(GetLastError());
-
-	//assert(::HeapValidate(hHeap,0,NULL));
-
-	return (::HeapFree(hHeap,0,ptr) == TRUE);
+	return (::HeapFree(Win32Thunk::instance().m_hHeap,0,ptr) == TRUE);
 }
 
 #endif // _WIN32

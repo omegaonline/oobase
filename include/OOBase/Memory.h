@@ -47,6 +47,7 @@ namespace OOBase
 		static void* allocate(size_t len);
 		static void* reallocate(void* ptr, size_t len);
 		static bool free(void* ptr);
+		static void check() {};
 	};
 
 	class HeapAllocator

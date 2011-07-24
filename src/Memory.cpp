@@ -204,6 +204,8 @@ namespace
 
 		static void deref(void*)
 		{
+			s_instance->inst.check();
+
 			if (--s_instance->refcount == 0)
 				term();
 		}
@@ -226,8 +228,10 @@ namespace
 	class MemWatcher
 	{
 	public:
-		~MemWatcher()
+		void check()
 		{
+			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+
 			if (!m_setEntries.empty())
 				printf("****************** MEM LEAKS! *****************\n");
 		}
@@ -235,10 +239,11 @@ namespace
 		void* allocate(size_t len)
 		{
 			void* p = OOBase::CrtAllocator::allocate(len);
-
-			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
-
-			m_setEntries.insert(p,len);
+			if (p)
+			{
+				OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+				m_setEntries.insert(p,len);
+			}
 
 			return p;
 		}
@@ -254,7 +259,8 @@ namespace
 				bool e = m_setEntries.erase(ptr);
 				assert(e);
 
-				m_setEntries.insert(p,len);
+				if (p)
+					m_setEntries.insert(p,len);
 			}
 
 			return p;
@@ -262,6 +268,8 @@ namespace
 
 		bool free(void* ptr)
 		{
+			if (!ptr)
+				return true;
 			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 			bool e = m_setEntries.erase(ptr);
