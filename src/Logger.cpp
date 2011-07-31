@@ -86,6 +86,7 @@ namespace
 	class SysLogLogger
 	{
 	public:
+		SysLogLogger();
 		~SysLogLogger();
 
 		void open(const char* name, const char* pszSrcFile);

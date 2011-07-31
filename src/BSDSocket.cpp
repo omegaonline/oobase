@@ -137,8 +137,11 @@ namespace
 		Socket(OOBase::socket_t sock);
 		virtual ~Socket();
 
-		int send(const void* buf, size_t len, const OOBase::timeval_t* timeout = NULL);
-		size_t recv(void* buf, size_t len, int& err, const OOBase::timeval_t* timeout = NULL);
+		size_t send(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout = NULL);
+		//size_t send_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout = NULL);
+		size_t recv(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout = NULL);
+		//size_t recv_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout = NULL);
+
 		void close();
 
 	private:
@@ -155,8 +158,9 @@ namespace
 		::close(m_sock);
 	}
 
-	int Socket::send(const void* buf, size_t len, const OOBase::timeval_t* timeout)
+	size_t Socket::send(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout)
 	{
+		err = 0;
 		const char* cbuf = static_cast<const char*>(buf);
 
 		::timeval tv;
@@ -168,23 +172,23 @@ namespace
 
 		fd_set wfds;
 		fd_set efds;
-		for (;;)
+
+		size_t total = 0;
+		while (total < len)
 		{
 			ssize_t sent = ::send(m_sock,cbuf,static_cast<int>(len),0);
 			if (sent != -1)
 			{
-				len -= sent;
+				total += sent;
 				cbuf += sent;
-				if (len == 0)
-					return 0;
 			}
 			else
 			{
-				int err = errno;
+				err = errno;
 				if (err == EINTR)
 					continue;
 				else if (err != EAGAIN)
-					return err;
+					break;
 
 				// Do the select...
 				FD_ZERO(&wfds);
@@ -196,7 +200,7 @@ namespace
 				{
 					err = errno;
 					if (err != EINTR)
-						return err;
+						break;
 				}
 				else if (count == 1)
 				{
@@ -205,21 +209,26 @@ namespace
 						// Error
 						socklen_t len = sizeof(err);
 						if (getsockopt(m_sock,SOL_SOCKET,SO_ERROR,(char*)&err,&len) == -1)
-							return errno;
+							err = errno;
 
-						return err;
+						break;
 					}
 				}
 				else
-					return ETIMEDOUT;
+				{
+					err = ETIMEDOUT;
+					break;
+				}
 			}
 		}
+
+		return total;
 	}
 
-	size_t Socket::recv(void* buf, size_t len, int& err, const OOBase::timeval_t* timeout)
+	size_t Socket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout)
 	{
+		err = 0;
 		char* cbuf = static_cast<char*>(buf);
-		size_t total_recv = 0;
 
 		::timeval tv;
 		if (timeout)
@@ -230,17 +239,19 @@ namespace
 
 		fd_set rfds;
 		fd_set efds;
+
+		size_t total = 0;
 		for (;;)
 		{
 			ssize_t recvd = ::recv(m_sock,cbuf,static_cast<int>(len),0);
 			if (recvd != -1)
 			{
 				err = 0;
-				total_recv += recvd;
+				total += recvd;
 				cbuf += recvd;
 				len -= recvd;
-				if (len == 0 || recvd == 0)
-					return total_recv;
+				if (len == 0 || recvd == 0 || !bAll)
+					break;
 			}
 			else
 			{
@@ -248,7 +259,7 @@ namespace
 				if (err == EINTR)
 					continue;
 				else if (err != EAGAIN)
-					return total_recv;
+					break;
 
 				// Do the select...
 				FD_ZERO(&rfds);
@@ -260,7 +271,7 @@ namespace
 				{
 					err = errno;
 					if (err != EINTR)
-						return total_recv;
+						break;
 				}
 				else if (count == 1)
 				{
@@ -271,13 +282,18 @@ namespace
 						if (getsockopt(m_sock,SOL_SOCKET,SO_ERROR,(char*)&err,&len) == -1)
 							err = errno;
 
-						return total_recv;
+						break;
 					}
 				}
 				else
-					return total_recv;
+				{
+					err = ETIMEDOUT;
+					break;
+				}
 			}
 		}
+
+		return total;
 	}
 
 	void Socket::close()
@@ -365,7 +381,7 @@ void OOBase::POSIX::create_unix_socket(sockaddr_un& addr, socklen_t& len, const 
 {
 	addr.sun_family = AF_UNIX;
 	
-	if (path[0] = '\0')
+	if (path[0] == '\0')
 	{
 		addr.sun_path[0] = '\0';
 		strncpy(addr.sun_path+1,path+1,sizeof(addr.sun_path)-1);
@@ -381,15 +397,15 @@ void OOBase::POSIX::create_unix_socket(sockaddr_un& addr, socklen_t& len, const 
 
 OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const timeval_t* timeout)
 {
-	int sock = OOBase::BSD::create_socket(AF_UNIX,SOCK_STREAM,0,err);
+	int sock = BSD::create_socket(AF_UNIX,SOCK_STREAM,0,err);
 	if (sock == -1)
 		return NULL;
 
 	sockaddr_un addr;
 	socklen_t addr_len = 0;
-	create_unix_socket(addr,addr_len,path);
+	POSIX::create_unix_socket(addr,addr_len,path);
 	
-	if ((err = connect_i(sock,(sockaddr*)(&addr),addr_len,timeout)) != 0)
+	if ((err = BSD::connect(sock,(sockaddr*)(&addr),addr_len,timeout)) != 0)
 	{
 		::close(sock);
 		return NULL;

@@ -27,6 +27,7 @@
 #if defined(HAVE_EV_H) && !defined(_WIN32)
 
 #include "../include/OOBase/HandleTable.h"
+#include "../include/OOBase/Queue.h"
 
 #define EV_COMPAT3 0
 #define EV_STANDALONE 1
@@ -49,7 +50,7 @@ namespace OOSvrBase
 			AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout);
 				
 			int new_watcher(int fd, int events, void* param, void (*callback)(int fd, int events, void* param));
-			void close_watcher(int fd);
+			int close_watcher(int fd);
 			int start_watcher(int fd);
 			
 			int bind_fd(int fd);
@@ -59,14 +60,11 @@ namespace OOSvrBase
 			int send(int fd, void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer);
 			int send_v(int fd, void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count);
 		
+			OOSvrBase::Acceptor* accept_local(void* param, void (*callback)(void* param, OOSvrBase::AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa);
+			OOSvrBase::Acceptor* accept_remote(void* param, void (*callback)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err), const sockaddr* addr, size_t addr_len, int& err);
+
 			int run(int& err, const OOBase::timeval_t* timeout = NULL);
-		
-		private:
-			OOBase::SpinLock m_lock;
-			ev_loop*         m_pLoop;
-			ev_io            m_pipe_watcher;
-			int              m_pipe_fds[2];
-		
+
 			struct IOOp
 			{
 				size_t           m_count;
@@ -83,6 +81,18 @@ namespace OOSvrBase
 				};
 			};
 			
+			union param_t
+			{
+				size_t s;
+				void*  p;
+			};
+
+		private:
+			OOBase::SpinLock m_lock;
+			struct ev_loop*  m_pLoop;
+			ev_io            m_pipe_watcher;
+			int              m_pipe_fds[2];
+
 			struct Watcher : public ev_io
 			{
 				void (*m_callback)(int fd, int events, void* param);
@@ -114,13 +124,18 @@ namespace OOSvrBase
 			OOBase::HashTable<int,ev_io*,OOBase::HeapAllocator> m_mapWatchers;
 			OOBase::Queue<IOEvent,OOBase::LocalAllocator>*      m_pIOQueue;
 					
-			static void pipe_callback(ev_loop*, ev_io* watcher, int);
-			static void watcher_callback(ev_loop* pLoop, ev_io* watcher, int revents);
-			static void iowatcher_callback(ev_loop* pLoop, ev_io* watcher, int revents);
+			int init();
+
+			static void pipe_callback(struct ev_loop*, ev_io* watcher, int);
+			static void watcher_callback(struct ev_loop* pLoop, ev_io* watcher, int revents);
+			static void iowatcher_callback(struct ev_loop* pLoop, ev_io* watcher, int revents);
 			
 			void pipe_callback();
 			void process_event(Watcher* watcher, int fd, int revents);
 			void process_event(IOWatcher* watcher, int fd, int revents);
+
+			void process_recv(IOWatcher* watcher, int fd);
+			void process_send(IOWatcher* watcher, int fd);
 		};
 	}
 }

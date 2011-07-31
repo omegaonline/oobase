@@ -24,6 +24,10 @@
 
 #include "../include/OOBase/Socket.h"
 
+#if defined(HAVE_UNISTD_H)
+#include <sys/un.h>
+#endif
+
 namespace OOBase
 {
 	namespace BSD
@@ -33,6 +37,13 @@ namespace OOBase
 
 		int set_non_blocking(socket_t sock, bool set);
 	}
+
+#if defined(HAVE_UNISTD_H)
+	namespace POSIX
+	{
+		void create_unix_socket(sockaddr_un& addr, socklen_t& len, const char* path);
+	}
+#endif
 }
 
 #endif // OOBASE_BSD_SOCKET_H_INCLUDED_

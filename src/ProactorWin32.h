@@ -23,6 +23,9 @@
 #define OOSVRBASE_PROACTOR_WIN32_H_INCLUDED_
 
 #include "../include/OOSvrBase/Proactor.h"
+
+#if defined(_WIN32)
+
 #include "../include/OOBase/Win32.h"
 #include "Win32Socket.h"
 
@@ -67,5 +70,7 @@ namespace OOSvrBase
 		};
 	}
 }
+
+#endif // _WIN32
 
 #endif // OOSVRBASE_PROACTOR_WIN32_H_INCLUDED_

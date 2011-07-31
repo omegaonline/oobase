@@ -23,6 +23,12 @@
 
 #if defined(HAVE_EV_H) && !defined(_WIN32)
 
+#include "../include/OOBase/Condition.h"
+#include "../include/OOBase/Posix.h"
+#include "./BSDSocket.h"
+
+#include <string.h>
+
 namespace
 {
 	class AsyncSocket : public OOSvrBase::AsyncLocalSocket
@@ -202,15 +208,15 @@ namespace
 		class Acceptor
 		{
 		public:
-			SocketAcceptor(OOSvrBase::detail::ProactorEv* pProactor, void* param, mode_t mode);
-			virtual ~SocketAcceptor();
+			Acceptor(OOSvrBase::detail::ProactorEv* pProactor, void* param);
+			virtual ~Acceptor();
 
 			int listen(size_t backlog);
 			int stop(bool destroy);
 		
 			int bind(const sockaddr* addr, size_t addr_len);
 			void set_callback(callback_t callback);
-			void set_callback(callback_local_t callback);
+			void set_callback(callback_local_t callback, mode_t mode);
 		
 		private:	
 			OOSvrBase::detail::ProactorEv*   m_pProactor;
@@ -227,18 +233,16 @@ namespace
 			callback_local_t                 m_callback_local;
 			mode_t                           m_mode;
 		
-			~Acceptor();
-			
-			static void on_accept(int fd, int events, OOSvrBase::detail::ProactorEv::param_t params[]);
+			static void on_accept(int fd, int events, void* param);
 			void do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard);
-		}
+			int init_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, size_t backlog);
+		};
 		Acceptor* m_pAcceptor;
 	};
 }
 
 SocketAcceptor::SocketAcceptor() : 
-		m_pAcceptor(NULL),
-		m_fd(-1)
+		m_pAcceptor(NULL)
 { }
 
 SocketAcceptor::~SocketAcceptor()
@@ -299,7 +303,7 @@ int SocketAcceptor::bind(OOSvrBase::detail::ProactorEv* pProactor, void* param, 
 	return err;
 }
 
-SocketAcceptor::Acceptor::Acceptor(OOSvrBase::detail::ProactorEv* pProactor, void* param, mode_t mode) :
+SocketAcceptor::Acceptor::Acceptor(OOSvrBase::detail::ProactorEv* pProactor, void* param) :
 		m_pProactor(pProactor),
 		m_addr(NULL),
 		m_addr_len(0),
@@ -314,15 +318,15 @@ SocketAcceptor::Acceptor::Acceptor(OOSvrBase::detail::ProactorEv* pProactor, voi
 
 SocketAcceptor::Acceptor::~Acceptor()
 {
-	OOBase::free(m_addr);
+	OOBase::HeapFree(m_addr);
 }
 
-void SocketAcceptor::Acceptor::set_callback(callback_t callback)
+void SocketAcceptor::Acceptor::set_callback(SocketAcceptor::callback_t callback)
 {
 	m_callback = callback;
 }
 
-void SocketAcceptor::Acceptor::set_callback(callback_local_t callback, mode_t mode)
+void SocketAcceptor::Acceptor::set_callback(SocketAcceptor::callback_local_t callback, mode_t mode)
 {
 	m_callback_local = callback;
 	m_mode = mode;
@@ -330,7 +334,7 @@ void SocketAcceptor::Acceptor::set_callback(callback_local_t callback, mode_t mo
 
 int SocketAcceptor::Acceptor::bind(const sockaddr* addr, size_t addr_len)
 {
-	m_addr = (sockaddr*)OOBase::allocate(addr_len);
+	m_addr = (sockaddr*)OOBase::HeapAllocate(addr_len);
 	if (!m_addr)
 		return ENOMEM;
 	
@@ -344,11 +348,11 @@ int SocketAcceptor::Acceptor::listen(size_t backlog)
 {
 	OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 	
-	if (!m_listening)
-	{
-		m_listening = true;
-		return init_accept(guard,backlog);
-	}
+	if (m_listening)
+		return 0;
+
+	m_listening = true;
+	return init_accept(guard,backlog);
 }
 
 int SocketAcceptor::Acceptor::stop(bool destroy)
@@ -388,7 +392,6 @@ int SocketAcceptor::Acceptor::init_accept(OOBase::Guard<OOBase::Condition::Mutex
 		return err;
 		
 	// Bind to the address
-	int err = 0;
 	if (::bind(fd,m_addr,m_addr_len) == -1)
 	{
 		err = errno;
@@ -421,7 +424,7 @@ int SocketAcceptor::Acceptor::init_accept(OOBase::Guard<OOBase::Condition::Mutex
 
 void SocketAcceptor::Acceptor::on_accept(int fd, int /*events*/, void* param)
 {
-	SocketAcceptor* pThis = static_cast<SocketAcceptor*>(param);
+	Acceptor* pThis = static_cast<Acceptor*>(param);
 	
 	OOBase::Guard<OOBase::Condition::Mutex> guard(pThis->m_lock);
 	
@@ -434,12 +437,12 @@ void SocketAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>
 {
 	while (m_listening)
 	{
-		OOSvrBase::AsyncSocket* pSocket = NULL;
+		::AsyncSocket* pSocket = NULL;
 		sockaddr_storage addr = {0};
 		socklen_t addr_len = 0;
 		
 		int err = 0;
-		int new_fd = ::accept(fd,(sockaddr*)&addr,&addr_len);
+		int new_fd = ::accept(m_fd,(sockaddr*)&addr,&addr_len);
 		if (new_fd == -1)
 		{
 			err = errno;
@@ -479,7 +482,7 @@ void SocketAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>
 				if (!pSocket)
 					err = ENOMEM;
 				
-				err = pSocket->bind_fd(new_fd);
+				err = pSocket->bind(new_fd);
 				if (err != 0)
 					delete pSocket;
 			}
@@ -488,24 +491,15 @@ void SocketAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>
 				close(new_fd);
 		}
 		
-		try
+		if (m_callback_local)
+			(*m_callback_local)(m_param,err ? NULL : pSocket,0);
+		else
 		{
-			if (m_callback_local)
-				(*m_callback_local)(m_param,err ? NULL : pSocket,0);
+			if (err == 0)
+				(*m_callback)(m_param,pSocket,(sockaddr*)&addr,addr_len,0);
 			else
-			{
-				if (err == 0)
-					(*m_callback)(m_param,pSocket,(sockaddr*)&addr,remote_addr_len,0);
-				else
-					(*m_callback)(m_param,NULL,NULL,0,err);
-			}
+				(*m_callback)(m_param,NULL,NULL,0,err);
 		}
-		catch (...)
-		{
-			assert((0,"Unhandled exception"));
-			
-			delete pSocket;
-		}	
 		
 		guard.acquire();
 		
@@ -519,12 +513,11 @@ void SocketAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>
 	}
 }
 
-OOSvrBase::Acceptor* OOSvrBase::detail::ProactorEv::accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err), const sockaddr* addr, size_t addr_len, int& err)
+OOSvrBase::Acceptor* OOSvrBase::detail::ProactorEv::accept_remote(void* param, void (*callback)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err), const sockaddr* addr, size_t addr_len, int& err)
 {
 	// Make sure we have valid inputs
 	if (!callback || !addr || addr_len == 0)
 	{
-		assert((0,"Invalid parameters"));
 		err = EINVAL;
 		return NULL;
 	}
@@ -550,7 +543,6 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorEv::accept_local(void* param, vo
 	// Make sure we have valid inputs
 	if (!callback || !path)
 	{
-		assert((0,"Invalid parameters"));
 		err = EINVAL;
 		return NULL;
 	}
@@ -602,21 +594,9 @@ OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorEv::connect_socket(const sock
 		return NULL;
 	}
 	
-	OOSvrBase::AsyncSocket* pSocket = new (std::nothrow) ::AsyncSocket(m_pProactor,fd);
+	OOSvrBase::AsyncLocalSocket* pSocket = attach_local_socket(fd,err);
 	if (!pSocket)
-	{
 		close(fd);
-		err = ENOMEM;
-	}
-	else
-	{
-		err = pSocket->bind_fd(fd);
-		if (err != 0)
-		{
-			delete pSocket;
-			pSocket = NULL;
-		}
-	}
 	
 	return pSocket;
 }
@@ -640,21 +620,10 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorEv::connect_local_socket
 		return NULL;
 	}
 
-	OOSvrBase::AsyncLocalSocket* pSocket = new (std::nothrow) ::AsyncSocket(m_pProactor);
+	OOSvrBase::AsyncLocalSocket* pSocket = attach_local_socket(fd,err);
 	if (!pSocket)
-	{
 		close(fd);
-		err = ENOMEM;
-		return NULL;
-	}
 	
-	err = pSocket->bind_fd(fd);
-	if (err != 0)
-	{
-		delete pSocket;
-		return NULL;
-	}
-
 	return pSocket;
 	
 #else
@@ -671,25 +640,7 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorEv::connect_local_socket
 
 OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorEv::attach_socket(OOBase::socket_t sock, int& err)
 {
-	// Set non-blocking...
-	err = OOBase::BSD::set_non_blocking(sock,true);
-	if (err)
-		return NULL;
-	
-	OOSvrBase::AsyncSocket* pSocket = new (std::nothrow) ::AsyncSocket(m_pProactor,sock);
-	if (!pSocket)
-		err = ENOMEM;
-	else
-	{
-		err = pSocket->bind_fd(sock);
-		if (err != 0)
-		{
-			delete pSocket;
-			pSocket = NULL;
-		}
-	}
-		
-	return pSocket;
+	return attach_local_socket(sock,err);
 }
 
 OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorEv::attach_local_socket(OOBase::socket_t sock, int& err)
@@ -699,12 +650,12 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorEv::attach_local_socket(
 	if (err)
 		return NULL;
 	
-	OOSvrBase::AsyncSocket* pSocket = new (std::nothrow) ::AsyncSocket(m_pProactor,sock);
+	::AsyncSocket* pSocket = new (std::nothrow) ::AsyncSocket(this);
 	if (!pSocket)
 		err = ENOMEM;
 	else
 	{
-		err = pSocket->bind_fd(sock);
+		err = pSocket->bind(sock);
 		if (err != 0)
 		{
 			delete pSocket;

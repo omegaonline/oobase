@@ -23,6 +23,9 @@
 
 #if defined(HAVE_EV_H) && !defined(_WIN32)
 
+#include "../include/OOBase/Posix.h"
+#include "./BSDSocket.h"
+
 OOSvrBase::detail::ProactorEv::ProactorEv() : 
 		Proactor(false),
 		m_pLoop(NULL)
@@ -70,7 +73,7 @@ int OOSvrBase::detail::ProactorEv::init()
 	m_pipe_watcher.data = this;
 		
 	// Create an ev loop
-	m_pLoop = ev_loop_new(EVFLAG_AUTO | EVFLAG_NOENV | EVFLAG_NOSIGMASK);
+	m_pLoop = ev_loop_new(EVFLAG_AUTO | EVFLAG_NOENV);
 	if (!m_pLoop)
 		return (errno ? errno : ENOMEM);
 
@@ -83,45 +86,53 @@ int OOSvrBase::detail::ProactorEv::init()
 	return 0;
 }
 
-int OOSvrBase::detail::ProactorEv::run()
+int OOSvrBase::detail::ProactorEv::run(int& err, const OOBase::timeval_t* timeout)
 {
-	int err = init();
+	err = init();
 	if (err != 0)
-		return err;
+		return -1;
 	
 	// The loop is written as a leader/follower loop:
 	// Each thread polls, then queues up what needs to be processed
 	// Then lets the next waiting thread poll, while it processes the outstanding queue
 	
-	OOBase::Queue<IO,OOBase::LocalAllocator> io_queue;
-	while (!m_bStop)
+	OOBase::Guard<OOBase::Mutex> guard(m_ev_lock,false);
+	OOBase::Queue<IOEvent,OOBase::LocalAllocator> io_queue;
+
+	//while (!m_bStop)
+	for (;;)
 	{
-		OOBase::Guard<OOBase::Mutex> guard(m_ev_lock);
+		if (timeout)
+			guard.acquire(*timeout);
+		else
+			guard.acquire();
 
 		// Swap over the IO queue to our local one...
 		m_pIOQueue = &io_queue;
 
+		void* TODO; // Timeout timer...
+
 		// Run the ev loop with the lock held
-		ev_run(m_pLoop,0);
+		ev_loop(m_pLoop,0);
 
 		// Release the loop mutex... freeing the next thread to poll...
 		guard.release();
 
 		// Process our queue
-		IOEvent ev = {0};
+		IOEvent ev;
 		while (io_queue.pop(&ev))
 		{
 			switch (ev.m_type)
 			{
-			case Watcher:
+			case IOEvent::Watcher:
 				process_event(static_cast<Watcher*>(ev.m_watcher),ev.m_fd,ev.m_revents);
 				break;
 			
-			case IOWatcher:
+			case IOEvent::IOWatcher:
 				process_event(static_cast<IOWatcher*>(ev.m_watcher),ev.m_fd,ev.m_revents);
 				break;
 			
-			case Timer:
+			case IOEvent::Timer:
 				{ void* TODO; }
 				break;
 			}
@@ -131,25 +142,25 @@ int OOSvrBase::detail::ProactorEv::run()
 	return 0;
 }
 
-void OOSvrBase::detail::ProactorEv::pipe_callback(ev_loop*, ev_io* watcher, int)
+void OOSvrBase::detail::ProactorEv::pipe_callback(struct ev_loop*, ev_io* watcher, int)
 {
 	static_cast<ProactorEv*>(watcher->data)->pipe_callback();
 }
 
-void OOSvrBase::detail::ProactorEv::watcher_callback(ev_loop* pLoop, ev_io* watcher, int revents)
+void OOSvrBase::detail::ProactorEv::watcher_callback(struct ev_loop* pLoop, ev_io* watcher, int revents)
 {
 	// Add the event to the queue
 	IOEvent ev;
 	ev.m_type = IOEvent::Watcher;
 	ev.m_revents = revents;
-	ev.m_fd = watcher.fd;
+	ev.m_fd = watcher->fd;
 	ev.m_watcher = watcher;
 	
 	// Only stop the watcher if we managed to add it to the op queue
-	if (static_cast<ProactorEv*>(watcher->data)->m_pIOQueue.push(ev) == 0)
+	if (static_cast<ProactorEv*>(watcher->data)->m_pIOQueue->push(ev) == 0)
 		ev_io_stop(pLoop,watcher);
 		
-	ev_break(pLoop,EVBREAK_ONE);
+	ev_unloop(pLoop,EVUNLOOP_ONE);
 }
 
 void OOSvrBase::detail::ProactorEv::process_event(Watcher* watcher, int fd, int revents)
@@ -159,17 +170,17 @@ void OOSvrBase::detail::ProactorEv::process_event(Watcher* watcher, int fd, int 
 		(*watcher->m_callback)(fd,revents,watcher->m_param);
 }
 
-void OOSvrBase::detail::ProactorEv::iowatcher_callback(ev_loop* pLoop, ev_io* watcher, int revents)
+void OOSvrBase::detail::ProactorEv::iowatcher_callback(struct ev_loop* pLoop, ev_io* watcher, int revents)
 {
 	// Add the event to the queue	
 	IOEvent ev;
 	ev.m_type = IOEvent::IOWatcher;
 	ev.m_revents = revents;
-	ev.m_fd = watcher.fd;
+	ev.m_fd = watcher->fd;
 	ev.m_watcher = watcher;
 	
 	// Only stop the watcher if we managed to add it to the op queue
-	if (static_cast<ProactorEv*>(watcher->data)->m_pIOQueue.push(ev) == 0)
+	if (static_cast<ProactorEv*>(watcher->data)->m_pIOQueue->push(ev) == 0)
 	{
 		ev_io_stop(pLoop,watcher);
 		
@@ -182,7 +193,64 @@ void OOSvrBase::detail::ProactorEv::iowatcher_callback(ev_loop* pLoop, ev_io* wa
 			ev_io_start(pLoop,watcher);
 	}
 			
-	ev_break(pLoop,EVBREAK_ONE);
+	ev_unloop(pLoop,EVUNLOOP_ONE);
+}
+
+namespace
+{
+	struct Msg
+	{
+		enum Opcode
+		{
+			Recv,
+			Send,
+			RecvAgain,
+			SendAgain,
+			New,
+			Start,
+			Close,
+			CloseIO
+
+		} m_op_code;
+		int              m_fd;
+		OOSvrBase::detail::ProactorEv::IOOp m_op;
+	};
+
+	int recv_msg(int fd, Msg& msg)
+	{
+		int err = 0;
+		for (;;)
+		{
+			ssize_t r = read(fd,&msg,sizeof(msg));
+			if (r == -1)
+			{
+				err = errno;
+				if (err == EINTR)
+					continue;
+			}
+			break;
+		}
+
+		return err;
+	}
+
+	int send_msg(int fd, const Msg& msg)
+	{
+		int err = 0;
+		for (;;)
+		{
+			ssize_t s = write(fd,&msg,sizeof(msg));
+			if (s == -1)
+			{
+				err = errno;
+				if (err == EINTR)
+					continue;
+			}
+			break;
+		}
+
+		return err;
+	}
 }
 
 void OOSvrBase::detail::ProactorEv::process_recv(IOWatcher* watcher, int fd)
@@ -198,7 +266,7 @@ void OOSvrBase::detail::ProactorEv::process_recv(IOWatcher* watcher, int fd)
 			err = ECONNRESET;
 		else
 		{
-			size_t to_read = (op->m_count ? op->m_count : op->m_buffer->space())
+			size_t to_read = (op->m_count ? op->m_count : op->m_buffer->space());
 			
 			// We read again on EOF, as we only return error codes
 			ssize_t r = 0;
@@ -239,7 +307,9 @@ void OOSvrBase::detail::ProactorEv::process_recv(IOWatcher* watcher, int fd)
 		}
 		catch (...)
 		{
-			assert((0,"Unhandled exception"));
+			if (op->m_buffer)
+				op->m_buffer->release();
+			throw;
 		}
 		
 		// Done with buffer
@@ -306,7 +376,9 @@ void OOSvrBase::detail::ProactorEv::process_send(IOWatcher* watcher, int fd)
 			}
 			catch (...)
 			{
-				assert((0,"Unhandled exception"));
+				if (op->m_buffer)
+					op->m_buffer->release();
+				throw;
 			}
 			
 			// Done with buffer
@@ -321,7 +393,7 @@ void OOSvrBase::detail::ProactorEv::process_send(IOWatcher* watcher, int fd)
 				err = ECONNRESET;
 			else
 			{
-				struct iovec* iovec_bufs = static_cast<struct iovec*>(OOBase::LocalAllocate(op->m_count * sizeof(struct iovec));
+				struct iovec* iovec_bufs = static_cast<struct iovec*>(OOBase::LocalAllocate(op->m_count * sizeof(struct iovec)));
 				if (!iovec_bufs)
 					err = ENOMEM;
 				else
@@ -330,7 +402,7 @@ void OOSvrBase::detail::ProactorEv::process_send(IOWatcher* watcher, int fd)
 					for (size_t i=0;i<op->m_count;++i)
 					{
 						iovec_bufs[i].iov_len = op->m_buffers[i]->length();
-						iovec_bufs[i].iov_base = op->m_buffers[i]->rd_ptr();
+						iovec_bufs[i].iov_base = const_cast<char*>(op->m_buffers[i]->rd_ptr());
 						
 						total += iovec_bufs[i].iov_len;
 					}
@@ -365,10 +437,10 @@ void OOSvrBase::detail::ProactorEv::process_send(IOWatcher* watcher, int fd)
 						for (size_t i=0;s>0 && i<op->m_count;++i)
 						{
 							size_t len = op->m_buffers[i]->length();
-							if (len > s)
+							if (len > static_cast<size_t>(s))
 								len = s;
 							
-							buffers[i]->rd_ptr(len);
+							op->m_buffers[i]->rd_ptr(len);
 							s -= len;
 						}
 						
@@ -386,7 +458,11 @@ void OOSvrBase::detail::ProactorEv::process_send(IOWatcher* watcher, int fd)
 			}
 			catch (...)
 			{
-				assert((0,"Unhandled exception"));
+				for (size_t i=0;i<op->m_count;++i)
+					op->m_buffers[i]->release();
+
+				delete [] op->m_buffers;
+				throw;
 			}
 			
 			for (size_t i=0;i<op->m_count;++i)
@@ -401,27 +477,6 @@ void OOSvrBase::detail::ProactorEv::process_send(IOWatcher* watcher, int fd)
 	}
 }
 
-namespace
-{
-	struct Msg
-	{
-		enum Opcode
-		{
-			Recv,
-			Send,
-			RecvAgain,
-			SendAgain,
-			New,
-			Start,
-			Close,
-			CloseIO
-			
-		} m_op_code;
-		int   m_fd;
-		IOOp  m_op;
-	};
-}
-
 void OOSvrBase::detail::ProactorEv::process_event(IOWatcher* watcher, int fd, int revents)
 {
 	if ((revents & EV_READ))
@@ -434,36 +489,13 @@ void OOSvrBase::detail::ProactorEv::process_event(IOWatcher* watcher, int fd, in
 	if (watcher->m_closed == 3 && watcher->m_queueRecv.empty() && watcher->m_queueSend.empty())
 	{
 		Msg msg;
-		msg.m_op_code = Msg::IOClose;
+		msg.m_op_code = Msg::CloseIO;
 		msg.m_fd = fd;
 		
-		return send_msg(m_pipe_fds[1],msg);
+		int err = send_msg(m_pipe_fds[1],msg);
+		if (err != 0)
+			OOBase_CallCriticalFailure(err);
 	}
-}
-
-static int recv_msg(int fd, Msg& msg)
-{
-	size_t total = sizeof(msg);
-	char* p = static_cast<char*>(&msg);
-	
-	int err = 0;
-	while (total)
-	{
-		ssize_t r = read(fd,p,total);
-		if (r == -1)
-		{
-			if (errno == EINTR)
-				continue;
-			
-			err = errno;
-			break;
-		}
-		
-		p += r;
-		total -= r;
-	}
-	
-	return err;
 }
 
 void OOSvrBase::detail::ProactorEv::pipe_callback()
@@ -477,13 +509,13 @@ void OOSvrBase::detail::ProactorEv::pipe_callback()
 		if (err == EAGAIN || err == EWOULDBLOCK)
 			break;
 		else if (err != 0)
-			OOBase_CallCriticalError(err);
+			OOBase_CallCriticalFailure(err);
 				
 		if (msg.m_op_code == Msg::New)
 		{
 			err = m_mapWatchers.insert(msg.m_fd,static_cast<ev_io*>(msg.m_op.m_param));
 			if (err != 0)
-				OOBase_CallCriticalError(err);
+				OOBase_CallCriticalFailure(err);
 		}
 		else
 		{
@@ -498,7 +530,7 @@ void OOSvrBase::detail::ProactorEv::pipe_callback()
 				{
 					err = static_cast<IOWatcher*>(watcher)->m_queueRecv.push(msg.m_op);
 					if (err != 0)
-						OOBase_CallCriticalError(err);
+						OOBase_CallCriticalFailure(err);
 					
 					events = EV_READ;
 				}
@@ -506,7 +538,7 @@ void OOSvrBase::detail::ProactorEv::pipe_callback()
 				{
 					err = static_cast<IOWatcher*>(watcher)->m_queueSend.push(msg.m_op);
 					if (err != 0)
-						OOBase_CallCriticalError(err);
+						OOBase_CallCriticalFailure(err);
 					
 					events = EV_WRITE;
 				}
@@ -533,25 +565,25 @@ void OOSvrBase::detail::ProactorEv::pipe_callback()
 				{
 					err = mapStart.insert(watcher->fd,watcher);
 					if (err != 0 && err != EEXIST)
-						OOBase_CallCriticalError(err);
+						OOBase_CallCriticalFailure(err);
 				}
 				else if (msg.m_op_code == Msg::Close)
 				{
 					if (ev_is_active(watcher))
 						ev_io_stop(m_pLoop,watcher);
 					
-					::close(fd);
+					close(watcher->fd);
 					delete static_cast<Watcher*>(watcher);
-					m_mapWatchers.erase(fd);
+					m_mapWatchers.erase(watcher->fd);
 				}
 				else if (msg.m_op_code == Msg::CloseIO)
 				{
 					if (ev_is_active(watcher))
 						ev_io_stop(m_pLoop,watcher);
 					
-					::close(fd);
+					close(watcher->fd);
 					delete static_cast<IOWatcher*>(watcher);
-					m_mapWatchers.erase(fd);
+					m_mapWatchers.erase(watcher->fd);
 				}
 			}
 		}
@@ -559,33 +591,8 @@ void OOSvrBase::detail::ProactorEv::pipe_callback()
 	
 	// Start the watchers
 	ev_io* watcher = NULL;
-	while (mapStart.pop(NULL,watcher))
+	while (mapStart.pop(NULL,&watcher))
 		ev_io_start(m_pLoop,watcher);
-}
-
-static int send_msg(int fd, const Msg& msg)
-{
-	size_t total = sizeof(msg);
-	const char* p = static_cast<const char*>(&msg);
-	
-	int err = 0;
-	while (total)
-	{
-		ssize_t s = write(fd,p,total);
-		if (s == -1)
-		{
-			if (errno == EINTR)
-				continue;
-			
-			err = errno;
-			break;
-		}
-		
-		p += s;
-		total -= s;
-	}
-	
-	return err;
 }
 
 int OOSvrBase::detail::ProactorEv::recv(int fd, void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout)
@@ -614,7 +621,8 @@ int OOSvrBase::detail::ProactorEv::recv(int fd, void* param, void (*callback)(vo
 	msg.m_op_code = Msg::Recv;
 	msg.m_fd = fd;
 	msg.m_op.m_count = bytes;
-	msg.m_op.m_buffer = buffer->addref();
+	msg.m_op.m_buffer = buffer;
+	msg.m_op.m_buffer->addref();
 	msg.m_op.m_param = param;
 	msg.m_op.m_callback = callback;
 	
@@ -634,7 +642,8 @@ int OOSvrBase::detail::ProactorEv::send(int fd, void* param, void (*callback)(vo
 	msg.m_op_code = Msg::Send;
 	msg.m_fd = fd;
 	msg.m_op.m_count = 0;
-	msg.m_op.m_buffer = buffer->addref();
+	msg.m_op.m_buffer = buffer;
+	msg.m_op.m_buffer->addref();
 	msg.m_op.m_param = param;
 	msg.m_op.m_callback = callback;
 	
@@ -661,7 +670,10 @@ int OOSvrBase::detail::ProactorEv::send_v(int fd, void* param, void (*callback)(
 		return ENOMEM;
 	
 	for (size_t i=0;i<count;++i)
-		msg.m_op.m_buffers[i] = buffers[i]->addref();
+	{
+		msg.m_op.m_buffers[i] = buffers[i];
+		msg.m_op.m_buffers[i]->addref();
+	}
 		
 	err = send_msg(m_pipe_fds[1],msg);
 	if (err != 0)
@@ -701,7 +713,7 @@ int OOSvrBase::detail::ProactorEv::new_watcher(int fd, int events, void* param, 
 	return err;
 }
 
-void OOSvrBase::detail::ProactorEv::close_watcher(int fd)
+int OOSvrBase::detail::ProactorEv::close_watcher(int fd)
 {	
 	Msg msg;
 	msg.m_op_code = Msg::Close;
