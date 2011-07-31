@@ -270,6 +270,7 @@ namespace
 		{
 			if (!ptr)
 				return true;
+
 			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 			bool e = m_setEntries.erase(ptr);
@@ -277,8 +278,8 @@ namespace
 
 			guard.release();
 
-			if (e)
-				OOBase::CrtAllocator::free(ptr);
+			OOBase::CrtAllocator::free(ptr);
+
 			return e;
 		}
 
