@@ -36,23 +36,12 @@ lt-*.c
 *_ltshwrapper
 
 # msvc stuff
-*.obj
-*.[ip]db
-*.ipch
-*.lib
-*.sdf
-*.intermediate.manifest
-*.embed.manifest
-*.pch
-*.res
-*.exp
-*.ncb
-*.ilk
+ipch/
+src/Win32/*
+src/x64/*
 *.vcproj.*.user
+*.vcxproj.*
 *.suo
-BuildLog.htm
-mt.dep
-dte80a.*
 
 # Unix stuff
 *.so

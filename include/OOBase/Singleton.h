@@ -31,13 +31,19 @@ namespace OOBase
 	class Singleton
 	{
 	public:
-		static T& instance()
+		static T* instance_ptr()
 		{
 			static Once::once_t key = ONCE_T_INIT;
 			Once::Run(&key,init);
 
-			assert(s_instance != reinterpret_cast<T*>((uintptr_t)0xdeadbeef));
-			return *s_instance;
+			return s_instance;
+		}
+
+		static T& instance()
+		{
+			T* i = instance_ptr();
+			assert(i);
+			return *i;
 		}
 
 	private:
@@ -62,10 +68,8 @@ namespace OOBase
 
 		static void destroy(void*)
 		{
-			assert(s_instance != reinterpret_cast<T*>((uintptr_t)0xdeadbeef));
-
 			T* p = s_instance;
-			s_instance = reinterpret_cast<T*>((uintptr_t)0xdeadbeef);
+			s_instance = NULL;
 			
 			if (p)
 			{
