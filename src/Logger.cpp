@@ -20,7 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/GlobalNew.h"
-#include "../include/OOBase/Singleton.h"
+#include "../include/OOBase/Once.h"
 #include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/tr24731.h"
 #include "../include/OOBase/String.h"
@@ -60,8 +60,7 @@ namespace
 	class Win32Logger
 	{
 	public:
-		Win32Logger();
-		~Win32Logger();
+		static void init();
 
 		void open(const char* name, const char* pszSrcFile);
 		void log(OOSvrBase::Logger::Priority priority, const char* msg);
@@ -86,8 +85,7 @@ namespace
 	class SysLogLogger
 	{
 	public:
-		SysLogLogger();
-		~SysLogLogger();
+		static void init();
 
 		void open(const char* name, const char* pszSrcFile);
 		void log(OOSvrBase::Logger::Priority priority, const char* msg);
@@ -99,33 +97,36 @@ namespace
 	};
 #endif
 
-	/** \typedef LOGGER
+	/** \typedef LoggerClass
 	 *  The logger singleton.
 	 *  The singleton is specialised by the platform specific implementation
 	 *  e.g. \link Win32Logger \endlink , \link ASLLogger \endlink or \link SysLogLogger \endlink
 	 */
 #if defined(_WIN32)
-	typedef OOBase::Singleton<Win32Logger,OOBase::Module> LOGGER;
+	typedef Win32Logger LoggerClass;
 #elif defined(HAVE_ASL_H)
-	typedef OOBase::Singleton<ASLLogger,OOBase::Module> LOGGER;
+	typedef ASLLogger LoggerClass;
 #elif defined(HAVE_SYSLOG_H)
-	typedef OOBase::Singleton<SysLogLogger,OOBase::Module> LOGGER;
+	typedef SysLogLogger LoggerClass;
 #else
 #error Fix me!
 #endif
 
-#if defined(_WIN32)
+	static LoggerClass s_instance;
 
-	Win32Logger::Win32Logger() :
-			m_hLog(NULL),
-			m_pszSrcFile("")
+	static LoggerClass& LoggerInstance()
 	{
+		static OOBase::Once::once_t key = ONCE_T_INIT;
+		OOBase::Once::Run(&key,&LoggerClass::init);
+		return s_instance;
 	}
 
-	Win32Logger::~Win32Logger()
+#if defined(_WIN32)
+
+	void Win32Logger::init()
 	{
-		if (m_hLog)
-			DeregisterEventSource(m_hLog);
+		s_instance.m_hLog = NULL;
+		s_instance.m_pszSrcFile = "";
 	}
 
 	void Win32Logger::open(const char* name, const char* pszSrcFile)
@@ -270,13 +271,9 @@ namespace
 
 #elif defined(HAVE_SYSLOG_H)
 
-	SysLogLogger::SysLogLogger() :
-			m_pszSrcFile("")
-	{}
-
-	SysLogLogger::~SysLogLogger()
+	void SysLogLogger::init()
 	{
-		closelog();
+		s_instance.m_pszSrcFile = "";
 	}
 
 	void SysLogLogger::open(const char* name, const char* pszSrcFile)
@@ -346,7 +343,7 @@ namespace
 
 void OOSvrBase::Logger::open(const char* name, const char* pszSrcFile)
 {
-	LOGGER::instance().open(name,pszSrcFile);
+	LoggerInstance().open(name,pszSrcFile);
 }
 
 void OOSvrBase::Logger::log(Priority priority, const char* fmt, ...)
@@ -360,7 +357,7 @@ void OOSvrBase::Logger::log(Priority priority, const char* fmt, ...)
 	va_end(args);
 
 	if (err == 0)
-		LOGGER::instance().log(priority,msg.c_str());
+		LoggerInstance().log(priority,msg.c_str());
 }
 
 OOSvrBase::Logger::filenum_t::filenum_t(Priority priority, const char* pszFilename, unsigned int nLine) :
@@ -384,7 +381,7 @@ void OOSvrBase::Logger::filenum_t::log(const char* fmt, ...)
 	{
 		if (m_pszFilename)
 		{
-			const char* pszSrcFile = LOGGER::instance().src();
+			const char* pszSrcFile = LoggerInstance().src();
 			size_t s=0;
 			for (;;)
 			{
@@ -402,6 +399,6 @@ void OOSvrBase::Logger::filenum_t::log(const char* fmt, ...)
 
 		OOBase::LocalString header;
 		if (header.printf("%s(%u): %s",m_pszFilename,m_nLine,msg.c_str()) == 0)
-			LOGGER::instance().log(m_priority,header.c_str());
+			LoggerInstance().log(m_priority,header.c_str());
 	}
 }
