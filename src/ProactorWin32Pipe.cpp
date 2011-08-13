@@ -96,9 +96,6 @@ void AsyncPipe::translate_error(DWORD& dwErr)
 	switch (dwErr)
 	{
 	case ERROR_BROKEN_PIPE:
-		dwErr = 0;
-		break;
-
 	case ERROR_NO_DATA:
 		dwErr = WSAECONNRESET;
 		break;
