@@ -69,8 +69,8 @@ int OOSvrBase::detail::ProactorEv::init()
 
 	// Set up the pipe watcher
 	ev_io_init(&m_pipe_watcher,&pipe_callback,m_pipe_fds[0],EV_READ);
-	ev_set_priority(&m_pipe_watcher,EV_MINPRI);
 	m_pipe_watcher.data = this;
+	ev_set_priority(&m_pipe_watcher,EV_MINPRI);
 		
 	// Create an ev loop
 	m_pLoop = ev_loop_new(EVFLAG_AUTO | EVFLAG_NOENV);
@@ -698,6 +698,7 @@ int OOSvrBase::detail::ProactorEv::new_watcher(int fd, int events, void* param, 
 		return ENOMEM;
 	
 	ev_io_init(watcher,&watcher_callback,fd,events);
+	watcher->data = this;
 	watcher->m_callback = callback;
 	watcher->m_param = param;
 	
@@ -742,8 +743,9 @@ int OOSvrBase::detail::ProactorEv::bind_fd(int fd)
 		return ENOMEM;
 	
 	ev_io_init(watcher,&iowatcher_callback,fd,0);
+	watcher->data = this;
 	watcher->m_closed = 0;
-	
+
 	Msg msg;
 	msg.m_op_code = Msg::New;
 	msg.m_fd = fd;
