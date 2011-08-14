@@ -285,6 +285,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\CmdArgs.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Condition.cpp"
 				>
 			</File>
@@ -372,6 +376,10 @@
 			</File>
 			<File
 				RelativePath="..\include\OOBase\CDRStream.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\CmdArgs.h"
 				>
 			</File>
 			<File
