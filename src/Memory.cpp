@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/GlobalNew.h"
+#include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Destructor.h"
 
 const OOBase::critical_t OOBase::critical = {0};
@@ -43,82 +43,6 @@ bool OOBase::CrtAllocator::free(void* ptr)
 }
 
 #endif
-
-void* operator new(size_t size)
-{
-	void* p = OOBase::HeapAllocate(size);
-	if (!p)
-		throw std::bad_alloc();
-
-	return p;
-}
-
-void* operator new[](size_t size)
-{
-	void* p = OOBase::HeapAllocate(size);
-	if (!p)
-		throw std::bad_alloc();
-
-	return p;
-}
-
-void* operator new(size_t size, const std::nothrow_t&)
-{
-	return OOBase::HeapAllocate(size);
-}
-
-void* operator new[](size_t size, const std::nothrow_t&)
-{
-	return OOBase::HeapAllocate(size);
-}
-
-void* operator new(size_t size, const OOBase::critical_t&)
-{
-	void* p = OOBase::HeapAllocate(size);
-	if (!p)
-		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-
-	return p;
-}
-
-void* operator new[](size_t size, const OOBase::critical_t&)
-{
-	void* p = OOBase::HeapAllocate(size);
-	if (!p)
-		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-
-	return p;
-}
-
-void operator delete(void* p)
-{
-	return OOBase::HeapFree(p);
-}
-
-void operator delete(void* p, const std::nothrow_t&)
-{
-	return OOBase::HeapFree(p);
-}
-
-void operator delete(void* p, const OOBase::critical_t&)
-{
-	return OOBase::HeapFree(p);
-}
-
-void operator delete[](void* p)
-{
-	return OOBase::HeapFree(p);
-}
-
-void operator delete[](void* p, const std::nothrow_t&)
-{
-	return OOBase::HeapFree(p);
-}
-
-void operator delete[](void* p, const OOBase::critical_t&)
-{
-	return OOBase::HeapFree(p);
-}
 
 namespace OOBase
 {
@@ -293,29 +217,29 @@ namespace
 
 void* OOBase::HeapAllocate(size_t bytes)
 {
-#if defined(_DEBUG)
-	return MemoryManager<MemWatcher>::allocate(bytes);
-#else
+//#if defined(_DEBUG)
+//	return MemoryManager<MemWatcher>::allocate(bytes);
+//#else
 	return MemoryManager<CrtAllocator>::allocate(bytes);
-#endif
+//#endif
 }
 
 void* OOBase::HeapReallocate(void* p, size_t bytes)
 {
-#if defined(_DEBUG)
-	return MemoryManager<MemWatcher>::reallocate(p,bytes);
-#else
+//#if defined(_DEBUG)
+//	return MemoryManager<MemWatcher>::reallocate(p,bytes);
+//#else
 	return MemoryManager<CrtAllocator>::reallocate(p,bytes);
-#endif
+//#endif
 }
 
 void OOBase::HeapFree(void* p)
 {
-#if defined(_DEBUG)
-	MemoryManager<MemWatcher>::free(p);
-#else
+//#if defined(_DEBUG)
+//	MemoryManager<MemWatcher>::free(p);
+//#else
 	MemoryManager<CrtAllocator>::free(p);
-#endif
+//#endif
 }
 
 void* OOBase::LocalAllocate(size_t bytes)
@@ -332,4 +256,3 @@ void OOBase::LocalFree(void* p)
 {
 	return OOBase::HeapFree(p);
 }
-

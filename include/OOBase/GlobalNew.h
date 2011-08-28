@@ -24,26 +24,56 @@
 
 #include "Memory.h"
 
-#include <new>
-
 // Global operator new overloads
 
 // Throws std::bad_alloc
-void* operator new(size_t size);
-void* operator new[](size_t size);
-void operator delete(void* p);
-void operator delete[](void* p);
+inline void* operator new(size_t size)
+{
+	void* p = OOBase::HeapAllocate(size);
+	if (!p)
+		throw std::bad_alloc();
+
+	return p;
+}
+
+inline void* operator new[](size_t size)
+{
+	void* p = OOBase::HeapAllocate(size);
+	if (!p)
+		throw std::bad_alloc();
+
+	return p;
+}
+
+inline void operator delete(void* p)
+{
+	return OOBase::HeapFree(p);
+}
+
+inline void operator delete[](void* p)
+{
+	return OOBase::HeapFree(p);
+}
 
 // Returns NULL, doesn't throw
-void* operator new(size_t size, const std::nothrow_t&);
-void* operator new[](size_t size, const std::nothrow_t&);
-void operator delete(void* p, const std::nothrow_t&);
-void operator delete[](void* p, const std::nothrow_t&);
+inline void* operator new(size_t size, const std::nothrow_t&)
+{
+	return OOBase::HeapAllocate(size);
+}
 
-// Call the OOBase::OnCriticalError handler on failure
-void* operator new(size_t size, const OOBase::critical_t&);
-void* operator new[](size_t size, const OOBase::critical_t&);
-void operator delete(void* p, const OOBase::critical_t&);
-void operator delete[](void* p, const OOBase::critical_t&);
+inline void* operator new[](size_t size, const std::nothrow_t&)
+{
+	return OOBase::HeapAllocate(size);
+}
+
+inline void operator delete(void* p, const std::nothrow_t&)
+{
+	return OOBase::HeapFree(p);
+}
+
+inline void operator delete[](void* p, const std::nothrow_t&)
+{
+	return OOBase::HeapFree(p);
+}
 
 #endif // OOBASE_CUSTOM_NEW_H_INCLUDED_

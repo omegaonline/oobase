@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/GlobalNew.h"
+#include "../include/OOBase/Memory.h"
 #include "../include/OOBase/CmdArgs.h"
 
 int OOBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, const char* long_opt)

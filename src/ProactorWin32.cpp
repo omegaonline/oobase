@@ -23,7 +23,7 @@
 
 #if defined(_WIN32)
 
-#include "../include/OOBase/GlobalNew.h"
+#include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Thread.h"
 
 OOSvrBase::detail::ProactorWin32::ProactorWin32() :

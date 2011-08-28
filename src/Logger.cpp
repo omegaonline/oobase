@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/GlobalNew.h"
+#include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Once.h"
 #include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/tr24731.h"

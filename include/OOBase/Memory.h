@@ -166,4 +166,31 @@ namespace OOBase
 	};
 }
 
+// Call the OOBase::OnCriticalError handler on failure
+inline void* operator new(size_t size, const OOBase::critical_t&)
+{
+	void* p = ::operator new(size,std::nothrow);
+	if (!p)
+		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+	return p;
+}
+
+inline void* operator new[](size_t size, const OOBase::critical_t&)
+{
+	void* p = ::operator new [] (size,std::nothrow);
+	if (!p)
+		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+	return p;
+}
+
+inline void operator delete(void* p, const OOBase::critical_t&)
+{
+	delete p;
+}
+
+inline void operator delete[](void* p, const OOBase::critical_t&)
+{
+	delete [] p;
+}
+
 #endif // OOBASE_MEMORY_H_INCLUDED_

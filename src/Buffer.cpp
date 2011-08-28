@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/GlobalNew.h"
+#include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Buffer.h"
 
 #include <string.h>

@@ -19,7 +19,6 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/GlobalNew.h"
 #include "../include/OOBase/Memory.h"
 #include "../include/OOSvrBase/Database.h"
 #include "../include/OOSvrBase/Logger.h"

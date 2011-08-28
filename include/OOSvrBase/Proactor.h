@@ -22,7 +22,7 @@
 #ifndef OOSVRBASE_PROACTOR_H_INCLUDED_
 #define OOSVRBASE_PROACTOR_H_INCLUDED_
 
-#include "../OOBase/GlobalNew.h"
+#include "../OOBase/Memory.h"
 #include "../OOBase/Socket.h"
 
 #if !defined(_WIN32)
