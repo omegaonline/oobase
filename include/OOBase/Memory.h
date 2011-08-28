@@ -185,12 +185,12 @@ inline void* operator new[](size_t size, const OOBase::critical_t&)
 
 inline void operator delete(void* p, const OOBase::critical_t&)
 {
-	delete p;
+	::operator delete(p);
 }
 
 inline void operator delete[](void* p, const OOBase::critical_t&)
 {
-	delete [] p;
+	::operator delete[](p);
 }
 
 #endif // OOBASE_MEMORY_H_INCLUDED_
