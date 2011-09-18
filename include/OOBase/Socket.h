@@ -23,7 +23,6 @@
 #define OOBASE_SOCKET_H_INCLUDED_
 
 #include "Buffer.h"
-#include "SmartPtr.h"
 
 #if defined(_WIN32)
 #include <winsock2.h>
@@ -122,9 +121,5 @@ namespace OOBase
 		Socket& operator = (const Socket&);
 	};
 }
-
-#if !defined(INVALID_SOCKET)
-#define INVALID_SOCKET (OOBase::socket_t(-1))
-#endif
 
 #endif // OOBASE_SOCKET_H_INCLUDED_

@@ -39,7 +39,7 @@ namespace OOBase
 		virtual void abort();
 		virtual bool is_running();
 
-		static void sleep(const timeval_t& timeout);
+		static void sleep(const timeval_t& wait);
 		static void yield();
 
 		static Thread* self();

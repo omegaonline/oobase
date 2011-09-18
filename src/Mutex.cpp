@@ -80,9 +80,9 @@ bool OOBase::Mutex::tryacquire()
 	return false;
 }
 
-bool OOBase::Mutex::acquire(const timeval_t* timeout)
+bool OOBase::Mutex::acquire(const timeval_t* wait)
 {
-	DWORD dwWait = WaitForSingleObject(m_mutex,(timeout ? timeout->msec() : INFINITE));
+	DWORD dwWait = WaitForSingleObject(m_mutex,(wait ? wait->msec() : INFINITE));
 	if (dwWait == WAIT_OBJECT_0)
 		return true;
 	else if (dwWait != WAIT_TIMEOUT)
@@ -177,10 +177,10 @@ bool OOBase::Mutex::tryacquire()
 	return false;
 }
 
-bool OOBase::Mutex::acquire(const timeval_t* timeout)
+bool OOBase::Mutex::acquire(const timeval_t* wait)
 {
 	int err = 0;
-	if (!timeout)
+	if (!wait)
 	{
 		err = pthread_mutex_lock(&m_mutex);
 		if (!err)
@@ -190,7 +190,7 @@ bool OOBase::Mutex::acquire(const timeval_t* timeout)
 	{
 		timespec ts;
 		OOBase::timeval_t now = OOBase::timeval_t::gettimeofday();
-		now += *timeout;
+		now += *wait;
 		ts.tv_sec = now.tv_sec();
 		ts.tv_nsec = now.tv_usec() * 1000;
 

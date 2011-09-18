@@ -28,6 +28,7 @@
 #endif
 
 #include "../include/OOBase/Condition.h"
+#include "../include/OOBase/SmartPtr.h"
 
 #include "Win32Socket.h"
 
