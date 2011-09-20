@@ -53,18 +53,16 @@
 #elif defined(HAVE___SYNC_VAL_COMPARE_AND_SWAP)
 
 /* Define if you have atomic compare-and-swap for 32bit values */
-#define ATOMIC_CAS_32(t,c,x) __sync_val_compare_and_swap((int volatile*)(t),c,x)
+#define ATOMIC_CAS_32(t,c,x) __sync_val_compare_and_swap(t,c,x)
 
 /* Define if you have atomic compare-and-swap for 64bit values */
-#define ATOMIC_CAS_64(t,c,x)  __sync_val_compare_and_swap((long long*)(t),c,x)
+#define ATOMIC_CAS_64(t,c,x)  __sync_val_compare_and_swap(t,c,x)
 
 /* Define if you have atomic inc and dec for 32bit values */
-#define ATOMIC_ADD_32(t,v) __sync_add_and_fetch((int volatile*)(t),v)
-#define ATOMIC_SUB_32(t,v) __sync_sub_and_fetch((int volatile*)(t),-v)
+#define ATOMIC_ADD_32(t,v) __sync_add_and_fetch(t,v)
 
 /* Define if you have atomic inc and dec for 64bit values */
-#define ATOMIC_ADD_64(t,v) __sync_add_and_fetch((long long volatile*)(t),v)
-#define ATOMIC_SUB_64(t,v) __sync_sub_and_fetch((long long volatile*)(t),v)
+#define ATOMIC_ADD_64(t,v) __sync_add_and_fetch(t,v)
 
 #elif defined(_WIN32)
 
@@ -222,12 +220,14 @@ namespace OOBase
 		template <typename T>
 		struct AtomicImpl<T,4>
 		{
-		#if defined(ATOMIC_CAS_32)
 			static T CompareAndSwap(T& val, const T oldVal, const T newVal)
 			{
+			#if defined(ATOMIC_CAS_32)
 				return (T)ATOMIC_CAS_32(&val,oldVal,newVal);
+			#else
+				#error define ATOMIC_CAS_32
+			#endif
 			}
-		#endif
 
 			static T Exchange(T& val, const T newVal)
 			{
@@ -242,12 +242,14 @@ namespace OOBase
 			#endif
 			}
 
-		#if defined(ATOMIC_ADD_32)
 			static T Add(T& val, const T add)
 			{
+			#if defined(ATOMIC_ADD_32)
 				return (T)ATOMIC_ADD_32(&val,add);
+			#else
+				#error define ATOMIC_ADD_32
+			#endif
 			}
-		#endif
 
 			static T Increment(T& val)
 			{
@@ -280,12 +282,14 @@ namespace OOBase
 		template <typename T>
 		struct AtomicImpl<T,8>
 		{
-		#if defined(ATOMIC_CAS_64)
 			static T CompareAndSwap(T& val, const T oldVal, const T newVal)
 			{
+			#if defined(ATOMIC_CAS_64)
 				return (T)ATOMIC_CAS_64(&val,oldVal,newVal);
+			#else
+				#error define ATOMIC_CAS_64
+			#endif
 			}
-		#endif
 
 			static T Exchange(T& val, const T newVal)
 			{
@@ -300,12 +304,14 @@ namespace OOBase
 			#endif
 			}
 
-		#if defined(ATOMIC_ADD_64)
 			static T Add(T& val, const T add)
 			{
+			#if defined(ATOMIC_ADD_64)
 				return (T)ATOMIC_ADD_64(&val,add);
+			#else
+				#error define ATOMIC_ADD_64
+			#endif
 			}
-		#endif
 
 			static T Increment(T& val)
 			{
