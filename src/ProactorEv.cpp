@@ -99,8 +99,8 @@ int OOSvrBase::detail::ProactorEv::run(int& err, const OOBase::timeval_t* timeou
 	OOBase::Guard<OOBase::Mutex> guard(m_ev_lock,false);
 	OOBase::Queue<IOEvent,OOBase::LocalAllocator> io_queue;
 
-	//while (!m_bStop)
-	for (;;)
+	bool bStarting = true;
+	for (bool bStop = false;!bStop;)
 	{
 		if (timeout)
 			guard.acquire(*timeout);
@@ -114,6 +114,11 @@ int OOSvrBase::detail::ProactorEv::run(int& err, const OOBase::timeval_t* timeou
 
 		// Run the ev loop with the lock held
 		ev_loop(m_pLoop,0);
+
+		if (m_mapWatchers.empty() && !bStarting)
+		{
+			bStop = true;
+		}
 
 		// Release the loop mutex... freeing the next thread to poll...
 		guard.release();
@@ -136,6 +141,8 @@ int OOSvrBase::detail::ProactorEv::run(int& err, const OOBase::timeval_t* timeou
 				{ void* TODO; }
 				break;
 			}
+
+			bStarting = false;
 		}
 	}
 
@@ -208,8 +215,7 @@ namespace
 			SendAgain,
 			New,
 			Start,
-			Close,
-			CloseIO
+			Close
 
 		} m_op_code;
 		int              m_fd;
@@ -258,21 +264,18 @@ void OOSvrBase::detail::ProactorEv::process_recv(IOWatcher* watcher, int fd)
 	IOOp* op = watcher->m_queueRecv.front();
 	while (op)
 	{
-		if (!op->m_buffer)
-			watcher->m_closed |= 1;
-		
 		int err = 0;
-		if (watcher->m_closed & 1)
+		if (watcher->m_unbound)
 			err = ECONNRESET;
 		else
 		{
 			size_t to_read = (op->m_count ? op->m_count : op->m_buffer->space());
-			
+
 			// We read again on EOF, as we only return error codes
 			ssize_t r = 0;
 			while (r == 0 || (r == -1 && errno == EINTR))
 				r = read(fd,op->m_buffer->wr_ptr(),to_read);
-				
+
 			if (r == -1)
 			{
 				if (errno != EAGAIN && errno != EWOULDBLOCK)
@@ -282,7 +285,7 @@ void OOSvrBase::detail::ProactorEv::process_recv(IOWatcher* watcher, int fd)
 					Msg msg;
 					msg.m_op_code = Msg::RecvAgain;
 					msg.m_fd = fd;
-					
+
 					err = send_msg(m_pipe_fds[1],msg);
 					if (err == 0)
 						return;
@@ -293,7 +296,7 @@ void OOSvrBase::detail::ProactorEv::process_recv(IOWatcher* watcher, int fd)
 				op->m_buffer->wr_ptr(r);
 				if (op->m_count)
 					op->m_count -= r;
-				
+
 				// If we haven't read all the buffer, loop...
 				if (op->m_count != 0)
 					continue;
@@ -331,10 +334,10 @@ void OOSvrBase::detail::ProactorEv::process_send(IOWatcher* watcher, int fd)
 		{
 			// Single send
 			if (!op->m_buffer)
-				watcher->m_closed |= 2;
+				watcher->m_unbound = true;
 			
 			int err = 0;
-			if (watcher->m_closed & 2)
+			if (watcher->m_unbound)
 				err = ECONNRESET;
 			else
 			{
@@ -369,16 +372,18 @@ void OOSvrBase::detail::ProactorEv::process_send(IOWatcher* watcher, int fd)
 			}
 			
 			// Notify callback of status/error
-			try
+			if (op->m_callback)
 			{
-				if (op->m_callback)
+				try
+				{
 					(*op->m_callback)(op->m_param,op->m_buffer,err);
-			}
-			catch (...)
-			{
-				if (op->m_buffer)
-					op->m_buffer->release();
-				throw;
+				}
+				catch (...)
+				{
+					if (op->m_buffer)
+						op->m_buffer->release();
+					throw;
+				}
 			}
 			
 			// Done with buffer
@@ -389,7 +394,7 @@ void OOSvrBase::detail::ProactorEv::process_send(IOWatcher* watcher, int fd)
 		{
 			// Sendv
 			int err = 0;
-			if (watcher->m_closed & 2)
+			if (watcher->m_unbound)
 				err = ECONNRESET;
 			else
 			{
@@ -452,17 +457,20 @@ void OOSvrBase::detail::ProactorEv::process_send(IOWatcher* watcher, int fd)
 			}
 			
 			// Notify callback of status/error
-			try
+			if (op->m_callback_v)
 			{
-				(*op->m_callback_v)(op->m_param,op->m_buffers,op->m_count,err);
-			}
-			catch (...)
-			{
-				for (size_t i=0;i<op->m_count;++i)
-					op->m_buffers[i]->release();
+				try
+				{
+					(*op->m_callback_v)(op->m_param,op->m_buffers,op->m_count,err);
+				}
+				catch (...)
+				{
+					for (size_t i=0;i<op->m_count;++i)
+						op->m_buffers[i]->release();
 
-				delete [] op->m_buffers;
-				throw;
+					delete [] op->m_buffers;
+					throw;
+				}
 			}
 			
 			for (size_t i=0;i<op->m_count;++i)
@@ -486,10 +494,10 @@ void OOSvrBase::detail::ProactorEv::process_event(IOWatcher* watcher, int fd, in
 		process_send(watcher,fd);
 	
 	// Check to see if the watcher should be closed
-	if (watcher->m_closed == 3 && watcher->m_queueRecv.empty() && watcher->m_queueSend.empty())
+	if (watcher->m_unbound)
 	{
 		Msg msg;
-		msg.m_op_code = Msg::CloseIO;
+		msg.m_op_code = Msg::Close;
 		msg.m_fd = fd;
 		
 		int err = send_msg(m_pipe_fds[1],msg);
@@ -574,15 +582,6 @@ void OOSvrBase::detail::ProactorEv::pipe_callback()
 					
 					close(watcher->fd);
 					delete static_cast<Watcher*>(watcher);
-					m_mapWatchers.erase(watcher->fd);
-				}
-				else if (msg.m_op_code == Msg::CloseIO)
-				{
-					if (ev_is_active(watcher))
-						ev_io_stop(m_pLoop,watcher);
-					
-					close(watcher->fd);
-					delete static_cast<IOWatcher*>(watcher);
 					m_mapWatchers.erase(watcher->fd);
 				}
 			}
@@ -744,7 +743,7 @@ int OOSvrBase::detail::ProactorEv::bind_fd(int fd)
 	
 	ev_io_init(watcher,&iowatcher_callback,fd,0);
 	watcher->data = this;
-	watcher->m_closed = 0;
+	watcher->m_unbound = false;
 
 	Msg msg;
 	msg.m_op_code = Msg::New;
@@ -763,16 +762,11 @@ int OOSvrBase::detail::ProactorEv::unbind_fd(int fd)
 	Msg msg;
 	msg.m_op_code = Msg::Send;
 	msg.m_fd = fd;
+	msg.m_op.m_count = 0;
+	msg.m_op.m_callback = NULL;
 	msg.m_op.m_buffer = NULL; // <-- This is the important bit! The NULL buffer means close
 		
-	int err = send_msg(m_pipe_fds[1],msg);
-	if (err == 0)
-	{
-		msg.m_op_code = Msg::Recv;
-		err = send_msg(m_pipe_fds[1],msg);
-	}
-	
-	return err;
+	return send_msg(m_pipe_fds[1],msg);
 }
 	
 #endif // defined(HAVE_EV_H)

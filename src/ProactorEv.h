@@ -103,7 +103,7 @@ namespace OOSvrBase
 			{
 				OOBase::Queue<IOOp,OOBase::HeapAllocator> m_queueSend;
 				OOBase::Queue<IOOp,OOBase::HeapAllocator> m_queueRecv;
-				int                                       m_closed;
+				bool                                      m_unbound;
 			};
 					
 			struct IOEvent
