@@ -275,8 +275,11 @@ void OOSvrBase::detail::ProactorEv::process_recv(IOWatcher* watcher, int fd)
 
 			// We read again on EOF, as we only return error codes
 			ssize_t r = 0;
-			while (r == 0 || (r == -1 && errno == EINTR))
+			do
+			{
 				r = read(fd,op->m_buffer->wr_ptr(),to_read);
+			}
+			while (r == -1 && errno == EINTR);
 
 			if (r == -1)
 			{
@@ -345,8 +348,10 @@ void OOSvrBase::detail::ProactorEv::process_send(IOWatcher* watcher, int fd)
 			{
 				// We send again on EOF, as we only return error codes
 				ssize_t s = 0;
-				while (s == 0 || (s == -1 && errno == EINTR))
+				do
+				{
 					s = write(fd,op->m_buffer->rd_ptr(),op->m_buffer->length());
+				} while (s == -1 && errno == EINTR);
 				
 				if (s == -1)
 				{
