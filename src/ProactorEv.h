@@ -92,6 +92,7 @@ namespace OOSvrBase
 			struct ev_loop*  m_pLoop;
 			ev_io            m_pipe_watcher;
 			int              m_pipe_fds[2];
+			bool             m_started;
 
 			struct Watcher : public ev_io
 			{

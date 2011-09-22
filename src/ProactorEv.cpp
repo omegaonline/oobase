@@ -77,11 +77,13 @@ int OOSvrBase::detail::ProactorEv::init()
 	if (!m_pLoop)
 		return (errno ? errno : ENOMEM);
 
+	m_started = false;
+
 	// Start the pipe watcher
 	ev_io_start(m_pLoop,&m_pipe_watcher);
 	
 	// Drop loop refcount
-	ev_unref (m_pLoop);
+	ev_unref(m_pLoop);
 	
 	return 0;
 }
@@ -99,7 +101,6 @@ int OOSvrBase::detail::ProactorEv::run(int& err, const OOBase::timeval_t* timeou
 	OOBase::Guard<OOBase::Mutex> guard(m_ev_lock,false);
 	OOBase::Queue<IOEvent,OOBase::LocalAllocator> io_queue;
 
-	bool bStarting = true;
 	for (bool bStop = false;!bStop;)
 	{
 		if (timeout)
@@ -115,10 +116,13 @@ int OOSvrBase::detail::ProactorEv::run(int& err, const OOBase::timeval_t* timeou
 		// Run the ev loop with the lock held
 		ev_loop(m_pLoop,0);
 
-		if (m_mapWatchers.empty() && !bStarting)
+		if (m_mapWatchers.empty())
 		{
-			bStop = true;
+			 if (m_started)
+				bStop = true;
 		}
+		else
+			m_started = true;
 
 		// Release the loop mutex... freeing the next thread to poll...
 		guard.release();
@@ -141,8 +145,6 @@ int OOSvrBase::detail::ProactorEv::run(int& err, const OOBase::timeval_t* timeou
 				{ void* TODO; }
 				break;
 			}
-
-			bStarting = false;
 		}
 	}
 
