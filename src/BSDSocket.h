@@ -32,8 +32,7 @@ namespace OOBase
 {
 	namespace BSD
 	{
-		socket_t create_socket(int family, int socktype, int protocol, int& err);
-		int connect(int sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* timeout);
+		int connect(socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* timeout);
 
 		int set_non_blocking(socket_t sock, bool set);
 	}
@@ -41,7 +40,7 @@ namespace OOBase
 #if defined(HAVE_UNISTD_H)
 	namespace POSIX
 	{
-		void create_unix_socket(sockaddr_un& addr, socklen_t& len, const char* path);
+		void create_unix_socket_address(sockaddr_un& addr, socklen_t& len, const char* path);
 	}
 #endif
 }

@@ -33,35 +33,6 @@
 #include <sys/un.h>
 #endif
 
-OOBase::socket_t OOBase::BSD::create_socket(int family, int socktype, int protocol, int& err)
-{
-	err = 0;
-	OOBase::socket_t sock = ::socket(family,socktype,protocol);
-	if (sock == -1)
-	{
-		err = errno;
-		return sock;
-	}
-
-	err = OOBase::BSD::set_non_blocking(sock,true);
-	if (err != 0)
-	{
-		::close(sock);
-		return -1;
-	}
-
-#if defined(HAVE_UNISTD_H)
-	err = OOBase::POSIX::set_close_on_exec(sock,true);
-	if (err != 0)
-	{
-		::close(sock);
-		return -1;
-	}
-#endif
-
-	return sock;
-}
-
 int OOBase::BSD::set_non_blocking(socket_t sock, bool set)
 {
 #if defined(HAVE_UNISTD_H)
@@ -79,7 +50,7 @@ int OOBase::BSD::set_non_blocking(socket_t sock, bool set)
 	return 0;
 }
 
-int OOBase::BSD::connect(int sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* timeout)
+int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* timeout)
 {
 	// Do the connect
 	if (::connect(sock,addr,static_cast<int>(addrlen)) != -1)
@@ -108,12 +79,17 @@ int OOBase::BSD::connect(int sock, const sockaddr* addr, size_t addrlen, const O
 		FD_SET(sock,&wfds);
 		FD_SET(sock,&efds);
 
-		int count = select(static_cast<int>(sock+1),NULL,&wfds,&efds,timeout ? &tv : NULL);
+		int count = 0;
+		do
+		{
+			count = ::select(static_cast<int>(sock+1),NULL,&wfds,&efds,timeout ? &tv : NULL);
+		}
+		while (count == -1 && errno == EINTR);
+
 		if (count == -1)
 		{
 			err = errno;
-			if (err != EINTR)
-				return err;
+			return err;
 		}
 		else if (count == 1)
 		{
@@ -170,13 +146,20 @@ namespace
 			tv.tv_usec = timeout->tv_usec();
 		}
 
-		fd_set wfds;
-		fd_set efds;
-
 		size_t total = 0;
 		while (total < len)
 		{
-			ssize_t sent = ::send(m_sock,cbuf,static_cast<int>(len),0);
+			ssize_t sent = 0;
+			do
+			{
+				sent = ::send(m_sock,cbuf,static_cast<int>(len),(timeout ? MSG_DONTWAIT : 0)
+#if defined(MSG_NOSIGNAL)
+					| MSG_NOSIGNAL
+#endif
+				);
+			}
+			while (sent == -1 && errno == EINTR);
+
 			if (sent != -1)
 			{
 				total += sent;
@@ -185,22 +168,27 @@ namespace
 			else
 			{
 				err = errno;
-				if (err == EINTR)
-					continue;
-				else if (err != EAGAIN)
+				if (err != EAGAIN)
 					break;
 
 				// Do the select...
+				fd_set wfds;
+				fd_set efds;
 				FD_ZERO(&wfds);
 				FD_ZERO(&efds);
 				FD_SET(m_sock,&wfds);
 				FD_SET(m_sock,&efds);
-				int count = select(static_cast<int>(m_sock+1),NULL,&wfds,&efds,timeout ? &tv : NULL);
+				int count = 0;
+				do
+				{
+					count = ::select(static_cast<int>(m_sock+1),NULL,&wfds,&efds,timeout ? &tv : NULL);
+				}
+				while (count == -1 && errno == EINTR);
+
 				if (count == -1)
 				{
 					err = errno;
-					if (err != EINTR)
-						break;
+					break;
 				}
 				else if (count == 1)
 				{
@@ -237,13 +225,16 @@ namespace
 			tv.tv_usec = timeout->tv_usec();
 		}
 
-		fd_set rfds;
-		fd_set efds;
-
 		size_t total = 0;
 		for (;;)
 		{
-			ssize_t recvd = ::recv(m_sock,cbuf,static_cast<int>(len),0);
+			ssize_t recvd = 0;
+			do
+			{
+				recvd = ::recv(m_sock,cbuf,static_cast<int>(len),timeout ? MSG_DONTWAIT : MSG_WAITALL);
+			}
+			while (recvd == -1 && errno == EINTR);
+
 			if (recvd != -1)
 			{
 				err = 0;
@@ -256,22 +247,29 @@ namespace
 			else
 			{
 				err = errno;
-				if (err == EINTR)
-					continue;
-				else if (err != EAGAIN)
+				if (err != EAGAIN)
 					break;
 
 				// Do the select...
+				fd_set rfds;
+				fd_set efds;
+
 				FD_ZERO(&rfds);
 				FD_ZERO(&efds);
 				FD_SET(m_sock,&rfds);
 				FD_SET(m_sock,&efds);
-				int count = select(static_cast<int>(m_sock+1),&rfds,NULL,&efds,timeout ? &tv : NULL);
+
+				int count = 0;
+				do
+				{
+					count = ::select(static_cast<int>(m_sock+1),&rfds,NULL,&efds,timeout ? &tv : NULL);
+				}
+				while (count == -1 && errno == EINTR);
+
 				if (count == -1)
 				{
 					err = errno;
-					if (err != EINTR)
-						break;
+					break;
 				}
 				else if (count == 1)
 				{
@@ -332,11 +330,21 @@ namespace
 			{
 				// Clear error
 				err = 0;
-				sock = OOBase::BSD::create_socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,err);
+				sock = ::socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol);
 				if (sock == -1)
+				{
+					err = errno;
 					break;
+				}
 				else
 				{
+#if defined(HAVE_UNISTD_H)
+					if ((err = OOBase::POSIX::set_close_on_exec(sock,true)) != 0)
+					{
+						::close(sock);
+						break;
+					}
+#endif
 					if ((err = OOBase::BSD::connect(sock,pAddr->ai_addr,pAddr->ai_addrlen,&timeout2)) != 0)
 						::close(sock);
 					else
@@ -377,7 +385,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, i
 
 #if defined(HAVE_UNISTD_H)
 
-void OOBase::POSIX::create_unix_socket(sockaddr_un& addr, socklen_t& len, const char* path)
+void OOBase::POSIX::create_unix_socket_address(sockaddr_un& addr, socklen_t& len, const char* path)
 {
 	addr.sun_family = AF_UNIX;
 	
@@ -397,13 +405,24 @@ void OOBase::POSIX::create_unix_socket(sockaddr_un& addr, socklen_t& len, const 
 
 OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const timeval_t* timeout)
 {
-	int sock = BSD::create_socket(AF_UNIX,SOCK_STREAM,0,err);
+	int sock = ::socket(AF_UNIX,SOCK_STREAM,0);
 	if (sock == -1)
+	{
+		err = errno;
 		return NULL;
+	}
+
+#if defined(HAVE_UNISTD_H)
+	if ((err = OOBase::POSIX::set_close_on_exec(sock,true)) != 0)
+	{
+		::close(sock);
+		return NULL;
+	}
+#endif
 
 	sockaddr_un addr;
 	socklen_t addr_len = 0;
-	POSIX::create_unix_socket(addr,addr_len,path);
+	POSIX::create_unix_socket_address(addr,addr_len,path);
 	
 	if ((err = BSD::connect(sock,(sockaddr*)(&addr),addr_len,timeout)) != 0)
 	{

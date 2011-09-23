@@ -590,7 +590,7 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorEv::accept_local(void* param, vo
 		// Compose filename
 		sockaddr_un addr = {0};
 		socklen_t addr_len;
-		OOBase::POSIX::create_unix_socket(addr,addr_len,path);
+		OOBase::POSIX::create_unix_socket_address(addr,addr_len,path);
 				
 		err = pAcceptor->bind(this,param,(sockaddr*)&addr,addr_len,mode,callback);
 		if (err != 0)
@@ -640,7 +640,7 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorEv::connect_local_socket
 	// Compose filename
 	sockaddr_un addr = {0};
 	socklen_t addr_len;
-	OOBase::POSIX::create_unix_socket(addr,addr_len,path);
+	OOBase::POSIX::create_unix_socket_address(addr,addr_len,path);
 		
 	if ((err = OOBase::BSD::connect(fd,(sockaddr*)&addr,addr_len,timeout)) != 0)
 	{
