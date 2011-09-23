@@ -81,6 +81,8 @@ namespace OOSvrBase
 				};
 			};
 			
+			static bool copy_queue(OOBase::Queue<IOOp,OOBase::HeapAllocator>& dest, OOBase::Queue<IOOp,OOBase::HeapAllocator>& src);
+
 			union param_t
 			{
 				size_t s;
@@ -102,8 +104,12 @@ namespace OOSvrBase
 					
 			struct IOWatcher : public ev_io
 			{
+				OOBase::Queue<IOOp,OOBase::HeapAllocator> m_queueSendPending;
 				OOBase::Queue<IOOp,OOBase::HeapAllocator> m_queueSend;
+				OOBase::Queue<IOOp,OOBase::HeapAllocator> m_queueRecvPending;
 				OOBase::Queue<IOOp,OOBase::HeapAllocator> m_queueRecv;
+				bool                                      m_busy_recv;
+				bool                                      m_busy_send;
 				bool                                      m_unbound;
 			};
 					
@@ -121,7 +127,6 @@ namespace OOSvrBase
 				void* m_watcher;
 			};
 			
-			OOBase::Mutex                                       m_ev_lock;
 			OOBase::HashTable<int,ev_io*,OOBase::HeapAllocator> m_mapWatchers;
 			OOBase::Queue<IOEvent,OOBase::LocalAllocator>*      m_pIOQueue;
 					

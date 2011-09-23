@@ -31,6 +31,35 @@
 
 namespace
 {
+	int create_socket(int family, int socktype, int protocol, int& err)
+	{
+		err = 0;
+		int sock = ::socket(family,socktype,protocol);
+		if (sock == -1)
+		{
+			err = errno;
+			return sock;
+		}
+
+		err = OOBase::BSD::set_non_blocking(sock,true);
+		if (err != 0)
+		{
+			::close(sock);
+			return -1;
+		}
+
+	#if defined(HAVE_UNISTD_H)
+		err = OOBase::POSIX::set_close_on_exec(sock,true);
+		if (err != 0)
+		{
+			::close(sock);
+			return -1;
+		}
+	#endif
+
+		return sock;
+	}
+
 	class AsyncSocket : public OOSvrBase::AsyncLocalSocket
 	{
 	public:
@@ -393,7 +422,7 @@ int SocketAcceptor::Acceptor::init_accept(OOBase::Guard<OOBase::Condition::Mutex
 	// Create a new socket
 	int err = 0;
 	int fd = -1;
-	if ((fd = OOBase::BSD::create_socket(m_addr->sa_family,SOCK_STREAM,0,err)) == -1)
+	if ((fd = create_socket(m_addr->sa_family,SOCK_STREAM,0,err)) == -1)
 		return err;
 		
 	// Bind to the address
@@ -584,7 +613,7 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorEv::accept_local(void* param, vo
 OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorEv::connect_socket(const sockaddr* addr, size_t addr_len, int& err, const OOBase::timeval_t* timeout)
 {
 	int fd = -1;
-	if ((fd = OOBase::BSD::create_socket(addr->sa_family,SOCK_STREAM,0,err)) == -1)
+	if ((fd = create_socket(addr->sa_family,SOCK_STREAM,0,err)) == -1)
 		return NULL;
 	
 	if ((err = OOBase::BSD::connect(fd,addr,addr_len,timeout)) != 0)
@@ -605,7 +634,7 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorEv::connect_local_socket
 #if defined(HAVE_UNISTD_H)
 		
 	int fd = -1;
-	if ((fd = OOBase::BSD::create_socket(AF_UNIX,SOCK_STREAM,0,err)) == -1)
+	if ((fd = create_socket(AF_UNIX,SOCK_STREAM,0,err)) == -1)
 		return NULL;
 	
 	// Compose filename

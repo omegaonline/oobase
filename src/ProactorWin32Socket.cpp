@@ -332,7 +332,7 @@ namespace
 			OOSvrBase::detail::ProactorWin32* m_pProactor;
 			OOBase::Condition::Mutex          m_lock;
 			OOBase::Condition                 m_condition;
-			sockaddr*                  m_addr;
+			sockaddr*                         m_addr;
 			size_t                            m_addr_len;
 			SOCKET                            m_socket;
 			size_t                            m_backlog;
