@@ -352,7 +352,12 @@ int SocketAcceptor::Acceptor::listen(size_t backlog)
 		return 0;
 
 	m_listening = true;
-	return init_accept(guard,backlog);
+
+	int err = init_accept(guard,backlog);
+	if (err != 0)
+		m_listening = false;
+
+	return err;
 }
 
 int SocketAcceptor::Acceptor::stop(bool destroy)
