@@ -242,6 +242,16 @@ namespace OOBase
 	#endif
 		return err;
 	}
+
+	template <typename T>
+	inline void CorrectDirSeparator(T& str)
+	{
+	#if defined(_WIN32)
+		str.replace('/','\\');
+	#else
+		str.replace('\\','/');
+	#endif
+	}
 }
 
 #endif // OOBASE_STRING_H_INCLUDED_
