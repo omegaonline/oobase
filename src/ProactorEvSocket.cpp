@@ -439,7 +439,7 @@ void SocketAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>
 	{
 		::AsyncSocket* pSocket = NULL;
 		sockaddr_storage addr = {0};
-		socklen_t addr_len = 0;
+		socklen_t addr_len = sizeof(addr);
 		
 		int err = 0;
 		int new_fd = ::accept(m_fd,(sockaddr*)&addr,&addr_len);
@@ -466,12 +466,6 @@ void SocketAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>
 		if (new_fd != -1)
 		{
 			err = OOBase::POSIX::set_close_on_exec(new_fd,true);
-			if (err == 0 && m_callback)
-			{
-				if (getpeername(new_fd,(sockaddr*)&addr,&addr_len) != 0)
-					err = errno;
-			}
-			
 			if (err == 0)
 				err = OOBase::BSD::set_non_blocking(new_fd,true);
 					
