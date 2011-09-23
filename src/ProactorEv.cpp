@@ -295,11 +295,15 @@ void OOSvrBase::detail::ProactorEv::process_recv(IOWatcher* watcher, int fd)
 			ssize_t r = 0;
 			do
 			{
-				r = ::recv(fd,op->m_buffer->wr_ptr(),to_read,0);
+				r = ::recv(fd,op->m_buffer->wr_ptr(),to_read,MSG_DONTWAIT);
 			}
 			while (r == -1 && errno == EINTR);
 
-			if (r == -1)
+			if (r == 0)
+			{
+				err = ECONNRESET;
+			}
+			else if (r < 0)
 			{
 				if (errno != EAGAIN && errno != EWOULDBLOCK)
 					err = errno;
@@ -368,7 +372,7 @@ void OOSvrBase::detail::ProactorEv::process_send(IOWatcher* watcher, int fd)
 				ssize_t s = 0;
 				do
 				{
-					s = ::send(fd,op->m_buffer->rd_ptr(),op->m_buffer->length(),0
+					s = ::send(fd,op->m_buffer->rd_ptr(),op->m_buffer->length(),MSG_DONTWAIT
 #if defined(MSG_NOSIGNAL)
 							| MSG_NOSIGNAL
 #endif
