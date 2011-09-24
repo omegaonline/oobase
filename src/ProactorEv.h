@@ -46,7 +46,7 @@ namespace OOSvrBase
 			AsyncSocket* attach_socket(OOBase::socket_t sock, int& err);
 			AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int& err);
 
-			AsyncSocket* connect_socket(const sockaddr* addr, size_t addr_len, int& err, const OOBase::timeval_t* timeout);
+			AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::timeval_t* timeout);
 			AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout);
 				
 			int new_watcher(int fd, int events, void* param, void (*callback)(int fd, int events, void* param));
@@ -61,7 +61,7 @@ namespace OOSvrBase
 			int send_v(int fd, void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count);
 		
 			OOSvrBase::Acceptor* accept_local(void* param, void (*callback)(void* param, OOSvrBase::AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa);
-			OOSvrBase::Acceptor* accept_remote(void* param, void (*callback)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err), const sockaddr* addr, size_t addr_len, int& err);
+			OOSvrBase::Acceptor* accept_remote(void* param, void (*callback)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err), const sockaddr* addr, socklen_t addr_len, int& err);
 
 			int run(int& err, const OOBase::timeval_t* timeout = NULL);
 

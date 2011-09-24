@@ -154,12 +154,12 @@ namespace OOSvrBase
 		virtual ~Proactor();
 
 		virtual Acceptor* accept_local(void* param, void (*callback)(void* param, AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa);
-		virtual Acceptor* accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err), const sockaddr* addr, size_t addr_len, int& err);
+		virtual Acceptor* accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err), const sockaddr* addr, socklen_t addr_len, int& err);
 
 		virtual AsyncSocket* attach_socket(OOBase::socket_t sock, int& err);
 		virtual AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int& err);
 
-		virtual AsyncSocket* connect_socket(const sockaddr* addr, size_t addr_len, int& err, const OOBase::timeval_t* timeout = NULL);
+		virtual AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::timeval_t* timeout = NULL);
 		virtual AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout = NULL);
 
 		virtual int run(int& err, const OOBase::timeval_t* timeout = NULL);
