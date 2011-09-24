@@ -26,7 +26,6 @@
 #include "../include/OOBase/Singleton.h"
 #include "Win32Socket.h"
 
-#include <Ws2tcpip.h>
 #include <mswsock.h>
 
 #if !defined(WSAID_ACCEPTEX)
@@ -181,7 +180,7 @@ SOCKET OOBase::Win32::create_socket(int family, int socktype, int protocol, int&
 	return sock;
 }
 
-int OOBase::Win32::connect(SOCKET sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* timeout)
+int OOBase::Win32::connect(SOCKET sock, const sockaddr* addr, socklen_t addrlen, const OOBase::timeval_t* timeout)
 {
 	static const GUID guid_ConnectEx = WSAID_CONNECTEX;
 
@@ -265,8 +264,8 @@ namespace
 		OOBase::Win32::SmartHandle m_recv_event;
 		OOBase::Win32::SmartHandle m_send_event;
 
-		size_t send_i(WSABUF* wsabuf, DWORD count, int& err, const OOBase::timeval_t* timeout);
-		size_t recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int& err, const OOBase::timeval_t* timeout);
+		size_t send_i(WSABUF* wsabuf, size_t count, int& err, const OOBase::timeval_t* timeout);
+		size_t recv_i(WSABUF* wsabuf, size_t count, bool bAll, int& err, const OOBase::timeval_t* timeout);
 	};
 
 	SOCKET connect_i(const char* address, const char* port, int& err, const OOBase::timeval_t* timeout)
@@ -305,7 +304,7 @@ namespace
 					break;
 				else
 				{
-					if ((err = OOBase::Win32::connect(sock,pAddr->ai_addr,pAddr->ai_addrlen,timeout ? &timeout2 : NULL)) != 0)
+					if ((err = OOBase::Win32::connect(sock,pAddr->ai_addr,static_cast<socklen_t>(pAddr->ai_addrlen),timeout ? &timeout2 : NULL)) != 0)
 						closesocket(sock);
 					else
 						break;
@@ -349,7 +348,9 @@ size_t WinSocket::send(const void* buf, size_t len, int& err, const OOBase::time
 	{
 		WSABUF wsabuf;
 		wsabuf.buf = const_cast<char*>(static_cast<const char*>(buf));
-		wsabuf.len = len;
+
+		void* TODO_64;
+		wsabuf.len = static_cast<ULONG>(len);
 
 		return send_i(&wsabuf,1,err,timeout);
 	}
@@ -416,7 +417,7 @@ size_t WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, int& err, cons
 	return total;
 }
 
-size_t WinSocket::send_i(WSABUF* wsabuf, DWORD count, int& err, const OOBase::timeval_t* timeout)
+size_t WinSocket::send_i(WSABUF* wsabuf, size_t count, int& err, const OOBase::timeval_t* timeout)
 {
 	OOBase::Guard<OOBase::Mutex> guard(m_send_lock);
 
@@ -441,7 +442,7 @@ size_t WinSocket::send_i(WSABUF* wsabuf, DWORD count, int& err, const OOBase::ti
 		DWORD dwWritten = 0;
 		if (!timeout)
 		{
-			if (WSASend(m_socket,wsabuf,count,&dwWritten,0,NULL,NULL) != 0)
+			if (WSASend(m_socket,wsabuf,static_cast<DWORD>(count),&dwWritten,0,NULL,NULL) != 0)
 			{
 				err = WSAGetLastError();
 				if (err != ERROR_OPERATION_ABORTED)
@@ -450,7 +451,7 @@ size_t WinSocket::send_i(WSABUF* wsabuf, DWORD count, int& err, const OOBase::ti
 		}
 		else
 		{
-			if (WSASend(m_socket,wsabuf,count,&dwWritten,0,&ov,NULL) != 0)
+			if (WSASend(m_socket,wsabuf,static_cast<DWORD>(count),&dwWritten,0,&ov,NULL) != 0)
 			{
 				err = WSAGetLastError();
 				if (err != ERROR_OPERATION_ABORTED)
@@ -519,7 +520,9 @@ size_t WinSocket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase:
 	{
 		WSABUF wsabuf;
 		wsabuf.buf = const_cast<char*>(static_cast<const char*>(buf));
-		wsabuf.len = len;
+
+		void* TODO_64;
+		wsabuf.len = static_cast<ULONG>(len);
 
 		return recv_i(&wsabuf,1,bAll,err,timeout);
 	}
@@ -586,7 +589,7 @@ size_t WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, int& err, cons
 	return total;
 }
 
-size_t WinSocket::recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int& err, const OOBase::timeval_t* timeout)
+size_t WinSocket::recv_i(WSABUF* wsabuf, size_t count, bool bAll, int& err, const OOBase::timeval_t* timeout)
 {
 	err = 0;
 
@@ -614,7 +617,7 @@ size_t WinSocket::recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int& err, const
 		DWORD dwRead = 0;
 		if (!timeout)
 		{
-			if (WSARecv(m_socket,wsabuf,count,&dwRead,&dwFlags,NULL,NULL) != 0)
+			if (WSARecv(m_socket,wsabuf,static_cast<DWORD>(count),&dwRead,&dwFlags,NULL,NULL) != 0)
 			{
 				err = WSAGetLastError();
 				if (err != ERROR_OPERATION_ABORTED)
@@ -623,7 +626,7 @@ size_t WinSocket::recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int& err, const
 		}
 		else
 		{
-			if (WSARecv(m_socket,wsabuf,count,&dwRead,&dwFlags,&ov,NULL) != 0)
+			if (WSARecv(m_socket,wsabuf,static_cast<DWORD>(count),&dwRead,&dwFlags,&ov,NULL) != 0)
 			{
 				err = WSAGetLastError();
 				if (err != ERROR_OPERATION_ABORTED)

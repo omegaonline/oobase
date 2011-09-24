@@ -42,7 +42,7 @@ namespace OOSvrBase
 			OOSvrBase::AsyncSocket* attach_socket(OOBase::socket_t sock, int& err);
 			OOSvrBase::AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int& err);
 
-			OOSvrBase::AsyncSocket* connect_socket(const sockaddr* addr, size_t addr_len, int& err, const OOBase::timeval_t* timeout);
+			OOSvrBase::AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::timeval_t* timeout);
 			OOSvrBase::AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout);
 		
 			struct Overlapped : public OVERLAPPED
@@ -61,7 +61,7 @@ namespace OOSvrBase
 
 		protected:
 			OOSvrBase::Acceptor* accept_local(void* param, void (*callback)(void* param, OOSvrBase::AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa);
-			OOSvrBase::Acceptor* accept_remote(void* param, void (*callback)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err), const sockaddr* addr, size_t addr_len, int& err);
+			OOSvrBase::Acceptor* accept_remote(void* param, void (*callback)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err), const sockaddr* addr, socklen_t addr_len, int& err);
 
 		private:
 			HANDLE           m_hPort;

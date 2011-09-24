@@ -237,7 +237,7 @@ int AsyncSocket::send_v(void* param, void (*callback)(void* param, OOBase::Buffe
 	pOv->m_extras[3] = static_cast<ULONG_PTR>(count);
 		
 	DWORD dwSent = 0;
-	if (WSASend(m_hSocket,wsa_bufs,count,&dwSent,0,pOv,NULL) == SOCKET_ERROR)
+	if (WSASend(m_hSocket,wsa_bufs,static_cast<DWORD>(count),&dwSent,0,pOv,NULL) == SOCKET_ERROR)
 	{
 		err = GetLastError();
 		if (err == WSA_IO_PENDING)
@@ -277,7 +277,7 @@ void AsyncSocket::on_send_v(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase
 			len = dwBytes;
 		
 		buffers[i]->rd_ptr(len);
-		dwBytes -= len;
+		dwBytes -= static_cast<DWORD>(len);
 	}
 	
 	// Call callback
@@ -308,13 +308,13 @@ namespace
 	class SocketAcceptor : public OOSvrBase::Acceptor
 	{
 	public:
-		typedef void (*callback_t)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err);
+		typedef void (*callback_t)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err);
 	
 		SocketAcceptor();
 		
 		int listen(size_t backlog);
 		int stop();
-		int bind(OOSvrBase::detail::ProactorWin32* pProactor, void* param, callback_t callback, const sockaddr* addr, size_t addr_len);
+		int bind(OOSvrBase::detail::ProactorWin32* pProactor, void* param, callback_t callback, const sockaddr* addr, socklen_t addr_len);
 	
 	private:
 		virtual ~SocketAcceptor();
@@ -326,14 +326,14 @@ namespace
 			
 			int listen(size_t backlog);
 			int stop(bool destroy);
-			int bind(const sockaddr* addr, size_t addr_len);
+			int bind(const sockaddr* addr, socklen_t addr_len);
 			
 		private:
 			OOSvrBase::detail::ProactorWin32* m_pProactor;
 			OOBase::Condition::Mutex          m_lock;
 			OOBase::Condition                 m_condition;
 			sockaddr*                         m_addr;
-			size_t                            m_addr_len;
+			socklen_t                         m_addr_len;
 			SOCKET                            m_socket;
 			size_t                            m_backlog;
 			size_t                            m_pending;
@@ -382,7 +382,7 @@ int SocketAcceptor::stop()
 	return m_pAcceptor->stop(false);
 }
 
-int SocketAcceptor::bind(OOSvrBase::detail::ProactorWin32* pProactor, void* param, callback_t callback, const sockaddr* addr, size_t addr_len)
+int SocketAcceptor::bind(OOSvrBase::detail::ProactorWin32* pProactor, void* param, callback_t callback, const sockaddr* addr, socklen_t addr_len)
 {
 	m_pAcceptor = new (std::nothrow) SocketAcceptor::Acceptor(pProactor,param,callback);
 	if (!m_pAcceptor)
@@ -416,7 +416,7 @@ SocketAcceptor::Acceptor::~Acceptor()
 	OOBase::HeapFree(m_addr);
 }
 
-int SocketAcceptor::Acceptor::bind(const sockaddr* addr, size_t addr_len)
+int SocketAcceptor::Acceptor::bind(const sockaddr* addr, socklen_t addr_len)
 {
 	m_addr = static_cast<sockaddr*>(OOBase::HeapAllocate(addr_len));
 	if (!m_addr)
@@ -527,7 +527,7 @@ int SocketAcceptor::Acceptor::init_accept(OOBase::Guard<OOBase::Condition::Mutex
 			else
 			{
 				// Start the socket listening...
-				if (::listen(m_socket,m_backlog) == SOCKET_ERROR)
+				if (::listen(m_socket,static_cast<int>(m_backlog)) == SOCKET_ERROR)
 					err = WSAGetLastError();
 				else
 				{
@@ -744,7 +744,7 @@ bool SocketAcceptor::Acceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwE
 	return false;
 }
 
-OOSvrBase::Acceptor* OOSvrBase::detail::ProactorWin32::accept_remote(void* param, void (*callback)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err), const sockaddr* addr, size_t addr_len, int& err)
+OOSvrBase::Acceptor* OOSvrBase::detail::ProactorWin32::accept_remote(void* param, void (*callback)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err), const sockaddr* addr, socklen_t addr_len, int& err)
 {
 	OOBase::Win32::WSAStartup();
 	
@@ -771,7 +771,7 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorWin32::accept_remote(void* param
 	return pAcceptor;
 }
 
-OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorWin32::connect_socket(const sockaddr* addr, size_t addr_len, int& err, const OOBase::timeval_t* timeout)
+OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorWin32::connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::timeval_t* timeout)
 {
 	SOCKET sock = INVALID_SOCKET;
 	if ((sock = OOBase::Win32::create_socket(addr->sa_family,SOCK_STREAM,0,err)) == INVALID_SOCKET)

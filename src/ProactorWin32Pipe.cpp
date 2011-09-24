@@ -27,16 +27,6 @@
 #include "../include/OOBase/String.h"
 #include "../include/OOBase/Condition.h"
 
-#if defined(max)
-#undef max
-#endif
-
-#if defined(min)
-#undef min
-#endif
-
-#include <limits>
-
 namespace
 {
 	int MakePipeName(OOBase::String& str, const char* name)
@@ -227,7 +217,7 @@ int AsyncPipe::send_v(void* param, void (*callback)(void* param, OOBase::Buffer*
 	for (size_t i=0;i<count;++i)
 	{
 		size_t len = buffers[i]->length();
-		if (std::numeric_limits<size_t>::max() - len < total)
+		if (0xFFFFFFFF - len < total)
 			return WSAENOBUFS;
 		
 		total += len;
