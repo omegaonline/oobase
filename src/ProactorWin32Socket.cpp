@@ -673,7 +673,7 @@ bool SocketAcceptor::Acceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwE
 	
 	guard.release();
 	
-	OOBase::RefPtr<OOSvrBase::AsyncSocket> pSocket;
+	::AsyncSocket* pSocket = NULL;
 	sockaddr* remote_addr = NULL;
 	int remote_addr_len = 0;
 		
@@ -685,7 +685,7 @@ bool SocketAcceptor::Acceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwE
 		OOBase::Win32::WSAGetAcceptExSockAddrs(m_socket,addr_buf,0,m_addr_len+16,m_addr_len+16,&local_addr,&local_addr_len,&remote_addr,&remote_addr_len);
 			
 		// Wrap the handle
-		pSocket = new (std::nothrow) AsyncSocket(m_pProactor,hSocket);
+		pSocket = new (std::nothrow) ::AsyncSocket(m_pProactor,hSocket);
 		if (!pSocket)
 			dwErr = ERROR_OUTOFMEMORY;
 	}
@@ -697,7 +697,17 @@ bool SocketAcceptor::Acceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwE
 		closesocket(hSocket);
 	}
 	
-	(*m_callback)(m_param,pSocket,remote_addr,remote_addr_len,dwErr);
+	try
+	{
+		(*m_callback)(m_param,pSocket,remote_addr,remote_addr_len,dwErr);
+	}
+	catch (...)
+	{
+		if (bRemove)
+			OOBase::HeapFree(addr_buf);
+
+		throw;
+	}
 		
 	if (bRemove)
 		OOBase::HeapFree(addr_buf);

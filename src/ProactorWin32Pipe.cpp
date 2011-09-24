@@ -576,8 +576,7 @@ bool PipeAcceptor::Acceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, 
 		guard.release();
 		
 		// Wrap the handle
-		OOBase::RefPtr<OOSvrBase::AsyncLocalSocket> pSocket;
-
+		AsyncPipe* pSocket = NULL;
 		if (dwErr == 0)
 		{
 			pSocket = new (std::nothrow) AsyncPipe(m_pProactor,hPipe);

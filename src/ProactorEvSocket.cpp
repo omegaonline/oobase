@@ -471,7 +471,6 @@ void SocketAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>
 {
 	while (m_listening)
 	{
-		::AsyncSocket* pSocket = NULL;
 		sockaddr_storage addr = {0};
 		socklen_t addr_len = sizeof(addr);
 		
@@ -497,6 +496,7 @@ void SocketAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>
 		
 		guard.release();
 		
+		::AsyncSocket* pSocket = NULL;
 		if (new_fd != -1)
 		{
 			err = OOBase::POSIX::set_close_on_exec(new_fd,true);
@@ -509,10 +509,15 @@ void SocketAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>
 				pSocket = new (std::nothrow) ::AsyncSocket(m_pProactor);
 				if (!pSocket)
 					err = ENOMEM;
-				
-				err = pSocket->bind(new_fd);
-				if (err != 0)
-					delete pSocket;
+				else
+				{
+					err = pSocket->bind(new_fd);
+					if (err != 0)
+					{
+						delete pSocket;
+						pSocket = NULL;
+					}
+				}
 			}
 			
 			if (err != 0)
@@ -520,15 +525,10 @@ void SocketAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>
 		}
 		
 		if (m_callback_local)
-			(*m_callback_local)(m_param,err ? NULL : pSocket,0);
+			(*m_callback_local)(m_param,pSocket,err);
 		else
-		{
-			if (err == 0)
-				(*m_callback)(m_param,pSocket,(sockaddr*)&addr,addr_len,0);
-			else
-				(*m_callback)(m_param,NULL,NULL,0,err);
-		}
-		
+			(*m_callback)(m_param,pSocket,(sockaddr*)&addr,addr_len,err);
+				
 		guard.acquire();
 		
 		// See if we have been killed in the callback
