@@ -247,7 +247,9 @@ namespace OOBase
 			#if defined(ATOMIC_ADD_32)
 				return (T)ATOMIC_ADD_32(&val,add);
 			#else
-				#error define ATOMIC_ADD_32
+				T res = val + add;
+				Exchange(val,res);
+				return res;
 			#endif
 			}
 
@@ -279,16 +281,13 @@ namespace OOBase
 			}
 		};
 
+#if defined(ATOMIC_CAS_64)
 		template <typename T>
 		struct AtomicImpl<T,8>
 		{
 			static T CompareAndSwap(T& val, const T oldVal, const T newVal)
 			{
-			#if defined(ATOMIC_CAS_64)
 				return (T)ATOMIC_CAS_64(&val,oldVal,newVal);
-			#else
-				#error define ATOMIC_CAS_64
-			#endif
 			}
 
 			static T Exchange(T& val, const T newVal)
@@ -309,7 +308,9 @@ namespace OOBase
 			#if defined(ATOMIC_ADD_64)
 				return (T)ATOMIC_ADD_64(&val,add);
 			#else
-				#error define ATOMIC_ADD_64
+				T res = val + add;
+				Exchange(val,res);
+				return res;
 			#endif
 			}
 
@@ -340,6 +341,7 @@ namespace OOBase
 			#endif
 			}
 		};
+#endif
 	}
 }
 
