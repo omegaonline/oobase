@@ -222,7 +222,7 @@ namespace
 	class SocketAcceptor : public OOSvrBase::Acceptor
 	{
 	public:
-		typedef void (*callback_t)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err);
+		typedef void (*callback_t)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err);
 		typedef void (*callback_local_t)(void* param, OOSvrBase::AsyncLocalSocket* pSocket, int err);
 	
 		SocketAcceptor();
@@ -230,8 +230,8 @@ namespace
 
 		int listen(size_t backlog);
 		int stop();
-		int bind(OOSvrBase::detail::ProactorEv* pProactor, void* param, const sockaddr* addr, size_t addr_len, callback_t callback);
-		int bind(OOSvrBase::detail::ProactorEv* pProactor, void* param, const sockaddr* addr, size_t addr_len, mode_t mode, callback_local_t callback);
+		int bind(OOSvrBase::detail::ProactorEv* pProactor, void* param, const sockaddr* addr, socklen_t addr_len, callback_t callback);
+		int bind(OOSvrBase::detail::ProactorEv* pProactor, void* param, const sockaddr* addr, socklen_t addr_len, mode_t mode, callback_local_t callback);
 	
 	private:
 		class Acceptor
@@ -243,7 +243,7 @@ namespace
 			int listen(size_t backlog);
 			int stop(bool destroy);
 		
-			int bind(const sockaddr* addr, size_t addr_len);
+			int bind(const sockaddr* addr, socklen_t addr_len);
 			void set_callback(callback_t callback);
 			void set_callback(callback_local_t callback, mode_t mode);
 		
@@ -253,7 +253,7 @@ namespace
 			OOBase::Condition::Mutex         m_lock;
 			OOBase::Condition                m_condition;
 			sockaddr*                        m_addr;
-			size_t                           m_addr_len;
+			socklen_t                        m_addr_len;
 			bool                             m_listening;
 			bool                             m_in_progress;
 			size_t                           m_refcount;
@@ -296,7 +296,7 @@ int SocketAcceptor::stop()
 	return m_pAcceptor->stop(false);
 }
 
-int SocketAcceptor::bind(OOSvrBase::detail::ProactorEv* pProactor, void* param, const sockaddr* addr, size_t addr_len, callback_t callback)
+int SocketAcceptor::bind(OOSvrBase::detail::ProactorEv* pProactor, void* param, const sockaddr* addr, socklen_t addr_len, callback_t callback)
 {
 	m_pAcceptor = new (std::nothrow) SocketAcceptor::Acceptor(pProactor,param);
 	if (!m_pAcceptor)
@@ -314,7 +314,7 @@ int SocketAcceptor::bind(OOSvrBase::detail::ProactorEv* pProactor, void* param, 
 	return err;
 }
 
-int SocketAcceptor::bind(OOSvrBase::detail::ProactorEv* pProactor, void* param, const sockaddr* addr, size_t addr_len, mode_t mode, callback_local_t callback)
+int SocketAcceptor::bind(OOSvrBase::detail::ProactorEv* pProactor, void* param, const sockaddr* addr, socklen_t addr_len, mode_t mode, callback_local_t callback)
 {
 	m_pAcceptor = new (std::nothrow) SocketAcceptor::Acceptor(pProactor,param);
 	if (!m_pAcceptor)
@@ -361,7 +361,7 @@ void SocketAcceptor::Acceptor::set_callback(SocketAcceptor::callback_local_t cal
 	m_mode = mode;
 }
 
-int SocketAcceptor::Acceptor::bind(const sockaddr* addr, size_t addr_len)
+int SocketAcceptor::Acceptor::bind(const sockaddr* addr, socklen_t addr_len)
 {
 	m_addr = (sockaddr*)OOBase::HeapAllocate(addr_len);
 	if (!m_addr)
@@ -541,7 +541,7 @@ void SocketAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>
 	}
 }
 
-OOSvrBase::Acceptor* OOSvrBase::detail::ProactorEv::accept_remote(void* param, void (*callback)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err), const sockaddr* addr, size_t addr_len, int& err)
+OOSvrBase::Acceptor* OOSvrBase::detail::ProactorEv::accept_remote(void* param, void (*callback)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err), const sockaddr* addr, socklen_t addr_len, int& err)
 {
 	// Make sure we have valid inputs
 	if (!callback || !addr || addr_len == 0)
@@ -610,7 +610,7 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorEv::accept_local(void* param, vo
 	return pAcceptor;
 }
 
-OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorEv::connect_socket(const sockaddr* addr, size_t addr_len, int& err, const OOBase::timeval_t* timeout)
+OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorEv::connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::timeval_t* timeout)
 {
 	int fd = -1;
 	if ((fd = create_socket(addr->sa_family,SOCK_STREAM,0,err)) == -1)
