@@ -26,8 +26,6 @@
 
 #if defined(_WIN32)
 
-#include <Ws2tcpip.h>
-
 namespace OOBase
 {
 	namespace Win32

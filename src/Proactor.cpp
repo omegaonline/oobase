@@ -97,7 +97,7 @@ OOSvrBase::Acceptor* OOSvrBase::Proactor::accept_local(void* param, void (*callb
 	return m_impl->accept_local(param,callback,path,err,psa);
 }
 
-OOSvrBase::Acceptor* OOSvrBase::Proactor::accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const sockaddr* addr, size_t addr_len, int err), const sockaddr* addr, size_t addr_len, int& err)
+OOSvrBase::Acceptor* OOSvrBase::Proactor::accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err), const sockaddr* addr, socklen_t addr_len, int& err)
 {
 	if (!m_impl)
 	{
@@ -130,7 +130,7 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::Proactor::attach_local_socket(OOBase::so
 	return m_impl->attach_local_socket(sock,err);
 }
 
-OOSvrBase::AsyncSocket* OOSvrBase::Proactor::connect_socket(const sockaddr* addr, size_t addr_len, int& err, const OOBase::timeval_t* timeout)
+OOSvrBase::AsyncSocket* OOSvrBase::Proactor::connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::timeval_t* timeout)
 {
 	if (!m_impl)
 	{
