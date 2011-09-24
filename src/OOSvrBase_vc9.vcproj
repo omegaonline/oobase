@@ -245,7 +245,7 @@
 				Optimization="3"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories="C:\sqlite3"
+				AdditionalIncludeDirectories="C:\Work\sqlite"
 				PreprocessorDefinitions="HAVE_SQLITE3_AMALGAMATION;NDEBUG"
 				StringPooling="true"
 				RuntimeLibrary="0"
