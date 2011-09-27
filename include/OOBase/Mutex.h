@@ -130,11 +130,11 @@ namespace OOBase
 				acquire();
 		}
 
-		Guard(MUTEX& mutex, const timeval_t& wait) :
+		Guard(MUTEX& mutex, const timeval_t& timeout) :
 				m_acquired(false),
 				m_mutex(mutex)
 		{
-			acquire(&wait);
+			acquire(&timeout);
 		}
 
 		~Guard()
@@ -152,11 +152,11 @@ namespace OOBase
 			m_acquired = true;
 		}
 
-		bool acquire(const timeval_t& wait)
+		bool acquire(const timeval_t& timeout)
 		{
 			assert(!m_acquired);
 
-			if (m_mutex.acquire(&wait))
+			if (m_mutex.acquire(&timeout))
 				m_acquired = true;
 
 			return m_acquired;
