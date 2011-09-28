@@ -130,13 +130,6 @@ namespace OOBase
 				acquire();
 		}
 
-		Guard(MUTEX& mutex, const timeval_t& timeout) :
-				m_acquired(false),
-				m_mutex(mutex)
-		{
-			acquire(&timeout);
-		}
-
 		~Guard()
 		{
 			if (m_acquired)
