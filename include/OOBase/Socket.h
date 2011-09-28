@@ -51,7 +51,7 @@ namespace OOBase
 		static Socket* connect_local(const char* path, int& err, const timeval_t* timeout = NULL);
 
 		virtual size_t send(const void* buf, size_t len, int& err, const timeval_t* timeout = NULL) = 0;
-		//virtual size_t send_v(Buffer* buffers[], size_t count, int& err, const timeval_t* timeout = NULL) = 0;
+		virtual int send_v(Buffer* buffers[], size_t count, const timeval_t* timeout = NULL) = 0;
 				
 		template <typename T>
 		int send(const T& val, const timeval_t* timeout = NULL)
@@ -74,7 +74,7 @@ namespace OOBase
 		}
 
 		virtual size_t recv(void* buf, size_t len, bool bAll, int& err, const timeval_t* timeout = NULL) = 0;
-		//virtual size_t recv_v(Buffer* buffers[], size_t count, int& err, const timeval_t* timeout = NULL) = 0;
+		virtual int recv_v(Buffer* buffers[], size_t count, const timeval_t* timeout = NULL) = 0;
 
 		template <typename T>
 		int recv(T& val, const timeval_t* timeout = NULL)

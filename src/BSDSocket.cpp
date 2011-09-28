@@ -114,190 +114,20 @@ namespace
 		virtual ~Socket();
 
 		size_t send(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout = NULL);
-		//size_t send_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout = NULL);
+		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout = NULL);
 		size_t recv(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout = NULL);
-		//size_t recv_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout = NULL);
+		int recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout = NULL);
 
 		void close();
 
 	private:
 		int  m_sock;
+
+		OOBase::Mutex              m_recv_lock;  // These are mutexes to enforce ordering
+		OOBase::Mutex              m_send_lock;
+
+		int do_select(bool bWrite, const OOBase::timeval_t* timeout = NULL);
 	};
-
-	Socket::Socket(int sock) :
-			m_sock(sock)
-	{
-	}
-
-	Socket::~Socket()
-	{
-		::close(m_sock);
-	}
-
-	size_t Socket::send(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout)
-	{
-		err = 0;
-		const char* cbuf = static_cast<const char*>(buf);
-
-		::timeval tv;
-		if (timeout)
-		{
-			tv.tv_sec = static_cast<long>(timeout->tv_sec());
-			tv.tv_usec = timeout->tv_usec();
-		}
-
-		size_t total = 0;
-		while (total < len)
-		{
-			ssize_t sent = 0;
-			do
-			{
-				sent = ::send(m_sock,cbuf,static_cast<int>(len),(timeout ? MSG_DONTWAIT : 0)
-#if defined(MSG_NOSIGNAL)
-					| MSG_NOSIGNAL
-#endif
-				);
-			}
-			while (sent == -1 && errno == EINTR);
-
-			if (sent != -1)
-			{
-				total += sent;
-				cbuf += sent;
-			}
-			else
-			{
-				err = errno;
-				if (err != EAGAIN)
-					break;
-
-				// Do the select...
-				fd_set wfds;
-				fd_set efds;
-				FD_ZERO(&wfds);
-				FD_ZERO(&efds);
-				FD_SET(m_sock,&wfds);
-				FD_SET(m_sock,&efds);
-				int count = 0;
-				do
-				{
-					count = ::select(static_cast<int>(m_sock+1),NULL,&wfds,&efds,timeout ? &tv : NULL);
-				}
-				while (count == -1 && errno == EINTR);
-
-				if (count == -1)
-				{
-					err = errno;
-					break;
-				}
-				else if (count == 1)
-				{
-					if (FD_ISSET(m_sock,&efds))
-					{
-						// Error
-						socklen_t len = sizeof(err);
-						if (getsockopt(m_sock,SOL_SOCKET,SO_ERROR,(char*)&err,&len) == -1)
-							err = errno;
-
-						break;
-					}
-				}
-				else
-				{
-					err = ETIMEDOUT;
-					break;
-				}
-			}
-		}
-
-		return total;
-	}
-
-	size_t Socket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout)
-	{
-		err = 0;
-		char* cbuf = static_cast<char*>(buf);
-
-		::timeval tv;
-		if (timeout)
-		{
-			tv.tv_sec = static_cast<long>(timeout->tv_sec());
-			tv.tv_usec = timeout->tv_usec();
-		}
-
-		size_t total = 0;
-		for (;;)
-		{
-			ssize_t recvd = 0;
-			do
-			{
-				recvd = ::recv(m_sock,cbuf,static_cast<int>(len),timeout ? MSG_DONTWAIT : MSG_WAITALL);
-			}
-			while (recvd == -1 && errno == EINTR);
-
-			if (recvd != -1)
-			{
-				err = 0;
-				total += recvd;
-				cbuf += recvd;
-				len -= recvd;
-				if (len == 0 || recvd == 0 || !bAll)
-					break;
-			}
-			else
-			{
-				err = errno;
-				if (err != EAGAIN)
-					break;
-
-				// Do the select...
-				fd_set rfds;
-				fd_set efds;
-
-				FD_ZERO(&rfds);
-				FD_ZERO(&efds);
-				FD_SET(m_sock,&rfds);
-				FD_SET(m_sock,&efds);
-
-				int count = 0;
-				do
-				{
-					count = ::select(static_cast<int>(m_sock+1),&rfds,NULL,&efds,timeout ? &tv : NULL);
-				}
-				while (count == -1 && errno == EINTR);
-
-				if (count == -1)
-				{
-					err = errno;
-					break;
-				}
-				else if (count == 1)
-				{
-					if (FD_ISSET(m_sock,&efds))
-					{
-						// Error
-						socklen_t len = sizeof(err);
-						if (getsockopt(m_sock,SOL_SOCKET,SO_ERROR,(char*)&err,&len) == -1)
-							err = errno;
-
-						break;
-					}
-				}
-				else
-				{
-					err = ETIMEDOUT;
-					break;
-				}
-			}
-		}
-
-		return total;
-	}
-
-	void Socket::close()
-	{
-		::shutdown(m_sock,SHUT_RDWR);
-	}
 
 	int connect_i(const char* address, const char* port, int& err, const OOBase::timeval_t* timeout)
 	{
@@ -316,7 +146,7 @@ namespace
 			err = errno;
 			return -1;
 		}
-		
+
 		int sock = -1;
 
 		// Took too long to resolve...
@@ -365,6 +195,352 @@ namespace
 
 		return sock;
 	}
+}
+
+Socket::Socket(int sock) :
+		m_sock(sock)
+{
+}
+
+Socket::~Socket()
+{
+	::close(m_sock);
+}
+
+int Socket::do_select(bool bWrite, const OOBase::timeval_t* timeout)
+{
+	::timeval tv;
+	if (timeout)
+	{
+		tv.tv_sec = static_cast<long>(timeout->tv_sec());
+		tv.tv_usec = timeout->tv_usec();
+	}
+
+	fd_set fds,efds;
+	FD_ZERO(&fds);
+	FD_ZERO(&efds);
+	FD_SET(m_sock,&fds);
+	FD_SET(m_sock,&efds);
+
+	int count = 0;
+	do
+	{
+		count = ::select(m_sock+1,(bWrite ? NULL : &fds),(bWrite ? &fds : NULL),&efds,timeout ? &tv : NULL);
+	}
+	while (count == -1 && errno == EINTR);
+
+	if (count == -1)
+		return errno;
+
+	if (count == 0)
+		return ETIMEDOUT;
+
+	if (FD_ISSET(m_sock,&efds))
+	{
+		// Error
+		int err = 0;
+		socklen_t len = sizeof(err);
+		if (getsockopt(m_sock,SOL_SOCKET,SO_ERROR,(char*)&err,&len) == -1)
+			err = errno;
+
+		return err;
+	}
+
+	return 0;
+}
+
+size_t Socket::send(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout)
+{
+	// Start a countdown
+	OOBase::timeval_t timeout2 = (timeout ? *timeout : OOBase::timeval_t::MaxTime);
+	OOBase::Countdown countdown(&timeout2);
+
+	const char* cbuf = static_cast<const char*>(buf);
+	size_t to_send = len;
+	err = 0;
+
+	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,false);
+	if (!guard.acquire(timeout2))
+	{
+		err = ETIMEDOUT;
+		return 0;
+	}
+
+	do
+	{
+		ssize_t sent = 0;
+		do
+		{
+			sent = ::send(m_sock,cbuf,to_send,0
+#if defined(MSG_NOSIGNAL)
+				| MSG_NOSIGNAL
+#endif
+			);
+		}
+		while (sent == -1 && errno == EINTR);
+
+		if (sent > 0)
+		{
+			to_send -= sent;
+			cbuf += sent;
+		}
+		else
+		{
+			err = errno;
+			if (err == EAGAIN)
+			{
+				countdown.update();
+
+				// Do the select...
+				err = do_select(true,timeout ? &timeout2 : NULL);
+			}
+		}
+	}
+	while (err == 0 && to_send);
+
+	return (len - to_send);
+}
+
+int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout)
+{
+	if (count == 0)
+		return 0;
+
+	// Start a countdown
+	OOBase::timeval_t timeout2 = (timeout ? *timeout : OOBase::timeval_t::MaxTime);
+	OOBase::Countdown countdown(&timeout2);
+
+	struct iovec static_bufs[4];
+	OOBase::SmartPtr<struct iovec,OOBase::LocalAllocator> ptrBufs;
+
+	struct msghdr msg = {0};
+	msg.msg_iov = static_bufs;
+	msg.msg_iovlen = count;
+
+	if (count > sizeof(static_bufs)/sizeof(static_bufs[0]))
+	{
+		ptrBufs = static_cast<struct iovec*>(OOBase::LocalAllocate(count * sizeof(struct iovec)));
+		if (!ptrBufs)
+			return ENOMEM;
+
+		msg.msg_iov = ptrBufs;
+	}
+
+	for (size_t i=0;i<count;++i)
+	{
+		msg.msg_iov[i].iov_len = buffers[i]->length();
+		msg.msg_iov[i].iov_base = const_cast<char*>(buffers[i]->rd_ptr());
+	}
+
+	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,false);
+	if (!guard.acquire(timeout2))
+		return ETIMEDOUT;
+
+	size_t first_buffer = 0;
+	int err = 0;
+	do
+	{
+		ssize_t sent = 0;
+		do
+		{
+			sent = ::sendmsg(m_sock,&msg,0
+#if defined(MSG_NOSIGNAL)
+				| MSG_NOSIGNAL
+#endif
+			);
+		}
+		while (sent == -1 && errno == EINTR);
+
+		if (sent > 0)
+		{
+			// Update buffers...
+			do
+			{
+				if (static_cast<size_t>(sent) >= msg.msg_iov->iov_len)
+				{
+					buffers[first_buffer]->rd_ptr(msg.msg_iov->iov_len);
+					++first_buffer;
+					sent -= msg.msg_iov->iov_len;
+					++msg.msg_iov;
+					if (--msg.msg_iovlen == 0)
+						break;
+				}
+				else
+				{
+					buffers[first_buffer]->rd_ptr(sent);
+					msg.msg_iov->iov_len -= sent;
+					msg.msg_iov->iov_base = static_cast<char*>(msg.msg_iov->iov_base) + sent;
+					sent = 0;
+				}
+			}
+			while (sent > 0);
+		}
+		else
+		{
+			err = errno;
+			if (err == EAGAIN)
+			{
+				countdown.update();
+
+				// Do the select...
+				err = do_select(true,timeout);
+			}
+		}
+	}
+	while (err == 0 && msg.msg_iovlen);
+
+	return err;
+}
+
+size_t Socket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout)
+{
+	// Start a countdown
+	OOBase::timeval_t timeout2 = (timeout ? *timeout : OOBase::timeval_t::MaxTime);
+	OOBase::Countdown countdown(&timeout2);
+
+	char* cbuf = static_cast<char*>(buf);
+	size_t to_recv = len;
+	err = 0;
+
+	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,false);
+	if (!guard.acquire(timeout2))
+	{
+		err = ETIMEDOUT;
+		return 0;
+	}
+
+	do
+	{
+		ssize_t recvd = 0;
+		do
+		{
+			recvd = ::recv(m_sock,cbuf,to_recv,0);
+		}
+		while (recvd == -1 && errno == EINTR);
+
+		if (recvd > 0)
+		{
+			to_recv -= recvd;
+			cbuf += recvd;
+
+			if (!bAll)
+				break;
+		}
+		else
+		{
+			if (recvd == 0)
+				err = ECONNRESET;
+			else
+				err = errno;
+
+			if (err == EAGAIN)
+			{
+				countdown.update();
+
+				// Do the select...
+				err = do_select(false,timeout);
+			}
+		}
+	}
+	while (err == 0 && to_recv);
+
+	return (len - to_recv);
+}
+
+int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout)
+{
+	if (count == 0)
+		return 0;
+
+	// Start a countdown
+	OOBase::timeval_t timeout2 = (timeout ? *timeout : OOBase::timeval_t::MaxTime);
+	OOBase::Countdown countdown(&timeout2);
+
+	struct iovec static_bufs[4];
+	OOBase::SmartPtr<struct iovec,OOBase::LocalAllocator> ptrBufs;
+
+	struct msghdr msg = {0};
+	msg.msg_iov = static_bufs;
+	msg.msg_iovlen = count;
+
+	if (count > sizeof(static_bufs)/sizeof(static_bufs[0]))
+	{
+		ptrBufs = static_cast<struct iovec*>(OOBase::LocalAllocate(count * sizeof(struct iovec)));
+		if (!ptrBufs)
+			return ENOMEM;
+
+		msg.msg_iov = ptrBufs;
+	}
+
+	for (size_t i=0;i<count;++i)
+	{
+		msg.msg_iov[i].iov_len = buffers[i]->space();
+		msg.msg_iov[i].iov_base = buffers[i]->wr_ptr();
+	}
+
+	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,false);
+	if (!guard.acquire(timeout2))
+		return ETIMEDOUT;
+
+	size_t first_buffer = 0;
+	int err = 0;
+	do
+	{
+		ssize_t recvd = 0;
+		do
+		{
+			recvd = ::recvmsg(m_sock,&msg,0);
+		}
+		while (recvd == -1 && errno == EINTR);
+
+		if (recvd > 0)
+		{
+			// Update buffers...
+			do
+			{
+				if (static_cast<size_t>(recvd) >= msg.msg_iov->iov_len)
+				{
+					buffers[first_buffer]->wr_ptr(msg.msg_iov->iov_len);
+					++first_buffer;
+					recvd -= msg.msg_iov->iov_len;
+					++msg.msg_iov;
+					if (--msg.msg_iovlen == 0)
+						break;
+				}
+				else
+				{
+					buffers[first_buffer]->wr_ptr(recvd);
+					msg.msg_iov->iov_len -= recvd;
+					msg.msg_iov->iov_base = static_cast<char*>(msg.msg_iov->iov_base) + recvd;
+					recvd = 0;
+				}
+			}
+			while (recvd > 0);
+		}
+		else
+		{
+			if (recvd == 0)
+				err = ECONNRESET;
+			else
+				err = errno;
+
+			if (err == EAGAIN)
+			{
+				countdown.update();
+
+				// Do the select...
+				err = do_select(false,timeout);
+			}
+		}
+	}
+	while (err == 0 && msg.msg_iovlen);
+
+	return err;
+}
+
+void Socket::close()
+{
+	::shutdown(m_sock,SHUT_RDWR);
 }
 
 OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, int& err, const timeval_t* timeout)

@@ -250,10 +250,10 @@ namespace
 		virtual ~WinSocket();
 
 		size_t recv(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout = NULL);
-		size_t recv_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout = NULL);
+		int recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout = NULL);
 		
 		size_t send(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout = NULL);
-		size_t send_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout = NULL);
+		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout = NULL);
 
 		void close();
 					
@@ -264,8 +264,8 @@ namespace
 		OOBase::Win32::SmartHandle m_recv_event;
 		OOBase::Win32::SmartHandle m_send_event;
 
-		size_t send_i(WSABUF* wsabuf, size_t count, int& err, const OOBase::timeval_t* timeout);
-		size_t recv_i(WSABUF* wsabuf, size_t count, bool bAll, int& err, const OOBase::timeval_t* timeout);
+		DWORD send_i(WSABUF* wsabuf, DWORD count, int& err, const OOBase::timeval_t* timeout);
+		DWORD recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int& err, const OOBase::timeval_t* timeout);
 	};
 
 	SOCKET connect_i(const char* address, const char* port, int& err, const OOBase::timeval_t* timeout)
@@ -339,91 +339,112 @@ WinSocket::~WinSocket()
 
 size_t WinSocket::send(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout)
 {
+	err = 0;
+	if (len == 0)
+		return 0;
+
 	if (len > 0xFFFFFFFF)
 	{
 		err = E2BIG;
 		return 0;
 	}
-	else
-	{
-		WSABUF wsabuf;
-		wsabuf.buf = const_cast<char*>(static_cast<const char*>(buf));
 
-		void* TODO_64;
-		wsabuf.len = static_cast<ULONG>(len);
+	WSABUF buf;
+	buf.buf = const_cast<char*>(static_cast<const char*>(buf));
+	buf.len = static_cast<ULONG>(len);
 
-		return send_i(&wsabuf,1,err,timeout);
-	}
+	return send_i(&buf,1,err,timeout);
 }
 
-size_t WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout)
+int WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout)
 {
 	if (count == 0)
 		return 0;
 
 	WSABUF static_bufs[4];
 	WSABUF* bufs = static_bufs;
-	
-	if (count > sizeof(static_bufs)/sizeof(static_bufs[0]))
-	{
-		bufs = static_cast<WSABUF*>(OOBase::LocalAllocate(count * sizeof(WSABUF)));
-		if (!bufs)
-		{
-			err = ERROR_OUTOFMEMORY;
-			return 0;
-		}
-	}
+	OOBase::SmartPtr<WSABUF,OOBase::LocalAllocator> ptrBufs;
 
-	err = 0;
+	size_t total_len = 0;
+	DWORD actual_count = 0;
 	for (size_t i=0;i<count;++i)
 	{
 		size_t len = buffers[i]->length();
-		if (len > 0xFFFFFFFF)
+
+		total_len += len;
+		if (total_len > 0xFFFFFFFF)
+			return E2BIG;
+
+		if (len > 0)
 		{
-			err = E2BIG;
-			break;
+			if (actual_count == 0xFFFFFFFF)
+				return E2BIG;
+
+			++actual_count;
 		}
-		
-		bufs[i].len = static_cast<ULONG>(len);
-		bufs[i].buf = const_cast<char*>(buffers[i]->rd_ptr());
 	}
 
-	size_t total = 0;
-	if (err == 0)
+	if (actual_count > sizeof(static_bufs)/sizeof(static_bufs[0]))
 	{
-		size_t len = send_i(bufs,count,err,timeout);
+		ptrBufs = static_cast<WSABUF*>(OOBase::LocalAllocate(actual_count * sizeof(WSABUF)));
+		if (!ptrBufs)
+			return ERROR_OUTOFMEMORY;
 
-		total = len;
-		
-		for (size_t i=0;i<count && len > 0;++i)
+		bufs = ptrBufs;
+	}
+
+	DWORD j = 0;
+	for (size_t i=0;i<count;++i)
+	{
+		size_t len = buffers[i]->length();
+		if (len > 0)
 		{
-			size_t l = buffers[i]->length();
-			if (len >= l)
-			{
-				buffers[i]->rd_ptr(l);
-				len -= l;
-			}
-			else
-			{
-				buffers[i]->rd_ptr(len);
-				len = 0;
-			}
+			bufs[j].len = static_cast<ULONG>(len);
+			bufs[j].buf = const_cast<char*>(static_cast<const char*>(buffers[i]->rd_ptr()));
+			++j;
 		}
 	}
 
-	if (bufs != static_bufs)
-		OOBase::LocalFree(bufs);
+	int err = 0;
+	DWORD dwWritten = send_i(bufs,actual_count,err,timeout);
 
-	return total;
+	// Update buffers...
+	for (size_t first_buffer = 0;dwWritten;)
+	{
+		if (dwWritten >= bufs->len)
+		{
+			buffers[first_buffer]->rd_ptr(bufs->len);
+			++first_buffer;
+			dwWritten -= bufs->len;
+			++bufs;
+			if (--actual_count == 0)
+				break;
+		}
+		else
+		{
+			buffers[first_buffer]->rd_ptr(dwWritten);
+			bufs->len -= dwWritten;
+			bufs->buf += dwWritten;
+			dwWritten = 0;
+		}
+	}
+
+	return err;
 }
 
-size_t WinSocket::send_i(WSABUF* wsabuf, size_t count, int& err, const OOBase::timeval_t* timeout)
+DWORD WinSocket::send_i(WSABUF* wsabuf, DWORD count, int& err, const OOBase::timeval_t* timeout)
 {
-	OOBase::Guard<OOBase::Mutex> guard(m_send_lock);
-
 	WSAOVERLAPPED ov = {0};
+	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,false);
+
 	if (timeout)
 	{
+		if (!guard.acquire(*timeout))
+		{
+			err = WSAETIMEDOUT;
+			return 0;
+		}
+
 		if (!m_send_event.is_valid())
 		{
 			m_send_event = CreateEventW(NULL,TRUE,FALSE,NULL);
@@ -433,171 +454,159 @@ size_t WinSocket::send_i(WSABUF* wsabuf, size_t count, int& err, const OOBase::t
 				return 0;
 			}
 		}
+
 		ov.hEvent = m_send_event;
 	}
 
-	size_t total = 0;
-	while (count > 0)
+	DWORD dwWritten = 0;
+	if (!timeout)
 	{
-		DWORD dwWritten = 0;
-		if (!timeout)
+		if (WSASend(m_socket,wsabuf,static_cast<DWORD>(count),&dwWritten,0,NULL,NULL) != 0)
+			err = WSAGetLastError();
+	}
+	else
+	{
+		if (WSASend(m_socket,wsabuf,static_cast<DWORD>(count),&dwWritten,0,&ov,NULL) != 0)
 		{
-			if (WSASend(m_socket,wsabuf,static_cast<DWORD>(count),&dwWritten,0,NULL,NULL) != 0)
+			err = WSAGetLastError();
+			if (err == WSA_IO_PENDING)
 			{
-				err = WSAGetLastError();
-				if (err != ERROR_OPERATION_ABORTED)
-					return total;
-			}
-		}
-		else
-		{
-			if (WSASend(m_socket,wsabuf,static_cast<DWORD>(count),&dwWritten,0,&ov,NULL) != 0)
-			{
-				err = WSAGetLastError();
-				if (err != ERROR_OPERATION_ABORTED)
+				err = 0;
+				DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout->msec());
+				if (dwWait == WAIT_TIMEOUT)
 				{
-					if (err != WSA_IO_PENDING)
-						return total;
+					CancelIo(reinterpret_cast<HANDLE>(m_socket));
+					err = WAIT_TIMEOUT;
+				}
+				else if (dwWait != WAIT_OBJECT_0)
+				{
+					err = GetLastError();
+					CancelIo(reinterpret_cast<HANDLE>(m_socket));
+				}
 
-					err = 0;
-					DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout->msec());
-					if (dwWait == WAIT_TIMEOUT)
-					{
-						CancelIo(reinterpret_cast<HANDLE>(m_socket));
-						err = WAIT_TIMEOUT;
-					}
-					else if (dwWait != WAIT_OBJECT_0)
-					{
-						err = GetLastError();
-						CancelIo(reinterpret_cast<HANDLE>(m_socket));
-					}
-				
-					DWORD dwFlags = 0;
-					if (!WSAGetOverlappedResult(m_socket,&ov,&dwWritten,TRUE,&dwFlags))
-					{
-						int dwErr = WSAGetLastError();
-						if (err == 0 && dwErr != ERROR_OPERATION_ABORTED)
-							err = dwErr;
-
-						if (err != 0)
-							return total;
-					}
+				DWORD dwFlags = 0;
+				if (!WSAGetOverlappedResult(m_socket,&ov,&dwWritten,TRUE,&dwFlags))
+				{
+					int dwErr = WSAGetLastError();
+					if (err == 0 && dwErr != ERROR_OPERATION_ABORTED)
+						err = dwErr;
 				}
 			}
 		}
-
-		total += dwWritten;
-
-		// Update buffers
-		do
-		{
-			if (wsabuf->len > dwWritten)
-			{
-				wsabuf->len -= dwWritten;
-				wsabuf->buf += dwWritten;
-				break;
-			}
-
-			dwWritten -= wsabuf->len;
-			++wsabuf;
-			--count;
-		} 
-		while (count > 0);
 	}
 
-	err = 0;
-	return total;
+	return dwWritten;
 }
 
 size_t WinSocket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout)
 {
+	err = 0;
+	if (len == 0)
+		return 0;
+
 	if (len > 0xFFFFFFFF)
 	{
 		err = E2BIG;
 		return 0;
 	}
-	else
-	{
-		WSABUF wsabuf;
-		wsabuf.buf = const_cast<char*>(static_cast<const char*>(buf));
 
-		void* TODO_64;
-		wsabuf.len = static_cast<ULONG>(len);
+	WSABUF buf;
+	buf.buf = static_cast<char*>(buf);
+	buf.len = static_cast<ULONG>(len);
 
-		return recv_i(&wsabuf,1,bAll,err,timeout);
-	}
+	return recv_i(&buf,1,bAll,err,timeout);
 }
 
-size_t WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout)
+int WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout)
 {
 	if (count == 0)
 		return 0;
 
 	WSABUF static_bufs[4];
 	WSABUF* bufs = static_bufs;
-	
-	if (count > sizeof(static_bufs)/sizeof(static_bufs[0]))
-	{
-		bufs = static_cast<WSABUF*>(OOBase::LocalAllocate(count * sizeof(WSABUF)));
-		if (!bufs)
-		{
-			err = ERROR_OUTOFMEMORY;
-			return 0;
-		}
-	}
+	OOBase::SmartPtr<WSABUF,OOBase::LocalAllocator> ptrBufs;
 
-	err = 0;
+	size_t total_len = 0;
+	DWORD actual_count = 0;
 	for (size_t i=0;i<count;++i)
 	{
 		size_t len = buffers[i]->space();
-		if (len > 0xFFFFFFFF)
+
+		total_len += len;
+		if (total_len > 0xFFFFFFFF)
+			return E2BIG;
+
+		if (len > 0)
 		{
-			err = E2BIG;
-			break;
+			if (actual_count == 0xFFFFFFFF)
+				return E2BIG;
+
+			++actual_count;
 		}
-		
-		bufs[i].len = static_cast<ULONG>(len);
-		bufs[i].buf = const_cast<char*>(buffers[i]->wr_ptr());
 	}
 
-	size_t total = 0;
-	if (err == 0)
+	if (actual_count > sizeof(static_bufs)/sizeof(static_bufs[0]))
 	{
-		size_t len = recv_i(bufs,count,true,err,timeout);
+		ptrBufs = static_cast<WSABUF*>(OOBase::LocalAllocate(actual_count * sizeof(WSABUF)));
+		if (!ptrBufs)
+			return ERROR_OUTOFMEMORY;
 
-		total = len;
-		
-		for (size_t i=0;i<count && len > 0;++i)
+		bufs = ptrBufs;
+	}
+
+	DWORD j = 0;
+	for (size_t i=0;i<count;++i)
+	{
+		size_t len = buffers[i]->space();
+		if (len > 0)
 		{
-			size_t l = buffers[i]->space();
-			if (len >= l)
-			{
-				buffers[i]->wr_ptr(l);
-				len -= l;
-			}
-			else
-			{
-				buffers[i]->wr_ptr(len);
-				len = 0;
-			}
+			bufs[j].len = static_cast<ULONG>(len);
+			bufs[j].buf = const_cast<char*>(buffers[i]->wr_ptr());
+			++j;
 		}
 	}
 
-	if (bufs != static_bufs)
-		OOBase::LocalFree(bufs);
+	int err = 0;
+	DWORD dwRead = recv_i(bufs,actual_count,bAll,err,timeout);
 
-	return total;
+	// Update buffers...
+	for (size_t first_buffer = 0;dwRead;)
+	{
+		if (dwRead >= bufs->len)
+		{
+			buffers[first_buffer]->wr_ptr(bufs->len);
+			++first_buffer;
+			dwRead -= bufs->len;
+			++bufs;
+			if (--actual_count == 0)
+				break;
+		}
+		else
+		{
+			buffers[first_buffer]->wr_ptr(dwRead);
+			bufs->len -= dwRead;
+			bufs->buf += dwRead;
+			dwRead = 0;
+		}
+	}
+
+	return err;
 }
 
-size_t WinSocket::recv_i(WSABUF* wsabuf, size_t count, bool bAll, int& err, const OOBase::timeval_t* timeout)
+DWORD WinSocket::recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int& err, const OOBase::timeval_t* timeout)
 {
-	err = 0;
-
-	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock);
-
 	WSAOVERLAPPED ov = {0};
+
+	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,false);
+
 	if (timeout)
 	{
+		if (!guard.acquire(*timeout))
+		{
+			err = WSAETIMEDOUT;
+			return 0;
+		}
+
 		if (!m_recv_event.is_valid())
 		{
 			m_recv_event = CreateEventW(NULL,TRUE,FALSE,NULL);
@@ -607,83 +616,48 @@ size_t WinSocket::recv_i(WSABUF* wsabuf, size_t count, bool bAll, int& err, cons
 				return 0;
 			}
 		}
+
 		ov.hEvent = m_recv_event;
 	}
-	
-	size_t total = 0;
-	while (count > 0)
+
+	DWORD dwFlags = (bAll ? MSG_WAITALL : 0);
+	DWORD dwRead = 0;
+	if (!timeout)
 	{
-		DWORD dwFlags = 0;
-		DWORD dwRead = 0;
-		if (!timeout)
+		if (WSARecv(m_socket,wsabuf,static_cast<DWORD>(count),&dwRead,&dwFlags,NULL,NULL) != 0)
+			err = WSAGetLastError();
+	}
+	else
+	{
+		if (WSARecv(m_socket,wsabuf,static_cast<DWORD>(count),&dwRead,&dwFlags,&ov,NULL) != 0)
 		{
-			if (WSARecv(m_socket,wsabuf,static_cast<DWORD>(count),&dwRead,&dwFlags,NULL,NULL) != 0)
+			err = WSAGetLastError();
+			if (err == WSA_IO_PENDING)
 			{
-				err = WSAGetLastError();
-				if (err != ERROR_OPERATION_ABORTED)
-					return total;
-			}
-		}
-		else
-		{
-			if (WSARecv(m_socket,wsabuf,static_cast<DWORD>(count),&dwRead,&dwFlags,&ov,NULL) != 0)
-			{
-				err = WSAGetLastError();
-				if (err != ERROR_OPERATION_ABORTED)
+				err = 0;
+				DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout->msec());
+				if (dwWait == WAIT_TIMEOUT)
 				{
-					if (err != WSA_IO_PENDING)
-						return total;
+					CancelIo(reinterpret_cast<HANDLE>(m_socket));
+					err = WAIT_TIMEOUT;
+				}
+				else if (dwWait != WAIT_OBJECT_0)
+				{
+					err = GetLastError();
+					CancelIo(reinterpret_cast<HANDLE>(m_socket));
+				}
 
-					err = 0;
-					DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout->msec());
-					if (dwWait == WAIT_TIMEOUT)
-					{
-						CancelIo(reinterpret_cast<HANDLE>(m_socket));
-						err = WAIT_TIMEOUT;
-					}
-					else if (dwWait != WAIT_OBJECT_0)
-					{
-						err = GetLastError();
-						CancelIo(reinterpret_cast<HANDLE>(m_socket));
-					}
-					
-					if (!WSAGetOverlappedResult(m_socket,&ov,&dwRead,TRUE,&dwFlags))
-					{
-						int dwErr = WSAGetLastError();
-						if (err == 0 && dwErr != ERROR_OPERATION_ABORTED)
-							err = dwErr;
-
-						if (err != 0)
-							return total;
-					}
+				if (!WSAGetOverlappedResult(m_socket,&ov,&dwRead,TRUE,&dwFlags))
+				{
+					int dwErr = WSAGetLastError();
+					if (err == 0 && dwErr != ERROR_OPERATION_ABORTED)
+						err = dwErr;
 				}
 			}
 		}
-
-		total += dwRead;
-
-		// Update buffers
-		do
-		{
-			if (wsabuf->len > dwRead)
-			{
-				wsabuf->len -= dwRead;
-				wsabuf->buf += dwRead;
-				break;
-			}
-
-			dwRead -= wsabuf->len;
-			++wsabuf;
-			--count;
-		} 
-		while (count > 0);
-
-		if (!bAll && total > 0)
-			break;
 	}
 
-	err = 0;
-	return total;
+	return dwRead;
 }
 
 void WinSocket::close()

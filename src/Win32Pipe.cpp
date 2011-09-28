@@ -45,10 +45,10 @@ namespace
 		virtual ~Pipe();
 
 		size_t recv(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout);
-		size_t recv_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout);
+		int recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout);
 		
 		size_t send(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout);
-		size_t send_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout);
+		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout);
 		
 		void close();
 					
@@ -79,19 +79,40 @@ Pipe::~Pipe()
 
 size_t Pipe::send(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout)
 {
-	OOBase::Guard<OOBase::Mutex> guard(m_send_lock);
+	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,timeout ? false : true);
+	if (timeout && !guard.acquire(*timeout))
+	{
+		err = WSAETIMEDOUT;
+		return 0;
+	}
 
 	return send_i(buf,len,err,timeout);
 }
 
-size_t Pipe::send_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout)
+int Pipe::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout)
 {
 	if (count == 0)
 		return 0;
 
-	void* TODO;
+	int err = 0;
 
-	return 0;
+	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,timeout ? false : true);
+	if (timeout && !guard.acquire(*timeout))
+	{
+		err = WSAETIMEDOUT;
+		return 0;
+	}
+
+	for (size_t i=0;i<count && err == 0 ;++i)
+	{
+		if (buffers[i]->length() > 0)
+		{
+			size_t len = send_i(buffers[i]->rd_ptr(),buffers[i]->length(),true,err,timeout);
+			buffers[i]->wr_ptr(len);
+		}
+	}
+
+	return err;
 }
 
 size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout)
@@ -114,19 +135,22 @@ size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::timeval
 
 	OVERLAPPED ov = {0};
 	ov.hEvent = m_send_event;
+
+	void* TODO; // Why does this loop?
 		
 	const char* cbuf = static_cast<const char*>(buf);
-	size_t total = len;
-	while (total > 0)
+	size_t to_write = len;
+	while (to_write > 0)
 	{
+		err = 0;
 		DWORD dwWritten = 0;
-		if (!WriteFile(m_handle,cbuf,static_cast<DWORD>(total),&dwWritten,&ov))
+		if (!WriteFile(m_handle,cbuf,static_cast<DWORD>(to_write),&dwWritten,&ov))
 		{
 			err = GetLastError();
 			if (err != ERROR_OPERATION_ABORTED)
 			{
 				if (err != ERROR_IO_PENDING)
-					return (len - total);
+					break;
 
 				err = 0;
 				if (timeout)
@@ -151,47 +175,60 @@ size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::timeval
 						err = dwErr;
 
 					if (err != 0)
-						return (len - total);
+						break;
 				}
 			}
 		}
 		
 		cbuf += dwWritten;
-		total -= dwWritten;
+		to_write -= dwWritten;
 
 		if (!m_send_allowed)
-			return (len - total);
+		{
+			err = WSAESHUTDOWN;
+			break;
+		}
 	}
 
-	err = 0;
-	return len;
+	return (len - to_write);
 }
 
 size_t Pipe::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout)
 {
-	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock);
+	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,timeout ? false : true);
+	if (timeout && !guard.acquire(*timeout))
+	{
+		err = WSAETIMEDOUT;
+		return 0;
+	}
 
 	return recv_i(buf,len,bAll,err,timeout);
 }
 
-size_t Pipe::recv_v(OOBase::Buffer* buffers[], size_t count, int& err, const OOBase::timeval_t* timeout)
+int Pipe::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout)
 {
-	err = 0;
+	if (count == 0)
+		return 0;
 
-	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock);
+	int err = 0;
 
-	size_t total = 0;
+	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,timeout ? false : true);
+	if (timeout && !guard.acquire(*timeout))
+	{
+		err = WSAETIMEDOUT;
+		return 0;
+	}
+
 	for (size_t i=0;i<count && err == 0 ;++i)
 	{
-		size_t space = buffers[i]->space();
-		size_t len = recv_i(buffers[i]->wr_ptr(),space,true,err,timeout);
-
-		buffers[i]->wr_ptr(len);
-
-		total += len;
+		if (buffers[i]->space() > 0)
+		{
+			size_t len = recv_i(buffers[i]->wr_ptr(),buffers[i]->space(),true,err,timeout);
+			buffers[i]->wr_ptr(len);
+		}
 	}
 	
-	return total;
+	return err;
 }
 
 size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout)
@@ -216,19 +253,20 @@ size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::ti
 	ov.hEvent = m_recv_event;
 		
 	char* cbuf = static_cast<char*>(buf);
-	size_t total = len;
-	while (total > 0)
+	size_t to_read = len;
+	while (to_read > 0)
 	{
+		err = 0;
 		DWORD dwRead = 0;
-		if (!ReadFile(m_handle,cbuf,static_cast<DWORD>(total),&dwRead,&ov))
+		if (!ReadFile(m_handle,cbuf,static_cast<DWORD>(to_read),&dwRead,&ov))
 		{
 			err = GetLastError();
 			if (err == ERROR_MORE_DATA)
-				dwRead = static_cast<DWORD>(total);
+				dwRead = static_cast<DWORD>(to_read);
 			else if (err != ERROR_OPERATION_ABORTED)
 			{
 				if (err != ERROR_IO_PENDING)
-					return (len - total);
+					break;
 
 				err = 0;
 				if (timeout)
@@ -253,23 +291,25 @@ size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::ti
 						err = dwErr;
 
 					if (err != 0)
-						return (len - total);
+						break;
 				}
 			}
 		}
 
 		cbuf += dwRead;
-		total -= dwRead;
+		to_read -= dwRead;
 
 		if (!bAll && dwRead > 0)
 			break;
 
 		if (!m_recv_allowed)
+		{
+			err = WSAESHUTDOWN;
 			break;
+		}
 	}
 
-	err = 0;
-	return (len - total);
+	return (len - to_read);
 }
 
 void Pipe::close()
