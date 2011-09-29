@@ -41,6 +41,8 @@ namespace OOBase
 	namespace POSIX
 	{
 		void create_unix_socket_address(sockaddr_un& addr, socklen_t& len, const char* path);
+
+		int get_peer_uid(int fd, uid_t& uid);
 	}
 #endif
 }

@@ -116,104 +116,10 @@ int AsyncSocket::send_v(void* param, void (*callback)(void* param, OOBase::Buffe
 
 int AsyncSocket::get_uid(OOSvrBase::AsyncLocalSocket::uid_t& uid)
 {
-	void* TODO; // Shift this to its own file for licensing reasons
-	
-#if defined(HAVE_GETPEEREID)
-	/* OpenBSD style:  */
-	gid_t gid;
-	if (getpeereid(m_fd, &uid, &gid) != 0)
-	{
-		/* We didn't get a valid credentials struct. */
-		return errno;
-	}
-	return 0;
-
-#elif defined(HAVE_SO_PEERCRED)
-	/* Linux style: use getsockopt(SO_PEERCRED) */
-	ucred peercred;
-	socklen_t so_len = sizeof(peercred);
-
-	if (getsockopt(m_fd, SOL_SOCKET, SO_PEERCRED, &peercred, &so_len) != 0 || so_len != sizeof(peercred))
-	{
-		/* We didn't get a valid credentials struct. */
-		return errno;
-	}
-	uid = peercred.uid;
-	return 0;
-
-#elif defined(HAVE_GETPEERUCRED)
-	/* Solaris > 10 */
-	ucred_t* ucred = NULL; /* must be initialized to NULL */
-	if (getpeerucred(m_fd, &ucred) != 0)
-	{
-		/* We didn't get a valid credentials struct. */
-		return errno;
-	}
-
-	if ((uid = ucred_geteuid(ucred)) == -1)
-	{
-		int err = errno;
-		ucred_free(ucred);
-		return err;
-	}
-	return 0;
-
-#elif (defined(HAVE_STRUCT_CMSGCRED) || defined(HAVE_STRUCT_FCRED) || defined(HAVE_STRUCT_SOCKCRED)) && defined(HAVE_LOCAL_CREDS)
-
-	/*
-	* Receive credentials on next message receipt, BSD/OS,
-	* NetBSD. We need to set this before the client sends the
-	* next packet.
-	*/
-	int on = 1;
-	if (setsockopt(m_fd, 0, LOCAL_CREDS, &on, sizeof(on)) != 0)
-		return errno;
-
-	/* Credentials structure */
-#if defined(HAVE_STRUCT_CMSGCRED)
-	typedef cmsgcred Cred;
-	#define cruid cmcred_uid
-#elif defined(HAVE_STRUCT_FCRED)
-	typedef fcred Cred;
-	#define cruid fc_uid
-#elif defined(HAVE_STRUCT_SOCKCRED)
-	typedef sockcred Cred;
-	#define cruid sc_uid
-#endif
-	/* Compute size without padding */
-	char cmsgmem[ALIGN(sizeof(struct cmsghdr)) + ALIGN(sizeof(Cred))];   /* for NetBSD */
-
-	/* Point to start of first structure */
-	struct cmsghdr* cmsg = (struct cmsghdr*)cmsgmem;
-	struct iovec iov;
-
-	msghdr msg;
-	memset(&msg, 0, sizeof(msg));
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-	msg.msg_control = (char *) cmsg;
-	msg.msg_controllen = sizeof(cmsgmem);
-	memset(cmsg, 0, sizeof(cmsgmem));
-
-	/*
-	 * The one character which is received here is not meaningful; its
-	 * purposes is only to make sure that recvmsg() blocks long enough for the
-	 * other side to send its credentials.
-	 */
-	char buf;
-	iov.iov_base = &buf;
-	iov.iov_len = 1;
-
-	if (recvmsg(m_fd, &msg, 0) < 0 || cmsg->cmsg_len < sizeof(cmsgmem) || cmsg->cmsg_type != SCM_CREDS)
-		return errno;
-
-	Cred* cred = (Cred*)CMSG_DATA(cmsg);
-	uid = cred->cruid;
-	return 0;
-
+#if defined(HAVE_UNISTD_H)
+	return OOBase::POSIX::get_peer_uid(m_fd,uid);
 #else
-	// We can't handle this situation
-	#error Fix me!
+	return EINVAL;
 #endif
 }
 

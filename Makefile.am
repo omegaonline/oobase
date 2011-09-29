@@ -135,6 +135,7 @@ liboosvrbase_la_SOURCES = \
 	src/ProactorEv.h \
 	src/ProactorWin32.h \
 	src/Database.cpp \
+	src/GetPeerUid.cpp \
 	src/Logger.cpp \
 	src/Proactor.cpp \
 	src/ProactorEv.cpp \
