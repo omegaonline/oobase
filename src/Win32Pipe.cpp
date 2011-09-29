@@ -136,8 +136,6 @@ size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::timeval
 	OVERLAPPED ov = {0};
 	ov.hEvent = m_send_event;
 
-	void* TODO; // Why does this loop?
-		
 	const char* cbuf = static_cast<const char*>(buf);
 	size_t to_write = len;
 	while (to_write > 0)
