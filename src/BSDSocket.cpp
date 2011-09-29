@@ -324,6 +324,8 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeva
 			return ENOMEM;
 
 		msg.msg_iov = ptrBufs;
+
+		countdown.update();
 	}
 
 	for (size_t i=0;i<count;++i)
@@ -470,6 +472,8 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeva
 			return ENOMEM;
 
 		msg.msg_iov = ptrBufs;
+
+		countdown.update();
 	}
 
 	for (size_t i=0;i<count;++i)
