@@ -168,7 +168,7 @@ namespace
 			callback_local_t                 m_callback_local;
 			mode_t                           m_mode;
 		
-			static void on_accept(int fd, int events, void* param);
+			static void on_accept(void* param);
 			void do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard);
 			int init_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, size_t backlog);
 		};
@@ -305,7 +305,7 @@ int SocketAcceptor::Acceptor::stop(bool destroy)
 		
 		if (m_fd != -1)
 		{
-			m_pProactor->close_watcher(m_fd);
+			m_pProactor->close_acceptor(m_fd);
 			m_fd = -1;
 		}
 	}
@@ -340,7 +340,7 @@ int SocketAcceptor::Acceptor::init_accept(OOBase::Guard<OOBase::Condition::Mutex
 	else
 	{
 		// Create a watcher
-		err = m_pProactor->new_watcher(fd,EV_READ,this,&on_accept);
+		err = m_pProactor->new_acceptor(fd,this,&on_accept);
 		if (err != 0)
 			close(fd);
 		else
@@ -349,7 +349,7 @@ int SocketAcceptor::Acceptor::init_accept(OOBase::Guard<OOBase::Condition::Mutex
 			if (::listen(fd,backlog) == -1)
 			{
 				err = errno;
-				m_pProactor->close_watcher(fd);
+				m_pProactor->close_acceptor(fd);
 			}
 			else
 			{
@@ -362,7 +362,7 @@ int SocketAcceptor::Acceptor::init_accept(OOBase::Guard<OOBase::Condition::Mutex
 	return err;
 }
 
-void SocketAcceptor::Acceptor::on_accept(int fd, int /*events*/, void* param)
+void SocketAcceptor::Acceptor::on_accept(void* param)
 {
 	Acceptor* pThis = static_cast<Acceptor*>(param);
 	
@@ -388,7 +388,7 @@ void SocketAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>
 			if (err == EAGAIN || err == EWOULDBLOCK)
 			{
 				// Will complete later...
-				err = m_pProactor->start_watcher(m_fd);
+				err = m_pProactor->start_acceptor(m_fd);
 				if (err == 0)
 				{
 					m_in_progress = true;

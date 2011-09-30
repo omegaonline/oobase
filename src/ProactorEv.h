@@ -49,9 +49,9 @@ namespace OOSvrBase
 			AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::timeval_t* timeout);
 			AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout);
 				
-			int new_watcher(int fd, int events, void* param, void (*callback)(int fd, int events, void* param));
-			int close_watcher(int fd);
-			int start_watcher(int fd);
+			int new_acceptor(int fd, void* param, void (*callback)(void* param));
+			int close_acceptor(int fd);
+			int start_acceptor(int fd);
 			
 			int bind_fd(int fd);
 			int unbind_fd(int fd);
@@ -96,9 +96,9 @@ namespace OOSvrBase
 			int              m_pipe_fds[2];
 			bool             m_started;
 
-			struct Watcher : public ev_io
+			struct AcceptWatcher : public ev_io
 			{
-				void (*m_callback)(int fd, int events, void* param);
+				void (*m_callback)(void* param);
 				void* m_param;
 			};
 					
@@ -117,7 +117,7 @@ namespace OOSvrBase
 			{
 				enum
 				{
-					Watcher,
+					Acceptor,
 					IOWatcher,
 					Timer
 					
@@ -133,11 +133,11 @@ namespace OOSvrBase
 			int init();
 
 			static void pipe_callback(struct ev_loop*, ev_io* watcher, int);
-			static void watcher_callback(struct ev_loop* pLoop, ev_io* watcher, int revents);
+			static void acceptor_callback(struct ev_loop* pLoop, ev_io* watcher, int revents);
 			static void iowatcher_callback(struct ev_loop* pLoop, ev_io* watcher, int revents);
 			
 			void pipe_callback();
-			void process_event(Watcher* watcher, int fd, int revents);
+			void process_accept(AcceptWatcher* watcher);
 			void process_event(IOWatcher* watcher, int fd, int revents);
 
 			void process_recv(IOWatcher* watcher, int fd);

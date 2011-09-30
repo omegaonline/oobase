@@ -134,8 +134,8 @@ int OOSvrBase::detail::ProactorEv::run(int& err, const OOBase::timeval_t* timeou
 		{
 			switch (ev.m_type)
 			{
-			case IOEvent::Watcher:
-				process_event(static_cast<Watcher*>(ev.m_watcher),ev.m_fd,ev.m_revents);
+			case IOEvent::Acceptor:
+				process_accept(static_cast<AcceptWatcher*>(ev.m_watcher));
 				break;
 			
 			case IOEvent::IOWatcher:
@@ -157,11 +157,11 @@ void OOSvrBase::detail::ProactorEv::pipe_callback(struct ev_loop*, ev_io* watche
 	static_cast<ProactorEv*>(watcher->data)->pipe_callback();
 }
 
-void OOSvrBase::detail::ProactorEv::watcher_callback(struct ev_loop* pLoop, ev_io* watcher, int revents)
+void OOSvrBase::detail::ProactorEv::acceptor_callback(struct ev_loop* pLoop, ev_io* watcher, int revents)
 {
 	// Add the event to the queue
 	IOEvent ev;
-	ev.m_type = IOEvent::Watcher;
+	ev.m_type = IOEvent::Acceptor;
 	ev.m_revents = revents;
 	ev.m_fd = watcher->fd;
 	ev.m_watcher = watcher;
@@ -173,11 +173,11 @@ void OOSvrBase::detail::ProactorEv::watcher_callback(struct ev_loop* pLoop, ev_i
 	ev_unloop(pLoop,EVUNLOOP_ONE);
 }
 
-void OOSvrBase::detail::ProactorEv::process_event(Watcher* watcher, int fd, int revents)
+void OOSvrBase::detail::ProactorEv::process_accept(AcceptWatcher* watcher)
 {
 	// Just call the callback
 	if (watcher->m_callback)
-		(*watcher->m_callback)(fd,revents,watcher->m_param);
+		(*watcher->m_callback)(watcher->m_param);
 }
 
 void OOSvrBase::detail::ProactorEv::iowatcher_callback(struct ev_loop* pLoop, ev_io* watcher, int revents)
@@ -218,13 +218,13 @@ namespace
 	{
 		enum Opcode
 		{
+			Add,
+			Start,
 			Recv,
 			Send,
 			RecvAgain,
 			SendAgain,
-			New,
-			Start,
-			Close,
+			AcceptorClose,
 			IOClose
 
 		} m_op_code;
@@ -588,7 +588,7 @@ void OOSvrBase::detail::ProactorEv::pipe_callback()
 		else if (err != 0)
 			OOBase_CallCriticalFailure(err);
 				
-		if (msg.m_op_code == Msg::New)
+		if (msg.m_op_code == Msg::Add)
 		{
 			err = m_mapWatchers.insert(msg.m_fd,static_cast<ev_io*>(msg.m_op.m_param));
 			if (err != 0)
@@ -635,12 +635,12 @@ void OOSvrBase::detail::ProactorEv::pipe_callback()
 						events = EV_WRITE;
 					break;
 
-				case Msg::Close:
+				case Msg::AcceptorClose:
 					if (ev_is_active(watcher))
 						ev_io_stop(m_pLoop,watcher);
 
 					close(watcher->fd);
-					delete static_cast<Watcher*>(watcher);
+					delete static_cast<AcceptWatcher*>(watcher);
 					m_mapWatchers.erase(watcher->fd);
 					break;
 
@@ -779,23 +779,23 @@ int OOSvrBase::detail::ProactorEv::send_v(int fd, void* param, void (*callback)(
 	return err;
 }
 
-int OOSvrBase::detail::ProactorEv::new_watcher(int fd, int events, void* param, void (*callback)(int fd, int events, void* param))
+int OOSvrBase::detail::ProactorEv::new_acceptor(int fd, void* param, void (*callback)(void* param))
 {
 	int err = init();
 	if (err != 0)
 		return err;
 	
-	Watcher* watcher = new (std::nothrow) Watcher;
+	AcceptWatcher* watcher = new (std::nothrow) AcceptWatcher;
 	if (!watcher)
 		return ENOMEM;
 	
-	ev_io_init(watcher,&watcher_callback,fd,events);
+	ev_io_init(watcher,&acceptor_callback,fd,EV_READ);
 	watcher->data = this;
 	watcher->m_callback = callback;
 	watcher->m_param = param;
 	
 	Msg msg;
-	msg.m_op_code = Msg::New;
+	msg.m_op_code = Msg::Add;
 	msg.m_fd = fd;
 	msg.m_op.m_param = static_cast<ev_io*>(watcher);
 	
@@ -806,16 +806,16 @@ int OOSvrBase::detail::ProactorEv::new_watcher(int fd, int events, void* param, 
 	return err;
 }
 
-int OOSvrBase::detail::ProactorEv::close_watcher(int fd)
+int OOSvrBase::detail::ProactorEv::close_acceptor(int fd)
 {	
 	Msg msg;
-	msg.m_op_code = Msg::Close;
+	msg.m_op_code = Msg::AcceptorClose;
 	msg.m_fd = fd;
 	
 	return send_msg(m_pipe_fds[1],msg);
 }
 
-int OOSvrBase::detail::ProactorEv::start_watcher(int fd)
+int OOSvrBase::detail::ProactorEv::start_acceptor(int fd)
 {
 	Msg msg;
 	msg.m_op_code = Msg::Start;
@@ -841,7 +841,7 @@ int OOSvrBase::detail::ProactorEv::bind_fd(int fd)
 	watcher->m_busy_send = false;
 
 	Msg msg;
-	msg.m_op_code = Msg::New;
+	msg.m_op_code = Msg::Add;
 	msg.m_fd = fd;
 	msg.m_op.m_param = static_cast<ev_io*>(watcher);
 	
