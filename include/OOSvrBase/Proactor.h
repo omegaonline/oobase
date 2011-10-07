@@ -139,8 +139,7 @@ namespace OOSvrBase
 	class Acceptor : public OOBase::RefCounted
 	{
 	public:
-		virtual int listen(size_t backlog = SOMAXCONN) = 0;
-		virtual int stop() = 0;
+		// No members, just release() to close
 			
 	protected:
 		Acceptor() {}
@@ -163,9 +162,12 @@ namespace OOSvrBase
 		virtual AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout = NULL);
 
 		virtual int run(int& err, const OOBase::timeval_t* timeout = NULL);
+		virtual void stop();
 
 	protected:
 		explicit Proactor(bool);
+
+		virtual int init();
 
 	private:
 		// Don't copy or assign proactors, they're just too big

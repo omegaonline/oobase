@@ -28,6 +28,7 @@
 
 #include "../include/OOBase/HandleTable.h"
 #include "../include/OOBase/Queue.h"
+#include "../include/OOBase/Condition.h"
 
 #define EV_COMPAT3 0
 #define EV_STANDALONE 1
@@ -43,27 +44,30 @@ namespace OOSvrBase
 			ProactorEv();
 			virtual ~ProactorEv();
 
+			int init();
+
 			AsyncSocket* attach_socket(OOBase::socket_t sock, int& err);
 			AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int& err);
 
 			AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::timeval_t* timeout);
 			AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout);
 				
-			int new_acceptor(int fd, void* param, void (*callback)(void* param));
-			int close_acceptor(int fd);
-			int start_acceptor(int fd);
-			
-			int bind_fd(int fd);
-			int unbind_fd(int fd);
+			void* new_acceptor(int fd, void* param, bool (*callback)(void* param, int fd), int& err);
+			int close_acceptor(void* handle);
+
+			void* bind(int fd, int& err);
+			int unbind(void* handle);
+			int get_fd(void* handle);
 				
-			int recv(int fd, void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout);
-			int send(int fd, void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer);
-			int send_v(int fd, void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count);
+			int recv(void* handle, void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout);
+			int send(void* handle, void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer);
+			int send_v(void* handle, void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count);
 		
 			OOSvrBase::Acceptor* accept_local(void* param, void (*callback)(void* param, OOSvrBase::AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa);
 			OOSvrBase::Acceptor* accept_remote(void* param, void (*callback)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err), const sockaddr* addr, socklen_t addr_len, int& err);
 
 			int run(int& err, const OOBase::timeval_t* timeout = NULL);
+			void stop();
 
 			struct IOOp
 			{
@@ -81,36 +85,39 @@ namespace OOSvrBase
 				};
 			};
 			
-			static bool copy_queue(OOBase::Queue<IOOp,OOBase::HeapAllocator>& dest, OOBase::Queue<IOOp,OOBase::HeapAllocator>& src);
-
-			union param_t
-			{
-				size_t s;
-				void*  p;
-			};
+			static bool copy_queue(OOBase::Queue<IOOp>& dest, OOBase::Queue<IOOp>& src);
 
 		private:
 			OOBase::SpinLock m_lock;
 			struct ev_loop*  m_pLoop;
-			ev_io            m_pipe_watcher;
+			struct ev_io     m_pipe_watcher;
 			int              m_pipe_fds[2];
-			bool             m_started;
+			size_t           m_outstanding;
+
+			struct Wait
+			{
+				bool                     m_finished;
+				OOBase::Condition::Mutex m_mutex;
+				OOBase::Condition        m_condition;
+			};
 
 			struct AcceptWatcher : public ev_io
 			{
-				void (*m_callback)(void* param);
+				OOBase::Atomic<size_t> m_refcount;
+				bool (*m_callback)(void* param, int fd);
 				void* m_param;
+				Wait* m_wait;
 			};
 					
 			struct IOWatcher : public ev_io
 			{
-				OOBase::Queue<IOOp,OOBase::HeapAllocator> m_queueSendPending;
-				OOBase::Queue<IOOp,OOBase::HeapAllocator> m_queueSend;
-				OOBase::Queue<IOOp,OOBase::HeapAllocator> m_queueRecvPending;
-				OOBase::Queue<IOOp,OOBase::HeapAllocator> m_queueRecv;
-				bool                                      m_busy_recv;
-				bool                                      m_busy_send;
-				bool                                      m_unbound;
+				OOBase::Atomic<size_t> m_refcount;
+				OOBase::Queue<IOOp>    m_queueSendPending;
+				OOBase::Queue<IOOp>    m_queueSend;
+				OOBase::Queue<IOOp>    m_queueRecvPending;
+				OOBase::Queue<IOOp>    m_queueRecv;
+				bool                   m_busy_recv;
+				bool                   m_busy_send;
 			};
 					
 			struct IOEvent
@@ -127,21 +134,23 @@ namespace OOSvrBase
 				void* m_watcher;
 			};
 			
-			OOBase::HashTable<int,ev_io*,OOBase::HeapAllocator> m_mapWatchers;
-			OOBase::Queue<IOEvent,OOBase::LocalAllocator>*      m_pIOQueue;
+			OOBase::Queue<IOEvent,OOBase::LocalAllocator>* m_pIOQueue;
 					
-			int init();
+			bool deref(AcceptWatcher* watcher);
+			bool deref(IOWatcher* watcher);
 
-			static void pipe_callback(struct ev_loop*, ev_io* watcher, int);
-			static void acceptor_callback(struct ev_loop* pLoop, ev_io* watcher, int revents);
-			static void iowatcher_callback(struct ev_loop* pLoop, ev_io* watcher, int revents);
-			
+			void io_start(struct ev_io* io);
+			void io_stop(struct ev_io* io);
+
 			void pipe_callback();
-			void process_accept(AcceptWatcher* watcher);
-			void process_event(IOWatcher* watcher, int fd, int revents);
 
-			void process_recv(IOWatcher* watcher, int fd);
-			void process_send(IOWatcher* watcher, int fd);
+			static void pipe_callback(struct ev_loop*, struct ev_io* watcher, int);
+			static void acceptor_callback(struct ev_loop* pLoop, struct ev_io* watcher, int revents);
+			static void iowatcher_callback(struct ev_loop* pLoop, struct ev_io* watcher, int revents);
+			static void process_accept(int send_fd, AcceptWatcher* watcher);
+			static void process_event(int send_fd, IOWatcher* watcher, int fd, int revents);
+			static void process_recv(int send_fd, IOWatcher* watcher, int fd);
+			static void process_send(int send_fd, IOWatcher* watcher, int fd);
 		};
 	}
 }

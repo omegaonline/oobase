@@ -28,7 +28,8 @@
 
 OOSvrBase::detail::ProactorEv::ProactorEv() : 
 		Proactor(false),
-		m_pLoop(NULL)
+		m_pLoop(NULL),
+		m_outstanding(1)
 { 
 	m_pipe_fds[0] = -1;
 	m_pipe_fds[1] = -1;
@@ -36,22 +37,19 @@ OOSvrBase::detail::ProactorEv::ProactorEv() :
 
 OOSvrBase::detail::ProactorEv::~ProactorEv()
 {
-	close(m_pipe_fds[0]);
-	close(m_pipe_fds[1]);
-	
 	if (m_pLoop)
 	{
+		ev_ref(m_pLoop);
 		ev_io_stop(m_pLoop,&m_pipe_watcher);
 		ev_loop_destroy(m_pLoop);
-	}	
+	}
+
+	close(m_pipe_fds[0]);
+	close(m_pipe_fds[1]);
 }
 
 int OOSvrBase::detail::ProactorEv::init()
 {
-	// Early escape...
-	if (m_pLoop)
-		return 0;
-	
 	// Create a pipe
 	if (pipe(m_pipe_fds) != 0)
 		return errno;
@@ -75,25 +73,34 @@ int OOSvrBase::detail::ProactorEv::init()
 	if (!m_pLoop)
 		return (errno ? errno : ENOMEM);
 
-	m_started = false;
-
 	// Start the pipe watcher
 	ev_io_start(m_pLoop,&m_pipe_watcher);
 	
-	// Drop loop refcount
-	ev_unref(m_pLoop);
-	
 	return 0;
+}
+
+void OOSvrBase::detail::ProactorEv::io_start(struct ev_io* io)
+{
+	if (!ev_is_active(io))
+	{
+		ev_io_start(m_pLoop,io);
+		++m_outstanding;
+	}
+}
+
+void OOSvrBase::detail::ProactorEv::io_stop(struct ev_io* io)
+{
+	if (ev_is_active(io))
+	{
+		ev_io_stop(m_pLoop,io);
+		--m_outstanding;
+	}
 }
 
 int OOSvrBase::detail::ProactorEv::run(int& err, const OOBase::timeval_t* timeout)
 {
 	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-	err = init();
-	if (err != 0)
-		return -1;
-	
 	// The loop is written as a leader/follower loop:
 	// Each thread polls, then queues up what needs to be processed
 	// Then lets the next waiting thread poll, while it processes the outstanding queue
@@ -117,13 +124,9 @@ int OOSvrBase::detail::ProactorEv::run(int& err, const OOBase::timeval_t* timeou
 		// Run the ev loop with the lock held
 		ev_loop(m_pLoop,0);
 
-		if (m_mapWatchers.empty())
-		{
-			 if (m_started)
-				bStop = true;
-		}
-		else
-			m_started = true;
+		bStop = (m_outstanding == 0);
+
+		int send_fd = m_pipe_fds[1];
 
 		// Release the loop mutex... freeing the next thread to poll...
 		guard.release();
@@ -135,11 +138,11 @@ int OOSvrBase::detail::ProactorEv::run(int& err, const OOBase::timeval_t* timeou
 			switch (ev.m_type)
 			{
 			case IOEvent::Acceptor:
-				process_accept(static_cast<AcceptWatcher*>(ev.m_watcher));
+				process_accept(send_fd,static_cast<AcceptWatcher*>(ev.m_watcher));
 				break;
 			
 			case IOEvent::IOWatcher:
-				process_event(static_cast<IOWatcher*>(ev.m_watcher),ev.m_fd,ev.m_revents);
+				process_event(send_fd,static_cast<IOWatcher*>(ev.m_watcher),ev.m_fd,ev.m_revents);
 				break;
 			
 			case IOEvent::Timer:
@@ -152,13 +155,15 @@ int OOSvrBase::detail::ProactorEv::run(int& err, const OOBase::timeval_t* timeou
 	return 0;
 }
 
-void OOSvrBase::detail::ProactorEv::pipe_callback(struct ev_loop*, ev_io* watcher, int)
+void OOSvrBase::detail::ProactorEv::pipe_callback(struct ev_loop*, struct ev_io* watcher, int)
 {
 	static_cast<ProactorEv*>(watcher->data)->pipe_callback();
 }
 
-void OOSvrBase::detail::ProactorEv::acceptor_callback(struct ev_loop* pLoop, ev_io* watcher, int revents)
+void OOSvrBase::detail::ProactorEv::acceptor_callback(struct ev_loop* pLoop, struct ev_io* watcher, int revents)
 {
+	ProactorEv* pThis = static_cast<ProactorEv*>(watcher->data);
+
 	// Add the event to the queue
 	IOEvent ev;
 	ev.m_type = IOEvent::Acceptor;
@@ -167,21 +172,21 @@ void OOSvrBase::detail::ProactorEv::acceptor_callback(struct ev_loop* pLoop, ev_
 	ev.m_watcher = watcher;
 	
 	// Only stop the watcher if we managed to add it to the op queue
-	if (static_cast<ProactorEv*>(watcher->data)->m_pIOQueue->push(ev) == 0)
-		ev_io_stop(pLoop,watcher);
+	if (pThis->m_pIOQueue->push(ev) == 0)
+	{
+		pThis->io_stop(watcher);
 		
-	ev_unloop(pLoop,EVUNLOOP_ONE);
+		// Inc the ref count
+		++static_cast<AcceptWatcher*>(watcher)->m_refcount;
+
+		ev_unloop(pLoop,EVUNLOOP_ONE);
+	}
 }
 
-void OOSvrBase::detail::ProactorEv::process_accept(AcceptWatcher* watcher)
+void OOSvrBase::detail::ProactorEv::iowatcher_callback(struct ev_loop* pLoop, struct ev_io* watcher, int revents)
 {
-	// Just call the callback
-	if (watcher->m_callback)
-		(*watcher->m_callback)(watcher->m_param);
-}
+	ProactorEv* pThis = static_cast<ProactorEv*>(watcher->data);
 
-void OOSvrBase::detail::ProactorEv::iowatcher_callback(struct ev_loop* pLoop, ev_io* watcher, int revents)
-{
 	// Add the event to the queue	
 	IOEvent ev;
 	ev.m_type = IOEvent::IOWatcher;
@@ -190,15 +195,21 @@ void OOSvrBase::detail::ProactorEv::iowatcher_callback(struct ev_loop* pLoop, ev
 	ev.m_watcher = watcher;
 	
 	// Only stop the watcher if we managed to add it to the op queue
-	if (static_cast<ProactorEv*>(watcher->data)->m_pIOQueue->push(ev) == 0)
+	if ((revents & (EV_READ | EV_WRITE)) && pThis->m_pIOQueue->push(ev) == 0)
 	{
-		ev_io_stop(pLoop,watcher);
+		pThis->io_stop(watcher);
 		
 		if (revents & EV_READ)
+		{
 			static_cast<IOWatcher*>(watcher)->m_busy_recv = true;
+			++static_cast<IOWatcher*>(watcher)->m_refcount;
+		}
 
 		if (revents & EV_WRITE)
+		{
 			static_cast<IOWatcher*>(watcher)->m_busy_send = true;
+			++static_cast<IOWatcher*>(watcher)->m_refcount;
+		}
 
 		// Clear received events
 		int outstanding = (watcher->events & ~revents);
@@ -206,10 +217,10 @@ void OOSvrBase::detail::ProactorEv::iowatcher_callback(struct ev_loop* pLoop, ev
 		ev_io_set(watcher,watcher->fd,outstanding);
 		
 		if (outstanding != 0)
-			ev_io_start(pLoop,watcher);
+			pThis->io_start(watcher);
+
+		ev_unloop(pLoop,EVUNLOOP_ONE);
 	}
-			
-	ev_unloop(pLoop,EVUNLOOP_ONE);
 }
 
 namespace
@@ -218,17 +229,20 @@ namespace
 	{
 		enum Opcode
 		{
-			Add,
-			Start,
+			Stop,
+
 			Recv,
 			Send,
 			RecvAgain,
 			SendAgain,
+			IOClose,
+
+			Accept,
+			AcceptAgain,
 			AcceptorClose,
-			IOClose
 
 		} m_op_code;
-		int              m_fd;
+		void*                               m_handle;
 		OOSvrBase::detail::ProactorEv::IOOp m_op;
 	};
 
@@ -266,7 +280,18 @@ namespace
 	}
 }
 
-bool OOSvrBase::detail::ProactorEv::copy_queue(OOBase::Queue<IOOp,OOBase::HeapAllocator>& dest, OOBase::Queue<IOOp,OOBase::HeapAllocator>& src)
+void OOSvrBase::detail::ProactorEv::stop()
+{
+	Msg msg;
+	msg.m_op_code = Msg::Stop;
+	msg.m_handle = NULL;
+
+	int err = send_msg(m_pipe_fds[1],msg);
+	if (err != 0)
+		OOBase_CallCriticalFailure(err);
+}
+
+bool OOSvrBase::detail::ProactorEv::copy_queue(OOBase::Queue<IOOp>& dest, OOBase::Queue<IOOp>& src)
 {
 	IOOp op;
 	while (src.pop(&op))
@@ -279,47 +304,55 @@ bool OOSvrBase::detail::ProactorEv::copy_queue(OOBase::Queue<IOOp,OOBase::HeapAl
 	return !dest.empty();
 }
 
-void OOSvrBase::detail::ProactorEv::process_recv(IOWatcher* watcher, int fd)
+void OOSvrBase::detail::ProactorEv::process_accept(int send_fd, AcceptWatcher* watcher)
+{
+	// Just call the callback
+	bool bAgain = false;
+	if (watcher->m_callback)
+		bAgain = (*watcher->m_callback)(watcher->m_param,watcher->fd);
+
+	Msg msg;
+	msg.m_op_code = bAgain ? Msg::AcceptAgain : Msg::AcceptorClose;
+	msg.m_handle = watcher;
+
+	int err = send_msg(send_fd,msg);
+	if (err != 0)
+		OOBase_CallCriticalFailure(err);
+}
+
+void OOSvrBase::detail::ProactorEv::process_recv(int send_fd, IOWatcher* watcher, int fd)
 {
 	IOOp* op = watcher->m_queueRecv.front();
 	while (op)
 	{
 		int err = 0;
-		if (watcher->m_unbound)
-			err = ECONNRESET;
-		else
+
+		size_t to_read = (op->m_count ? op->m_count : op->m_buffer->space());
+
+		// We read again on EOF, as we only return error codes
+		ssize_t r = 0;
+		do
 		{
-			size_t to_read = (op->m_count ? op->m_count : op->m_buffer->space());
+			r = ::recv(fd,op->m_buffer->wr_ptr(),to_read,0);
+		}
+		while (r == -1 && errno == EINTR);
 
-			// We read again on EOF, as we only return error codes
-			ssize_t r = 0;
-			do
-			{
-				r = ::recv(fd,op->m_buffer->wr_ptr(),to_read,0);
-			}
-			while (r == -1 && errno == EINTR);
-
-			if (r == 0)
-			{
-				err = ECONNRESET;
-			}
-			else if (r < 0)
-			{
-				if (errno != EAGAIN && errno != EWOULDBLOCK)
-					err = errno;
-				else
-					break;
-			}
+		if (r < 0)
+		{
+			if (errno != EAGAIN && errno != EWOULDBLOCK)
+				err = errno;
 			else
-			{
-				op->m_buffer->wr_ptr(r);
-				if (op->m_count)
-					op->m_count -= r;
+				break;
+		}
+		else if (r > 0)
+		{
+			op->m_buffer->wr_ptr(r);
+			if (op->m_count)
+				op->m_count -= r;
 
-				// If we haven't read all the buffer, restart loop...
-				if (op->m_count != 0)
-					continue;
-			}
+			// If we haven't read all the buffer, restart loop...
+			if (op->m_count != 0)
+				continue;
 		}
 		
 		// Notify callback of status/error
@@ -341,18 +374,59 @@ void OOSvrBase::detail::ProactorEv::process_recv(IOWatcher* watcher, int fd)
 		// Pop queue front and line up the next operation...
 		watcher->m_queueRecv.pop();
 		op = watcher->m_queueRecv.front();
+
+		// Reduce refcount - this will never hit zero
+		--watcher->m_refcount;
 	}
 
 	Msg msg;
 	msg.m_op_code = Msg::RecvAgain;
-	msg.m_fd = fd;
+	msg.m_handle = watcher;
 
-	int err = send_msg(m_pipe_fds[1],msg);
+	int err = send_msg(send_fd,msg);
 	if (err != 0)
 		OOBase_CallCriticalFailure(err);
 }
 
-void OOSvrBase::detail::ProactorEv::process_send(IOWatcher* watcher, int fd)
+int OOSvrBase::detail::ProactorEv::get_fd(void* handle)
+{
+	if (!handle)
+		return -1;
+	else
+		return static_cast<struct ev_io*>(handle)->fd;
+}
+
+bool OOSvrBase::detail::ProactorEv::deref(AcceptWatcher* watcher)
+{
+	bool ret = (--watcher->m_refcount == 0);
+	if (ret)
+	{
+		if (ev_is_active(watcher))
+			io_stop(watcher);
+
+		close(watcher->fd);
+		delete watcher;
+	}
+
+	return ret;
+}
+
+bool OOSvrBase::detail::ProactorEv::deref(IOWatcher* watcher)
+{
+	bool ret = (--watcher->m_refcount == 0);
+	if (ret)
+	{
+		if (ev_is_active(watcher))
+			io_stop(watcher);
+
+		close(watcher->fd);
+		delete watcher;
+	}
+
+	return ret;
+}
+
+void OOSvrBase::detail::ProactorEv::process_send(int send_fd, IOWatcher* watcher, int fd)
 {
 	IOOp* op = watcher->m_queueSend.front();
 	while (op)
@@ -361,39 +435,32 @@ void OOSvrBase::detail::ProactorEv::process_send(IOWatcher* watcher, int fd)
 		if (op->m_count == 0)
 		{
 			// Single send
-			if (!op->m_buffer)
-				watcher->m_unbound = true;
 			
-			if (watcher->m_unbound)
-				err = ECONNRESET;
+			// We send again on EOF, as we only return error codes
+			ssize_t sent = 0;
+			do
+			{
+				sent = ::send(fd,op->m_buffer->rd_ptr(),op->m_buffer->length(),0
+#if defined(MSG_NOSIGNAL)
+						| MSG_NOSIGNAL
+#endif
+					);
+			} while (sent == -1 && errno == EINTR);
+
+			if (sent == -1)
+			{
+				if (errno != EAGAIN && errno != EWOULDBLOCK)
+					err = errno;
+				else
+					break;
+			}
 			else
 			{
-				// We send again on EOF, as we only return error codes
-				ssize_t sent = 0;
-				do
-				{
-					sent = ::send(fd,op->m_buffer->rd_ptr(),op->m_buffer->length(),0
-#if defined(MSG_NOSIGNAL)
-							| MSG_NOSIGNAL
-#endif
-						);
-				} while (sent == -1 && errno == EINTR);
+				op->m_buffer->rd_ptr(sent);
 				
-				if (sent == -1)
-				{
-					if (errno != EAGAIN && errno != EWOULDBLOCK)
-						err = errno;
-					else
-						break;
-				}
-				else
-				{
-					op->m_buffer->rd_ptr(sent);
-					
-					// If we haven't sent all the buffer, restart loop...
-					if (op->m_buffer->length() != 0)
-						continue;
-				}
+				// If we haven't sent all the buffer, restart loop...
+				if (op->m_buffer->length() != 0)
+					continue;
 			}
 			
 			// Notify callback of status/error
@@ -418,103 +485,93 @@ void OOSvrBase::detail::ProactorEv::process_send(IOWatcher* watcher, int fd)
 		else
 		{
 			// Sendv
-			if (watcher->m_unbound)
-				err = ECONNRESET;
-			else
+
+			// Find first valid buffer
+			size_t first_buffer = 0;
+			for (size_t i = 0;i<op->m_count;++i)
 			{
-				// Find first valid buffer
-				size_t first_buffer = 0;
-				for (size_t i = 0;i<op->m_count;++i)
-				{
-					if (op->m_buffers[i]->length() > 0)
-						break;
+				if (op->m_buffers[i]->length() > 0)
+					break;
 
-					++first_buffer;
+				++first_buffer;
+			}
+
+			struct iovec static_bufs[4];
+			OOBase::SmartPtr<struct iovec,OOBase::LocalAllocator> ptrBufs;
+
+			struct msghdr msg = {0};
+			msg.msg_iov = static_bufs;
+			msg.msg_iovlen = op->m_count - first_buffer;
+
+			if (msg.msg_iovlen > sizeof(static_bufs)/sizeof(static_bufs[0]))
+			{
+				ptrBufs = static_cast<struct iovec*>(OOBase::LocalAllocate(msg.msg_iovlen * sizeof(struct iovec)));
+				if (!ptrBufs)
+				{
+					msg.msg_iov = NULL;
+					err = ENOMEM;
+				}
+				else
+					msg.msg_iov = ptrBufs;
+			}
+
+			if (msg.msg_iov)
+			{
+				for (size_t i=0;i<msg.msg_iovlen;++i)
+				{
+					msg.msg_iov[i].iov_len = op->m_buffers[i+first_buffer]->length();
+					msg.msg_iov[i].iov_base = const_cast<char*>(op->m_buffers[i+first_buffer]->rd_ptr());
 				}
 
-				struct iovec static_bufs[4];
-				OOBase::SmartPtr<struct iovec,OOBase::LocalAllocator> ptrBufs;
-
-				struct msghdr msg = {0};
-				msg.msg_iov = static_bufs;
-				msg.msg_iovlen = op->m_count - first_buffer;
-
-				if (msg.msg_iovlen > sizeof(static_bufs)/sizeof(static_bufs[0]))
+				do
 				{
-					ptrBufs = static_cast<struct iovec*>(OOBase::LocalAllocate(msg.msg_iovlen * sizeof(struct iovec)));
-					if (!ptrBufs)
-					{
-						msg.msg_iov = NULL;
-						err = ENOMEM;
-					}
-					else
-						msg.msg_iov = ptrBufs;
-				}
-
-				if (msg.msg_iov)
-				{
-					for (size_t i=0;i<msg.msg_iovlen;++i)
-					{
-						msg.msg_iov[i].iov_len = op->m_buffers[i+first_buffer]->length();
-						msg.msg_iov[i].iov_base = const_cast<char*>(op->m_buffers[i+first_buffer]->rd_ptr());
-					}
-					
+					// We send again on EOF, as we only return error codes
+					ssize_t sent = 0;
 					do
 					{
-						if (watcher->m_unbound)
-						{
-							err = ECONNRESET;
+						sent = ::sendmsg(fd,&msg,0
+#if defined(MSG_NOSIGNAL)
+							| MSG_NOSIGNAL
+#endif
+						);
+					} while (sent == -1 && errno == EINTR);
+
+					if (sent == -1)
+					{
+						if (errno != EAGAIN && errno != EWOULDBLOCK)
+							err = errno;
+						else
 							break;
-						}
-						
-						// We send again on EOF, as we only return error codes
-						ssize_t sent = 0;
+					}
+					else
+					{
+						// Update buffers...
 						do
 						{
-							sent = ::sendmsg(fd,&msg,0
-	#if defined(MSG_NOSIGNAL)
-								| MSG_NOSIGNAL
-	#endif
-							);
-						} while (sent == -1 && errno == EINTR);
-
-						if (sent == -1)
-						{
-							if (errno != EAGAIN && errno != EWOULDBLOCK)
-								err = errno;
-							else
-								break;
-						}
-						else
-						{
-							// Update buffers...
-							do
+							if (static_cast<size_t>(sent) >= msg.msg_iov->iov_len)
 							{
-								if (static_cast<size_t>(sent) >= msg.msg_iov->iov_len)
-								{
-									op->m_buffers[first_buffer]->rd_ptr(msg.msg_iov->iov_len);
-									++first_buffer;
-									sent -= msg.msg_iov->iov_len;
-									++msg.msg_iov;
-									if (--msg.msg_iovlen == 0)
-										break;
-								}
-								else
-								{
-									op->m_buffers[first_buffer]->rd_ptr(sent);
-									msg.msg_iov->iov_len -= sent;
-									msg.msg_iov->iov_base = static_cast<char*>(msg.msg_iov->iov_base) + sent;
-									sent = 0;
-								}
+								op->m_buffers[first_buffer]->rd_ptr(msg.msg_iov->iov_len);
+								++first_buffer;
+								sent -= msg.msg_iov->iov_len;
+								++msg.msg_iov;
+								if (--msg.msg_iovlen == 0)
+									break;
 							}
-							while (sent > 0);
+							else
+							{
+								op->m_buffers[first_buffer]->rd_ptr(sent);
+								msg.msg_iov->iov_len -= sent;
+								msg.msg_iov->iov_base = static_cast<char*>(msg.msg_iov->iov_base) + sent;
+								sent = 0;
+							}
 						}
+						while (sent > 0);
 					}
-					while (msg.msg_iovlen);
-
-					if (errno == EAGAIN || errno == EWOULDBLOCK)
-						break;
 				}
+				while (msg.msg_iovlen);
+
+				if (errno == EAGAIN || errno == EWOULDBLOCK)
+					break;
 			}
 			
 			// Notify callback of status/error
@@ -543,43 +600,31 @@ void OOSvrBase::detail::ProactorEv::process_send(IOWatcher* watcher, int fd)
 		// Pop queue front and line up the next operation...
 		watcher->m_queueSend.pop();
 		op = watcher->m_queueSend.front();
+
+		// Reduce refcount - this will never hit zero
+		--watcher->m_refcount;
 	}
 
 	Msg msg;
 	msg.m_op_code = Msg::SendAgain;
-	msg.m_fd = fd;
+	msg.m_handle = watcher;
 
-	int err = send_msg(m_pipe_fds[1],msg);
+	int err = send_msg(send_fd,msg);
 	if (err != 0)
 		OOBase_CallCriticalFailure(err);
 }
 
-void OOSvrBase::detail::ProactorEv::process_event(IOWatcher* watcher, int fd, int revents)
+void OOSvrBase::detail::ProactorEv::process_event(int send_fd, IOWatcher* watcher, int fd, int revents)
 {
 	if ((revents & EV_READ))
-		process_recv(watcher,fd);
+		process_recv(send_fd,watcher,fd);
 	
 	if (revents & EV_WRITE)
-		process_send(watcher,fd);
-	
-	// Check to see if the watcher should be closed
-	if (watcher->m_unbound)
-	{
-		Msg msg;
-		msg.m_op_code = Msg::IOClose;
-		msg.m_fd = fd;
-		
-		int err = send_msg(m_pipe_fds[1],msg);
-		if (err != 0)
-			OOBase_CallCriticalFailure(err);
-	}
+		process_send(send_fd,watcher,fd);
 }
 
 void OOSvrBase::detail::ProactorEv::pipe_callback()
 {
-	// A local map of watchers, so we start each only once...
-	OOBase::HashTable<int,ev_io*,OOBase::LocalAllocator> mapStart;
-	
 	for (Msg msg;;)	
 	{
 		int err = recv_msg(m_pipe_fds[0],msg);
@@ -588,111 +633,124 @@ void OOSvrBase::detail::ProactorEv::pipe_callback()
 		else if (err != 0)
 			OOBase_CallCriticalFailure(err);
 				
-		if (msg.m_op_code == Msg::Add)
+		// Process the message
+		struct ev_io* watcher = static_cast<struct ev_io*>(msg.m_handle);
+
+		int events = 0;
+		switch (msg.m_op_code)
 		{
-			err = m_mapWatchers.insert(msg.m_fd,static_cast<ev_io*>(msg.m_op.m_param));
-			if (err != 0)
-				OOBase_CallCriticalFailure(err);
-		}
-		else
-		{
-			// Process the message
-			ev_io* watcher = NULL;
-			if (m_mapWatchers.find(msg.m_fd,watcher))
+		case Msg::Stop:
+			// Drop loop refcount
+			ev_unref(m_pLoop);
+			--m_outstanding;
+			break;
+
+		case Msg::Recv:
+			if (watcher)
 			{
-				assert(msg.m_fd == watcher->fd);
-						
-				int events = 0;
-				switch (msg.m_op_code)
+				IOWatcher* io_watcher = static_cast<IOWatcher*>(watcher);
+
+				if ((err = io_watcher->m_queueRecvPending.push(msg.m_op)) != 0)
+					OOBase_CallCriticalFailure(err);
+
+				// Inc the ref count
+				++io_watcher->m_refcount;
+
+				if (!io_watcher->m_busy_recv)
 				{
-				case Msg::Recv:
-					if ((err = static_cast<IOWatcher*>(watcher)->m_queueRecvPending.push(msg.m_op)) != 0)
-						OOBase_CallCriticalFailure(err);
-					
-					// We fall through if we are already not busy...
-					if (static_cast<IOWatcher*>(watcher)->m_busy_recv)
-						break;
-
-				case Msg::RecvAgain:
-					static_cast<IOWatcher*>(watcher)->m_busy_recv = false;
-
-					if (copy_queue(static_cast<IOWatcher*>(watcher)->m_queueRecv,static_cast<IOWatcher*>(watcher)->m_queueRecvPending))
+					if (copy_queue(io_watcher->m_queueRecv,io_watcher->m_queueRecvPending))
 						events = EV_READ;
-					break;
-
-				case Msg::Send:
-					if ((err = static_cast<IOWatcher*>(watcher)->m_queueSendPending.push(msg.m_op)) != 0)
-						OOBase_CallCriticalFailure(err);
-					
-					// We fall through if we are already not busy...
-					if (static_cast<IOWatcher*>(watcher)->m_busy_send)
-						break;
-
-				case Msg::SendAgain:
-					static_cast<IOWatcher*>(watcher)->m_busy_send = false;
-
-					if (copy_queue(static_cast<IOWatcher*>(watcher)->m_queueSend,static_cast<IOWatcher*>(watcher)->m_queueSendPending))
-						events = EV_WRITE;
-					break;
-
-				case Msg::AcceptorClose:
-					if (ev_is_active(watcher))
-						ev_io_stop(m_pLoop,watcher);
-
-					close(watcher->fd);
-					delete static_cast<AcceptWatcher*>(watcher);
-					m_mapWatchers.erase(watcher->fd);
-					break;
-
-				case Msg::IOClose:
-					if (ev_is_active(watcher))
-						ev_io_stop(m_pLoop,watcher);
-
-					close(watcher->fd);
-					delete static_cast<IOWatcher*>(watcher);
-					m_mapWatchers.erase(watcher->fd);
-					break;
-
-				default:
-					break;
-				}
-							
-				if (events != 0)
-				{
-					if (!(watcher->events & events))
-					{
-						if (ev_is_active(watcher))
-							ev_io_stop(m_pLoop,watcher);
-						
-						ev_io_set(watcher,watcher->fd,watcher->events | events);
-					}
-					
-					// Make sure we start the watcher again
-					msg.m_op_code = Msg::Start;
-				}
-				
-				if (msg.m_op_code == Msg::Start)
-				{
-					err = mapStart.insert(watcher->fd,watcher);
-					if (err != 0 && err != EEXIST)
-						OOBase_CallCriticalFailure(err);
 				}
 			}
+			break;
+
+		case Msg::RecvAgain:
+			if (watcher)
+			{
+				IOWatcher* io_watcher = static_cast<IOWatcher*>(watcher);
+
+				io_watcher->m_busy_recv = false;
+
+				if (copy_queue(io_watcher->m_queueRecv,io_watcher->m_queueRecvPending))
+					events = EV_READ;
+
+				deref(io_watcher);
+			}
+			break;
+
+		case Msg::Send:
+			if (watcher)
+			{
+				IOWatcher* io_watcher = static_cast<IOWatcher*>(watcher);
+
+				if ((err = io_watcher->m_queueSendPending.push(msg.m_op)) != 0)
+					OOBase_CallCriticalFailure(err);
+
+				// Inc the ref count
+				++io_watcher->m_refcount;
+
+				if (!io_watcher->m_busy_send)
+				{
+					if (copy_queue(io_watcher->m_queueSend,io_watcher->m_queueSendPending))
+						events = EV_WRITE;
+				}
+			}
+			break;
+
+		case Msg::SendAgain:
+			if (watcher)
+			{
+				IOWatcher* io_watcher = static_cast<IOWatcher*>(watcher);
+
+				io_watcher->m_busy_send = false;
+
+				if (copy_queue(io_watcher->m_queueSend,io_watcher->m_queueSendPending))
+					events = EV_WRITE;
+
+				deref(io_watcher);
+			}
+			break;
+
+		case Msg::IOClose:
+			if (watcher)
+				deref(static_cast<IOWatcher*>(watcher));
+			break;
+
+		case Msg::Accept:
+			if (watcher)
+				io_start(watcher);
+			break;
+
+		case Msg::AcceptAgain:
+			if (watcher && !deref(static_cast<AcceptWatcher*>(watcher)))
+				io_start(watcher);
+			break;
+
+		case Msg::AcceptorClose:
+			if (watcher)
+				deref(static_cast<AcceptWatcher*>(watcher));
+			break;
+
+		default:
+			break;
+		}
+
+
+		if (watcher && events != 0 && (watcher->events & events) != events)
+		{
+			if (ev_is_active(watcher))
+				io_stop(watcher);
+
+			ev_io_set(watcher,watcher->fd,watcher->events | events);
+
+			// Make sure we start the watcher again
+			io_start(watcher);
 		}
 	}
-	
-	// Start the watchers
-	ev_io* watcher = NULL;
-	while (mapStart.pop(NULL,&watcher))
-		ev_io_start(m_pLoop,watcher);
 }
 
-int OOSvrBase::detail::ProactorEv::recv(int fd, void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout)
+int OOSvrBase::detail::ProactorEv::recv(void* handle, void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout)
 {
-	int err = init();
-	if (err != 0)
-		return err;
-
 	// Must have a callback function
 	assert(callback);
 	
@@ -704,14 +762,14 @@ int OOSvrBase::detail::ProactorEv::recv(int fd, void* param, void (*callback)(vo
 	else
 	{
 		// Make sure we have room
-		err = buffer->space(bytes);
+		int err = buffer->space(bytes);
 		if (err != 0)
 			return err;
 	}
 	
 	Msg msg;
 	msg.m_op_code = Msg::Recv;
-	msg.m_fd = fd;
+	msg.m_handle = handle;
 	msg.m_op.m_count = bytes;
 	msg.m_op.m_buffer = buffer;
 	msg.m_op.m_buffer->addref();
@@ -721,18 +779,14 @@ int OOSvrBase::detail::ProactorEv::recv(int fd, void* param, void (*callback)(vo
 	return send_msg(m_pipe_fds[1],msg);
 }
 
-int OOSvrBase::detail::ProactorEv::send(int fd, void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer)
+int OOSvrBase::detail::ProactorEv::send(void* handle, void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer)
 {
-	int err = init();
-	if (err != 0)
-		return err;
-	
 	// I imagine you might want to increase length()?
 	assert(buffer->length() > 0);
 	
 	Msg msg;
 	msg.m_op_code = Msg::Send;
-	msg.m_fd = fd;
+	msg.m_handle = handle;
 	msg.m_op.m_count = 0;
 	msg.m_op.m_buffer = buffer;
 	msg.m_op.m_buffer->addref();
@@ -742,18 +796,14 @@ int OOSvrBase::detail::ProactorEv::send(int fd, void* param, void (*callback)(vo
 	return send_msg(m_pipe_fds[1],msg);
 }
 
-int OOSvrBase::detail::ProactorEv::send_v(int fd, void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count)
+int OOSvrBase::detail::ProactorEv::send_v(void* handle, void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count)
 {
-	int err = init();
-	if (err != 0)
-		return err;
-	
 	if (count == 0)
 		return EINVAL;
 	
 	Msg msg;
 	msg.m_op_code = Msg::Send;
-	msg.m_fd = fd;
+	msg.m_handle = handle;
 	msg.m_op.m_count = count;
 	msg.m_op.m_param = param;
 	msg.m_op.m_callback_v = callback;
@@ -767,7 +817,7 @@ int OOSvrBase::detail::ProactorEv::send_v(int fd, void* param, void (*callback)(
 		msg.m_op.m_buffers[i]->addref();
 	}
 		
-	err = send_msg(m_pipe_fds[1],msg);
+	int err = send_msg(m_pipe_fds[1],msg);
 	if (err != 0)
 	{
 		for (size_t i=0;i<count;++i)
@@ -779,88 +829,69 @@ int OOSvrBase::detail::ProactorEv::send_v(int fd, void* param, void (*callback)(
 	return err;
 }
 
-int OOSvrBase::detail::ProactorEv::new_acceptor(int fd, void* param, void (*callback)(void* param))
+void* OOSvrBase::detail::ProactorEv::new_acceptor(int fd, void* param, bool (*callback)(void* param, int fd), int& err)
 {
-	int err = init();
-	if (err != 0)
-		return err;
-	
 	AcceptWatcher* watcher = new (std::nothrow) AcceptWatcher;
 	if (!watcher)
-		return ENOMEM;
+	{
+		err = ENOMEM;
+		return NULL;
+	}
 	
 	ev_io_init(watcher,&acceptor_callback,fd,EV_READ);
 	watcher->data = this;
 	watcher->m_callback = callback;
 	watcher->m_param = param;
+	watcher->m_refcount = 1;
+	watcher->m_wait = NULL;
 	
 	Msg msg;
-	msg.m_op_code = Msg::Add;
-	msg.m_fd = fd;
-	msg.m_op.m_param = static_cast<ev_io*>(watcher);
-	
+	msg.m_op_code = Msg::Accept;
+	msg.m_handle = watcher;
+
 	err = send_msg(m_pipe_fds[1],msg);
 	if (err != 0)
+	{
 		delete watcher;
-	
-	return err;
+		watcher = NULL;
+	}
+
+	return watcher;
 }
 
-int OOSvrBase::detail::ProactorEv::close_acceptor(int fd)
+int OOSvrBase::detail::ProactorEv::close_acceptor(void* handle)
 {	
 	Msg msg;
 	msg.m_op_code = Msg::AcceptorClose;
-	msg.m_fd = fd;
+	msg.m_handle = handle;
 	
 	return send_msg(m_pipe_fds[1],msg);
 }
 
-int OOSvrBase::detail::ProactorEv::start_acceptor(int fd)
+void* OOSvrBase::detail::ProactorEv::bind(int fd, int& err)
 {
-	Msg msg;
-	msg.m_op_code = Msg::Start;
-	msg.m_fd = fd;
-	
-	return send_msg(m_pipe_fds[1],msg);
-}
-
-int OOSvrBase::detail::ProactorEv::bind_fd(int fd)
-{
-	int err = init();
-	if (err != 0)
-		return err;
-	
 	IOWatcher* watcher = new (std::nothrow) IOWatcher;
 	if (!watcher)
-		return ENOMEM;
+	{
+		err = ENOMEM;
+		return NULL;
+	}
 	
 	ev_io_init(watcher,&iowatcher_callback,fd,0);
 	watcher->data = this;
-	watcher->m_unbound = false;
+	watcher->m_refcount = 1;
 	watcher->m_busy_recv = false;
 	watcher->m_busy_send = false;
 
-	Msg msg;
-	msg.m_op_code = Msg::Add;
-	msg.m_fd = fd;
-	msg.m_op.m_param = static_cast<ev_io*>(watcher);
-	
-	err = send_msg(m_pipe_fds[1],msg);
-	if (err != 0)
-		delete watcher;
-	
-	return err;
+	return watcher;
 }
 
-int OOSvrBase::detail::ProactorEv::unbind_fd(int fd)
+int OOSvrBase::detail::ProactorEv::unbind(void* handle)
 {
 	Msg msg;
-	msg.m_op_code = Msg::Send;
-	msg.m_fd = fd;
-	msg.m_op.m_count = 0;
-	msg.m_op.m_callback = NULL;
-	msg.m_op.m_buffer = NULL; // <-- This is the important bit! The NULL buffer means close
-		
+	msg.m_op_code = Msg::IOClose;
+	msg.m_handle = handle;
+
 	return send_msg(m_pipe_fds[1],msg);
 }
 	

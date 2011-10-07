@@ -62,6 +62,17 @@ OOSvrBase::Proactor::Proactor() :
 #else
 #error Fix me!
 #endif
+	if (m_impl)
+	{
+		int err = m_impl->init();
+		if (err != 0)
+		{
+			delete m_impl;
+			OOBase_CallCriticalFailure(err);
+		}
+	}
+	else
+		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 }
 
 OOSvrBase::Proactor::Proactor(bool) :
@@ -75,80 +86,48 @@ OOSvrBase::Proactor::~Proactor()
 	delete m_impl;
 }
 
+int OOSvrBase::Proactor::init()
+{
+	return 0;
+}
+
 int OOSvrBase::Proactor::run(int& err, const OOBase::timeval_t* timeout)
 {
-	if (!m_impl)
-	{
-		err = ERROR_OUTOFMEMORY;
-		return -1;
-	}
-	
 	return m_impl->run(err,timeout);
+}
+
+void OOSvrBase::Proactor::stop()
+{
+	return m_impl->stop();
 }
 
 OOSvrBase::Acceptor* OOSvrBase::Proactor::accept_local(void* param, void (*callback)(void* param, AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa)
 {
-	if (!m_impl)
-	{
-		err = ERROR_OUTOFMEMORY;
-		return NULL;
-	}
-	
 	return m_impl->accept_local(param,callback,path,err,psa);
 }
 
 OOSvrBase::Acceptor* OOSvrBase::Proactor::accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err), const sockaddr* addr, socklen_t addr_len, int& err)
 {
-	if (!m_impl)
-	{
-		err = ERROR_OUTOFMEMORY;
-		return NULL;
-	}
-	
 	return m_impl->accept_remote(param,callback,addr,addr_len,err);
 }
 
 OOSvrBase::AsyncSocket* OOSvrBase::Proactor::attach_socket(OOBase::socket_t sock, int& err)
 {
-	if (!m_impl)
-	{
-		err = ERROR_OUTOFMEMORY;
-		return NULL;
-	}
-	
 	return m_impl->attach_socket(sock,err);
 }
 
 OOSvrBase::AsyncLocalSocket* OOSvrBase::Proactor::attach_local_socket(OOBase::socket_t sock, int& err)
 {
-	if (!m_impl)
-	{
-		err = ERROR_OUTOFMEMORY;
-		return NULL;
-	}
-	
 	return m_impl->attach_local_socket(sock,err);
 }
 
 OOSvrBase::AsyncSocket* OOSvrBase::Proactor::connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::timeval_t* timeout)
 {
-	if (!m_impl)
-	{
-		err = ERROR_OUTOFMEMORY;
-		return NULL;
-	}
-	
 	return m_impl->connect_socket(addr,addr_len,err,timeout);
 }
 
 OOSvrBase::AsyncLocalSocket* OOSvrBase::Proactor::connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout)
 {
-	if (!m_impl)
-	{
-		err = ERROR_OUTOFMEMORY;
-		return NULL;
-	}
-	
 	return m_impl->connect_local_socket(path,err,timeout);
 }
 
