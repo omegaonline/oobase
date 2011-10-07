@@ -125,12 +125,16 @@ void AsyncSocket::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	pfnCallback callback = reinterpret_cast<pfnCallback>(pOv->m_extras[1]);
 	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
-	buffer->wr_ptr(dwBytes);
-	
+
 	delete pOv;
 		
 	// Call callback
-	(*callback)(param,buffer,dwErr);
+	if (callback)
+	{
+		buffer->wr_ptr(dwBytes);
+
+		(*callback)(param,buffer,dwErr);
+	}
 }
 
 int AsyncSocket::send(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer)
@@ -183,13 +187,16 @@ void AsyncSocket::on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	pfnCallback callback = reinterpret_cast<pfnCallback>(pOv->m_extras[1]);
 	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
-	buffer->rd_ptr(dwBytes);
-	
+
 	delete pOv;
 		
 	// Call callback
 	if (callback)
+	{
+		buffer->rd_ptr(dwBytes);
+
 		(*callback)(param,buffer,dwErr);
+	}
 }
 
 int AsyncSocket::send_v(void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count)

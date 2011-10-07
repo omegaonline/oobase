@@ -144,17 +144,20 @@ void AsyncPipe::on_recv(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOSvrBase
 	
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	pfnCallback callback = reinterpret_cast<pfnCallback>(pOv->m_extras[1]);
-
 	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
-	buffer->wr_ptr(dwBytes);
 
 	delete pOv;
 	
-	// Translate error codes...
-	translate_error(dwErr);
-		
 	// Call callback
-	(*callback)(param,buffer,dwErr);
+	if (callback)
+	{
+		// Translate error codes...
+		translate_error(dwErr);
+
+		buffer->wr_ptr(dwBytes);
+		
+		(*callback)(param,buffer,dwErr);
+	}
 }
 
 int AsyncPipe::send(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer)
@@ -196,10 +199,10 @@ void AsyncPipe::on_send(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOSvrBase
 	// Call callback
 	if (callback)
 	{
-		buffer->rd_ptr(dwBytes);
-
 		// Translate error codes...
 		translate_error(dwErr);
+
+		buffer->rd_ptr(dwBytes);
 
 		(*callback)(param,buffer,dwErr);
 	}
@@ -262,7 +265,7 @@ void AsyncPipe::on_send_v(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOSvrBa
 	
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	pfnCallback callback = reinterpret_cast<pfnCallback>(pOv->m_extras[1]);
-	OOBase::Buffer* buffer = reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]);
+	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
 	
 	delete pOv;
 	
@@ -274,18 +277,8 @@ void AsyncPipe::on_send_v(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOSvrBa
 
 		buffer->rd_ptr(dwBytes);
 
-		try
-		{
-			(*callback)(param,&buffer,1,dwErr);
-		}
-		catch (...)
-		{
-			buffer->release();
-			throw;
-		}
+		(*callback)(param,&buffer,1,dwErr);
 	}
-
-	buffer->release();
 }
 
 int AsyncPipe::get_uid(OOSvrBase::AsyncLocalSocket::uid_t& uid)
