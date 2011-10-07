@@ -67,7 +67,7 @@ OOSvrBase::Proactor::Proactor() :
 OOSvrBase::Proactor::Proactor(bool) :
 		m_impl(NULL)
 {
-	// This stops derived class recursively constructing themselves (using the default constructor)
+	// This stops derived classes recursively constructing themselves (using the default constructor)
 }
 
 OOSvrBase::Proactor::~Proactor()
