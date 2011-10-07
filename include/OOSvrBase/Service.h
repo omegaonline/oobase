@@ -41,7 +41,8 @@ namespace OOSvrBase
 
 	private:
 #if defined(HAVE_UNISTD_H)
-		sigset_t m_set;
+		sigset_t  m_set;
+		pthread_t m_tid;
 #endif
 	};
 

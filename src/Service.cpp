@@ -229,7 +229,8 @@ int OOSvrBase::Service::wait_for_quit()
 
 #elif defined(HAVE_UNISTD_H)
 
-OOSvrBase::Server::Server()
+OOSvrBase::Server::Server() :
+		m_tid(pthread_self())
 {
 	sigemptyset(&m_set);
 	sigaddset(&m_set, SIGQUIT);
@@ -244,13 +245,14 @@ OOSvrBase::Server::Server()
 int OOSvrBase::Server::wait_for_quit()
 {
 	int ret = 0;
+	m_tid = pthread_self();
 	sigwait(&m_set,&ret);
 	return ret;
 }
 
 void OOSvrBase::Server::signal(int sig)
 {
-	kill(getpid(),sig);
+	pthread_kill(m_tid,sig);
 }
 
 void OOSvrBase::Server::quit()
