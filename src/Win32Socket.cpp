@@ -665,7 +665,7 @@ void WinSocket::close()
 	// This may not cancel any outstanding recvs
 	void* CHECK_ME;
 
-	::shutdown(m_socket,SD_BOTH);
+	::shutdown(m_socket,SD_SEND);
 }
 
 OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, int& err, const timeval_t* timeout)

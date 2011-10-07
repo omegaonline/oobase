@@ -544,7 +544,7 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeva
 
 void Socket::close()
 {
-	::shutdown(m_sock,SHUT_RDWR);
+	::shutdown(m_sock,SHUT_WR);
 }
 
 OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, int& err, const timeval_t* timeout)
