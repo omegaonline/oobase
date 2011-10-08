@@ -66,7 +66,7 @@ namespace
 			void* p = i.inst.allocate(len);
 			if (p)
 				++i.refcount;
-			
+
 			return p;
 		}
 
@@ -74,7 +74,7 @@ namespace
 		{
 			if (!ptr)
 				return allocate(len);
-			
+
 			return instance().inst.reallocate(ptr,len);
 		}
 
@@ -102,7 +102,7 @@ namespace
 		{
 			static OOBase::Once::once_t key = ONCE_T_INIT;
 			OOBase::Once::Run(&key,&init);
-			
+
 			return *s_instance;
 		}
 
