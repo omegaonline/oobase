@@ -52,17 +52,17 @@
 
 #elif defined(HAVE___SYNC_VAL_COMPARE_AND_SWAP)
 
-/* Define if you have atomic compare-and-swap for 32bit values */
+#if defined(__clang__)
+#define ATOMIC_CAS_32(t,c,x) __sync_val_compare_and_swap((int volatile*)(t),(int)c,(int)x)
+#define ATOMIC_CAS_64(t,c,x)  __sync_val_compare_and_swap((long volatile*)(t),(long)c,(long)x)
+#define ATOMIC_ADD_32(t,v) __sync_add_and_fetch((int volatile*)(t),(int)v)
+#define ATOMIC_ADD_64(t,v) __sync_add_and_fetch((long volatile*)(t),(long)v)
+#else
 #define ATOMIC_CAS_32(t,c,x) __sync_val_compare_and_swap(t,c,x)
-
-/* Define if you have atomic compare-and-swap for 64bit values */
 #define ATOMIC_CAS_64(t,c,x)  __sync_val_compare_and_swap(t,c,x)
-
-/* Define if you have atomic inc and dec for 32bit values */
 #define ATOMIC_ADD_32(t,v) __sync_add_and_fetch(t,v)
-
-/* Define if you have atomic inc and dec for 64bit values */
 #define ATOMIC_ADD_64(t,v) __sync_add_and_fetch(t,v)
+#endif
 
 #elif defined(_WIN32)
 
@@ -124,7 +124,7 @@ namespace OOBase
 			return *this;
 		}
 
-		static T Exchange(T& val, const T newVal)
+		static T Exchange(volatile T& val, const T newVal)
 		{
 			return detail::AtomicImpl<T,sizeof(T)>::Exchange(val,newVal);
 		}
@@ -134,7 +134,7 @@ namespace OOBase
 			return Exchange(m_val,newVal);
 		}
 
-		static T CompareAndSwap(T& val, const T oldVal, const T newVal)
+		static T CompareAndSwap(volatile T& val, const T oldVal, const T newVal)
 		{
 			return detail::AtomicImpl<T,sizeof(T)>::CompareAndSwap(val,oldVal,newVal);
 		}
@@ -149,7 +149,7 @@ namespace OOBase
 			return m_val;
 		}
 
-		static T Increment(T& val)
+		static T Increment(volatile T& val)
 		{
 			return detail::AtomicImpl<T,sizeof(T)>::Increment(val);
 		}
@@ -159,7 +159,7 @@ namespace OOBase
 			return Increment(m_val);
 		}
 
-		static T Decrement(T& val)
+		static T Decrement(volatile T& val)
 		{
 			return detail::AtomicImpl<T,sizeof(T)>::Decrement(val);
 		}
@@ -179,7 +179,7 @@ namespace OOBase
 			return Decrement(m_val) + 1;
 		}
 
-		static T Add(T& val, const T add)
+		static T Add(volatile T& val, const T add)
 		{
 			return detail::AtomicImpl<T,sizeof(T)>::Add(val,add);
 		}
@@ -190,7 +190,7 @@ namespace OOBase
 			return *this;
 		}
 
-		static T Subtract(T& val, const T subtract)
+		static T Subtract(volatile T& val, const T subtract)
 		{
 			return detail::AtomicImpl<T,sizeof(T)>::Subtract(val,subtract);
 		}
@@ -220,7 +220,7 @@ namespace OOBase
 		template <typename T>
 		struct AtomicImpl<T,4>
 		{
-			static T CompareAndSwap(T& val, const T oldVal, const T newVal)
+			static T CompareAndSwap(volatile T& val, const T oldVal, const T newVal)
 			{
 			#if defined(ATOMIC_CAS_32)
 				return (T)ATOMIC_CAS_32(&val,oldVal,newVal);
@@ -229,7 +229,7 @@ namespace OOBase
 			#endif
 			}
 
-			static T Exchange(T& val, const T newVal)
+			static T Exchange(volatile T& val, const T newVal)
 			{
 			#if defined (ATOMIC_EXCH_32)
 				return (T)ATOMIC_EXCH_32(&val,newVal);
@@ -242,7 +242,7 @@ namespace OOBase
 			#endif
 			}
 
-			static T Add(T& val, const T add)
+			static T Add(volatile T& val, const T add)
 			{
 			#if defined(ATOMIC_ADD_32)
 				return (T)ATOMIC_ADD_32(&val,add);
@@ -253,7 +253,7 @@ namespace OOBase
 			#endif
 			}
 
-			static T Increment(T& val)
+			static T Increment(volatile T& val)
 			{
 			#if defined(ATOMIC_INC_32)
 				return (T)ATOMIC_INC_32(&val);
@@ -262,7 +262,7 @@ namespace OOBase
 			#endif
 			}
 
-			static T Subtract(T& val, const T sub)
+			static T Subtract(volatile T& val, const T sub)
 			{
 			#if defined(ATOMIC_SUB_32)
 				return (T)ATOMIC_SUB_32(&val,sub);
@@ -271,7 +271,7 @@ namespace OOBase
 			#endif
 			}
 
-			static T Decrement(T& val)
+			static T Decrement(volatile T& val)
 			{
 			#if defined(ATOMIC_DEC_32)
 				return (T)ATOMIC_DEC_32(&val);
