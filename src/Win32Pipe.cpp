@@ -107,7 +107,7 @@ int Pipe::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_
 	{
 		if (buffers[i]->length() > 0)
 		{
-			size_t len = send_i(buffers[i]->rd_ptr(),buffers[i]->length(),true,err,timeout);
+			size_t len = send_i(buffers[i]->rd_ptr(),buffers[i]->length(),err,timeout);
 			buffers[i]->wr_ptr(len);
 		}
 	}

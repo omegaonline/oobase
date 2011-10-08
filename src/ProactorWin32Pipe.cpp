@@ -220,8 +220,8 @@ int AsyncPipe::send_v(void* param, void (*callback)(void* param, OOBase::Buffer*
 	for (size_t i=0;i<count;++i)
 	{
 		size_t len = buffers[i]->length();
-		if (0xFFFFFFFF - len < total)
-			return WSAENOBUFS;
+		if (len > 0xFFFFFFFF || 0xFFFFFFFF - len < total)
+			return ERROR_BUFFER_OVERFLOW;
 		
 		total += len;
 	}

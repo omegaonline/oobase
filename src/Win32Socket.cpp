@@ -345,15 +345,15 @@ size_t WinSocket::send(const void* buf, size_t len, int& err, const OOBase::time
 
 	if (len > 0xFFFFFFFF)
 	{
-		err = E2BIG;
+		err = ERROR_BUFFER_OVERFLOW;
 		return 0;
 	}
 
-	WSABUF buf;
-	buf.buf = const_cast<char*>(static_cast<const char*>(buf));
-	buf.len = static_cast<ULONG>(len);
+	WSABUF wsabuf;
+	wsabuf.buf = const_cast<char*>(static_cast<const char*>(buf));
+	wsabuf.len = static_cast<ULONG>(len);
 
-	return send_i(&buf,1,err,timeout);
+	return send_i(&wsabuf,1,err,timeout);
 }
 
 int WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout)
@@ -373,12 +373,12 @@ int WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::tim
 
 		total_len += len;
 		if (total_len > 0xFFFFFFFF)
-			return E2BIG;
+			return ERROR_BUFFER_OVERFLOW;
 
 		if (len > 0)
 		{
 			if (actual_count == 0xFFFFFFFF)
-				return E2BIG;
+				return ERROR_BUFFER_OVERFLOW;
 
 			++actual_count;
 		}
@@ -506,15 +506,15 @@ size_t WinSocket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase:
 
 	if (len > 0xFFFFFFFF)
 	{
-		err = E2BIG;
+		err = ERROR_BUFFER_OVERFLOW;
 		return 0;
 	}
 
-	WSABUF buf;
-	buf.buf = static_cast<char*>(buf);
-	buf.len = static_cast<ULONG>(len);
+	WSABUF wsabuf;
+	wsabuf.buf = static_cast<char*>(buf);
+	wsabuf.len = static_cast<ULONG>(len);
 
-	return recv_i(&buf,1,bAll,err,timeout);
+	return recv_i(&wsabuf,1,bAll,err,timeout);
 }
 
 int WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout)
@@ -531,15 +531,15 @@ int WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::tim
 	for (size_t i=0;i<count;++i)
 	{
 		size_t len = buffers[i]->space();
-
-		total_len += len;
-		if (total_len > 0xFFFFFFFF)
-			return E2BIG;
-
 		if (len > 0)
 		{
+			if (len > 0xFFFFFFFF || 0xFFFFFFFF - len < total_len)
+				return ERROR_BUFFER_OVERFLOW;
+
+			total_len += len;
+
 			if (actual_count == 0xFFFFFFFF)
-				return E2BIG;
+				return ERROR_BUFFER_OVERFLOW;
 
 			++actual_count;
 		}
@@ -567,7 +567,7 @@ int WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::tim
 	}
 
 	int err = 0;
-	DWORD dwRead = recv_i(bufs,actual_count,bAll,err,timeout);
+	DWORD dwRead = recv_i(bufs,actual_count,true,err,timeout);
 
 	// Update buffers...
 	for (size_t first_buffer = 0;dwRead;)
