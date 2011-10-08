@@ -39,8 +39,7 @@ namespace
 	};
 }
 
-OOSvrBase::Win32::sec_descript_t::sec_descript_t() :
-		m_pACL(NULL), m_psd(NULL)
+OOSvrBase::Win32::sec_descript_t::sec_descript_t()
 {
 	// Create a new security descriptor
 	m_psd = (PSECURITY_DESCRIPTOR)LocalAlloc(LPTR,SECURITY_DESCRIPTOR_MIN_LENGTH);

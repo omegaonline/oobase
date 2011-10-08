@@ -58,10 +58,11 @@ namespace OOSvrBase
 			void unbind(HANDLE hFile);
 
 			int run(int& err, const OOBase::timeval_t* timeout = NULL);
+			void stop();
 
 		protected:
-			OOSvrBase::Acceptor* accept_local(void* param, void (*callback)(void* param, OOSvrBase::AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa);
-			OOSvrBase::Acceptor* accept_remote(void* param, void (*callback)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err), const sockaddr* addr, socklen_t addr_len, int& err);
+			OOSvrBase::Acceptor* accept_local(void* param, accept_local_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa);
+			OOSvrBase::Acceptor* accept_remote(void* param, accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err);
 
 		private:
 			HANDLE           m_hPort;

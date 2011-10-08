@@ -39,9 +39,9 @@ namespace
 	public:
 		AsyncSocket(OOSvrBase::detail::ProactorWin32* pProactor, SOCKET hSocket);
 		
-		int recv(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout);
-		int send(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer);
-		int send_v(void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count);
+		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout);
+		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
+		int send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 	
 	private:
 		virtual ~AsyncSocket();
@@ -65,7 +65,7 @@ AsyncSocket::~AsyncSocket()
 	closesocket(m_hSocket);
 }
 
-int AsyncSocket::recv(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout)
+int AsyncSocket::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout)
 {
 	// Must have a callback function
 	assert(callback);
@@ -120,10 +120,8 @@ void AsyncSocket::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::
 	if (!WSAGetOverlappedResult((SOCKET)handle,pOv,&dwBytes,TRUE,&dwFlags))
 		dwErr = WSAGetLastError();
 	
-	typedef void (*pfnCallback)(void* param, OOBase::Buffer* buffer, int err);
-		
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
-	pfnCallback callback = reinterpret_cast<pfnCallback>(pOv->m_extras[1]);
+	recv_callback_t callback = reinterpret_cast<recv_callback_t>(pOv->m_extras[1]);
 	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
 
 	delete pOv;
@@ -137,7 +135,7 @@ void AsyncSocket::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::
 	}
 }
 
-int AsyncSocket::send(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer)
+int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buffer)
 {
 	size_t bytes = buffer->length();
 	if (bytes == 0)
@@ -182,24 +180,18 @@ void AsyncSocket::on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::
 	if (!WSAGetOverlappedResult((SOCKET)handle,pOv,&dwBytes,TRUE,&dwFlags))
 		dwErr = WSAGetLastError();
 	
-	typedef void (*pfnCallback)(void* param, OOBase::Buffer* buffer, int err);
-	
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
-	pfnCallback callback = reinterpret_cast<pfnCallback>(pOv->m_extras[1]);
+	send_callback_t callback = reinterpret_cast<send_callback_t>(pOv->m_extras[1]);
 	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
 
 	delete pOv;
 		
 	// Call callback
 	if (callback)
-	{
-		buffer->rd_ptr(dwBytes);
-
-		(*callback)(param,buffer,dwErr);
-	}
+		(*callback)(param,dwErr);
 }
 
-int AsyncSocket::send_v(void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count)
+int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count)
 {
 	if (count == 0)
 		return 0;
@@ -268,46 +260,19 @@ void AsyncSocket::on_send_v(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase
 	if (!WSAGetOverlappedResult((SOCKET)handle,pOv,&dwBytes,TRUE,&dwFlags))
 		dwErr = WSAGetLastError();
 	
-	typedef void (*pfnCallback)(void* param, OOBase::Buffer* buffers[], size_t count, int err);
-	
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
-	pfnCallback callback = reinterpret_cast<pfnCallback>(pOv->m_extras[1]);
+	send_callback_t callback = reinterpret_cast<send_callback_t>(pOv->m_extras[1]);
 	OOBase::Buffer** buffers = reinterpret_cast<OOBase::Buffer**>(pOv->m_extras[2]);
 	size_t count = static_cast<size_t>(pOv->m_extras[3]);
-	
-	delete pOv;
-	
-	for (size_t i=0;dwBytes>0 && i<count;++i)
-	{
-		size_t len = buffers[i]->length();
-		if (len > dwBytes)
-			len = dwBytes;
-		
-		buffers[i]->rd_ptr(len);
-		dwBytes -= static_cast<DWORD>(len);
-	}
-	
-	// Call callback
-	if (callback)
-	{
-		try
-		{
-			(*callback)(param,buffers,count,dwErr);
-		}
-		catch (...)
-		{
-			for (size_t i=0;i<count;++i)
-				buffers[i]->release();
-			
-			delete [] buffers;
-			throw;
-		}
-	}
-		
+
 	for (size_t i=0;i<count;++i)
 		buffers[i]->release();
-	
+
 	delete [] buffers;
+	delete pOv;
+	
+	if (callback)
+		(*callback)(param,dwErr);
 }
 
 namespace
@@ -315,13 +280,11 @@ namespace
 	class SocketAcceptor : public OOSvrBase::Acceptor
 	{
 	public:
-		typedef void (*callback_t)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err);
-	
 		SocketAcceptor();
 		
 		int listen(size_t backlog);
 		int stop();
-		int bind(OOSvrBase::detail::ProactorWin32* pProactor, void* param, callback_t callback, const sockaddr* addr, socklen_t addr_len);
+		int bind(OOSvrBase::detail::ProactorWin32* pProactor, void* param, OOSvrBase::Proactor::accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len);
 	
 	private:
 		virtual ~SocketAcceptor();
@@ -329,26 +292,26 @@ namespace
 		class Acceptor
 		{
 		public:
-			Acceptor(OOSvrBase::detail::ProactorWin32* pProactor, void* param, SocketAcceptor::callback_t callback);
+			Acceptor(OOSvrBase::detail::ProactorWin32* pProactor, void* param, OOSvrBase::Proactor::accept_remote_callback_t callback);
 			
 			int listen(size_t backlog);
 			int stop(bool destroy);
 			int bind(const sockaddr* addr, socklen_t addr_len);
 			
 		private:
-			OOSvrBase::detail::ProactorWin32* m_pProactor;
-			OOBase::Condition::Mutex          m_lock;
-			OOBase::Condition                 m_condition;
-			sockaddr*                         m_addr;
-			socklen_t                         m_addr_len;
-			SOCKET                            m_socket;
-			size_t                            m_backlog;
-			size_t                            m_pending;
-			size_t                            m_refcount;
-			OOBase::Win32::SmartHandle        m_hEvent;
-			HANDLE                            m_hWait;
-			void*                             m_param;
-			SocketAcceptor::callback_t        m_callback;
+			OOSvrBase::detail::ProactorWin32*             m_pProactor;
+			OOBase::Condition::Mutex                      m_lock;
+			OOBase::Condition                             m_condition;
+			sockaddr*                                     m_addr;
+			socklen_t                                     m_addr_len;
+			SOCKET                                        m_socket;
+			size_t                                        m_backlog;
+			size_t                                        m_pending;
+			size_t                                        m_refcount;
+			OOBase::Win32::SmartHandle                    m_hEvent;
+			HANDLE                                        m_hWait;
+			void*                                         m_param;
+			OOSvrBase::Proactor::accept_remote_callback_t m_callback;
 		
 			~Acceptor();
 			
@@ -389,7 +352,7 @@ int SocketAcceptor::stop()
 	return m_pAcceptor->stop(false);
 }
 
-int SocketAcceptor::bind(OOSvrBase::detail::ProactorWin32* pProactor, void* param, callback_t callback, const sockaddr* addr, socklen_t addr_len)
+int SocketAcceptor::bind(OOSvrBase::detail::ProactorWin32* pProactor, void* param, OOSvrBase::Proactor::accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len)
 {
 	m_pAcceptor = new (std::nothrow) SocketAcceptor::Acceptor(pProactor,param,callback);
 	if (!m_pAcceptor)
@@ -405,7 +368,7 @@ int SocketAcceptor::bind(OOSvrBase::detail::ProactorWin32* pProactor, void* para
 	return err;
 }
 
-SocketAcceptor::Acceptor::Acceptor(OOSvrBase::detail::ProactorWin32* pProactor, void* param, SocketAcceptor::callback_t callback) :
+SocketAcceptor::Acceptor::Acceptor(OOSvrBase::detail::ProactorWin32* pProactor, void* param, OOSvrBase::Proactor::accept_remote_callback_t callback) :
 		m_pProactor(pProactor),
 		m_addr(NULL),
 		m_addr_len(0),
@@ -751,7 +714,7 @@ bool SocketAcceptor::Acceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwE
 	return false;
 }
 
-OOSvrBase::Acceptor* OOSvrBase::detail::ProactorWin32::accept_remote(void* param, void (*callback)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err), const sockaddr* addr, socklen_t addr_len, int& err)
+OOSvrBase::Acceptor* OOSvrBase::detail::ProactorWin32::accept_remote(void* param, accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err)
 {
 	OOBase::Win32::WSAStartup();
 	

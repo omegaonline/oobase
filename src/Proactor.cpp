@@ -39,7 +39,12 @@ namespace
 		bool                     m_complete;
 		int                      m_err;
 
-		static void callback(void* param, OOBase::Buffer*, int err)
+		static void callback_recv(void* param, OOBase::Buffer*, int err)
+		{
+			callback(param,err);
+		}
+
+		static void callback(void* param, int err)
 		{
 			WaitCallback* pThis = static_cast<WaitCallback*>(param);
 
@@ -101,12 +106,12 @@ void OOSvrBase::Proactor::stop()
 	return m_impl->stop();
 }
 
-OOSvrBase::Acceptor* OOSvrBase::Proactor::accept_local(void* param, void (*callback)(void* param, AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa)
+OOSvrBase::Acceptor* OOSvrBase::Proactor::accept_local(void* param, accept_local_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa)
 {
 	return m_impl->accept_local(param,callback,path,err,psa);
 }
 
-OOSvrBase::Acceptor* OOSvrBase::Proactor::accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err), const sockaddr* addr, socklen_t addr_len, int& err)
+OOSvrBase::Acceptor* OOSvrBase::Proactor::accept_remote(void* param, accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err)
 {
 	return m_impl->accept_remote(param,callback,addr,addr_len,err);
 }
@@ -139,7 +144,7 @@ int OOSvrBase::AsyncSocket::recv(OOBase::Buffer* buffer, size_t bytes, const OOB
 
 	OOBase::Guard<OOBase::Condition::Mutex> guard(wait.m_lock);
 
-	int err = recv(&wait,&WaitCallback::callback,buffer,bytes,timeout);
+	int err = recv(&wait,&WaitCallback::callback_recv,buffer,bytes,timeout);
 	if (err == 0)
 	{
 		while (!wait.m_complete)

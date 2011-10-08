@@ -85,15 +85,14 @@ void OOBase::LocalString::replace(char from, char to)
 
 int OOBase::LocalString::vprintf(const char* format, va_list args)
 {
-	char* new_buf = NULL;
 	char szBuf[256];
-	int r = vsnprintf_s(szBuf,sizeof(szBuf),format,args);
+	char* new_buf = szBuf;
+
+	int r = vsnprintf_s(new_buf,sizeof(szBuf),format,args);
 	if (r == -1)
 		return errno;
 
-	if (static_cast<size_t>(r) < sizeof(szBuf))
-		new_buf = szBuf;
-	else
+	if (static_cast<size_t>(r) >= sizeof(szBuf))
 	{
 		for (;;)
 		{
@@ -134,16 +133,33 @@ int OOBase::LocalString::printf(const char* format, ...)
 
 int OOBase::LocalString::getenv(const char* envvar)
 {
-#if defined(_MSC_VER) && defined(_CRT_INSECURE_DEPRECATE)
-	char* buf = 0;
-	size_t len = 0;
-	int err = _dupenv_s(&buf,&len,envvar);
-	if (err == 0)
+#if defined(_WIN32)
+	char szBuf[256];
+	char* new_buf = szBuf;
+
+	DWORD dwLen = GetEnvironmentVariable(envvar,new_buf,sizeof(szBuf));
+	if (dwLen >= sizeof(szBuf))
 	{
-		if (len)
-			err = assign(buf,len-1);
-		free(buf);
+		new_buf = static_cast<char*>(OOBase::LocalAllocate(dwLen+1));
+		if (!new_buf)
+			return ERROR_OUTOFMEMORY;
+
+		dwLen = GetEnvironmentVariable(envvar,new_buf,dwLen+1);
 	}
+
+	int err = 0;
+	if (dwLen == 0)
+	{
+		err = GetLastError();
+		if (err == ERROR_ENVVAR_NOT_FOUND)
+			err = 0;
+	}
+	else if (dwLen > 1)
+		err = assign(new_buf,dwLen);
+
+	if (new_buf != szBuf)
+		OOBase::LocalFree(new_buf);
+	
 	return err;
 #else
 	return assign(::getenv(envvar));

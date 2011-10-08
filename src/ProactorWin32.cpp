@@ -29,7 +29,7 @@
 OOSvrBase::detail::ProactorWin32::ProactorWin32() :
 		Proactor(false),
 		m_hPort(NULL),
-		m_outstanding(0)
+		m_outstanding(1)
 {
 	OOBase::Win32::WSAStartup();
 }
@@ -129,6 +129,11 @@ int OOSvrBase::detail::ProactorWin32::run(int& err, const OOBase::timeval_t* tim
 
 	err = 0;
 	return 1;
+}
+
+void OOSvrBase::detail::ProactorWin32::stop()
+{
+	unbind(NULL);
 }
 
 #endif // _WIN32

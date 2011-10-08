@@ -64,17 +64,20 @@ namespace OOBase
 			if (m_last_error != 0)
 				return error;
 
-			while (!m_closed && m_queue.size() >= m_bound)
+			if (m_closed)
+				return closed;
+
+			while (m_queue.size() >= m_bound)
 			{
 				if (wait)
 					countdown.update();
 
 				if (!m_space.wait(m_lock,(wait ? &wait2 : 0)))
 					return timedout;
-			}
 
-			if (m_closed)
-				return closed;
+				if (m_closed)
+					return closed;
+			}
 
 			m_last_error = m_queue.push(val);
 			if (m_last_error != 0)
@@ -95,8 +98,20 @@ namespace OOBase
 			if (m_last_error != 0)
 				return error;
 
-			while (!m_pulsed && !m_closed && m_queue.empty())
+			for (;;)
 			{
+				if (m_queue.pop(&val))
+				{
+					m_space.signal();				
+					return success;
+				}
+
+				if (m_pulsed)
+					return pulsed;
+
+				if (m_closed)
+					return closed;
+
 				++m_waiters;
 
 				if (wait)
@@ -110,20 +125,6 @@ namespace OOBase
 
 				--m_waiters;
 			}
-
-			if (m_pulsed)
-				return pulsed;
-
-			if (m_queue.pop(&val))
-			{
-				m_space.signal();				
-
-				return success;
-			}
-
-			// Must be closed
-			assert(m_closed);
-			return closed;
 		}
 
 		void close()
@@ -132,11 +133,11 @@ namespace OOBase
 
 			if (!m_closed)
 			{
+				m_closed = true;
+
 				m_available.broadcast();
 				m_space.broadcast();
-			}
-
-			m_closed = true;
+			}			
 		}
 
 		void pulse()

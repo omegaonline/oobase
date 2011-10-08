@@ -273,7 +273,7 @@ namespace OOBase
 			else if (len == (size_t)-1)
 				len = strlen(pszText);
 
-			if (len >= 0xFFFFFFFF)
+			if (len > 0xFFFFFFFF)
 			{
 #if defined(_WIN32)
 				m_last_error = ERROR_BUFFER_OVERFLOW;
