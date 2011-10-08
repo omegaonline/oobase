@@ -27,7 +27,7 @@
 // Global operator new overloads
 
 // Throws std::bad_alloc
-inline void* operator new(size_t size)
+inline void* operator new(size_t size) throw(std::bad_alloc)
 {
 	void* p = OOBase::HeapAllocate(size);
 	if (!p)
@@ -36,7 +36,7 @@ inline void* operator new(size_t size)
 	return p;
 }
 
-inline void* operator new[](size_t size)
+inline void* operator new[](size_t size) throw(std::bad_alloc)
 {
 	void* p = OOBase::HeapAllocate(size);
 	if (!p)
@@ -45,33 +45,33 @@ inline void* operator new[](size_t size)
 	return p;
 }
 
-inline void operator delete(void* p)
+inline void operator delete(void* p) throw()
 {
 	return OOBase::HeapFree(p);
 }
 
-inline void operator delete[](void* p)
+inline void operator delete[](void* p) throw()
 {
 	return OOBase::HeapFree(p);
 }
 
 // Returns NULL, doesn't throw
-inline void* operator new(size_t size, const std::nothrow_t&)
+inline void* operator new(size_t size, const std::nothrow_t&) throw()
 {
 	return OOBase::HeapAllocate(size);
 }
 
-inline void* operator new[](size_t size, const std::nothrow_t&)
+inline void* operator new[](size_t size, const std::nothrow_t&) throw()
 {
 	return OOBase::HeapAllocate(size);
 }
 
-inline void operator delete(void* p, const std::nothrow_t&)
+inline void operator delete(void* p, const std::nothrow_t&) throw()
 {
 	return OOBase::HeapFree(p);
 }
 
-inline void operator delete[](void* p, const std::nothrow_t&)
+inline void operator delete[](void* p, const std::nothrow_t&) throw()
 {
 	return OOBase::HeapFree(p);
 }
