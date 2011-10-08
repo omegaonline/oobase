@@ -68,9 +68,9 @@ namespace
 	
 		int bind(int fd);
 
-		int recv(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout);
-		int send(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer);
-		int send_v(void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count);
+		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout);
+		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
+		int send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 
 		int get_uid(uid_t& uid);
 	
@@ -97,17 +97,17 @@ int AsyncSocket::bind(int fd)
 	return err;
 }
 
-int AsyncSocket::recv(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout)
+int AsyncSocket::recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout)
 {
 	return m_pProactor->recv(m_handle,param,callback,buffer,bytes,timeout);
 }
 
-int AsyncSocket::send(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer)
+int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buffer)
 {
 	return m_pProactor->send(m_handle,param,callback,buffer);
 }
 
-int AsyncSocket::send_v(void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count)
+int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count)
 {
 	return m_pProactor->send_v(m_handle,param,callback,buffers,count);
 }
@@ -126,28 +126,25 @@ namespace
 	class SocketAcceptor : public OOSvrBase::Acceptor
 	{
 	public:
-		typedef void (*callback_t)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err);
-		typedef void (*callback_local_t)(void* param, OOSvrBase::AsyncLocalSocket* pSocket, int err);
-	
-		SocketAcceptor(OOSvrBase::detail::ProactorEv* pProactor, void* param, callback_t callback);
-		SocketAcceptor(OOSvrBase::detail::ProactorEv* pProactor, void* param, callback_local_t callback);
+		SocketAcceptor(OOSvrBase::detail::ProactorEv* pProactor, void* param, OOSvrBase::Proactor::accept_remote_callback_t callback);
+		SocketAcceptor(OOSvrBase::detail::ProactorEv* pProactor, void* param, OOSvrBase::Proactor::accept_local_callback_t callback);
 		virtual ~SocketAcceptor();
 
 		int bind(const sockaddr* addr, socklen_t addr_len);
 
 	private:
-		OOSvrBase::detail::ProactorEv*   m_pProactor;
-		void*                            m_param;
-		callback_t                       m_callback;
-		callback_local_t                 m_callback_local;
-		void*                            m_handle;
+		OOSvrBase::detail::ProactorEv*                m_pProactor;
+		void*                                         m_param;
+		OOSvrBase::Proactor::accept_remote_callback_t m_callback;
+		OOSvrBase::Proactor::accept_local_callback_t  m_callback_local;
+		void*                                         m_handle;
 		
 		static bool on_accept(void* param, int fd);
 		bool do_accept(int fd);
 	};
 }
 
-SocketAcceptor::SocketAcceptor(OOSvrBase::detail::ProactorEv* pProactor, void* param, callback_t callback) :
+SocketAcceptor::SocketAcceptor(OOSvrBase::detail::ProactorEv* pProactor, void* param, OOSvrBase::Proactor::accept_remote_callback_t callback) :
 		m_pProactor(pProactor),
 		m_param(param),
 		m_callback(callback),
@@ -155,7 +152,7 @@ SocketAcceptor::SocketAcceptor(OOSvrBase::detail::ProactorEv* pProactor, void* p
 		m_handle(NULL)
 { }
 
-SocketAcceptor::SocketAcceptor(OOSvrBase::detail::ProactorEv* pProactor, void* param, callback_local_t callback) :
+SocketAcceptor::SocketAcceptor(OOSvrBase::detail::ProactorEv* pProactor, void* param, OOSvrBase::Proactor::accept_local_callback_t callback) :
 		m_pProactor(pProactor),
 		m_param(param),
 		m_callback(NULL),

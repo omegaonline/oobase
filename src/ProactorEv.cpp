@@ -358,7 +358,7 @@ void OOSvrBase::detail::ProactorEv::process_recv(int send_fd, IOWatcher* watcher
 		// Notify callback of status/error
 		try
 		{
-			(*op->m_callback)(op->m_param,op->m_buffer,err);
+			(*op->m_recv_callback)(op->m_param,op->m_buffer,err);
 		}
 		catch (...)
 		{
@@ -464,11 +464,11 @@ void OOSvrBase::detail::ProactorEv::process_send(int send_fd, IOWatcher* watcher
 			}
 			
 			// Notify callback of status/error
-			if (op->m_callback)
+			if (op->m_send_callback)
 			{
 				try
 				{
-					(*op->m_callback)(op->m_param,op->m_buffer,err);
+					(*op->m_send_callback)(op->m_param,err);
 				}
 				catch (...)
 				{
@@ -575,11 +575,11 @@ void OOSvrBase::detail::ProactorEv::process_send(int send_fd, IOWatcher* watcher
 			}
 			
 			// Notify callback of status/error
-			if (op->m_callback_v)
+			if (op->m_send_callback)
 			{
 				try
 				{
-					(*op->m_callback_v)(op->m_param,op->m_buffers,op->m_count,err);
+					(*op->m_send_callback)(op->m_param,err);
 				}
 				catch (...)
 				{
@@ -773,12 +773,12 @@ int OOSvrBase::detail::ProactorEv::recv(void* handle, void* param, void (*callba
 	msg.m_op.m_buffer = buffer;
 	msg.m_op.m_buffer->addref();
 	msg.m_op.m_param = param;
-	msg.m_op.m_callback = callback;
+	msg.m_op.m_recv_callback = callback;
 	
 	return send_msg(m_pipe_fds[1],msg);
 }
 
-int OOSvrBase::detail::ProactorEv::send(void* handle, void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer)
+int OOSvrBase::detail::ProactorEv::send(void* handle, void* param, AsyncSocket::send_callback_t callback, OOBase::Buffer* buffer)
 {
 	// I imagine you might want to increase length()?
 	assert(buffer->length() > 0);
@@ -790,12 +790,12 @@ int OOSvrBase::detail::ProactorEv::send(void* handle, void* param, void (*callba
 	msg.m_op.m_buffer = buffer;
 	msg.m_op.m_buffer->addref();
 	msg.m_op.m_param = param;
-	msg.m_op.m_callback = callback;
+	msg.m_op.m_send_callback = callback;
 	
 	return send_msg(m_pipe_fds[1],msg);
 }
 
-int OOSvrBase::detail::ProactorEv::send_v(void* handle, void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count)
+int OOSvrBase::detail::ProactorEv::send_v(void* handle, void* param, AsyncSocket::send_callback_t callback, OOBase::Buffer* buffers[], size_t count)
 {
 	if (count == 0)
 		return EINVAL;
@@ -805,7 +805,7 @@ int OOSvrBase::detail::ProactorEv::send_v(void* handle, void* param, void (*call
 	msg.m_handle = handle;
 	msg.m_op.m_count = count;
 	msg.m_op.m_param = param;
-	msg.m_op.m_callback_v = callback;
+	msg.m_op.m_send_callback = callback;
 	msg.m_op.m_buffers = new (std::nothrow) OOBase::Buffer*[count];
 	if (!msg.m_op.m_buffers)
 		return ENOMEM;

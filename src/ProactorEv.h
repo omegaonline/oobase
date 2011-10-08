@@ -59,12 +59,12 @@ namespace OOSvrBase
 			int unbind(void* handle);
 			int get_fd(void* handle);
 				
-			int recv(void* handle, void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout);
-			int send(void* handle, void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer);
-			int send_v(void* handle, void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count);
+			int recv(void* handle, void* param, OOSvrBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout);
+			int send(void* handle, void* param, OOSvrBase::AsyncSocket::send_callback_t callback, OOBase::Buffer* buffer);
+			int send_v(void* handle, void* param, OOSvrBase::AsyncSocket::send_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 		
-			OOSvrBase::Acceptor* accept_local(void* param, void (*callback)(void* param, OOSvrBase::AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa);
-			OOSvrBase::Acceptor* accept_remote(void* param, void (*callback)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err), const sockaddr* addr, socklen_t addr_len, int& err);
+			OOSvrBase::Acceptor* accept_local(void* param, accept_local_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa);
+			OOSvrBase::Acceptor* accept_remote(void* param, accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err);
 
 			int run(int& err, const OOBase::timeval_t* timeout = NULL);
 			void stop();
@@ -80,8 +80,8 @@ namespace OOSvrBase
 				};
 				union
 				{
-					void (*m_callback)(void* param, OOBase::Buffer* buffer, int err);
-					void (*m_callback_v)(void* param, OOBase::Buffer* buffers[], size_t count, int err);
+					OOSvrBase::AsyncSocket::send_callback_t m_send_callback;
+					OOSvrBase::AsyncSocket::recv_callback_t m_recv_callback;
 				};
 			};
 			
