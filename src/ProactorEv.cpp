@@ -735,7 +735,6 @@ void OOSvrBase::detail::ProactorEv::pipe_callback()
 			break;
 		}
 
-
 		if (watcher && events != 0 && (watcher->events & events) != events)
 		{
 			if (ev_is_active(watcher))

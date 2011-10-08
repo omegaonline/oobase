@@ -43,9 +43,9 @@ namespace
 	public:
 		AsyncPipe(OOSvrBase::detail::ProactorWin32* pProactor, HANDLE hPipe);
 		
-		int recv(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout);
-		int send(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer);
-		int send_v(void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count);
+		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout);
+		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
+		int send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 
 		int get_uid(uid_t& uid);
 	
@@ -87,7 +87,7 @@ void AsyncPipe::translate_error(DWORD& dwErr)
 	{
 	case ERROR_BROKEN_PIPE:
 	case ERROR_NO_DATA:
-		dwErr = WSAECONNRESET;
+		dwErr = 0;
 		break;
 	
 	case ERROR_BAD_PIPE:
@@ -103,7 +103,7 @@ void AsyncPipe::translate_error(DWORD& dwErr)
 	}
 }
 
-int AsyncPipe::recv(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout)
+int AsyncPipe::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout)
 {
 	// Must have a callback function
 	assert(callback);
@@ -140,10 +140,8 @@ int AsyncPipe::recv(void* param, void (*callback)(void* param, OOBase::Buffer* b
 
 void AsyncPipe::on_recv(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv)
 {
-	typedef void (*pfnCallback)(void* param, OOBase::Buffer* buffer, int err);
-	
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
-	pfnCallback callback = reinterpret_cast<pfnCallback>(pOv->m_extras[1]);
+	recv_callback_t callback = reinterpret_cast<recv_callback_t>(pOv->m_extras[1]);
 	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
 
 	delete pOv;
@@ -160,7 +158,7 @@ void AsyncPipe::on_recv(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOSvrBase
 	}
 }
 
-int AsyncPipe::send(void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer)
+int AsyncPipe::send(void* param, send_callback_t callback, OOBase::Buffer* buffer)
 {
 	size_t bytes = buffer->length();
 	if (bytes == 0)
@@ -186,12 +184,10 @@ int AsyncPipe::send(void* param, void (*callback)(void* param, OOBase::Buffer* b
 	return 0;
 }
 
-void AsyncPipe::on_send(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv)
+void AsyncPipe::on_send(HANDLE /*handle*/, DWORD /*dwBytes*/, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv)
 {
-	typedef void (*pfnCallback)(void* param, OOBase::Buffer* buffer, int err);
-	
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
-	pfnCallback callback = reinterpret_cast<pfnCallback>(pOv->m_extras[1]);
+	send_callback_t callback = reinterpret_cast<send_callback_t>(pOv->m_extras[1]);
 	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
 		
 	delete pOv;
@@ -202,13 +198,11 @@ void AsyncPipe::on_send(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOSvrBase
 		// Translate error codes...
 		translate_error(dwErr);
 
-		buffer->rd_ptr(dwBytes);
-
-		(*callback)(param,buffer,dwErr);
+		(*callback)(param,dwErr);
 	}
 }
 
-int AsyncPipe::send_v(void* param, void (*callback)(void* param, OOBase::Buffer* buffers[], size_t count, int err), OOBase::Buffer* buffers[], size_t count)
+int AsyncPipe::send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count)
 {
 	// Because scatter-gather just doesn't work on named pipes,
 	// we concatenate the buffers and send as one 'atomic' write
@@ -259,12 +253,10 @@ int AsyncPipe::send_v(void* param, void (*callback)(void* param, OOBase::Buffer*
 	return 0;
 }
 
-void AsyncPipe::on_send_v(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv)
+void AsyncPipe::on_send_v(HANDLE /*handle*/, DWORD /*dwBytes*/, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv)
 {
-	typedef void (*pfnCallback)(void* param, OOBase::Buffer* buffer[], size_t count, int err);
-	
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
-	pfnCallback callback = reinterpret_cast<pfnCallback>(pOv->m_extras[1]);
+	send_callback_t callback = reinterpret_cast<send_callback_t>(pOv->m_extras[1]);
 	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
 	
 	delete pOv;
@@ -274,10 +266,8 @@ void AsyncPipe::on_send_v(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOSvrBa
 	{
 		// Translate error codes...
 		translate_error(dwErr);
-
-		buffer->rd_ptr(dwBytes);
-
-		(*callback)(param,&buffer,1,dwErr);
+		
+		(*callback)(param,dwErr);
 	}
 }
 
@@ -308,13 +298,9 @@ namespace
 	class PipeAcceptor : public OOSvrBase::Acceptor
 	{
 	public:
-		typedef void (*callback_t)(void* param, OOSvrBase::AsyncLocalSocket* pSocket, int err);
-	
 		PipeAcceptor();
 		
-		int listen(size_t backlog);
-		int stop();
-		int bind(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, callback_t callback);
+		int bind(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOSvrBase::Proactor::accept_local_callback_t callback);
 		
 	private:
 		virtual ~PipeAcceptor();
@@ -322,22 +308,22 @@ namespace
 		class Acceptor
 		{
 		public:
-			Acceptor(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, PipeAcceptor::callback_t callback);
+			Acceptor(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOSvrBase::Proactor::accept_local_callback_t callback);
 			
-			int listen(size_t backlog);
-			int stop(bool destroy);
+			int start();
+			int stop();
 					
 		private:
-			OOSvrBase::detail::ProactorWin32* m_pProactor;
-			OOBase::Condition::Mutex          m_lock;
-			OOBase::Condition                 m_condition;
-			OOBase::String                    m_pipe_name;
-			SECURITY_ATTRIBUTES*              m_psa;
-			size_t                            m_backlog;
-			size_t                            m_refcount;
-			OOBase::Stack<HANDLE>             m_stkPending;
-			void*                             m_param;
-			PipeAcceptor::callback_t          m_callback;
+			OOSvrBase::detail::ProactorWin32*            m_pProactor;
+			OOBase::Condition::Mutex                     m_lock;
+			OOBase::Condition                            m_condition;
+			OOBase::String                               m_pipe_name;
+			SECURITY_ATTRIBUTES*                         m_psa;
+			size_t                                       m_backlog;
+			size_t                                       m_refcount;
+			OOBase::Stack<HANDLE>                        m_stkPending;
+			void*                                        m_param;
+			OOSvrBase::Proactor::accept_local_callback_t m_callback;
 		
 			~Acceptor();
 			
@@ -356,39 +342,30 @@ PipeAcceptor::PipeAcceptor() :
 PipeAcceptor::~PipeAcceptor()
 {
 	if (m_pAcceptor)
-		m_pAcceptor->stop(true);
+		m_pAcceptor->stop();
 }
 
-int PipeAcceptor::listen(size_t backlog)
-{
-	if (!m_pAcceptor)
-		return WSAEBADF;
-	
-	return m_pAcceptor->listen(backlog);
-}
-
-int PipeAcceptor::stop()
-{
-	if (!m_pAcceptor)
-		return WSAEBADF;
-	
-	return m_pAcceptor->stop(false);
-}
-
-int PipeAcceptor::bind(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, callback_t callback)
+int PipeAcceptor::bind(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOSvrBase::Proactor::accept_local_callback_t callback)
 {
 	m_pAcceptor = new (std::nothrow) PipeAcceptor::Acceptor(pProactor,pipe_name,psa,param,callback);
 	if (!m_pAcceptor)
 		return ERROR_OUTOFMEMORY;
 	
-	return 0;
+	int err = m_pAcceptor->start();
+	if (err != 0)
+	{
+		m_pAcceptor->stop();
+		m_pAcceptor = NULL;
+	}
+
+	return err;
 }
 
-PipeAcceptor::Acceptor::Acceptor(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, PipeAcceptor::callback_t callback) :
+PipeAcceptor::Acceptor::Acceptor(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOSvrBase::Proactor::accept_local_callback_t callback) :
 		m_pProactor(pProactor),
 		m_pipe_name(pipe_name),
 		m_psa(psa),
-		m_backlog(0),
+		m_backlog(3),
 		m_refcount(1),
 		m_param(param),
 		m_callback(callback)
@@ -397,27 +374,14 @@ PipeAcceptor::Acceptor::Acceptor(OOSvrBase::detail::ProactorWin32* pProactor, co
 PipeAcceptor::Acceptor::~Acceptor()
 { }
 
-int PipeAcceptor::Acceptor::listen(size_t backlog)
+int PipeAcceptor::Acceptor::start()
 {	
 	OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 	
-	if (backlog > 3 || backlog == 0)
-		backlog = 3;
-	
-	if (m_backlog != 0)
-	{
-		m_backlog = backlog;
-		return 0;
-	}
-	else
-	{
-		m_backlog = backlog;
-		
-		return do_accept(guard,true);
-	}
+	return do_accept(guard,true);
 }
 
-int PipeAcceptor::Acceptor::stop(bool destroy)
+int PipeAcceptor::Acceptor::stop()
 {
 	OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 	
@@ -434,7 +398,7 @@ int PipeAcceptor::Acceptor::stop(bool destroy)
 	while (!m_stkPending.empty() && m_backlog == 0)
 		m_condition.wait(m_lock);
 		
-	if (destroy && --m_refcount == 0)
+	if (--m_refcount == 0)
 	{
 		guard.release();
 		delete this;
@@ -606,7 +570,7 @@ bool PipeAcceptor::Acceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, 
 	return false;
 }
 
-OOSvrBase::Acceptor* OOSvrBase::detail::ProactorWin32::accept_local(void* param, void (*callback)(void* param, OOSvrBase::AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa)
+OOSvrBase::Acceptor* OOSvrBase::detail::ProactorWin32::accept_local(void* param, accept_local_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa)
 {
 	// Make sure we have valid inputs
 	if (!callback || !path)
