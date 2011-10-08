@@ -25,9 +25,14 @@
 #include "Memory.h"
 
 // Global operator new overloads
+#if defined(_MSC_VER)
+#define THROW_BAD_ALLOC
+#else
+#define THROW_BAD_ALLOC throw(std::bad_alloc)
+#endif
 
 // Throws std::bad_alloc
-inline void* operator new(size_t size) throw(std::bad_alloc)
+inline void* operator new(size_t size) THROW_BAD_ALLOC
 {
 	void* p = OOBase::HeapAllocate(size);
 	if (!p)
@@ -36,7 +41,7 @@ inline void* operator new(size_t size) throw(std::bad_alloc)
 	return p;
 }
 
-inline void* operator new[](size_t size) throw(std::bad_alloc)
+inline void* operator new[](size_t size) THROW_BAD_ALLOC
 {
 	void* p = OOBase::HeapAllocate(size);
 	if (!p)
