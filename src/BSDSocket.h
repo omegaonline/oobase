@@ -32,7 +32,7 @@ namespace OOBase
 {
 	namespace BSD
 	{
-		int connect(socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* timeout);
+		int connect(socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::Countdown& countdown = OOBase::Countdown());
 
 		int set_non_blocking(socket_t sock, bool set);
 	}

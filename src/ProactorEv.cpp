@@ -99,20 +99,21 @@ void OOSvrBase::detail::ProactorEv::io_stop(struct ev_io* io)
 
 int OOSvrBase::detail::ProactorEv::run(int& err, const OOBase::timeval_t* timeout)
 {
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
-
 	// The loop is written as a leader/follower loop:
 	// Each thread polls, then queues up what needs to be processed
 	// Then lets the next waiting thread poll, while it processes the outstanding queue
 	
+	OOBase::Countdown countdown(timeout);
+	OOBase::Guard<OOBase::SpinLock> guard(m_lock,false);
 	OOBase::Queue<IOEvent,OOBase::LocalAllocator> io_queue;
 
-	guard.release();
-
-	for (bool bStop = false;!bStop;)
+	for (bool bStop = false;!bStop && !countdown.has_ended();)
 	{
 		if (timeout)
-			guard.acquire(*timeout);
+		{
+			if (!guard.acquire(countdown))
+				break;
+		}
 		else
 			guard.acquire();
 

@@ -50,7 +50,7 @@ int OOBase::BSD::set_non_blocking(socket_t sock, bool set)
 	return 0;
 }
 
-int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::timeval_t* timeout)
+int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::Countdown& countdown)
 {
 	// Do the connect
 	if (::connect(sock,addr,static_cast<int>(addrlen)) != -1)
@@ -62,27 +62,24 @@ int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, size_t addrlen, co
 		return err;
 
 	// Wait for the connect to go ahead - by select()ing on write
-	::timeval tv;
-	if (timeout)
-	{
-		tv.tv_sec = static_cast<long>(timeout->tv_sec());
-		tv.tv_usec = timeout->tv_usec();
-	}
 
 	fd_set wfds;
 	fd_set efds; // Annoyingly Winsock uses the exceptions not just the writes
 
 	for (;;)
 	{
-		FD_ZERO(&wfds);
-		FD_ZERO(&efds);
-		FD_SET(sock,&wfds);
-		FD_SET(sock,&efds);
-
 		int count = 0;
 		do
 		{
-			count = ::select(static_cast<int>(sock+1),NULL,&wfds,&efds,timeout ? &tv : NULL);
+			FD_ZERO(&wfds);
+			FD_ZERO(&efds);
+			FD_SET(sock,&wfds);
+			FD_SET(sock,&efds);
+
+			struct ::timeval tv;
+			countdown.timeval(tv);
+
+			count = ::select(static_cast<int>(sock+1),NULL,&wfds,&efds,countdown.is_infinite() ? NULL : &tv);
 		}
 		while (count == -1 && errno == EINTR);
 
@@ -173,7 +170,7 @@ namespace
 						break;
 					}
 #endif
-					if ((err = OOBase::BSD::connect(sock,pAddr->ai_addr,pAddr->ai_addrlen,&timeout2)) != 0)
+					if ((err = OOBase::BSD::connect(sock,pAddr->ai_addr,pAddr->ai_addrlen,countdown)) != 0)
 						::close(sock);
 					else
 						break;
@@ -218,7 +215,7 @@ int Socket::do_select(bool bWrite, const OOBase::Countdown& countdown)
 		struct timeval timeout;
 		countdown.timeval(timeout);
 
-		count = ::select(m_sock+1,(bWrite ? NULL : &fds),(bWrite ? &fds : NULL),&efds,countdown.is_infinite() ? NULL : &imeout);
+		count = ::select(m_sock+1,(bWrite ? NULL : &fds),(bWrite ? &fds : NULL),&efds,countdown.is_infinite() ? NULL : &timeout);
 	}
 	while (count == -1 && errno == EINTR);
 
@@ -251,8 +248,8 @@ size_t Socket::send(const void* buf, size_t len, int& err, const OOBase::timeval
 	size_t to_send = len;
 	err = 0;
 
-	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,false);
-	if (!guard.acquire(countdown))
+	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,timeout ? false : true);
+	if (timeout && !guard.acquire(countdown))
 	{
 		err = ETIMEDOUT;
 		return 0;
@@ -313,8 +310,6 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeva
 			return ENOMEM;
 
 		msg.msg_iov = ptrBufs;
-
-		countdown.update();
 	}
 
 	for (size_t i=0;i<count;++i)
@@ -323,8 +318,8 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeva
 		msg.msg_iov[i].iov_base = const_cast<char*>(buffers[i]->rd_ptr());
 	}
 
-	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,false);
-	if (!guard.acquire(countdown))
+	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,timeout ? false : true);
+	if (timeout && !guard.acquire(countdown))
 		return ETIMEDOUT;
 
 	size_t first_buffer = 0;
@@ -455,8 +450,6 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeva
 			return ENOMEM;
 
 		msg.msg_iov = ptrBufs;
-
-		countdown.update();
 	}
 
 	for (size_t i=0;i<count;++i)
@@ -465,8 +458,8 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeva
 		msg.msg_iov[i].iov_base = buffers[i]->wr_ptr();
 	}
 
-	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,false);
-	if (!guard.acquire(countdown))
+	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,timeout ? false : true);
+	if (timeout && !guard.acquire(countdown))
 		return ETIMEDOUT;
 
 	size_t first_buffer = 0;

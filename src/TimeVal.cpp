@@ -186,7 +186,7 @@ void OOBase::Countdown::timeout(timeval_t& timeout) const
 		timeout = (m_end - timeval_t::gettimeofday());
 }
 
-void OOBase::Countdown::timeval(struct timeval& timeout) const
+void OOBase::Countdown::timeval(::timeval& timeout) const
 {
 	timeval_t to;
 	this->timeout(to);

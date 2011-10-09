@@ -34,6 +34,10 @@
 #include <winsock2.h>
 #endif
 
+#if defined(HAVE_UNISTD_H)
+#include <sys/time.h>
+#endif
+
 namespace OOBase
 {
 	struct timeval_t
@@ -171,7 +175,7 @@ namespace OOBase
 		}
 
 		void timeout(timeval_t& timeout) const;
-		void timeval(struct timeval& timeout) const;
+		void timeval(::timeval& timeout) const;
 
 #if defined(_WIN32)
 		Countdown(DWORD millisecs);

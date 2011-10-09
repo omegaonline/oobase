@@ -143,9 +143,9 @@ void OOBase::Event::set()
 		OOBase_CallCriticalFailure(GetLastError());
 }
 
-bool OOBase::Event::wait(const timeval_t* wait)
+bool OOBase::Event::wait(const timeval_t* timeout)
 {
-	DWORD dwWait = WaitForSingleObject(m_handle,(wait ? wait->msec() : INFINITE));
+	DWORD dwWait = WaitForSingleObject(m_handle,(timeout ? timeout->msec() : INFINITE));
 	if (dwWait == WAIT_OBJECT_0)
 		return true;
 	else if (dwWait != WAIT_TIMEOUT)
@@ -201,12 +201,12 @@ void OOBase::Event::set()
 	}
 }
 
-bool OOBase::Event::wait(const timeval_t* wait)
+bool OOBase::Event::wait(const timeval_t* timeout)
 {
-	Countdown countdown(wait);
+	Countdown countdown(timeout);
 
 	Guard<Condition::Mutex> guard(m_lock,false);
-	if (!guard.acquire(countdown)
+	if (!guard.acquire(countdown))
 		return false;
 
 	while (!m_bSet)
