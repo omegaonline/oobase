@@ -183,7 +183,13 @@ void OOBase::Countdown::timeout(timeval_t& timeout) const
 	if (m_null)
 		timeout = timeval_t::MaxTime;
 	else
-		timeout = (m_end - timeval_t::gettimeofday());
+	{
+		timeval_t now = timeval_t::gettimeofday();
+		if (now >= m_end)
+			timeout = timeval_t::Zero;
+		else
+			timeout = (m_end - now);
+	}
 }
 
 void OOBase::Countdown::timeval(::timeval& timeout) const
