@@ -34,9 +34,9 @@ OOBase::Condition::~Condition()
 	Win32::DeleteConditionVariable(&m_var);
 }
 
-bool OOBase::Condition::wait(Condition::Mutex& mutex, const timeval_t* wait)
+bool OOBase::Condition::wait(Condition::Mutex& mutex, const Countdown& countdown)
 {
-	if (!Win32::SleepConditionVariable(&m_var,&mutex,wait ? wait->msec() : INFINITE))
+	if (!Win32::SleepConditionVariable(&m_var,&mutex,countdown.msec()))
 	{
 		DWORD dwErr = GetLastError();
 		if (dwErr == ERROR_TIMEOUT)
@@ -82,22 +82,18 @@ OOBase::Condition::~Condition()
 	pthread_cond_destroy(&m_var);
 }
 
-bool OOBase::Condition::wait(Condition::Mutex& mutex, const timeval_t* wait)
+bool OOBase::Condition::wait(Condition::Mutex& mutex, const Countdown& countdown)
 {
 	int err = 0;
-	if (!wait)
+	if (countdown.is_infinite())
 		err = pthread_cond_wait(&m_var,&mutex.m_mutex);
 	else
 	{
 		timespec wt;
-		timeval_t now = OOBase::timeval_t::gettimeofday();
-		now += *wait;
-		wt.tv_sec = now.tv_sec();
-		wt.tv_nsec = now.tv_usec() * 1000;
-
+		countdown.abs_timespec(wt);
 		err = pthread_cond_timedwait(&m_var,&mutex.m_mutex,&wt);
 	}
-
+	
 	if (err == 0)
 		return true;
 
@@ -207,11 +203,15 @@ void OOBase::Event::set()
 
 bool OOBase::Event::wait(const timeval_t* wait)
 {
-	Guard<Condition::Mutex> guard(m_lock);
+	Countdown countdown(wait);
+
+	Guard<Condition::Mutex> guard(m_lock,false);
+	if (!guard.acquire(countdown)
+		return false;
 
 	while (!m_bSet)
 	{
-		if (!m_cond.wait(m_lock,wait))
+		if (!m_cond.wait(m_lock,countdown))
 			return false;
 	}
 

@@ -617,16 +617,15 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorWin32::attach_local_sock
 
 OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorWin32::connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout)
 {
+	OOBase::Countdown countdown(timeout);
+
 	OOBase::String pipe_name;
 	err = MakePipeName(pipe_name,path);
 	if (err != 0)
 		return NULL;
 	
-	OOBase::timeval_t timeout2 = (timeout ? *timeout : OOBase::timeval_t::MaxTime);
-	OOBase::Countdown countdown(&timeout2);
-
 	OOBase::Win32::SmartHandle hPipe;
-	while (timeout2 != OOBase::timeval_t::Zero)
+	for (;;)
 	{
 		hPipe = ::CreateFileA(pipe_name.c_str(),
 							PIPE_ACCESS_DUPLEX,
@@ -648,9 +647,9 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorWin32::connect_local_soc
 		DWORD dwWait = NMPWAIT_USE_DEFAULT_WAIT;
 		if (timeout)
 		{
-			countdown.update();
-
-			dwWait = timeout2.msec();
+			dwWait = countdown.msec();
+			if (dwWait == NMPWAIT_USE_DEFAULT_WAIT)
+				dwWait = 1;
 		}
 
 		if (!::WaitNamedPipeA(pipe_name.c_str(),dwWait))

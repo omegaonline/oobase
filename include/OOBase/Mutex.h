@@ -35,7 +35,8 @@ namespace OOBase
 		~Mutex();
 
 		bool tryacquire();
-		bool acquire(const timeval_t* wait = NULL);
+		void acquire();
+		bool acquire(const Countdown& countdown);
 		void release();
 
 	private:
@@ -145,11 +146,11 @@ namespace OOBase
 			m_acquired = true;
 		}
 
-		bool acquire(const timeval_t& timeout)
+		bool acquire(const Countdown& countdown)
 		{
 			assert(!m_acquired);
 
-			if (m_mutex.acquire(&timeout))
+			if (m_mutex.acquire(countdown))
 				m_acquired = true;
 
 			return m_acquired;

@@ -54,11 +54,8 @@ namespace OOBase
 			return m_last_error;
 		}
 
-		Result push(const T& val, const timeval_t* wait = 0)
+		Result push(const T& val, const Countdown& countdown = Countdown())
 		{
-			timeval_t wait2 = (wait ? *wait : timeval_t::MaxTime);
-			Countdown countdown(&wait2);
-			
 			Guard<Condition::Mutex> guard(m_lock);
 
 			if (m_last_error != 0)
@@ -69,10 +66,7 @@ namespace OOBase
 
 			while (m_queue.size() >= m_bound)
 			{
-				if (wait)
-					countdown.update();
-
-				if (!m_space.wait(m_lock,(wait ? &wait2 : 0)))
+				if (!m_space.wait(m_lock,countdown))
 					return timedout;
 
 				if (m_closed)
@@ -88,11 +82,8 @@ namespace OOBase
 			return success;
 		}
 
-		Result pop(T& val, const timeval_t* wait = 0)
+		Result pop(T& val, const Countdown& countdown = Countdown())
 		{
-			timeval_t wait2 = (wait ? *wait : timeval_t::MaxTime);
-			Countdown countdown(&wait2);
-
 			Guard<Condition::Mutex> guard(m_lock);
 
 			if (m_last_error != 0)
@@ -114,10 +105,7 @@ namespace OOBase
 
 				++m_waiters;
 
-				if (wait)
-					countdown.update();
-
-				if (!m_available.wait(m_lock,(wait ? &wait2 : 0)))
+				if (!m_available.wait(m_lock,countdown))
 				{
 					--m_waiters;
 					return timedout;

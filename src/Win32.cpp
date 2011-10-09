@@ -540,8 +540,7 @@ OOBase::Win32::condition_variable_t::~condition_variable_t()
 bool OOBase::Win32::condition_variable_t::wait(HANDLE hMutex, DWORD dwMilliseconds)
 {
 	// Use a countdown as we do multiple waits
-	timeval_t wait(dwMilliseconds / 1000, (dwMilliseconds % 1000) * 1000);
-	Countdown countdown(&wait);
+	Countdown countdown(dwMilliseconds);
 
 	// Avoid race conditions.
 	EnterCriticalSection(&m_waiters_lock);
@@ -556,28 +555,35 @@ bool OOBase::Win32::condition_variable_t::wait(HANDLE hMutex, DWORD dwMillisecon
 				break;
 
 			LeaveCriticalSection(&m_waiters_lock);
+
+			if (countdown.has_ended())
+				return false;
 		}
 	}
-	++m_waiters;
-	LeaveCriticalSection(&m_waiters_lock);
+		
+	bool ret = false;
+	DWORD dwWait;
+	if (!countdown.has_ended())
+	{
+		++m_waiters;
 
-	if (dwMilliseconds != INFINITE)
-		countdown.update();
+		LeaveCriticalSection(&m_waiters_lock);
 
-	// This call atomically releases the mutex and waits on the
-	// semaphore until <signal> or <broadcast>
-	// are called by another thread.
-	DWORD dwWait = SignalObjectAndWait(hMutex,m_sema,(dwMilliseconds != INFINITE ? wait.msec() : INFINITE),FALSE);
-	if (dwWait != WAIT_OBJECT_0 && dwWait != WAIT_TIMEOUT)
-		OOBase_CallCriticalFailure(GetLastError());
+		// This call atomically releases the mutex and waits on the
+		// semaphore until <signal> or <broadcast>
+		// are called by another thread.
+		dwWait = SignalObjectAndWait(hMutex,m_sema,countdown.msec(),FALSE);
+		if (dwWait != WAIT_OBJECT_0 && dwWait != WAIT_TIMEOUT)
+			OOBase_CallCriticalFailure(GetLastError());
 
-	bool ret = (dwWait == WAIT_OBJECT_0);
+		ret = (dwWait == WAIT_OBJECT_0);
 
-	// Reacquire lock to avoid race conditions.
-	EnterCriticalSection(&m_waiters_lock);
+		// Reacquire lock to avoid race conditions.
+		EnterCriticalSection(&m_waiters_lock);
 
-	// We're no longer waiting...
-	--m_waiters;
+		// We're no longer waiting...
+		--m_waiters;
+	}
 
 	// Check to see if we're the last waiter after <broadcast>.
 	bool last_waiter = m_broadcast && (m_waiters == 0);

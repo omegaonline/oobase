@@ -284,6 +284,8 @@ namespace
 
 		if (wait)
 		{
+			OOBase::Countdown countdown(wait);
+
 			pthread_mutex_t join_mutex = PTHREAD_MUTEX_INITIALIZER;
 			int err = pthread_mutex_lock(&join_mutex);
 			if (err)
@@ -293,12 +295,8 @@ namespace
 			while (m_running)
 			{
 				timespec wt;
-				OOBase::timeval_t now = OOBase::timeval_t::gettimeofday();
-				now += *wait;
-				wt.tv_sec = now.tv_sec();
-				wt.tv_nsec = now.tv_usec() * 1000;
+				countdown.abs_timespec(wt);
 				err = pthread_cond_timedwait(&m_condition,&join_mutex,&wt);
-
 				if (err)
 				{
 					if (err != ETIMEDOUT)

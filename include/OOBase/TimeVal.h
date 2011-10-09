@@ -30,6 +30,10 @@
 #include <stdint.h>
 #endif
 
+#if defined(_WIN32)
+#include <winsock2.h>
+#endif
+
 namespace OOBase
 {
 	struct timeval_t
@@ -154,16 +158,31 @@ namespace OOBase
 	class Countdown
 	{
 	public:
-		Countdown(timeval_t* wait);
+		Countdown(const timeval_t* timeout = NULL);
+		Countdown(timeval_t::time_64_t s, int us);
 
-		void update();
-
-	private:
 		Countdown(const Countdown&);
 		Countdown& operator = (const Countdown&);
 
-		timeval_t  m_start;
-		timeval_t* m_wait;
+		bool has_ended() const;
+		bool is_infinite() const
+		{
+			return m_null;
+		}
+
+		void timeout(timeval_t& timeout) const;
+		void timeval(struct timeval& timeout) const;
+
+#if defined(_WIN32)
+		Countdown(DWORD millisecs);
+		DWORD msec() const;
+#else
+		void abs_timespec(timespec& timeout) const;
+#endif
+
+	private:
+		bool      m_null;
+		timeval_t m_end;
 	};
 }
 

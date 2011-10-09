@@ -142,22 +142,83 @@ OOBase::timeval_t OOBase::timeval_t::deadline(unsigned long msec)
 	return v;
 }
 
-OOBase::Countdown::Countdown(timeval_t* wait) :
-		m_start(timeval_t::gettimeofday()),
-		m_wait(wait)
+OOBase::Countdown::Countdown(const timeval_t* timeout) :
+		m_null(timeout == NULL),
+		m_end(timeout ? timeval_t::gettimeofday() + *timeout : timeval_t::Zero)
 {
-	assert(wait);
 }
 
-void OOBase::Countdown::update()
+OOBase::Countdown::Countdown(timeval_t::time_64_t s, int us) :
+		m_null(false),
+		m_end(s,us)
 {
-	timeval_t now = timeval_t::gettimeofday();
-	timeval_t diff = (now - m_start);
-	if (diff >= *m_wait)
-		*m_wait = timeval_t::Zero;
-	else
-	{
-		m_start = now;
-		*m_wait -= diff;
-	}
 }
+
+OOBase::Countdown::Countdown(const Countdown& rhs) :
+		m_null(rhs.m_null),
+		m_end(rhs.m_end)
+{
+}
+
+OOBase::Countdown& OOBase::Countdown::operator = (const Countdown& rhs)
+{
+	if (this != &rhs)
+	{
+		m_null = rhs.m_null;
+		m_end = rhs.m_end;
+	}
+	return *this;
+}
+
+bool OOBase::Countdown::has_ended() const
+{
+	if (m_null)
+		return false;
+
+	return timeval_t::gettimeofday() >= m_end;
+}
+
+void OOBase::Countdown::timeout(timeval_t& timeout) const
+{
+	if (m_null)
+		timeout = timeval_t::MaxTime;
+	else
+		timeout = (m_end - timeval_t::gettimeofday());
+}
+
+void OOBase::Countdown::timeval(struct timeval& timeout) const
+{
+	timeval_t to;
+	this->timeout(to);
+
+	timeout.tv_sec = static_cast<long>(to.tv_sec());
+	timeout.tv_usec = to.tv_usec();
+}
+
+#if defined(_WIN32)
+OOBase::Countdown::Countdown(DWORD millisecs) :
+		m_null(millisecs == INFINITE),
+		m_end(millisecs == INFINITE ? timeval_t::Zero : timeval_t(millisecs / 1000, (millisecs % 1000) * 1000))
+{
+}
+
+DWORD OOBase::Countdown::msec() const
+{
+	if (m_null)
+		return INFINITE;
+
+	timeval_t now = timeval_t::gettimeofday();
+	if (now >= m_end)
+		return 0;
+		
+	return (m_end - now).msec();
+}
+#else
+
+void OOBase::Countdown::abs_timespec(timespec& timeout) const
+{
+	timeout.tv_sec = m_end.tv_sec();
+	timeout.tv_nsec = m_end.tv_usec() * 1000;
+}
+
+#endif

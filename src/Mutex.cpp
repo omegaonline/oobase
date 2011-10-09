@@ -80,9 +80,16 @@ bool OOBase::Mutex::tryacquire()
 	return false;
 }
 
-bool OOBase::Mutex::acquire(const timeval_t* wait)
+void OOBase::Mutex::acquire()
 {
-	DWORD dwWait = WaitForSingleObject(m_mutex,(wait ? wait->msec() : INFINITE));
+	DWORD dwWait = WaitForSingleObject(m_mutex,INFINITE);
+	if (dwWait != WAIT_OBJECT_0)
+		OOBase_CallCriticalFailure(GetLastError());
+}
+
+bool OOBase::Mutex::acquire(const Countdown& countdown)
+{
+	DWORD dwWait = WaitForSingleObject(m_mutex,countdown.msec());
 	if (dwWait == WAIT_OBJECT_0)
 		return true;
 	else if (dwWait != WAIT_TIMEOUT)
@@ -177,31 +184,30 @@ bool OOBase::Mutex::tryacquire()
 	return false;
 }
 
-bool OOBase::Mutex::acquire(const timeval_t* wait)
+void OOBase::Mutex::acquire()
 {
-	int err = 0;
-	if (!wait)
-	{
-		err = pthread_mutex_lock(&m_mutex);
-		if (!err)
-			return true;
-	}
-	else
-	{
-		timespec ts;
-		OOBase::timeval_t now = OOBase::timeval_t::gettimeofday();
-		now += *wait;
-		ts.tv_sec = now.tv_sec();
-		ts.tv_nsec = now.tv_usec() * 1000;
+	int err = pthread_mutex_lock(&m_mutex);
+	if (err)
+		OOBase_CallCriticalFailure(err);
+}
 
-		int err = pthread_mutex_timedlock(&m_mutex,&ts);
-		if (err == 0)
-			return true;
-		else if (err == ETIMEDOUT)
-			return false;
+bool OOBase::Mutex::acquire(const Countdown& countdown)
+{
+	if (countdown.is_infinite())
+	{
+		acquire();
+		return true;
 	}
 
-	OOBase_CallCriticalFailure(err);
+	timespec ts;
+	countdown.abs_timespec(ts);
+	int err = pthread_mutex_timedlock(&m_mutex,&ts);
+	if (err == 0)
+		return true;
+	
+	if (err != ETIMEDOUT)
+		OOBase_CallCriticalFailure(err);	
+	
 	return false;
 }
 
