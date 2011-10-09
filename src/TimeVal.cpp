@@ -150,7 +150,7 @@ OOBase::Countdown::Countdown(const timeval_t* timeout) :
 
 OOBase::Countdown::Countdown(timeval_t::time_64_t s, int us) :
 		m_null(false),
-		m_end(s,us)
+		m_end(timeval_t::gettimeofday() + timeval_t(s,us))
 {
 }
 
@@ -204,7 +204,7 @@ void OOBase::Countdown::timeval(::timeval& timeout) const
 #if defined(_WIN32)
 OOBase::Countdown::Countdown(DWORD millisecs) :
 		m_null(millisecs == INFINITE),
-		m_end(millisecs == INFINITE ? timeval_t::Zero : timeval_t(millisecs / 1000, (millisecs % 1000) * 1000))
+		m_end(millisecs == INFINITE ? timeval_t::Zero : timeval_t::gettimeofday() + timeval_t(millisecs / 1000, (millisecs % 1000) * 1000))
 {
 }
 
