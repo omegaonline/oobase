@@ -120,7 +120,7 @@ namespace OOBase
 		Atomic& operator = (const Atomic& a)
 		{
 			if (&a != this)
-				Exchange(a.m_val);
+				m_val = a.m_val;
 			return *this;
 		}
 
