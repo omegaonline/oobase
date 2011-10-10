@@ -283,9 +283,7 @@ namespace
 
 void OOSvrBase::detail::ProactorEv::stop()
 {
-	Msg msg;
-	msg.m_op_code = Msg::Stop;
-	msg.m_handle = NULL;
+	Msg msg = { Msg::Stop, NULL, {0} };
 
 	int err = send_msg(m_pipe_fds[1],msg);
 	if (err != 0)
@@ -312,9 +310,8 @@ void OOSvrBase::detail::ProactorEv::process_accept(int send_fd, AcceptWatcher* w
 	if (watcher->m_callback)
 		bAgain = (*watcher->m_callback)(watcher->m_param,watcher->fd);
 
-	Msg msg;
+	Msg msg = { Msg::AcceptAgain, watcher, {0} };
 	msg.m_op_code = bAgain ? Msg::AcceptAgain : Msg::AcceptorClose;
-	msg.m_handle = watcher;
 
 	int err = send_msg(send_fd,msg);
 	if (err != 0)
@@ -380,9 +377,7 @@ void OOSvrBase::detail::ProactorEv::process_recv(int send_fd, IOWatcher* watcher
 		--watcher->m_refcount;
 	}
 
-	Msg msg;
-	msg.m_op_code = Msg::RecvAgain;
-	msg.m_handle = watcher;
+	Msg msg = { Msg::RecvAgain, watcher, {0} };
 
 	int err = send_msg(send_fd,msg);
 	if (err != 0)
@@ -606,9 +601,7 @@ void OOSvrBase::detail::ProactorEv::process_send(int send_fd, IOWatcher* watcher
 		--watcher->m_refcount;
 	}
 
-	Msg msg;
-	msg.m_op_code = Msg::SendAgain;
-	msg.m_handle = watcher;
+	Msg msg = { Msg::SendAgain, watcher, {0} };
 
 	int err = send_msg(send_fd,msg);
 	if (err != 0)
@@ -767,9 +760,7 @@ int OOSvrBase::detail::ProactorEv::recv(void* handle, void* param, void (*callba
 			return err;
 	}
 	
-	Msg msg;
-	msg.m_op_code = Msg::Recv;
-	msg.m_handle = handle;
+	Msg msg = { Msg::Recv, handle, {0} };
 	msg.m_op.m_count = bytes;
 	msg.m_op.m_buffer = buffer;
 	msg.m_op.m_buffer->addref();
@@ -784,9 +775,7 @@ int OOSvrBase::detail::ProactorEv::send(void* handle, void* param, AsyncSocket::
 	// I imagine you might want to increase length()?
 	assert(buffer->length() > 0);
 	
-	Msg msg;
-	msg.m_op_code = Msg::Send;
-	msg.m_handle = handle;
+	Msg msg = { Msg::Send, handle, {0} };
 	msg.m_op.m_count = 0;
 	msg.m_op.m_buffer = buffer;
 	msg.m_op.m_buffer->addref();
@@ -801,9 +790,7 @@ int OOSvrBase::detail::ProactorEv::send_v(void* handle, void* param, AsyncSocket
 	if (count == 0)
 		return EINVAL;
 	
-	Msg msg;
-	msg.m_op_code = Msg::Send;
-	msg.m_handle = handle;
+	Msg msg = { Msg::Send, handle, {0} };
 	msg.m_op.m_count = count;
 	msg.m_op.m_param = param;
 	msg.m_op.m_send_callback = callback;
@@ -845,9 +832,7 @@ void* OOSvrBase::detail::ProactorEv::new_acceptor(int fd, void* param, bool (*ca
 	watcher->m_refcount = 1;
 	watcher->m_wait = NULL;
 	
-	Msg msg;
-	msg.m_op_code = Msg::Accept;
-	msg.m_handle = watcher;
+	Msg msg = { Msg::Accept, watcher, {0} };
 
 	err = send_msg(m_pipe_fds[1],msg);
 	if (err != 0)
@@ -861,9 +846,7 @@ void* OOSvrBase::detail::ProactorEv::new_acceptor(int fd, void* param, bool (*ca
 
 int OOSvrBase::detail::ProactorEv::close_acceptor(void* handle)
 {	
-	Msg msg;
-	msg.m_op_code = Msg::AcceptorClose;
-	msg.m_handle = handle;
+	Msg msg = { Msg::AcceptorClose, handle, {0} };
 	
 	return send_msg(m_pipe_fds[1],msg);
 }
@@ -888,9 +871,7 @@ void* OOSvrBase::detail::ProactorEv::bind(int fd, int& err)
 
 int OOSvrBase::detail::ProactorEv::unbind(void* handle)
 {
-	Msg msg;
-	msg.m_op_code = Msg::IOClose;
-	msg.m_handle = handle;
+	Msg msg = { Msg::IOClose, handle, {0} };
 
 	return send_msg(m_pipe_fds[1],msg);
 }
