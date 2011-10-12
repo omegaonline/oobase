@@ -536,7 +536,7 @@ int WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::tim
 		size_t len = buffers[i]->space();
 		if (len > 0)
 		{
-			if (len > 0xFFFFFFFF || 0xFFFFFFFF - len < total_len)
+			if (len > 0xFFFFFFFF || total_len > 0xFFFFFFFF - len)
 				return ERROR_BUFFER_OVERFLOW;
 
 			total_len += len;
