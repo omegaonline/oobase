@@ -88,14 +88,12 @@ DWORD OOSvrBase::Win32::GetNameFromToken(HANDLE hToken, OOBase::SmartPtr<wchar_t
 	if (dwUNameSize == 0)
 		return GetLastError();
 
-	strUserName = static_cast<wchar_t*>(OOBase::LocalAllocate(dwUNameSize*sizeof(wchar_t)));
-	if (!strUserName)
+	if (!strUserName.allocate(dwUNameSize*sizeof(wchar_t)))
 		return ERROR_OUTOFMEMORY;
 
 	if (dwDNameSize)
 	{
-		strDomainName = static_cast<wchar_t*>(OOBase::LocalAllocate(dwDNameSize*sizeof(wchar_t)));
-		if (!strDomainName)
+		if (!strDomainName.allocate(dwDNameSize*sizeof(wchar_t)))
 			return ERROR_OUTOFMEMORY;
 	}
 
@@ -160,7 +158,7 @@ DWORD OOSvrBase::Win32::GetLogonSID(HANDLE hToken, OOBase::SmartPtr<void,OOBase:
 			if (IsValidSid(ptrGroups->Groups[dwIndex].Sid))
 			{
 				DWORD dwLen = GetLengthSid(ptrGroups->Groups[dwIndex].Sid);
-				pSIDLogon = static_cast<PSID>(OOBase::LocalAllocate(dwLen));
+				pSIDLogon = static_cast<PSID>(OOBase::LocalAllocator::allocate(dwLen));
 				if (!pSIDLogon)
 					return ERROR_OUTOFMEMORY;
 
@@ -307,7 +305,7 @@ void* OOSvrBase::Win32::GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls)
 {
 	for (DWORD dwLen = 256;;)
 	{
-		void* pBuffer = OOBase::HeapAllocate(dwLen);
+		void* pBuffer = OOBase::HeapAllocator::allocate(dwLen);
 		if (!pBuffer)
 		{
 			SetLastError(ERROR_OUTOFMEMORY);
@@ -319,7 +317,7 @@ void* OOSvrBase::Win32::GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls)
 
 		DWORD err = GetLastError();
 
-		OOBase::HeapFree(pBuffer);
+		OOBase::HeapAllocator::free(pBuffer);
 
 		SetLastError(err);
 			

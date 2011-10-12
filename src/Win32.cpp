@@ -682,9 +682,9 @@ void* OOBase::CrtAllocator::reallocate(void* ptr, size_t len)
 	return ::HeapReAlloc(Win32Thunk::instance().m_hHeap,0,ptr,len);
 }
 
-bool OOBase::CrtAllocator::free(void* ptr)
+void OOBase::CrtAllocator::free(void* ptr)
 {
-	return (::HeapFree(Win32Thunk::instance().m_hHeap,0,ptr) == TRUE);
+	::HeapFree(Win32Thunk::instance().m_hHeap,0,ptr);
 }
 
 #endif // _WIN32

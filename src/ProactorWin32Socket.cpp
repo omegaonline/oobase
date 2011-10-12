@@ -380,12 +380,12 @@ SocketAcceptor::Acceptor::Acceptor(OOSvrBase::detail::ProactorWin32* pProactor, 
 
 SocketAcceptor::Acceptor::~Acceptor()
 { 
-	OOBase::HeapFree(m_addr);
+	OOBase::HeapAllocator::free(m_addr);
 }
 
 int SocketAcceptor::Acceptor::bind(const sockaddr* addr, socklen_t addr_len)
 {
-	m_addr = static_cast<sockaddr*>(OOBase::HeapAllocate(addr_len));
+	m_addr = static_cast<sockaddr*>(OOBase::HeapAllocator::allocate(addr_len));
 	if (!m_addr)
 		return ERROR_OUTOFMEMORY;
 	
@@ -397,7 +397,7 @@ int SocketAcceptor::Acceptor::bind(const sockaddr* addr, socklen_t addr_len)
 	if (!m_hEvent.is_valid())
 	{
 		int err = GetLastError();
-		OOBase::HeapFree(m_addr);
+		OOBase::HeapAllocator::free(m_addr);
 		m_addr = NULL;
 		m_addr_len = 0;
 		return err;
@@ -407,7 +407,7 @@ int SocketAcceptor::Acceptor::bind(const sockaddr* addr, socklen_t addr_len)
 	if (!RegisterWaitForSingleObject(&m_hWait,m_hEvent,&accept_ready,this,INFINITE,WT_EXECUTEDEFAULT))
 	{
 		int err = GetLastError();
-		OOBase::HeapFree(m_addr);
+		OOBase::HeapAllocator::free(m_addr);
 		m_addr = NULL;
 		m_addr_len = 0;
 		return err;
@@ -543,7 +543,7 @@ int SocketAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>&
 				break;
 			}
 			
-			buf = OOBase::HeapAllocate((m_addr_len+16)*2);
+			buf = OOBase::HeapAllocator::allocate((m_addr_len+16)*2);
 			if (!buf)
 			{
 				m_pProactor->unbind((HANDLE)sockNew);
@@ -588,7 +588,7 @@ int SocketAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>&
 		closesocket(sockNew);
 	
 	if (buf)
-		OOBase::HeapFree(buf);
+		OOBase::HeapAllocator::free(buf);
 	
 	delete pOv;
 	
@@ -671,13 +671,13 @@ bool SocketAcceptor::Acceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwE
 	catch (...)
 	{
 		if (bRemove)
-			OOBase::HeapFree(addr_buf);
+			OOBase::HeapAllocator::free(addr_buf);
 
 		throw;
 	}
 		
 	if (bRemove)
-		OOBase::HeapFree(addr_buf);
+		OOBase::HeapAllocator::free(addr_buf);
 	
 	guard.acquire();
 	
