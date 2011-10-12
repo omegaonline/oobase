@@ -34,12 +34,11 @@ OOBase::POSIX::pw_info::pw_info(uid_t uid) :
 
 	// _SC_GETPW_R_SIZE_MAX is defined on Mac OS X. However,
 	// sysconf(_SC_GETPW_R_SIZE_MAX) returns an error. Therefore, the
-	// constant is used as below when error was retured.
+	// constant is used as below when error was returned.
 	if (m_buf_len <= 0)
 		m_buf_len = 1024;
 
-	m_buffer = static_cast<char*>(OOBase::HeapAllocate(m_buf_len));
-	if (!m_buffer)
+	if (!m_buffer.allocate(m_buf_len))
 		OOBase_CallCriticalFailure(ENOMEM);
 
 	if (::getpwuid_r(uid,&m_pwd2,m_buffer,m_buf_len,&m_pwd) != 0)
@@ -55,12 +54,11 @@ OOBase::POSIX::pw_info::pw_info(const char* uname) :
 
 	// _SC_GETPW_R_SIZE_MAX is defined on Mac OS X. However,
 	// sysconf(_SC_GETPW_R_SIZE_MAX) returns an error. Therefore, the
-	// constant is used as below when error was retured.
+	// constant is used as below when error was returned.
 	if (m_buf_len <= 0)
 		m_buf_len = 1024;
 
-	m_buffer = static_cast<char*>(OOBase::HeapAllocate(m_buf_len));
-	if (!m_buffer)
+	if (!m_buffer.allocate(m_buf_len))
 		OOBase_CallCriticalFailure(ENOMEM);
 
 	if (::getpwnam_r(uname,&m_pwd2,m_buffer,m_buf_len,&m_pwd) != 0)

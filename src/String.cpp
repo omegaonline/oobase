@@ -38,7 +38,7 @@ int OOBase::LocalString::assign(const char* sz, size_t len)
 			return 0;
 		}
 
-		new_sz = static_cast<char*>(OOBase::LocalAllocate(len+1));
+		new_sz = static_cast<char*>(OOBase::LocalAllocator::allocate(len+1));
 		if (!new_sz)
 			return ERROR_OUTOFMEMORY;
 
@@ -46,7 +46,7 @@ int OOBase::LocalString::assign(const char* sz, size_t len)
 		new_sz[len] = '\0';
 	}
 
-	OOBase::LocalFree(m_data);
+	OOBase::LocalAllocator::free(m_data);
 	m_data = new_sz;
 
 	return 0;
@@ -60,7 +60,7 @@ int OOBase::LocalString::append(const char* sz, size_t len)
 		if (len == npos)
 			len = strlen(sz);
 
-		char* new_sz = static_cast<char*>(OOBase::LocalReallocate(m_data,our_len + len + 1));
+		char* new_sz = static_cast<char*>(OOBase::LocalAllocator::reallocate(m_data,our_len + len + 1));
 		if (!new_sz)
 			return ERROR_OUTOFMEMORY;
 
@@ -96,7 +96,7 @@ int OOBase::LocalString::vprintf(const char* format, va_list args)
 	{
 		for (;;)
 		{
-			new_buf = static_cast<char*>(OOBase::LocalAllocate(r+1));
+			new_buf = static_cast<char*>(OOBase::LocalAllocator::allocate(r+1));
 			if (!new_buf)
 				return ERROR_OUTOFMEMORY;
 
@@ -114,7 +114,7 @@ int OOBase::LocalString::vprintf(const char* format, va_list args)
 	int err = assign(new_buf,r);
 
 	if (new_buf != szBuf)
-		OOBase::LocalFree(new_buf);
+		OOBase::LocalAllocator::free(new_buf);
 
 	return err;
 }
@@ -140,7 +140,7 @@ int OOBase::LocalString::getenv(const char* envvar)
 	DWORD dwLen = GetEnvironmentVariable(envvar,new_buf,sizeof(szBuf));
 	if (dwLen >= sizeof(szBuf))
 	{
-		new_buf = static_cast<char*>(OOBase::LocalAllocate(dwLen+1));
+		new_buf = static_cast<char*>(OOBase::LocalAllocator::allocate(dwLen+1));
 		if (!new_buf)
 			return ERROR_OUTOFMEMORY;
 
@@ -158,7 +158,7 @@ int OOBase::LocalString::getenv(const char* envvar)
 		err = assign(new_buf,dwLen);
 
 	if (new_buf != szBuf)
-		OOBase::LocalFree(new_buf);
+		OOBase::LocalAllocator::free(new_buf);
 	
 	return err;
 #else
@@ -227,7 +227,7 @@ int OOBase::String::append(const char* sz, size_t len)
 		if (m_node->m_refcount == 1)
 		{
 			// It's our buffer to play with...
-			new_node = static_cast<Node*>(OOBase::HeapReallocate(m_node,sizeof(Node) + our_len+len));
+			new_node = static_cast<Node*>(OOBase::HeapAllocator::reallocate(m_node,sizeof(Node) + our_len+len));
 			if (!new_node)
 				return ERROR_OUTOFMEMORY;
 
@@ -285,7 +285,7 @@ int OOBase::String::printf(const char* format, ...)
 	{
 		for (;;)
 		{
-			new_buf = static_cast<char*>(OOBase::LocalAllocate(r+1));
+			new_buf = static_cast<char*>(OOBase::LocalAllocator::allocate(r+1));
 			if (!new_buf)
 				return ERROR_OUTOFMEMORY;
 
@@ -303,7 +303,7 @@ int OOBase::String::printf(const char* format, ...)
 	int err = assign(new_buf,r);
 
 	if (new_buf != szBuf)
-		OOBase::LocalFree(new_buf);
+		OOBase::LocalAllocator::free(new_buf);
 
 	va_end(args);
 
@@ -345,11 +345,11 @@ void OOBase::String::node_addref(Node* node)
 void OOBase::String::node_release(Node* node)
 {
 	if (node && --node->m_refcount == 0)
-		OOBase::HeapFree(node);
+		OOBase::HeapAllocator::free(node);
 }
 
 OOBase::String::Node* OOBase::String::node_allocate(size_t len)
 {
 	// There is an implicit len+1 here as m_data[1] in struct
-	return static_cast<Node*>(OOBase::HeapAllocate(sizeof(Node) + len));
+	return static_cast<Node*>(OOBase::HeapAllocator::allocate(sizeof(Node) + len));
 }

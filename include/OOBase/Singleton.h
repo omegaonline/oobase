@@ -57,11 +57,7 @@ namespace OOBase
 
 		static void init()
 		{
-			void* p = OOBase::HeapAllocate(sizeof(T));
-			if (!p)
-				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-			
-			s_instance = ::new (p) T();
+			s_instance = ::new (OOBase::critical) T();
 			
 			DLLDestructor<DLL>::add_destructor(&destroy,NULL);
 		}
@@ -71,11 +67,7 @@ namespace OOBase
 			T* p = s_instance;
 			s_instance = NULL;
 			
-			if (p)
-			{
-				p->~T();
-				OOBase::HeapFree(p);
-			}
+			delete p;
 		}
 	};
 

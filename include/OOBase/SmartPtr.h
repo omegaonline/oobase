@@ -188,6 +188,14 @@ namespace OOBase
 			return *this;
 		}
 
+		bool allocate(size_t size)
+		{
+			T* p = static_cast<T*>(Allocator::allocate(size));
+			if (p)
+				baseClass::operator=(p);
+			return (p != NULL);
+		}
+
 		T* operator ->()
 		{
 			assert(baseClass::value() != NULL);

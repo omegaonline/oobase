@@ -492,82 +492,84 @@ void OOSvrBase::detail::ProactorEv::process_send(int send_fd, IOWatcher* watcher
 				++first_buffer;
 			}
 
-			struct iovec static_bufs[4];
-			OOBase::SmartPtr<struct iovec,OOBase::LocalAllocator> ptrBufs;
-
-			struct msghdr msg = {0};
-			msg.msg_iov = static_bufs;
-			msg.msg_iovlen = op->m_count - first_buffer;
-
-			if (msg.msg_iovlen > sizeof(static_bufs)/sizeof(static_bufs[0]))
+			if (first_buffer < op->m_count)
 			{
-				ptrBufs = static_cast<struct iovec*>(OOBase::LocalAllocate(msg.msg_iovlen * sizeof(struct iovec)));
-				if (!ptrBufs)
-				{
-					msg.msg_iov = NULL;
-					err = ENOMEM;
-				}
-				else
-					msg.msg_iov = ptrBufs;
-			}
+				struct iovec static_bufs[4];
+				OOBase::SmartPtr<struct iovec,OOBase::LocalAllocator> ptrBufs;
 
-			if (msg.msg_iov)
-			{
-				for (size_t i=0;i<msg.msg_iovlen;++i)
-				{
-					msg.msg_iov[i].iov_len = op->m_buffers[i+first_buffer]->length();
-					msg.msg_iov[i].iov_base = const_cast<char*>(op->m_buffers[i+first_buffer]->rd_ptr());
-				}
+				struct msghdr msg = {0};
+				msg.msg_iov = static_bufs;
+				msg.msg_iovlen = op->m_count - first_buffer;
 
-				do
+				if (msg.msg_iovlen > sizeof(static_bufs)/sizeof(static_bufs[0]))
 				{
-					// We send again on EOF, as we only return error codes
-					ssize_t sent = 0;
-					do
+					if (!ptrBufs.allocate(msg.msg_iovlen * sizeof(struct iovec)))
 					{
-						sent = ::sendmsg(fd,&msg,0
-#if defined(MSG_NOSIGNAL)
-							| MSG_NOSIGNAL
-#endif
-						);
-					} while (sent == -1 && errno == EINTR);
-
-					if (sent == -1)
-					{
-						if (errno != EAGAIN && errno != EWOULDBLOCK)
-							err = errno;
-						else
-							break;
+						msg.msg_iov = NULL;
+						err = ENOMEM;
 					}
 					else
+						msg.msg_iov = ptrBufs;
+				}
+
+				if (msg.msg_iov)
+				{
+					for (size_t i=0;i<msg.msg_iovlen;++i)
 					{
-						// Update buffers...
+						msg.msg_iov[i].iov_len = op->m_buffers[i+first_buffer]->length();
+						msg.msg_iov[i].iov_base = const_cast<char*>(op->m_buffers[i+first_buffer]->rd_ptr());
+					}
+
+					do
+					{
+						// We send again on EOF, as we only return error codes
+						ssize_t sent = 0;
 						do
 						{
-							if (static_cast<size_t>(sent) >= msg.msg_iov->iov_len)
-							{
-								op->m_buffers[first_buffer]->rd_ptr(msg.msg_iov->iov_len);
-								++first_buffer;
-								sent -= msg.msg_iov->iov_len;
-								++msg.msg_iov;
-								if (--msg.msg_iovlen == 0)
-									break;
-							}
-							else
-							{
-								op->m_buffers[first_buffer]->rd_ptr(sent);
-								msg.msg_iov->iov_len -= sent;
-								msg.msg_iov->iov_base = static_cast<char*>(msg.msg_iov->iov_base) + sent;
-								sent = 0;
-							}
-						}
-						while (sent > 0);
-					}
-				}
-				while (msg.msg_iovlen);
+							sent = ::sendmsg(fd,&msg,0
+	#if defined(MSG_NOSIGNAL)
+								| MSG_NOSIGNAL
+	#endif
+							);
+						} while (sent == -1 && errno == EINTR);
 
-				if (errno == EAGAIN || errno == EWOULDBLOCK)
-					break;
+						if (sent == -1)
+						{
+							if (errno != EAGAIN && errno != EWOULDBLOCK)
+								err = errno;
+							else
+								break;
+						}
+						else
+						{
+							// Update buffers...
+							do
+							{
+								if (static_cast<size_t>(sent) >= msg.msg_iov->iov_len)
+								{
+									op->m_buffers[first_buffer]->rd_ptr(msg.msg_iov->iov_len);
+									++first_buffer;
+									sent -= msg.msg_iov->iov_len;
+									++msg.msg_iov;
+									if (--msg.msg_iovlen == 0)
+										break;
+								}
+								else
+								{
+									op->m_buffers[first_buffer]->rd_ptr(sent);
+									msg.msg_iov->iov_len -= sent;
+									msg.msg_iov->iov_base = static_cast<char*>(msg.msg_iov->iov_base) + sent;
+									sent = 0;
+								}
+							}
+							while (sent > 0);
+						}
+					}
+					while (msg.msg_iovlen);
+
+					if (errno == EAGAIN || errno == EWOULDBLOCK)
+						break;
+				}
 			}
 			
 			// Notify callback of status/error

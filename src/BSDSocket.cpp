@@ -305,8 +305,7 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeva
 
 	if (count > sizeof(static_bufs)/sizeof(static_bufs[0]))
 	{
-		ptrBufs = static_cast<struct iovec*>(OOBase::LocalAllocate(count * sizeof(struct iovec)));
-		if (!ptrBufs)
+		if (!ptrBufs.allocate(count * sizeof(struct iovec)))
 			return ENOMEM;
 
 		msg.msg_iov = ptrBufs;
@@ -445,8 +444,7 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeva
 
 	if (count > sizeof(static_bufs)/sizeof(static_bufs[0]))
 	{
-		ptrBufs = static_cast<struct iovec*>(OOBase::LocalAllocate(count * sizeof(struct iovec)));
-		if (!ptrBufs)
+		if (!ptrBufs.allocate(count * sizeof(struct iovec)))
 			return ENOMEM;
 
 		msg.msg_iov = ptrBufs;

@@ -29,14 +29,6 @@
 
 namespace OOBase
 {
-	void* HeapAllocate(size_t bytes);
-	void* HeapReallocate(void* p, size_t bytes);
-	void HeapFree(void* p);
-
-	void* LocalAllocate(size_t bytes);
-	void* LocalReallocate(void* p, size_t bytes);
-	void LocalFree(void* p);
-
 	struct critical_t { int unused; };
 	extern const critical_t critical;
 
@@ -44,153 +36,130 @@ namespace OOBase
 	class CrtAllocator
 	{
 	public:
-		static void* allocate(size_t len);
-		static void* reallocate(void* ptr, size_t len);
-		static bool free(void* ptr);
-		static void check() {};
+		static void* allocate(size_t bytes);
+		static void* reallocate(void* ptr, size_t bytes);
+		static void free(void* ptr);
 	};
 
 	class HeapAllocator
 	{
 	public:
-		static void* allocate(size_t size) 
-		{
-			return OOBase::HeapAllocate(size);
-		}
-
-		static void* reallocate(void* p, size_t size)
-		{
-			return OOBase::HeapReallocate(p,size);
-		}
-
-		static void free(void* p) 
-		{
-			OOBase::HeapFree(p);
-		}
+		static void* allocate(size_t bytes);
+		static void* reallocate(void* ptr, size_t bytes);
+		static void free(void* ptr);
 	};
 
 	class LocalAllocator
 	{
 	public:
-		static void* allocate(size_t size) 
-		{
-			return OOBase::LocalAllocate(size);
-		}
-
-		static void* reallocate(void* p, size_t size)
-		{
-			return OOBase::LocalReallocate(p,size);
-		}
-
-		static void free(void* p) 
-		{
-			OOBase::LocalFree(p);
-		}
+		static void* allocate(size_t bytes);
+		static void* reallocate(void* ptr, size_t bytes);
+		static void free(void* ptr);
 	};
 
 	template <typename Allocator>
 	class CustomNew
 	{
 	public:
-		void* operator new(size_t size)
+		void* operator new(size_t bytes)
 		{
-			void* p = Allocator::allocate(size);
-			if (!p)
+			void* ptr = Allocator::allocate(bytes);
+			if (!ptr)
 				throw std::bad_alloc();
-			return p;
+			return ptr;
 		}
 
-		void* operator new[](size_t size)
+		void* operator new[](size_t bytes)
 		{
-			void* p = Allocator::allocate(size);
-			if (!p)
+			void* ptr = Allocator::allocate(bytes);
+			if (!ptr)
 				throw std::bad_alloc();
-			return p;
+			return ptr;
 		}
 
-		void operator delete(void* p)
+		void operator delete(void* ptr)
 		{
-			Allocator::free(p);
+			Allocator::free(ptr);
 		}
 
-		void operator delete[](void* p)
+		void operator delete[](void* ptr)
 		{
-			Allocator::free(p);
+			Allocator::free(ptr);
 		}
 
-		void* operator new(size_t size, const std::nothrow_t&)
+		void* operator new(size_t bytes, const std::nothrow_t&)
 		{
-			return Allocator::allocate(size);
+			return Allocator::allocate(bytes);
 		}
 
-		void* operator new[](size_t size, const std::nothrow_t&)
+		void* operator new[](size_t bytes, const std::nothrow_t&)
 		{
-			return Allocator::allocate(size);
+			return Allocator::allocate(bytes);
 		}
 
-		void operator delete(void* p, const std::nothrow_t&)
+		void operator delete(void* ptr, const std::nothrow_t&)
 		{
-			Allocator::free(p);
+			Allocator::free(ptr);
 		}
 
-		void operator delete[](void* p, const std::nothrow_t&)
+		void operator delete[](void* ptr, const std::nothrow_t&)
 		{
-			Allocator::free(p);
+			Allocator::free(ptr);
 		}
 
-		void* operator new(size_t size, const OOBase::critical_t&)
+		void* operator new(size_t bytes, const OOBase::critical_t&)
 		{
-			void* p = Allocator::allocate(size);
-			if (!p)
+			void* ptr = Allocator::allocate(bytes);
+			if (!ptr)
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-			return p;
+			return ptr;
 		}
 
-		void* operator new[](size_t size, const OOBase::critical_t&)
+		void* operator new[](size_t bytes, const OOBase::critical_t&)
 		{
-			void* p = Allocator::allocate(size);
-			if (!p)
+			void* ptr = Allocator::allocate(bytes);
+			if (!ptr)
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-			return p;
+			return ptr;
 		}
 
-		void operator delete(void* p, const OOBase::critical_t&)
+		void operator delete(void* ptr, const OOBase::critical_t&)
 		{
-			Allocator::free(p);
+			Allocator::free(ptr);
 		}
 
-		void operator delete[](void* p, const OOBase::critical_t&)
+		void operator delete[](void* ptr, const OOBase::critical_t&)
 		{
-			Allocator::free(p);
+			Allocator::free(ptr);
 		}
 	};
 }
 
 // Call the OOBase::OnCriticalError handler on failure
-inline void* operator new(size_t size, const OOBase::critical_t&)
+inline void* operator new(size_t bytes, const OOBase::critical_t&)
 {
-	void* p = ::operator new(size,std::nothrow);
-	if (!p)
+	void* ptr = ::operator new(bytes,std::nothrow);
+	if (!ptr)
 		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-	return p;
+	return ptr;
 }
 
-inline void* operator new[](size_t size, const OOBase::critical_t&)
+inline void* operator new[](size_t bytes, const OOBase::critical_t&)
 {
-	void* p = ::operator new [] (size,std::nothrow);
-	if (!p)
+	void* ptr = ::operator new [] (bytes,std::nothrow);
+	if (!ptr)
 		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-	return p;
+	return ptr;
 }
 
-inline void operator delete(void* p, const OOBase::critical_t&)
+inline void operator delete(void* ptr, const OOBase::critical_t&)
 {
-	::operator delete(p);
+	::operator delete(ptr);
 }
 
-inline void operator delete[](void* p, const OOBase::critical_t&)
+inline void operator delete[](void* ptr, const OOBase::critical_t&)
 {
-	::operator delete[](p);
+	::operator delete[](ptr);
 }
 
 #endif // OOBASE_MEMORY_H_INCLUDED_

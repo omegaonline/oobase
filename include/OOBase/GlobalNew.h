@@ -34,7 +34,7 @@
 // Throws std::bad_alloc
 inline void* operator new(size_t size) THROW_BAD_ALLOC
 {
-	void* p = OOBase::HeapAllocate(size);
+	void* p = OOBase::HeapAllocator::allocate(size);
 	if (!p)
 		throw std::bad_alloc();
 
@@ -43,7 +43,7 @@ inline void* operator new(size_t size) THROW_BAD_ALLOC
 
 inline void* operator new[](size_t size) THROW_BAD_ALLOC
 {
-	void* p = OOBase::HeapAllocate(size);
+	void* p = OOBase::HeapAllocator::allocate(size);
 	if (!p)
 		throw std::bad_alloc();
 
@@ -52,33 +52,33 @@ inline void* operator new[](size_t size) THROW_BAD_ALLOC
 
 inline void operator delete(void* p) throw()
 {
-	return OOBase::HeapFree(p);
+	return OOBase::HeapAllocator::free(p);
 }
 
 inline void operator delete[](void* p) throw()
 {
-	return OOBase::HeapFree(p);
+	return OOBase::HeapAllocator::free(p);
 }
 
 // Returns NULL, doesn't throw
 inline void* operator new(size_t size, const std::nothrow_t&) throw()
 {
-	return OOBase::HeapAllocate(size);
+	return OOBase::HeapAllocator::allocate(size);
 }
 
 inline void* operator new[](size_t size, const std::nothrow_t&) throw()
 {
-	return OOBase::HeapAllocate(size);
+	return OOBase::HeapAllocator::allocate(size);
 }
 
 inline void operator delete(void* p, const std::nothrow_t&) throw()
 {
-	return OOBase::HeapFree(p);
+	return OOBase::HeapAllocator::free(p);
 }
 
 inline void operator delete[](void* p, const std::nothrow_t&) throw()
 {
-	return OOBase::HeapFree(p);
+	return OOBase::HeapAllocator::free(p);
 }
 
 #endif // OOBASE_CUSTOM_NEW_H_INCLUDED_

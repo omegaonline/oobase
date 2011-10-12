@@ -39,7 +39,7 @@ namespace OOBase
 
 		~LocalString()
 		{
-			OOBase::LocalFree(m_data);
+			OOBase::LocalAllocator::free(m_data);
 		}
 
 		int assign(const char* sz, size_t len = npos);

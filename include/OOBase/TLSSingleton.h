@@ -58,10 +58,10 @@ namespace OOBase
 
 		static void* init()
 		{
-			void* p = OOBase::HeapAllocate(sizeof(T));
+			void* p = OOBase::LocalAllocator::allocate(sizeof(T));
 			if (!p)
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-			
+
 			T* pThis = ::new (p) T();
 									
 			int err = TLS::Set(&s_sentinal,pThis,&destroy);
@@ -76,7 +76,7 @@ namespace OOBase
 			if (p)
 			{
 				static_cast<T*>(p)->~T();
-				OOBase::HeapFree(p);
+				OOBase::LocalAllocator::free(p);
 			}
 		}
 	};
