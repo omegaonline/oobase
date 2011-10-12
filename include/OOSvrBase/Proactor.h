@@ -71,7 +71,7 @@ namespace OOSvrBase
 		int send(OOBase::Buffer* buffer);
 
 		typedef void (*recv_callback_t)(void* param, OOBase::Buffer* buffer, int err);
-		virtual int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout) = 0;
+		virtual int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout = NULL) = 0;
 
 		typedef void (*send_callback_t)(void* param, int err);
 		virtual int send(void* param, send_callback_t callback, OOBase::Buffer* buffer) = 0;

@@ -28,6 +28,10 @@
 
 #include <mswsock.h>
 
+#if !defined(MSG_WAITALL)
+#define MSG_WAITALL 8
+#endif
+
 #if !defined(WSAID_ACCEPTEX)
 
 typedef BOOL (PASCAL* LPFN_ACCEPTEX)(
