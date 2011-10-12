@@ -57,8 +57,7 @@ namespace
 					
 		static void on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv);
 		static void on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv);
-		static void on_send_v(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv);
-
+		
 		static void translate_error(int& dwErr);
 		static void translate_error(DWORD& dwErr);
 	};
@@ -256,7 +255,7 @@ int AsyncPipe::send_v(void* param, send_callback_t callback, OOBase::Buffer* buf
 	}
 			
 	OOSvrBase::detail::ProactorWin32::Overlapped* pOv = NULL;
-	int dwErr = m_pProactor->new_overlapped(pOv,&on_send_v);
+	int dwErr = m_pProactor->new_overlapped(pOv,&on_send);
 	if (dwErr != 0)
 		return dwErr;
 	
@@ -269,28 +268,10 @@ int AsyncPipe::send_v(void* param, send_callback_t callback, OOBase::Buffer* buf
 	{
 		dwErr = GetLastError();
 		if (dwErr != ERROR_IO_PENDING)
-			on_send_v(m_hPipe,dwSent,dwErr,pOv);
+			on_send(m_hPipe,dwSent,dwErr,pOv);
 	}
 	
 	return 0;
-}
-
-void AsyncPipe::on_send_v(HANDLE /*handle*/, DWORD /*dwBytes*/, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv)
-{
-	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
-	send_callback_t callback = reinterpret_cast<send_callback_t>(pOv->m_extras[1]);
-	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
-	
-	delete pOv;
-	
-	// Call callback
-	if (callback)
-	{
-		// Translate error codes...
-		translate_error(dwErr);
-		
-		(*callback)(param,dwErr);
-	}
 }
 
 int AsyncPipe::get_uid(OOSvrBase::AsyncLocalSocket::uid_t& uid)
