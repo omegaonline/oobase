@@ -70,9 +70,6 @@ int AsyncSocket::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callb
 	// Must have a callback function
 	assert(callback);
 
-	if (bytes == 0)
-		return 0;
-	
 	// Make sure we have room
 	int err = buffer->space(bytes);
 	if (err != 0)
@@ -95,7 +92,7 @@ int AsyncSocket::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callb
 	wsa_buf.len = static_cast<u_long>(bytes);
 	
 	DWORD dwRead = 0;
-	DWORD dwFlags = MSG_WAITALL;
+	DWORD dwFlags = (bytes != 0 ? MSG_WAITALL : 0);
 	if (WSARecv(m_hSocket,&wsa_buf,1,&dwRead,&dwFlags,pOv,NULL) == SOCKET_ERROR)
 	{
 		err = GetLastError();

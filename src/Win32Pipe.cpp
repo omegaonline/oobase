@@ -98,13 +98,8 @@ int Pipe::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_
 	int err = 0;
 
 	OOBase::Countdown countdown(timeout);
-	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,timeout ? false : true);
-	if (timeout && !guard.acquire(countdown))
-	{
-		err = WSAETIMEDOUT;
-		return 0;
-	}
-
+	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,true);
+	
 	for (size_t i=0;i<count && err == 0 ;++i)
 	{
 		if (buffers[i]->length() > 0)
