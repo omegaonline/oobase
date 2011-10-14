@@ -520,6 +520,7 @@ void OOSvrBase::detail::ProactorEv::process_send(int send_fd, IOWatcher* watcher
 						msg.msg_iov[i].iov_base = const_cast<char*>(op->m_buffers[i+first_buffer]->rd_ptr());
 					}
 
+					bool bBreak = false;
 					do
 					{
 						// We send again on EOF, as we only return error codes
@@ -527,9 +528,9 @@ void OOSvrBase::detail::ProactorEv::process_send(int send_fd, IOWatcher* watcher
 						do
 						{
 							sent = ::sendmsg(fd,&msg,0
-	#if defined(MSG_NOSIGNAL)
+#if defined(MSG_NOSIGNAL)
 								| MSG_NOSIGNAL
-	#endif
+#endif
 							);
 						} while (sent == -1 && errno == EINTR);
 
@@ -538,7 +539,10 @@ void OOSvrBase::detail::ProactorEv::process_send(int send_fd, IOWatcher* watcher
 							if (errno != EAGAIN && errno != EWOULDBLOCK)
 								err = errno;
 							else
+							{
+								bBreak = true;
 								break;
+							}
 						}
 						else
 						{
@@ -567,7 +571,7 @@ void OOSvrBase::detail::ProactorEv::process_send(int send_fd, IOWatcher* watcher
 					}
 					while (msg.msg_iovlen);
 
-					if (errno == EAGAIN || errno == EWOULDBLOCK)
+					if (bBreak)
 						break;
 				}
 			}
