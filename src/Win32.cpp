@@ -90,7 +90,7 @@ namespace
 	private:
 		Win32Thunk() : m_hKernel32(NULL), m_hHeap(NULL)
 		{}
-		
+
 		static BOOL __stdcall init(INIT_ONCE*, void* i, void**);
 		static void init_low_frag_heap(HMODULE hKernel32, HANDLE hHeap);
 	};
@@ -672,19 +672,95 @@ void OOBase::Win32::condition_variable_t::broadcast()
 		LeaveCriticalSection(&m_waiters_lock);
 }
 
+#if 1
+
+namespace
+{
+	union Marker
+	{
+		struct
+		{
+			size_t len;
+			size_t magic;
+		} value;
+		char   padding[16];
+	};
+}
+
 void* OOBase::CrtAllocator::allocate(size_t len)
 {
-	return ::HeapAlloc(Win32Thunk::instance().m_hHeap,0,len);
+	if (!len)
+		return NULL;
+	
+	Marker* m = (Marker*)::VirtualAlloc(NULL,len + sizeof(Marker),MEM_COMMIT | MEM_RESERVE,PAGE_EXECUTE_READWRITE);
+	if (!m)
+		return NULL;
+
+	m->value.len = len;
+	m->value.magic = 0x12345678;
+
+	return (m+1);
 }
 
 void* OOBase::CrtAllocator::reallocate(void* ptr, size_t len)
 {
-	return ::HeapReAlloc(Win32Thunk::instance().m_hHeap,0,ptr,len);
+	if (!len)
+		return NULL;
+
+	if (!ptr)
+		return allocate(len);
+
+	Marker* m = (static_cast<Marker*>(ptr) - 1);
+	assert(m->value.magic == 0x12345678);
+
+	if (m->value.len >= len)
+		return ptr;
+	
+	void* n = allocate(len);
+	if (n)
+		memcpy(n,ptr,m->value.len);
+
+	return n;
 }
 
 void OOBase::CrtAllocator::free(void* ptr)
 {
-	::HeapFree(Win32Thunk::instance().m_hHeap,0,ptr);
+	if (ptr)
+	{
+		Marker* m = (static_cast<Marker*>(ptr) - 1);
+		assert(m->value.magic == 0x12345678);
+
+		DWORD dwOld = 0;
+		::VirtualProtect(m,m->value.len + sizeof(Marker),PAGE_NOACCESS,&dwOld);
+	}
 }
+
+#else
+
+void* OOBase::CrtAllocator::allocate(size_t len)
+{
+	if (!len)
+		return NULL;
+	else
+		return ::HeapAlloc(Win32Thunk::instance().m_hHeap,0,len);
+}
+
+void* OOBase::CrtAllocator::reallocate(void* ptr, size_t len)
+{
+	if (!len)
+		return NULL;
+	else if (!ptr)
+		return ::HeapAlloc(Win32Thunk::instance().m_hHeap,0,len);
+	else
+		return ::HeapReAlloc(Win32Thunk::instance().m_hHeap,0,ptr,len);
+}
+
+void OOBase::CrtAllocator::free(void* ptr)
+{
+	if (ptr)
+		::HeapFree(Win32Thunk::instance().m_hHeap,0,ptr);
+}
+
+#endif
 
 #endif // _WIN32
