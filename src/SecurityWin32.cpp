@@ -247,9 +247,9 @@ DWORD OOSvrBase::Win32::EnableUserAccessToDir(const wchar_t* pszPath, const TOKE
 DWORD OOSvrBase::Win32::RestrictToken(HANDLE& hToken)
 {
 	// Work out what version of windows we are running on...
-	OSVERSIONINFO os = {0};
+	OSVERSIONINFOEXW os = {0};
 	os.dwOSVersionInfoSize = sizeof(os);
-	GetVersionEx(&os);
+	GetVersionExW((OSVERSIONINFOW*)&os);
 
 #if !defined(_DEBUG)
 	if ((os.dwMajorVersion == 5 && os.dwMinorVersion > 0) || os.dwMajorVersion >= 5)
