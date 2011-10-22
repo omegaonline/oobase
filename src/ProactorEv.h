@@ -30,7 +30,7 @@
 #include "../include/OOBase/Queue.h"
 #include "../include/OOBase/Condition.h"
 
-#define EV_COMPAT3 0
+#define EV_COMPAT3 1
 #define EV_STANDALONE 1
 #include <ev.h>
 
