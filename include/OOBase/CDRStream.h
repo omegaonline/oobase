@@ -237,6 +237,31 @@ namespace OOBase
 			return count;
 		}
 
+		/** Templatized socket recv function.
+		 */
+		template <typename S>
+		bool recv_string(S& pSocket, LocalString& str)
+		{
+			size_t mark = m_buffer->mark_rd_ptr();
+
+			m_last_error = pSocket->recv(m_buffer,sizeof(uint32_t));
+			if (m_last_error != 0)
+				return false;
+
+			uint32_t len = 0;
+			if (!read(len))
+				return false;
+
+			m_last_error = pSocket->recv(m_buffer,len);
+			if (m_last_error != 0)
+				return false;
+
+			// Now reset rd_ptr and read the string
+			m_buffer->mark_rd_ptr(mark);
+
+			return read(str);
+		}
+
 		/** Templatized variable write function.
 		 *  This function writes a value of type \p T, and advances wr_ptr() by \p sizeof(T).
 		 *  This function will call space() to increase the internal buffer capacity.
