@@ -22,7 +22,7 @@
 #ifndef OOSVRBASE_DATABASE_H_INCLUDED_
 #define OOSVRBASE_DATABASE_H_INCLUDED_
 
-#if !defined(HAVE_SQLITE3) && !defined(HAVE_SQLITE3_AMALGAMATION)
+#if !defined(HAVE_SQLITE3_H) && !defined(HAVE_SQLITE3_AMALGAMATION)
 #error SQLite3 required!
 #else
 
@@ -117,6 +117,6 @@ namespace OOSvrBase
 	}
 }
 
-#endif // #if defined(HAVE_SQLITE3) || defined(HAVE_SQLITE3_AMALGAMATION)
+#endif // #if defined(HAVE_SQLITE3_H) || defined(HAVE_SQLITE3_AMALGAMATION)
 
 #endif // OOSVRBASE_DATABASE_H_INCLUDED_

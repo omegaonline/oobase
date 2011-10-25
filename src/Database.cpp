@@ -23,7 +23,7 @@
 #include "../include/OOSvrBase/Database.h"
 #include "../include/OOSvrBase/Logger.h"
 
-#if defined(HAVE_SQLITE3) || defined(HAVE_SQLITE3_AMALGAMATION)
+#if defined(HAVE_SQLITE3_H) || defined(HAVE_SQLITE3_AMALGAMATION)
 
 OOSvrBase::Db::Statement::Statement(sqlite3_stmt* pStmt) :
 		m_pStmt(pStmt)
@@ -215,4 +215,4 @@ int OOSvrBase::Db::Transaction::rollback()
 	return err;
 }
 
-#endif // defined(HAVE_SQLITE3) || defined(HAVE_SQLITE3_AMALGAMATION)
+#endif // defined(HAVE_SQLITE3_H) || defined(HAVE_SQLITE3_AMALGAMATION)
