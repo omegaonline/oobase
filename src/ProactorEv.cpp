@@ -82,19 +82,13 @@ int OOSvrBase::detail::ProactorEv::init()
 void OOSvrBase::detail::ProactorEv::io_start(struct ev_io* io)
 {
 	if (!ev_is_active(io))
-	{
 		ev_io_start(m_pLoop,io);
-		++m_outstanding;
-	}
 }
 
 void OOSvrBase::detail::ProactorEv::io_stop(struct ev_io* io)
 {
 	if (ev_is_active(io))
-	{
 		ev_io_stop(m_pLoop,io);
-		--m_outstanding;
-	}
 }
 
 int OOSvrBase::detail::ProactorEv::run(int& err, const OOBase::timeval_t* timeout)
@@ -402,6 +396,7 @@ bool OOSvrBase::detail::ProactorEv::deref(AcceptWatcher* watcher)
 
 		close(watcher->fd);
 		delete watcher;
+		--m_outstanding;
 	}
 
 	return ret;
@@ -417,6 +412,7 @@ bool OOSvrBase::detail::ProactorEv::deref(IOWatcher* watcher)
 
 		close(watcher->fd);
 		delete watcher;
+		--m_outstanding;
 	}
 
 	return ret;
@@ -846,6 +842,8 @@ void* OOSvrBase::detail::ProactorEv::new_acceptor(int fd, void* param, bool (*ca
 		delete watcher;
 		watcher = NULL;
 	}
+	else
+		++m_outstanding;
 
 	return watcher;
 }
@@ -871,6 +869,8 @@ void* OOSvrBase::detail::ProactorEv::bind(int fd, int& err)
 	watcher->m_refcount = 1;
 	watcher->m_busy_recv = false;
 	watcher->m_busy_send = false;
+
+	++m_outstanding;
 
 	return watcher;
 }
