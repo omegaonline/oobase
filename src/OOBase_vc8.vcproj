@@ -163,11 +163,14 @@
 				Name="VCCLCompilerTool"
 				Optimization="3"
 				EnableIntrinsicFunctions="true"
+				FavorSizeOrSpeed="1"
 				PreprocessorDefinitions="NDEBUG"
 				StringPooling="true"
 				RuntimeLibrary="0"
+				EnableFunctionLevelLinking="true"
 				RuntimeTypeInfo="false"
 				WarningLevel="4"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -225,12 +228,15 @@
 				Name="VCCLCompilerTool"
 				Optimization="3"
 				EnableIntrinsicFunctions="true"
+				FavorSizeOrSpeed="1"
 				PreprocessorDefinitions="NDEBUG"
 				StringPooling="true"
 				RuntimeLibrary="0"
+				EnableFunctionLevelLinking="true"
 				RuntimeTypeInfo="false"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -278,6 +284,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\CmdArgs.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Condition.cpp"
 				>
 			</File>
@@ -290,6 +300,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Memory.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Mutex.cpp"
 				>
 			</File>
@@ -299,6 +313,10 @@
 			</File>
 			<File
 				RelativePath=".\Posix.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\String.cpp"
 				>
 			</File>
 			<File
@@ -322,11 +340,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\Win32Socket.cpp"
+				RelativePath=".\Win32Pipe.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Win32Socket2.cpp"
+				RelativePath=".\Win32Socket.cpp"
 				>
 			</File>
 		</Filter>
@@ -340,7 +358,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\internal\BSDSocket.h"
+				RelativePath="..\include\OOBase\BoundedQueue.h"
+				>
+			</File>
+			<File
+				RelativePath=".\BSDSocket.h"
 				>
 			</File>
 			<File
@@ -353,6 +375,10 @@
 			</File>
 			<File
 				RelativePath="..\include\OOBase\CDRStream.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\CmdArgs.h"
 				>
 			</File>
 			<File
@@ -369,6 +395,22 @@
 			</File>
 			<File
 				RelativePath="..\include\OOBase\DLL.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\GlobalNew.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\HandleTable.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\HashTable.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\Memory.h"
 				>
 			</File>
 			<File
@@ -392,6 +434,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\include\OOBase\RefCount.h"
+				>
+			</File>
+			<File
 				RelativePath="..\include\OOBase\Singleton.h"
 				>
 			</File>
@@ -401,6 +447,18 @@
 			</File>
 			<File
 				RelativePath="..\include\OOBase\Socket.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\Stack.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\String.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\Table.h"
 				>
 			</File>
 			<File
@@ -428,11 +486,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\internal\Win32Impl.h"
+				RelativePath=".\Win32Impl.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOBase\internal\Win32Socket.h"
+				RelativePath=".\Win32Socket.h"
 				>
 			</File>
 		</Filter>

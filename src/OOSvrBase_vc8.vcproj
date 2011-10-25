@@ -83,7 +83,7 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|x64"
-			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(PlatformName)\$(ConfigurationName)_Svr"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_Svr"
 			ConfigurationType="4"
 			CharacterSet="0"
@@ -109,7 +109,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="C:\sqlite3"
+				AdditionalIncludeDirectories="C:\Work\sqlite"
 				PreprocessorDefinitions="HAVE_SQLITE3_AMALGAMATION"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
@@ -174,13 +174,16 @@
 				Name="VCCLCompilerTool"
 				Optimization="3"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="C:\sqlite3"
+				FavorSizeOrSpeed="1"
+				AdditionalIncludeDirectories="C:\Work\sqlite"
 				PreprocessorDefinitions="HAVE_SQLITE3_AMALGAMATION;NDEBUG"
 				StringPooling="true"
 				RuntimeLibrary="0"
+				EnableFunctionLevelLinking="true"
 				RuntimeTypeInfo="false"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -212,7 +215,7 @@
 		</Configuration>
 		<Configuration
 			Name="Release|x64"
-			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(PlatformName)\$(ConfigurationName)_Svr"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_Svr"
 			ConfigurationType="4"
 			CharacterSet="0"
@@ -240,13 +243,16 @@
 				Name="VCCLCompilerTool"
 				Optimization="3"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="C:\sqlite3"
+				FavorSizeOrSpeed="1"
+				AdditionalIncludeDirectories="C:\Work\sqlite"
 				PreprocessorDefinitions="HAVE_SQLITE3_AMALGAMATION;NDEBUG"
 				StringPooling="true"
 				RuntimeLibrary="0"
+				EnableFunctionLevelLinking="true"
 				RuntimeTypeInfo="false"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -286,10 +292,6 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\CmdArgs.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\Database.cpp"
 				>
 			</File>
@@ -306,7 +308,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ProactorEvSocket.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\ProactorWin32.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\ProactorWin32Pipe.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\ProactorWin32Socket.cpp"
 				>
 			</File>
 			<File
@@ -332,10 +346,6 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath="..\include\OOSvrBase\CmdArgs.h"
-				>
-			</File>
-			<File
 				RelativePath="..\include\config-base.h"
 				>
 			</File>
@@ -356,19 +366,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOSvrBase\internal\ProactorEv.h"
+				RelativePath=".\ProactorEv.h"
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOSvrBase\internal\ProactorImpl.h"
-				>
-			</File>
-			<File
-				RelativePath="..\include\OOSvrBase\internal\ProactorWin32.h"
-				>
-			</File>
-			<File
-				RelativePath="..\include\OOSvrBase\pw_info.h"
+				RelativePath=".\ProactorWin32.h"
 				>
 			</File>
 			<File
