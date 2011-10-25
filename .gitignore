@@ -42,6 +42,8 @@ src/x64/*
 *.vcproj.*.user
 *.vcxproj.*
 *.suo
+*.sdf
+*.opensdf
 
 # Unix stuff
 *.so
