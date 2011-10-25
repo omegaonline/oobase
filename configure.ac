@@ -33,30 +33,6 @@ AM_CONDITIONAL([DEBUG], [test "x$debug" = "xtrue"])
 OO_PROG_CC
 OO_PROG_CXX
 
-# Check the multi-threading flags
-OO_MULTI_THREAD
-
-# Check for the builtin intrinsics functions we use
-OO_C_BUILTINS
-
-# Check for the headers we use
-AC_CHECK_HEADERS([windows.h sys/time.h asl.h syslog.h unistd.h ev.h])
-
-# Add the correct libs to LIBS
-AC_CHECK_LIB([ev],[ev_loop_new],AC_SUBST([EV_LIBS],["-lev"]))
-
-# Check for socket options
-OO_CHECK_SOCKOPT([SO_PEERCRED LOCAL_CREDS])
-
-# Find sqlite3
-OO_LIB_SQLITE3([3.5.0])
-
-# Check for specifics of Unix cred passing
-AC_CHECK_FUNCS([getpeereid getpeerucred])
-AC_CHECK_TYPES([struct cmsgcred])
-AC_CHECK_TYPES([struct fcred])
-AC_CHECK_TYPES([struct sockcred])
-
 # Set sensible default CFLAGS if necessary
 AS_IF([test "x$oo_test_CFLAGS" != "xset"],
 [
@@ -116,6 +92,30 @@ AS_IF([test "x$oo_test_CXXFLAGS" != "xset"],
 
 # Add debug defines
 AS_IF([test "x$debug" = "xtrue"],[CPPFLAGS="$CPPFLAGS -D_DEBUG"],[CPPFLAGS="$CPPFLAGS -DNDEBUG"])
+
+# Check the multi-threading flags
+OO_MULTI_THREAD
+
+# Check for the builtin intrinsics functions we use
+OO_C_BUILTINS
+
+# Check for the headers we use
+AC_CHECK_HEADERS([windows.h sys/time.h asl.h syslog.h unistd.h ev.h])
+
+# Add the correct libs to LIBS
+AC_CHECK_LIB([ev],[ev_loop_new],AC_SUBST([EV_LIBS],["-lev"]))
+
+# Check for socket options
+OO_CHECK_SOCKOPT([SO_PEERCRED LOCAL_CREDS])
+
+# Find sqlite3
+OO_LIB_SQLITE3([3.5.0])
+
+# Check for specifics of Unix cred passing
+AC_CHECK_FUNCS([getpeereid getpeerucred])
+AC_CHECK_TYPES([struct cmsgcred])
+AC_CHECK_TYPES([struct fcred])
+AC_CHECK_TYPES([struct sockcred])
 
 # Set up libtool correctly
 m4_ifdef([LT_PREREQ],,[AC_MSG_ERROR([Need libtool version 2.2.6 or later])])
