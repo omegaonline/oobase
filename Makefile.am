@@ -17,6 +17,8 @@ reallyclean: maintainer-clean
 	rm -f $(srcdir)/Makefile.in
 	rm -f $(srcdir)/aclocal.m4
 	rm -f $(srcdir)/configure
+	rm -f $(srcdir)/autoheader_dummy.h.in
+	rm -f $(srcdir)/autoheader_dummy.h.in~
 	rm -f $(srcdir)/m4/argz.m4
 	rm -f $(srcdir)/m4/libtool.m4
 	rm -f $(srcdir)/m4/ltdl.m4
@@ -24,9 +26,7 @@ reallyclean: maintainer-clean
 	rm -f $(srcdir)/m4/ltsugar.m4
 	rm -f $(srcdir)/m4/ltversion.m4
 	rm -f $(srcdir)/m4/lt~obsolete.m4
-	rm -f $(srcdir)/include/OOBase/autoheader_dummy.h.in
-	rm -f $(srcdir)/include/OOBase/autoheader_dummy.h.in~
-
+	
 ####################################
 # Hook to make the ChangeLog
 dist-hook:
