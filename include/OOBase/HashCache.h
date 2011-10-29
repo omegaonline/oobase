@@ -41,38 +41,20 @@ namespace OOBase
 
 		int insert(const K& key, const V& value)
 		{
-			if (!m_cache)
-			{
-				m_cache = static_cast<CacheEntry*>(Allocator::allocate(m_size*sizeof(CacheEntry)));
-				if (!m_cache)
-					return ERROR_OUTOFMEMORY;
+			if (m_table.find(key))
+				return EEXIST;
 
-				// Set nothing in use
-				for (size_t i=0;i<m_size;++i)
-				{
-					m_cache[i].m_in_use = 0;
-					m_cache[i].m_clk = 0;
-				}
-			}
+			return insert_i(k,v);
+		}
 
-			while (m_cache[m_clock].m_clk)
-			{
-				m_cache[m_clock].m_clk = 0;
-				m_clock = (m_clock+1) % m_size;
-			}
+		int replace(const K& key, const V& value)
+		{
+			V* v = m_table.find(key);
+			if (v)
+				return insert_i(key,value);
 
-			if (m_cache[m_clock].m_in_use)
-			{
-				m_table.erase(key);
-				m_cache[m_clock].~CacheEntry();
-				m_cache[m_clock].m_in_use = 0;
-			}
-
-			int err = m_table.insert(key,value);
-			if (err == 0)
-				::new (&m_cache[m_clock]) CacheEntry(key);
-
-			return err;
+			*v = value;
+			return 0;
 		}
 
 		bool find(const K& key, V& value) const
@@ -120,6 +102,42 @@ namespace OOBase
 		const size_t               m_size;
 		size_t                     m_clock;
 		HashTable<K,V,Allocator,H> m_table;
+
+		int insert_i(const K& key, const V& value)
+		{
+			if (!m_cache)
+			{
+				m_cache = static_cast<CacheEntry*>(Allocator::allocate(m_size*sizeof(CacheEntry)));
+				if (!m_cache)
+					return ERROR_OUTOFMEMORY;
+
+				// Set nothing in use
+				for (size_t i=0;i<m_size;++i)
+				{
+					m_cache[i].m_in_use = 0;
+					m_cache[i].m_clk = 0;
+				}
+			}
+
+			while (m_cache[m_clock].m_clk)
+			{
+				m_cache[m_clock].m_clk = 0;
+				m_clock = (m_clock+1) % m_size;
+			}
+
+			if (m_cache[m_clock].m_in_use)
+			{
+				m_table.erase(key);
+				m_cache[m_clock].~CacheEntry();
+				m_cache[m_clock].m_in_use = 0;
+			}
+
+			int err = m_table.insert(key,value);
+			if (err == 0)
+				::new (&m_cache[m_clock]) CacheEntry(key);
+
+			return err;
+		}
 	};
 }
 
