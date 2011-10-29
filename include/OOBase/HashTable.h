@@ -156,6 +156,7 @@ namespace OOBase
 				if (m_data[i].m_in_use == 2)
 				{
 					m_data[i].~Node();
+					m_data[i].m_in_use = 0;
 					--m_count;
 				}
 			}
