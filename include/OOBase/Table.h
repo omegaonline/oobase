@@ -82,7 +82,7 @@ namespace OOBase
 		
 		bool erase(const K& key, V* value = NULL)
 		{
-			size_t pos = find(key);
+			size_t pos = find_i(key,false);
 			if (pos == npos)
 				return false;
 			
@@ -116,21 +116,19 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		size_t find(K1 key, bool first = false) const
+		V* find(K1 key)
 		{
-			const Node* p = bsearch(key);
+			size_t pos = find_i(key,false);
+			if (pos == npos)
+				return NULL;
 			
-			// Scan for the first
-			while (p && first && p > m_data && (p-1)->m_key == p->m_key)
-				--p;
-
-			return (p ? static_cast<size_t>(p - m_data) : npos);
+			return &m_data[pos].m_value;
 		}
-				
+
 		template <typename K1>
 		bool find(K1 key, V& value, bool first = false) const
 		{
-			size_t pos = find(key,first);
+			size_t pos = find_i(key,first);
 			if (pos == npos)
 				return false;
 			
@@ -138,11 +136,17 @@ namespace OOBase
 			return true;
 		}
 
+		template <typename K1>
+		size_t find_first(K1 key)
+		{
+			return find_i(key,true);
+		}
+
 		int replace(const K& key, const V& value)
 		{
-			size_t pos = find(key);
+			size_t pos = find_i(key,false);
 			if (pos == npos)
-				return  insert(key,value);
+				return insert(key,value);
 			
 			*at(pos) = value;
 			return 0;
@@ -178,7 +182,7 @@ namespace OOBase
 			// This is a Shell-sort because we mostly use sort() in cases where qsort() behaves badly
 			// i.e. insertion at the end and then sort
 			// see http://warp.povusers.org/SortComparison
-						
+
 			// Generate the split intervals
 			// Knuth is my homeboy :)
 			size_t h = 1;
@@ -243,6 +247,18 @@ namespace OOBase
 			}
 			return 0;
 		}
+
+		template <typename K1>
+		size_t find_i(K1 key, bool first) const
+		{
+			const Node* p = bsearch(key);
+
+			// Scan for the first
+			while (p && first && p > m_data && (p-1)->m_key == p->m_key)
+				--p;
+
+			return (p ? static_cast<size_t>(p - m_data) : npos);
+		}
 					
 		template <typename K1>
 		const Node* bsearch(K1 key) const
@@ -250,7 +266,7 @@ namespace OOBase
 			const Node* base = m_data;
 			for (size_t span = m_size; span > 0; span /= 2) 
 			{
-				const Node* mid_point = base + (span / 2);	        
+				const Node* mid_point = base + (span / 2);
 				if (mid_point->m_key == key)
 					return mid_point;
 				
