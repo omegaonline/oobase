@@ -23,17 +23,18 @@
 #define OOBASE_HASHCACHE_H_INCLUDED_
 
 #include "HashTable.h"
+#include "Table.h"
 
 namespace OOBase
 {
-	template <typename K, typename V, typename Allocator = HeapAllocator, typename H = OOBase::Hash<K> >
-	class HashCache
+	template <typename K, typename V, typename Allocator, typename Container>
+	class Cache
 	{
 	public:
-		HashCache(size_t size) : m_cache(NULL), m_size(size), m_clock(0)
+		Cache(size_t size) : m_cache(NULL), m_size(size), m_clock(0)
 		{}
 
-		~HashCache()
+		~Cache()
 		{
 			clear();
 			Allocator::free(m_cache);
@@ -41,28 +42,60 @@ namespace OOBase
 
 		int insert(const K& key, const V& value)
 		{
-			if (m_table.find(key))
-				return EEXIST;
+			if (!m_cache)
+			{
+				m_cache = static_cast<CacheEntry*>(Allocator::allocate(m_size*sizeof(CacheEntry)));
+				if (!m_cache)
+					return ERROR_OUTOFMEMORY;
 
-			return insert_i(k,v);
+				// Set nothing in use
+				for (size_t i=0;i<m_size;++i)
+				{
+					m_cache[i].m_in_use = 0;
+					m_cache[i].m_clk = 0;
+				}
+			}
+
+			int err = m_table.insert(key,value);
+			if (err != 0)
+				return err;
+
+			while (m_cache[m_clock].m_clk)
+			{
+				m_cache[m_clock].m_clk = 0;
+				m_clock = (m_clock+1) % m_size;
+			}
+
+			if (m_cache[m_clock].m_in_use)
+			{
+				m_table.erase(key);
+				m_cache[m_clock].~CacheEntry();
+				m_cache[m_clock].m_in_use = 0;
+			}
+
+			::new (&m_cache[m_clock]) CacheEntry(key);
+
+			return 0;
 		}
 
 		int replace(const K& key, const V& value)
 		{
 			V* v = m_table.find(key);
 			if (v)
-				return insert_i(key,value);
+				return insert(key,value);
 
 			*v = value;
 			return 0;
 		}
 
-		bool find(const K& key, V& value) const
+		template <typename K1>
+		bool find(K1 key, V& value) const
 		{
 			return m_table.find(key,value);
 		}
 
-		V* find(const K& key)
+		template <typename K1>
+		V* find(K1 key)
 		{
 			return m_table.find(key);
 		}
@@ -85,8 +118,8 @@ namespace OOBase
 		// Do not allow copy constructors or assignment
 		// as memory allocation will occur...
 		// and you probably don't want to be copying these around
-		HashCache(const HashCache&);
-		HashCache& operator = (const HashCache&);
+		Cache(const Cache&);
+		Cache& operator = (const Cache&);
 
 		struct CacheEntry
 		{
@@ -98,46 +131,26 @@ namespace OOBase
 			{}
 		};
 
-		CacheEntry*                m_cache;
-		const size_t               m_size;
-		size_t                     m_clock;
-		HashTable<K,V,Allocator,H> m_table;
+		CacheEntry*  m_cache;
+		const size_t m_size;
+		size_t       m_clock;
+		Container    m_table;
+	};
 
-		int insert_i(const K& key, const V& value)
-		{
-			if (!m_cache)
-			{
-				m_cache = static_cast<CacheEntry*>(Allocator::allocate(m_size*sizeof(CacheEntry)));
-				if (!m_cache)
-					return ERROR_OUTOFMEMORY;
+	template <typename K, typename V, typename Allocator = HeapAllocator>
+	class TableCache : public Cache<K,V,Allocator,Table<K,V,Allocator> >
+	{
+	public:
+		TableCache(size_t size) : Cache<K,V,Allocator,Table<K,V,Allocator> >(size)
+		{}
+	};
 
-				// Set nothing in use
-				for (size_t i=0;i<m_size;++i)
-				{
-					m_cache[i].m_in_use = 0;
-					m_cache[i].m_clk = 0;
-				}
-			}
-
-			while (m_cache[m_clock].m_clk)
-			{
-				m_cache[m_clock].m_clk = 0;
-				m_clock = (m_clock+1) % m_size;
-			}
-
-			if (m_cache[m_clock].m_in_use)
-			{
-				m_table.erase(key);
-				m_cache[m_clock].~CacheEntry();
-				m_cache[m_clock].m_in_use = 0;
-			}
-
-			int err = m_table.insert(key,value);
-			if (err == 0)
-				::new (&m_cache[m_clock]) CacheEntry(key);
-
-			return err;
-		}
+	template <typename K, typename V, typename Allocator = HeapAllocator, typename H = OOBase::Hash<K> >
+	class HashCache : public Cache<K,V,Allocator,HashTable<K,V,Allocator,H> >
+	{
+	public:
+		HashCache(size_t size) : Cache<K,V,Allocator,HashTable<K,V,Allocator,H> >(size)
+		{}
 	};
 }
 
