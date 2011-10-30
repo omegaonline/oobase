@@ -491,9 +491,9 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 		Guard<SpinLock> guard(m_lock);
 
 		bool bAdd = true;
-		for (size_t i = 0;i<m_threads.size();++i)
+		for (size_t j = 0;j<m_threads.size();++j)
 		{
-			Thread** ppThread = m_threads.at(i);
+			Thread** ppThread = m_threads.at(j);
 			if (!*ppThread || !(*ppThread)->is_running())
 			{
 				delete *ppThread;

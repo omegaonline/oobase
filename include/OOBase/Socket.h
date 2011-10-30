@@ -26,7 +26,18 @@
 
 #if defined(_WIN32)
 #include <winsock2.h>
+
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 6386)
+#endif
+
 #include <Ws2tcpip.h>
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
+
 #endif
 
 #if defined(HAVE_UNISTD_H)

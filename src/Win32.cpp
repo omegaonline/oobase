@@ -100,18 +100,26 @@ namespace
 		Win32Thunk* instance = static_cast<Win32Thunk*>(i);
 		
 		instance->m_hKernel32 = GetModuleHandleW(L"Kernel32.dll");
-		if (!instance->m_hKernel32)
-			OOBase_CallCriticalFailure(GetLastError());
+		if (instance->m_hKernel32 != NULL)
+		{
+			instance->m_InitOnceExecuteOnce = (pfn_InitOnceExecuteOnce)(GetProcAddress(instance->m_hKernel32,"InitOnceExecuteOnce"));
+			
+			instance->m_InitializeSRWLock = (pfn_InitializeSRWLock)(GetProcAddress(instance->m_hKernel32,"InitializeSRWLock"));
+			instance->m_AcquireSRWLockShared = (pfn_AcquireSRWLockShared)(GetProcAddress(instance->m_hKernel32,"AcquireSRWLockShared"));
+			instance->m_AcquireSRWLockExclusive = (pfn_AcquireSRWLockExclusive)(GetProcAddress(instance->m_hKernel32,"AcquireSRWLockExclusive"));
+			instance->m_ReleaseSRWLockShared = (pfn_ReleaseSRWLockShared)(GetProcAddress(instance->m_hKernel32,"ReleaseSRWLockShared"));
+			instance->m_ReleaseSRWLockExclusive = (pfn_ReleaseSRWLockExclusive)(GetProcAddress(instance->m_hKernel32,"ReleaseSRWLockExclusive"));
+			
+			instance->m_InitializeConditionVariable = (pfn_InitializeConditionVariable)(GetProcAddress(instance->m_hKernel32,"InitializeConditionVariable"));
+			instance->m_SleepConditionVariableCS = (pfn_SleepConditionVariableCS)(GetProcAddress(instance->m_hKernel32,"SleepConditionVariableCS"));
+			instance->m_WakeConditionVariable = (pfn_WakeConditionVariable)(GetProcAddress(instance->m_hKernel32,"WakeConditionVariable"));
+			instance->m_WakeAllConditionVariable = (pfn_WakeAllConditionVariable)(GetProcAddress(instance->m_hKernel32,"WakeAllConditionVariable"));
 
-		instance->m_InitOnceExecuteOnce = (pfn_InitOnceExecuteOnce)(GetProcAddress(instance->m_hKernel32,"InitOnceExecuteOnce"));
+			instance->m_BindIoCompletionCallback = (pfn_BindIoCompletionCallback)(GetProcAddress(instance->m_hKernel32,"BindIoCompletionCallback"));
+		}
+			
 		if (!instance->m_InitOnceExecuteOnce)
 			instance->m_InitOnceExecuteOnce = impl_InitOnceExecuteOnce;
-
-		instance->m_InitializeSRWLock = (pfn_InitializeSRWLock)(GetProcAddress(instance->m_hKernel32,"InitializeSRWLock"));
-		instance->m_AcquireSRWLockShared = (pfn_AcquireSRWLockShared)(GetProcAddress(instance->m_hKernel32,"AcquireSRWLockShared"));
-		instance->m_AcquireSRWLockExclusive = (pfn_AcquireSRWLockExclusive)(GetProcAddress(instance->m_hKernel32,"AcquireSRWLockExclusive"));
-		instance->m_ReleaseSRWLockShared = (pfn_ReleaseSRWLockShared)(GetProcAddress(instance->m_hKernel32,"ReleaseSRWLockShared"));
-		instance->m_ReleaseSRWLockExclusive = (pfn_ReleaseSRWLockExclusive)(GetProcAddress(instance->m_hKernel32,"ReleaseSRWLockExclusive"));
 
 		if (!instance->m_InitializeSRWLock ||
 				!instance->m_AcquireSRWLockShared ||
@@ -124,12 +132,7 @@ namespace
 			instance->m_AcquireSRWLockExclusive = impl_AcquireSRWLockExclusive;
 			instance->m_ReleaseSRWLockShared = impl_ReleaseSRWLockShared;
 			instance->m_ReleaseSRWLockExclusive = impl_ReleaseSRWLockExclusive;
-		}
-
-		instance->m_InitializeConditionVariable = (pfn_InitializeConditionVariable)(GetProcAddress(instance->m_hKernel32,"InitializeConditionVariable"));
-		instance->m_SleepConditionVariableCS = (pfn_SleepConditionVariableCS)(GetProcAddress(instance->m_hKernel32,"SleepConditionVariableCS"));
-		instance->m_WakeConditionVariable = (pfn_WakeConditionVariable)(GetProcAddress(instance->m_hKernel32,"WakeConditionVariable"));
-		instance->m_WakeAllConditionVariable = (pfn_WakeAllConditionVariable)(GetProcAddress(instance->m_hKernel32,"WakeAllConditionVariable"));
+		}		
 
 		if (!instance->m_InitializeConditionVariable ||
 				!instance->m_SleepConditionVariableCS ||
@@ -141,8 +144,6 @@ namespace
 			instance->m_WakeConditionVariable = impl_WakeConditionVariable;
 			instance->m_WakeAllConditionVariable = impl_WakeAllConditionVariable;
 		}
-
-		instance->m_BindIoCompletionCallback = (pfn_BindIoCompletionCallback)(GetProcAddress(instance->m_hKernel32,"BindIoCompletionCallback"));
 
 		instance->m_hHeap = HeapCreate(0,0,0);
 		if (!instance->m_hHeap)

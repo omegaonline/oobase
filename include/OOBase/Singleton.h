@@ -42,7 +42,9 @@ namespace OOBase
 		static T& instance()
 		{
 			T* i = instance_ptr();
-			assert(i);
+			if (!i)
+				OOBase_CallCriticalFailure("Null instance pointer");
+
 			return *i;
 		}
 

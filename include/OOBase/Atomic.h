@@ -26,7 +26,10 @@
 
 #if defined(_MSC_VER)
 
+#pragma warning(push)
+#pragma warning(disable : 6540)
 #include <intrin.h>
+#pragma warning(pop)
 
 /* Define if you have atomic compare-and-swap for 32bit values */
 #define ATOMIC_CAS_32(t,c,x) _InterlockedCompareExchange((long volatile*)(t),(long)(x),(long)(c))

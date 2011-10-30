@@ -444,7 +444,8 @@ int SocketAcceptor::Acceptor::stop(bool destroy)
 	{
 		guard.release();
 		
-		UnregisterWaitEx(m_hWait,INVALID_HANDLE_VALUE);
+		if (!UnregisterWaitEx(m_hWait,INVALID_HANDLE_VALUE))
+			return GetLastError();
 	
 		guard.acquire();
 		
