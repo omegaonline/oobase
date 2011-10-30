@@ -116,6 +116,12 @@ namespace OOBase
 		}
 
 		template <typename K1>
+		bool exists(K1 key) const
+		{
+			return (find_i(key,false) != npos);
+		}
+
+		template <typename K1>
 		V* find(K1 key)
 		{
 			size_t pos = find_i(key,false);
