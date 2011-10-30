@@ -145,6 +145,7 @@
   <ItemGroup>
     <ClCompile Include="BSDSocket.cpp" />
     <ClCompile Include="Buffer.cpp" />
+    <ClCompile Include="CmdArgs.cpp" />
     <ClCompile Include="Condition.cpp" />
     <ClCompile Include="DLL.cpp" />
     <ClCompile Include="Error.cpp" />
@@ -164,6 +165,8 @@
   <ItemGroup>
     <ClInclude Include="..\include\OOBase\Atomic.h" />
     <ClInclude Include="..\include\OOBase\BoundedQueue.h" />
+    <ClInclude Include="..\include\OOBase\Cache.h" />
+    <ClInclude Include="..\include\OOBase\CmdArgs.h" />
     <ClInclude Include="BSDSocket.h" />
     <ClInclude Include="..\include\OOBase\Buffer.h" />
     <ClInclude Include="..\include\OOBase\ByteSwap.h" />
