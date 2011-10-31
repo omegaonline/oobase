@@ -47,6 +47,52 @@ namespace OOBase
 		}
 	};
 	
+	namespace detail
+	{
+		// See http://isthe.com/chongo/tech/comp/fnv/ for details
+		template <size_t d>
+		struct FNV;
+
+		template <>
+		struct FNV<4>
+		{
+			static const size_t offset_bias = 2166136261;
+			static const size_t prime = 16777619;
+		};
+
+		template <>
+		struct FNV<8>
+		{
+			static const size_t offset_bias = 14695981039346656037ull;
+			static const size_t prime = 1099511628211ull;
+		};
+	}
+
+	template <>
+	struct Hash<char*>
+	{
+		static size_t hash(const char* c)
+		{
+			size_t hash = detail::FNV<sizeof(size_t)>::offset_bias;
+			do
+			{
+				hash ^= *c;
+				hash *= detail::FNV<sizeof(size_t)>::prime;
+			}
+			while (*c++ != '\0');
+			return hash;
+		}
+	};
+
+	template <>
+	struct Hash<const char*>
+	{
+		static size_t hash(const char* c)
+		{
+			return Hash<char*>::hash(c);
+		}
+	};
+
 	template <typename K, typename V, typename Allocator = HeapAllocator, typename H = OOBase::Hash<K> >
 	class HashTable
 	{
