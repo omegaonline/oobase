@@ -111,60 +111,9 @@
 ////////////////////////////////////////
 // Define some standard errors to avoid lots of #ifdefs.
 
-#if !defined(_WIN32) && !defined(DOXYGEN)
+#if !defined(ERROR_OUTOFMEMORY) && defined(ENOMEM) && !defined(DOXYGEN)
 #define ERROR_OUTOFMEMORY ENOMEM
 #endif
-
-////////////////////////////////////////
-// Byte-order (endian-ness) determination.
-
-/// if (OOBASE_BYTE_ORDER == OOBASE_LITTLE_ENDIAN) then the current machine is little-endian
-#define OOBASE_LITTLE_ENDIAN 0x0123
-
-/// if (OOBASE_BYTE_ORDER == OOBASE_BIG_ENDIAN) then the current machine is big-endian
-#define OOBASE_BIG_ENDIAN 0x3210
-
-#if defined(DOXYGEN)
-/// Defines the current byte order
-#define OOBASE_BYTE_ORDER
-
-#elif defined(BYTE_ORDER)
-#   if (BYTE_ORDER == LITTLE_ENDIAN)
-#     define OOBASE_BYTE_ORDER OOBASE_LITTLE_ENDIAN
-#   elif (BYTE_ORDER == BIG_ENDIAN)
-#     define OOBASE_BYTE_ORDER OOBASE_BIG_ENDIAN
-#   else
-#     error: unknown BYTE_ORDER!
-#   endif /* BYTE_ORDER */
-# elif defined(_BYTE_ORDER)
-#   if (_BYTE_ORDER == _LITTLE_ENDIAN)
-#     define OOBASE_BYTE_ORDER OOBASE_LITTLE_ENDIAN
-#   elif (_BYTE_ORDER == _BIG_ENDIAN)
-#     define OOBASE_BYTE_ORDER OOBASE_BIG_ENDIAN
-#   else
-#     error: unknown _BYTE_ORDER!
-#   endif /* _BYTE_ORDER */
-# elif defined(__BYTE_ORDER)
-#   if (__BYTE_ORDER == __LITTLE_ENDIAN)
-#     define OOBASE_BYTE_ORDER OOBASE_LITTLE_ENDIAN
-#   elif (__BYTE_ORDER == __BIG_ENDIAN)
-#     define OOBASE_BYTE_ORDER OOBASE_BIG_ENDIAN
-#   else
-#     error: unknown __BYTE_ORDER!
-#   endif /* __BYTE_ORDER */
-# else /* ! BYTE_ORDER && ! __BYTE_ORDER */
-  // We weren't explicitly told, so we have to figure it out . . .
-#   if defined(i386) || defined(__i386__) || defined(_M_IX86) || \
-     defined(vax) || defined(__alpha) || defined(__LITTLE_ENDIAN__) ||\
-     defined(ARM) || defined(_M_IA64) || \
-     defined(_M_AMD64) || defined(__amd64)
-    // We know these are little endian.
-#     define OOBASE_BYTE_ORDER OOBASE_LITTLE_ENDIAN
-#   else
-    // Otherwise, we assume big endian.
-#     define OOBASE_BYTE_ORDER OOBASE_BIG_ENDIAN
-#   endif
-# endif /* ! BYTE_ORDER && ! __BYTE_ORDER */
 
 ////////////////////////////////////////
 // Forward declare custom error handling
