@@ -82,6 +82,17 @@ namespace OOBase
 			while (*c++ != '\0');
 			return hash;
 		}
+
+		static size_t hash(const char* c, size_t len)
+		{
+			size_t hash = detail::FNV<sizeof(size_t)>::offset_bias;
+			for (size_t i=0;i<len;++i)
+			{
+				hash ^= *c++;
+				hash *= detail::FNV<sizeof(size_t)>::prime;
+			}
+			return hash;
+		}
 	};
 
 	template <>
@@ -90,6 +101,11 @@ namespace OOBase
 		static size_t hash(const char* c)
 		{
 			return Hash<char*>::hash(c);
+		}
+
+		static size_t hash(const char* c, size_t len)
+		{
+			return Hash<char*>::hash(c,len);
 		}
 	};
 
