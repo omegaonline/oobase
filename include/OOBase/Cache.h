@@ -28,11 +28,9 @@
 namespace OOBase
 {
 	template <typename K, typename V, typename Allocator, typename Container>
-	class Cache
+	class Cache : public Container
 	{
 	public:
-		static const size_t npos = Container::npos;
-
 		Cache(size_t size) : m_cache(NULL), m_size(size), m_clock(0)
 		{}
 
@@ -58,7 +56,7 @@ namespace OOBase
 				}
 			}
 
-			int err = m_table.insert(key,value);
+			int err = Container::insert(key,value);
 			if (err != 0)
 				return err;
 
@@ -70,7 +68,7 @@ namespace OOBase
 
 			if (m_cache[m_clock].m_in_use)
 			{
-				m_table.remove(key);
+				this->remove(key);
 				m_cache[m_clock].~CacheEntry();
 				m_cache[m_clock].m_in_use = 0;
 			}
@@ -78,28 +76,6 @@ namespace OOBase
 			::new (&m_cache[m_clock]) CacheEntry(key);
 
 			return 0;
-		}
-
-		int replace(const K& key, const V& value)
-		{
-			V* v = m_table.find(key);
-			if (!v)
-				return insert(key,value);
-
-			*v = value;
-			return 0;
-		}
-
-		template <typename K1>
-		bool find(K1 key, V& value) const
-		{
-			return m_table.find(key,value);
-		}
-
-		template <typename K1>
-		V* find(K1 key)
-		{
-			return m_table.find(key);
 		}
 
 		void clear()
@@ -113,7 +89,7 @@ namespace OOBase
 				}
 				m_cache[i].m_clk = 0;
 			}
-			m_table.clear();
+			Container::clear();
 		}
 
 	private:
@@ -136,9 +112,6 @@ namespace OOBase
 		CacheEntry*  m_cache;
 		const size_t m_size;
 		size_t       m_clock;
-
-	protected:
-		Container    m_table;
 	};
 
 	template <typename K, typename V, typename Allocator = HeapAllocator>
@@ -147,27 +120,6 @@ namespace OOBase
 	public:
 		TableCache(size_t size) : Cache<K,V,Allocator,Table<K,V,Allocator> >(size)
 		{}
-
-		template <typename K1>
-		size_t find_first(K1 key)
-		{
-			return this->m_table.find_first(key);
-		}
-
-		V* at(size_t pos)
-		{
-			return this->m_table.at(pos);
-		}
-
-		const V* at(size_t pos) const
-		{
-			return this->m_table.at(pos);
-		}
-
-		const K* key_at(size_t pos) const
-		{
-			return this->m_table.key_at(pos);
-		}
 	};
 
 	template <typename K, typename V, typename Allocator = HeapAllocator, typename H = OOBase::Hash<K> >

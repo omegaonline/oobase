@@ -145,16 +145,6 @@ namespace OOBase
 			return err;
 		}
 
-		int replace(const K& key, const V& value)
-		{
-			size_t pos = find_i(key);
-			if (pos == npos)
-				return insert(key,value);
-			
-			*at(pos) = value;
-			return 0;
-		}
-
 		bool exists(const K& key) const
 		{
 			return (find_i(key) != npos);

@@ -38,6 +38,11 @@ namespace OOBase
 			
 		~HandleTable()
 		{}
+
+		int force_insert(ID id, const V& value)
+		{
+			return baseClass::insert(id,value);
+		}
 			
 		int insert(const V& value, ID& handle, ID min, ID max)
 		{
