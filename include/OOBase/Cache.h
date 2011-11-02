@@ -31,6 +31,8 @@ namespace OOBase
 	class Cache
 	{
 	public:
+		static const size_t npos = Container::npos;
+
 		Cache(size_t size) : m_cache(NULL), m_size(size), m_clock(0)
 		{}
 
@@ -81,7 +83,7 @@ namespace OOBase
 		int replace(const K& key, const V& value)
 		{
 			V* v = m_table.find(key);
-			if (v)
+			if (!v)
 				return insert(key,value);
 
 			*v = value;
@@ -134,6 +136,8 @@ namespace OOBase
 		CacheEntry*  m_cache;
 		const size_t m_size;
 		size_t       m_clock;
+
+	protected:
 		Container    m_table;
 	};
 
@@ -143,6 +147,27 @@ namespace OOBase
 	public:
 		TableCache(size_t size) : Cache<K,V,Allocator,Table<K,V,Allocator> >(size)
 		{}
+
+		template <typename K1>
+		size_t find_first(K1 key)
+		{
+			return m_table.find_first(key);
+		}
+
+		V* at(size_t pos)
+		{
+			return m_table.at(pos);
+		}
+
+		const V* at(size_t pos) const
+		{
+			return m_table.at(pos);
+		}
+
+		const K* key_at(size_t pos) const
+		{
+			return m_table.key_at(pos);
+		}
 	};
 
 	template <typename K, typename V, typename Allocator = HeapAllocator, typename H = OOBase::Hash<K> >
