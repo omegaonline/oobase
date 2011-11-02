@@ -69,7 +69,7 @@ namespace OOBase
 			return 0;
 		}
 		
-		void erase(size_t pos)
+		void remove_at(size_t pos)
 		{
 			if (m_data && pos < m_size)
 			{
@@ -80,7 +80,7 @@ namespace OOBase
 			}
 		}
 		
-		bool erase(const K& key, V* value = NULL)
+		bool remove(const K& key, V* value = NULL)
 		{
 			size_t pos = find_i(key,false);
 			if (pos == npos)
@@ -89,7 +89,7 @@ namespace OOBase
 			if (value)
 				*value = m_data[pos].m_value;
 			
-			erase(pos);
+			remove_at(pos);
 			
 			return true;
 		}

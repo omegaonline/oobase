@@ -50,7 +50,7 @@ namespace OOBase
 		{
 			DLLDestructor& inst = instance();
 			Guard<SpinLock> guard(inst.m_lock);
-			inst.m_list.erase(Node(pfn,p));
+			inst.m_list.remove(Node(pfn,p));
 		}
 
 	private:

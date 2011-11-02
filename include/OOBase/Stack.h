@@ -63,7 +63,7 @@ namespace OOBase
 			return 0;
 		}
 		
-		bool erase(const T& value)
+		bool remove(const T& value)
 		{
 			// This is just really useful!
 			size_t pos = 0;

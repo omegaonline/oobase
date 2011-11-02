@@ -179,7 +179,18 @@ namespace OOBase
 			return &m_data[pos].m_value;
 		}
 		
-		bool erase(const K& key, V* value = NULL)
+		void remove_at(size_t pos)
+		{
+			m_data[pos].~Node();
+			m_data[pos].m_in_use = 1;
+			--m_count;
+
+			size_t next = (pos+1) & (m_size-1);
+			if (m_data[next].m_in_use == 0)
+				m_data[pos].m_in_use = 0;
+		}
+
+		bool remove(const K& key, V* value = NULL)
 		{
 			size_t pos = find_i(key);
 			if (pos == npos)
@@ -188,7 +199,7 @@ namespace OOBase
 			if (value)
 				*value = m_data[pos].m_value;
 			
-			del_node(pos);
+			remove_at(pos);
 			return true;
 		}
 		
@@ -204,7 +215,7 @@ namespace OOBase
 					if (value)
 						*value = m_data[i].m_value;
 					
-					del_node(i);
+					remove_at(i);
 					return true;
 				}
 			}
@@ -293,17 +304,6 @@ namespace OOBase
 
 		mutable bool m_clone;
 
-		void del_node(size_t pos)
-		{
-			m_data[pos].~Node();
-			m_data[pos].m_in_use = 1;
-			--m_count;
-
-			size_t next = (pos+1) & (m_size-1);
-			if (m_data[next].m_in_use == 0)
-				m_data[pos].m_in_use = 0;
-		}
-		
 		int clone(bool grow)
 		{
 			m_clone = false;

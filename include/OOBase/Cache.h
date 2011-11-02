@@ -68,7 +68,7 @@ namespace OOBase
 
 			if (m_cache[m_clock].m_in_use)
 			{
-				m_table.erase(key);
+				m_table.remove(key);
 				m_cache[m_clock].~CacheEntry();
 				m_cache[m_clock].m_in_use = 0;
 			}
