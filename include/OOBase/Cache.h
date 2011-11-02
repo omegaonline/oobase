@@ -151,22 +151,22 @@ namespace OOBase
 		template <typename K1>
 		size_t find_first(K1 key)
 		{
-			return m_table.find_first(key);
+			return this->m_table.find_first(key);
 		}
 
 		V* at(size_t pos)
 		{
-			return m_table.at(pos);
+			return this->m_table.at(pos);
 		}
 
 		const V* at(size_t pos) const
 		{
-			return m_table.at(pos);
+			return this->m_table.at(pos);
 		}
 
 		const K* key_at(size_t pos) const
 		{
-			return m_table.key_at(pos);
+			return this->m_table.key_at(pos);
 		}
 	};
 
