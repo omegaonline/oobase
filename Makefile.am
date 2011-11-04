@@ -83,6 +83,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/RefCount.h \
 	include/OOBase/Singleton.h \
 	include/OOBase/SmartPtr.h \
+	include/OOBase/Set.h \
 	include/OOBase/Socket.h \
 	include/OOBase/Stack.h \
 	include/OOBase/String.h \
