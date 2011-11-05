@@ -148,6 +148,12 @@ namespace OOBase
 			return find_i(key,true);
 		}
 
+		template <typename K1>
+		size_t find_at(K1 key)
+		{
+			return find_i(key,false);
+		}
+
 		bool empty() const
 		{
 			return (m_size == 0);
