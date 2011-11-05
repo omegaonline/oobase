@@ -56,15 +56,15 @@ namespace OOBase
 		template <>
 		struct FNV<4>
 		{
-			static const size_t offset_bias = 2166136261;
-			static const size_t prime = 16777619;
+			static const size_t offset_bias = 2166136261ul;
+			static const size_t prime = 16777619ul;
 		};
 
 		template <>
 		struct FNV<8>
 		{
-			static const size_t offset_bias = 14695981039346656037ull;
-			static const size_t prime = 1099511628211ull;
+			static const unsigned long long offset_bias = 14695981039346656037ull;
+			static const unsigned long long prime = 1099511628211ull;
 		};
 	}
 
