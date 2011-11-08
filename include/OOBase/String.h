@@ -44,7 +44,8 @@ namespace OOBase
 
 		int assign(const char* sz, size_t len = npos);
 		int append(const char* sz, size_t len = npos);
-		void replace(char from, char to);
+		int replace(char from, char to);
+		int truncate(size_t len);
 		int printf(const char* format, ...);
 		int vprintf(const char* format, va_list args);
 		int getenv(const char* envvar);
@@ -151,7 +152,8 @@ namespace OOBase
 
 		int assign(const char* sz, size_t len = npos);
 		int append(const char* sz, size_t len = npos);
-		void replace(char from, char to);
+		int replace(char from, char to);
+		int truncate(size_t len);
 		int printf(const char* format, ...);
 
 		int concat(const char* sz1, const char* sz2)
@@ -226,31 +228,56 @@ namespace OOBase
 
 		static void node_addref(Node* node);
 		static void node_release(Node* node);
-		static Node* node_allocate(size_t len);
+		int copy_on_write(size_t inc);
 	};
 	
-	template <typename T>
-	inline int AppendDirSeparator(T& str)
+	namespace Paths
 	{
-		int err = 0;
-	#if defined(_WIN32)
-		if (str[str.length()-1] != '\\' && str[str.length()-1] != '/')
-			err = str.append("\\",1);
-	#else
-		if (str[str.length()-1] != '/')
-			err = str.append("/",1);
-	#endif
-		return err;
-	}
+		template <typename T>
+		inline int AppendDirSeparator(T& str)
+		{
+			int err = 0;
+		#if defined(_WIN32)
+			if (str[str.length()-1] != '\\' && str[str.length()-1] != '/')
+				err = str.append("\\",1);
+		#else
+			if (str[str.length()-1] != '/')
+				err = str.append("/",1);
+		#endif
+			return err;
+		}
 
-	template <typename T>
-	inline void CorrectDirSeparator(T& str)
-	{
-	#if defined(_WIN32)
-		str.replace('/','\\');
-	#else
-		str.replace('\\','/');
-	#endif
+		template <typename T>
+		inline int CorrectDirSeparators(T& str)
+		{
+		#if defined(_WIN32)
+			return str.replace('/','\\');
+		#else
+			return str.replace('\\','/');
+		#endif
+		}
+
+		template <typename T>
+		inline int SplitDirAndFilename(const T& path, T& dir, T& filename)
+		{
+			int err = dir.assign(path.c_str(),path.length());
+			if (err == 0)
+			{
+				CorrectDirSeparators(dir);
+			#if defined(_WIN32)
+				static const char sep = '\\';
+			#else
+				static const char sep = '/';
+			#endif
+				char* s = strrchr(dir.c_str(),sep);
+				if (s)
+				{
+					if ((err = dir.truncate(s-dir.c_str())) == 0)
+						err = filename.assign(dir.c_str()+1);
+				}
+				return err;
+			}
+		}
 	}
 }
 

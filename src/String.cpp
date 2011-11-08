@@ -72,7 +72,7 @@ int OOBase::LocalString::append(const char* sz, size_t len)
 	return 0;
 }
 
-void OOBase::LocalString::replace(char from, char to)
+int OOBase::LocalString::replace(char from, char to)
 {
 	size_t i = length();
 	while (i > 0)
@@ -81,6 +81,14 @@ void OOBase::LocalString::replace(char from, char to)
 		if (m_data[i] == from)
 			m_data[i] = to;
 	}
+	return 0;
+}
+
+int OOBase::LocalString::truncate(size_t len)
+{
+	if (len < length())
+		m_data[len] = '\0';
+	return 0;
 }
 
 int OOBase::LocalString::vprintf(const char* format, va_list args)
@@ -192,80 +200,110 @@ size_t OOBase::LocalString::find(const char* sz, size_t start) const
 	return static_cast<size_t>(p - m_data);
 }
 
-int OOBase::String::assign(const char* sz, size_t len)
+int OOBase::String::copy_on_write(size_t inc)
 {
-	Node* new_node = NULL;
-	if (sz && len)
+	if (!m_node || m_node->m_refcount > 1)
 	{
-		if (len == npos)
-			len = strlen(sz);
+		size_t our_len = (m_node ? length() : 0);
 
-		new_node = node_allocate(len);
+		// There is an implicit len+1 here as m_data[1] in struct
+		Node* new_node = static_cast<Node*>(OOBase::HeapAllocator::allocate(sizeof(Node) + our_len+inc));
 		if (!new_node)
 			return ERROR_OUTOFMEMORY;
 
+		if (our_len)
+			memcpy(new_node->m_data,m_node->m_data,our_len);
+
 		new_node->m_refcount = 1;
-		memcpy(new_node->m_data,sz,len);
-		new_node->m_data[len] = '\0';
+		new_node->m_data[our_len] = '\0';
+
+		if (m_node)
+			node_release(m_node);
+
+		m_node = new_node;
+	}
+	else if (inc > 0)
+	{
+		size_t our_len = length();
+
+		// It's our buffer to play with... (There is an implicit +1 here)
+		Node* new_node = static_cast<Node*>(OOBase::HeapAllocator::reallocate(m_node,sizeof(Node) + our_len+inc));
+		if (!new_node)
+			return ERROR_OUTOFMEMORY;
+
+		m_node = new_node;
 	}
 
-	node_release(m_node);
-	m_node = new_node;
-
 	return 0;
+}
+
+int OOBase::String::assign(const char* sz, size_t len)
+{
+	int err = 0;
+
+	if (len == npos && sz)
+		len = strlen(sz);
+
+	if (sz && len)
+	{
+		if ((err = copy_on_write(len)) == 0)
+		{
+			memcpy(m_node->m_data,sz,len);
+			m_node->m_data[len] = '\0';
+		}
+	}
+	return err;
 }
 
 int OOBase::String::append(const char* sz, size_t len)
 {
+	int err = 0;
+	if (len == npos && sz)
+		len = strlen(sz);
+
 	if (sz && len)
 	{
-		size_t our_len = length();
-		if (len == npos)
-			len = strlen(sz);
-
-		Node* new_node = NULL;
-		if (m_node->m_refcount == 1)
+		if ((err = copy_on_write(len)) == 0)
 		{
-			// It's our buffer to play with...
-			new_node = static_cast<Node*>(OOBase::HeapAllocator::reallocate(m_node,sizeof(Node) + our_len+len));
-			if (!new_node)
-				return ERROR_OUTOFMEMORY;
-
-			memcpy(new_node->m_data+our_len,sz,len);
-			new_node->m_data[our_len+len] = '\0';
+			size_t our_len = length();
+			memcpy(m_node->m_data+our_len,sz,len);
+			m_node->m_data[our_len+len] = '\0';
 		}
-		else
-		{
-			new_node = node_allocate(our_len+len);
-			if (!new_node)
-				return ERROR_OUTOFMEMORY;
-
-			if (our_len)
-				memcpy(new_node->m_data,m_node->m_data,our_len);
-
-			new_node->m_refcount = 1;
-			memcpy(new_node->m_data+our_len,sz,len);
-			new_node->m_data[our_len+len] = '\0';
-
-			node_release(m_node);
-		}
-
-		m_node = new_node;
-		return 0;
 	}
 
-	return 0;
+	return err;
 }
 
-void OOBase::String::replace(char from, char to)
+int OOBase::String::replace(char from, char to)
 {
+	bool copied = false;
 	size_t i = length();
 	while (i > 0)
 	{
 		--i;
 		if (m_node->m_data[i] == from)
+		{
+			if (!copied)
+			{
+				int err = copy_on_write(0);
+				if (err != 0)
+					return err;
+
+				copied = true;
+			}
 			m_node->m_data[i] = to;
+		}
 	}
+	return 0;
+}
+
+int OOBase::String::truncate(size_t len)
+{
+	int err = 0;
+	if (len < length() && (err = copy_on_write(0)) == 0)
+		m_node->m_data[len] = '\0';
+
+	return err;
 }
 
 int OOBase::String::printf(const char* format, ...)
@@ -346,10 +384,4 @@ void OOBase::String::node_release(Node* node)
 {
 	if (node && --node->m_refcount == 0)
 		OOBase::HeapAllocator::free(node);
-}
-
-OOBase::String::Node* OOBase::String::node_allocate(size_t len)
-{
-	// There is an implicit len+1 here as m_data[1] in struct
-	return static_cast<Node*>(OOBase::HeapAllocator::allocate(sizeof(Node) + len));
 }
