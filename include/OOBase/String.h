@@ -265,7 +265,7 @@ namespace OOBase
 		}
 
 		template <typename T>
-		inline int SplitDirAndFilename(const T& path, T& dir, T& filename)
+		inline int SplitDirAndFilename(const char* path, T& dir, T& filename)
 		{
 			int err = dir.assign(path);
 			if (err == 0)
