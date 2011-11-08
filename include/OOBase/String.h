@@ -42,6 +42,7 @@ namespace OOBase
 			OOBase::LocalAllocator::free(m_data);
 		}
 
+		int assign(const LocalString& str);
 		int assign(const char* sz, size_t len = npos);
 		int append(const char* sz, size_t len = npos);
 		int replace(char from, char to);
@@ -136,7 +137,7 @@ namespace OOBase
 
 		String& operator = (const String& rhs)
 		{
-			if (&rhs != this)
+			if (&rhs != this && m_node != rhs.m_node)
 			{
 				node_release(m_node);
 				m_node = rhs.m_node;
@@ -148,6 +149,12 @@ namespace OOBase
 		~String()
 		{
 			node_release(m_node);
+		}
+
+		int assign(const String& str)
+		{
+			*this = str;
+			return 0;
 		}
 
 		int assign(const char* sz, size_t len = npos);
@@ -260,7 +267,7 @@ namespace OOBase
 		template <typename T>
 		inline int SplitDirAndFilename(const T& path, T& dir, T& filename)
 		{
-			int err = dir.assign(path.c_str(),path.length());
+			int err = dir.assign(path);
 			if (err == 0)
 			{
 				CorrectDirSeparators(dir);

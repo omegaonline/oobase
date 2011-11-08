@@ -24,6 +24,14 @@
 
 #include <stdlib.h>
 
+int OOBase::LocalString::assign(const LocalString& str)
+{
+	int err = 0;
+	if (this != &str)
+		err = assign(str.c_str(),str.length());
+	return err;
+}
+
 int OOBase::LocalString::assign(const char* sz, size_t len)
 {
 	char* new_sz = NULL;
