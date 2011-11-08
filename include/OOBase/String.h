@@ -276,7 +276,7 @@ namespace OOBase
 			#else
 				static const char sep = '/';
 			#endif
-				char* s = strrchr(dir.c_str(),sep);
+				const char* s = strrchr(dir.c_str(),sep);
 				if (s)
 				{
 					if ((err = dir.truncate(s-dir.c_str())) == 0)
