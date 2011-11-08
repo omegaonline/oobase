@@ -282,8 +282,8 @@ namespace OOBase
 					if ((err = dir.truncate(s-dir.c_str())) == 0)
 						err = filename.assign(dir.c_str()+1);
 				}
-				return err;
 			}
+			return err;
 		}
 	}
 }
