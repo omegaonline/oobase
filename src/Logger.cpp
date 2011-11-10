@@ -281,7 +281,7 @@ namespace
 		if (pszSrcFile)
 			m_pszSrcFile = pszSrcFile;
 
-		openlog(name,LOG_NDELAY,LOG_DAEMON);
+		openlog(name,LOG_NDELAY,LOG_DAEMON | LOG_CONS);
 	}
 
 	void SysLogLogger::log(OOSvrBase::Logger::Priority priority, const char* msg)
@@ -310,6 +310,8 @@ namespace
 		default:
 			break;
 		}
+
+		syslog(wType,"%s",msg);
 
 		FILE* out_file = stdout;
 		switch (priority)
