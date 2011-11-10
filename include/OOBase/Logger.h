@@ -2,29 +2,29 @@
 //
 // Copyright (C) 2009 Rick Taylor
 //
-// This file is part of OOSvrBase, the Omega Online Base library.
+// This file is part of OOBase, the Omega Online Base library.
 //
-// OOSvrBase is free software: you can redistribute it and/or modify
+// OOBase is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// OOSvrBase is distributed in the hope that it will be useful,
+// OOBase is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with OOSvrBase.  If not, see <http://www.gnu.org/licenses/>.
+// along with OOBase.  If not, see <http://www.gnu.org/licenses/>.
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#ifndef OOSVRBASE_LOGGER_H_INCLUDED_
-#define OOSVRBASE_LOGGER_H_INCLUDED_
+#ifndef OOBASE_LOGGER_H_INCLUDED_
+#define OOBASE_LOGGER_H_INCLUDED_
 
 #include "../config-base.h"
 
-namespace OOSvrBase
+namespace OOBase
 {
 	namespace Logger
 	{
@@ -63,10 +63,10 @@ namespace OOSvrBase
 /// Log an Error message including file and line number, and return ret_val.
 #define LOG_ERROR_RETURN(expr,ret_val)
 #else
-#define LOG_DEBUG(expr) OOSvrBase::Logger::filenum_t(OOSvrBase::Logger::Debug,__FILE__,__LINE__).log expr
-#define LOG_WARNING(expr) OOSvrBase::Logger::filenum_t(OOSvrBase::Logger::Warning,__FILE__,__LINE__).log expr
-#define LOG_ERROR(expr) OOSvrBase::Logger::filenum_t(OOSvrBase::Logger::Error,__FILE__,__LINE__).log expr
+#define LOG_DEBUG(expr) OOBase::Logger::filenum_t(OOBase::Logger::Debug,__FILE__,__LINE__).log expr
+#define LOG_WARNING(expr) OOBase::Logger::filenum_t(OOBase::Logger::Warning,__FILE__,__LINE__).log expr
+#define LOG_ERROR(expr) OOBase::Logger::filenum_t(OOBase::Logger::Error,__FILE__,__LINE__).log expr
 #define LOG_ERROR_RETURN(expr,ret_val) return (LOG_ERROR(expr),ret_val)
 #endif
 
-#endif // OOSVRBASE_LOGGER_H_INCLUDED_
+#endif // OOBASE_LOGGER_H_INCLUDED_

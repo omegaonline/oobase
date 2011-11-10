@@ -2,20 +2,20 @@
 //
 // Copyright (C) 2009 Rick Taylor
 //
-// This file is part of OOSvrBase, the Omega Online Base library.
+// This file is part of OOBase, the Omega Online Base library.
 //
-// OOSvrBase is free software: you can redistribute it and/or modify
+// OOBase is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// OOSvrBase is distributed in the hope that it will be useful,
+// OOBase is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with OOSvrBase.  If not, see <http://www.gnu.org/licenses/>.
+// along with OOBase.  If not, see <http://www.gnu.org/licenses/>.
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
@@ -23,10 +23,9 @@
 #include "../include/OOBase/Once.h"
 #include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/tr24731.h"
+#include "../include/OOBase/SecurityWin32.h"
 #include "../include/OOBase/String.h"
-
-#include "../include/OOSvrBase/Logger.h"
-#include "../include/OOSvrBase/SecurityWin32.h"
+#include "../include/OOBase/Logger.h"
 
 #if defined(_WIN32)
 #define getpid GetCurrentProcessId
@@ -63,7 +62,7 @@ namespace
 		static void init();
 
 		void open(const char* name, const char* pszSrcFile);
-		void log(OOSvrBase::Logger::Priority priority, const char* msg);
+		void log(OOBase::Logger::Priority priority, const char* msg);
 		const char* src() const { return m_pszSrcFile; }
 
 	private:
@@ -88,7 +87,7 @@ namespace
 		static void init();
 
 		void open(const char* name, const char* pszSrcFile);
-		void log(OOSvrBase::Logger::Priority priority, const char* msg);
+		void log(OOBase::Logger::Priority priority, const char* msg);
 		const char* src() const { return m_pszSrcFile; }
 
 	private:
@@ -171,22 +170,22 @@ namespace
 		m_hLog = RegisterEventSourceA(NULL,name);
 	}
 
-	void Win32Logger::log(OOSvrBase::Logger::Priority priority, const char* msg)
+	void Win32Logger::log(OOBase::Logger::Priority priority, const char* msg)
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
 		WORD wType = 0;
 		switch (priority)
 		{
-		case OOSvrBase::Logger::Error:
+		case OOBase::Logger::Error:
 			wType = EVENTLOG_ERROR_TYPE;
 			break;
 
-		case OOSvrBase::Logger::Warning:
+		case OOBase::Logger::Warning:
 			wType = EVENTLOG_WARNING_TYPE;
 			break;
 
-		case OOSvrBase::Logger::Information:
+		case OOBase::Logger::Information:
 			wType = EVENTLOG_INFORMATION_TYPE;
 			break;
 
@@ -195,7 +194,7 @@ namespace
 		}
 
 #if !defined(_DEBUG)
-		if (m_hLog && priority != OOSvrBase::Logger::Debug)
+		if (m_hLog && priority != OOBase::Logger::Debug)
 		{
 			const char* arrBufs[2] = { msg, NULL };
 
@@ -231,7 +230,7 @@ namespace
 			ReportEventA(m_hLog,wType,0,0,psid,1,0,arrBufs,NULL);
 		}
 
-		if (priority == OOSvrBase::Logger::Debug)
+		if (priority == OOBase::Logger::Debug)
 #endif
 		{
 			OutputDebugStringA(msg);
@@ -241,17 +240,17 @@ namespace
 		FILE* out_file = stdout;
 		switch (priority)
 		{
-		case OOSvrBase::Logger::Error:
+		case OOBase::Logger::Error:
 			out_file = stderr;
 			fputs("Error: ",out_file);
 			break;
 
-		case OOSvrBase::Logger::Warning:
+		case OOBase::Logger::Warning:
 			fputs("Warning: ",out_file);
 			break;
 
 #if !defined(_DEBUG)
-		case OOSvrBase::Logger::Debug:
+		case OOBase::Logger::Debug:
 			return;
 #endif
 
@@ -284,26 +283,26 @@ namespace
 		openlog(name,LOG_NDELAY,LOG_DAEMON | LOG_CONS);
 	}
 
-	void SysLogLogger::log(OOSvrBase::Logger::Priority priority, const char* msg)
+	void SysLogLogger::log(OOBase::Logger::Priority priority, const char* msg)
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
 		int wType = 0;
 		switch (priority)
 		{
-		case OOSvrBase::Logger::Error:
+		case OOBase::Logger::Error:
 			wType = LOG_MAKEPRI(LOG_DAEMON,LOG_ERR);
 			break;
 
-		case OOSvrBase::Logger::Warning:
+		case OOBase::Logger::Warning:
 			wType = LOG_MAKEPRI(LOG_DAEMON,LOG_WARNING);
 			break;
 
-		case OOSvrBase::Logger::Information:
+		case OOBase::Logger::Information:
 			wType = LOG_MAKEPRI(LOG_DAEMON,LOG_INFO);
 			break;
 
-		case OOSvrBase::Logger::Debug:
+		case OOBase::Logger::Debug:
 			wType = LOG_MAKEPRI(LOG_DAEMON,LOG_DEBUG);
 			break;
 
@@ -316,17 +315,17 @@ namespace
 		FILE* out_file = stdout;
 		switch (priority)
 		{
-		case OOSvrBase::Logger::Error:
+		case OOBase::Logger::Error:
 			out_file = stderr;
 			fputs("Error: ",out_file);
 			break;
 
-		case OOSvrBase::Logger::Warning:
+		case OOBase::Logger::Warning:
 			fputs("Warning: ",out_file);
 			break;
 
 #if !defined(_DEBUG)
-		case OOSvrBase::Logger::Debug:
+		case OOBase::Logger::Debug:
 			return;
 #endif
 
@@ -343,12 +342,12 @@ namespace
 
 } // Anonymous namespace
 
-void OOSvrBase::Logger::open(const char* name, const char* pszSrcFile)
+void OOBase::Logger::open(const char* name, const char* pszSrcFile)
 {
 	LoggerInstance().open(name,pszSrcFile);
 }
 
-void OOSvrBase::Logger::log(Priority priority, const char* fmt, ...)
+void OOBase::Logger::log(Priority priority, const char* fmt, ...)
 {
 	va_list args;
 	va_start(args,fmt);
@@ -362,14 +361,14 @@ void OOSvrBase::Logger::log(Priority priority, const char* fmt, ...)
 		LoggerInstance().log(priority,msg.c_str());
 }
 
-OOSvrBase::Logger::filenum_t::filenum_t(Priority priority, const char* pszFilename, unsigned int nLine) :
+OOBase::Logger::filenum_t::filenum_t(Priority priority, const char* pszFilename, unsigned int nLine) :
 		m_priority(priority),
 		m_pszFilename(pszFilename),
 		m_nLine(nLine)
 {
 }
 
-void OOSvrBase::Logger::filenum_t::log(const char* fmt, ...)
+void OOBase::Logger::filenum_t::log(const char* fmt, ...)
 {
 	va_list args;
 	va_start(args,fmt);

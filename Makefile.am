@@ -75,6 +75,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/GlobalNew.h \
 	include/OOBase/HandleTable.h \
 	include/OOBase/HashTable.h \
+	include/OOBase/Logger.h \
 	include/OOBase/Memory.h \
 	include/OOBase/Mutex.h \
 	include/OOBase/Once.h \
@@ -83,6 +84,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/RefCount.h \
 	include/OOBase/Singleton.h \
 	include/OOBase/SmartPtr.h \
+	include/OOBase/SecurityWin32.h \
 	include/OOBase/Set.h \
 	include/OOBase/Socket.h \
 	include/OOBase/Stack.h \
@@ -103,10 +105,12 @@ liboobase_la_SOURCES = \
 	src/Condition.cpp \
 	src/DLL.cpp \
 	src/Error.cpp \
+	src/Logger.cpp \
 	src/Memory.cpp \
 	src/Mutex.cpp \
 	src/Once.cpp \
 	src/Posix.cpp \
+	src/SecurityWin32.cpp \
 	src/String.cpp \
 	src/Thread.cpp \
 	src/TimeVal.cpp \
@@ -130,15 +134,12 @@ endif
 
 liboosvrbase_la_SOURCES = \
 	include/OOSvrBase/Database.h \
-	include/OOSvrBase/Logger.h \
 	include/OOSvrBase/Proactor.h \
-	include/OOSvrBase/SecurityWin32.h \
 	include/OOSvrBase/Service.h \
 	src/ProactorEv.h \
 	src/ProactorWin32.h \
 	src/Database.cpp \
 	src/GetPeerUid.cpp \
-	src/Logger.cpp \
 	src/Proactor.cpp \
 	src/ProactorEv.cpp \
 	src/ProactorEvSocket.cpp \
@@ -146,6 +147,5 @@ liboosvrbase_la_SOURCES = \
 	src/ProactorWin32Pipe.cpp \
 	src/ProactorWin32Socket.cpp \
 	src/pw_info.cpp \
-	src/SecurityWin32.cpp \
 	src/Service.cpp \
 	src/SQLite3_comp.c

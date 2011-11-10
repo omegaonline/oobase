@@ -19,12 +19,14 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOSvrBase/Service.h"
-#include "../include/OOSvrBase/Logger.h"
+#include "../include/OOBase/Logger.h"
 #include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Singleton.h"
 #include "../include/OOBase/String.h"
 #include "../include/OOBase/Posix.h"
+
+#include "../include/OOSvrBase/Service.h"
+
 #include "Win32Impl.h"
 
 #if defined(HAVE_UNISTD_H)
@@ -289,7 +291,7 @@ bool OOSvrBase::Service::pid_file(const char* pszPidFile)
 		if (errno == EACCES || errno == EAGAIN)
 		{
 			close(fd);
-			OOSvrBase::Logger::log(OOSvrBase::Logger::Warning,"Service instance already running");
+			OOBase::Logger::log(OOBase::Logger::Warning,"Service instance already running");
 			return false;
 		}
 		else

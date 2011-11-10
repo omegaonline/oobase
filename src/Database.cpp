@@ -20,8 +20,9 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/Memory.h"
+#include "../include/OOBase/Logger.h"
+
 #include "../include/OOSvrBase/Database.h"
-#include "../include/OOSvrBase/Logger.h"
 
 #if defined(HAVE_SQLITE3_H) || defined(HAVE_SQLITE3_AMALGAMATION)
 

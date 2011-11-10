@@ -2,24 +2,24 @@
 //
 // Copyright (C) 2009 Rick Taylor
 //
-// This file is part of OOSvrBase, the Omega Online Base library.
+// This file is part of OOBase, the Omega Online Base library.
 //
-// OOSvrBase is free software: you can redistribute it and/or modify
+// OOBase is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// OOSvrBase is distributed in the hope that it will be useful,
+// OOBase is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with OOSvrBase.  If not, see <http://www.gnu.org/licenses/>.
+// along with OOBase.  If not, see <http://www.gnu.org/licenses/>.
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOSvrBase/SecurityWin32.h"
+#include "../include/OOBase/SecurityWin32.h"
 
 #if defined(_WIN32)
 
@@ -39,7 +39,7 @@ namespace
 	};
 }
 
-OOSvrBase::Win32::sec_descript_t::sec_descript_t()
+OOBase::Win32::sec_descript_t::sec_descript_t()
 {
 	// Create a new security descriptor
 	m_psd = (PSECURITY_DESCRIPTOR)LocalAlloc(LPTR,SECURITY_DESCRIPTOR_MIN_LENGTH);
@@ -51,11 +51,11 @@ OOSvrBase::Win32::sec_descript_t::sec_descript_t()
 		OOBase_CallCriticalFailure(GetLastError());
 }
 
-OOSvrBase::Win32::sec_descript_t::~sec_descript_t()
+OOBase::Win32::sec_descript_t::~sec_descript_t()
 {
 }
 
-DWORD OOSvrBase::Win32::sec_descript_t::SetEntriesInAcl(ULONG cCountOfExplicitEntries, PEXPLICIT_ACCESSW pListOfExplicitEntries, PACL OldAcl)
+DWORD OOBase::Win32::sec_descript_t::SetEntriesInAcl(ULONG cCountOfExplicitEntries, PEXPLICIT_ACCESSW pListOfExplicitEntries, PACL OldAcl)
 {
 	if (m_pACL)
 		m_pACL = NULL;
@@ -74,7 +74,7 @@ DWORD OOSvrBase::Win32::sec_descript_t::SetEntriesInAcl(ULONG cCountOfExplicitEn
 	return ERROR_SUCCESS;
 }
 
-DWORD OOSvrBase::Win32::GetNameFromToken(HANDLE hToken, OOBase::SmartPtr<wchar_t,OOBase::LocalAllocator>& strUserName, OOBase::SmartPtr<wchar_t,OOBase::LocalAllocator>& strDomainName)
+DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, OOBase::SmartPtr<wchar_t,OOBase::LocalAllocator>& strUserName, OOBase::SmartPtr<wchar_t,OOBase::LocalAllocator>& strDomainName)
 {
 	// Find out all about the user associated with hToken
 	OOBase::SmartPtr<TOKEN_USER,OOBase::HeapAllocator> ptrUserInfo = static_cast<TOKEN_USER*>(GetTokenInfo(hToken,TokenUser));
@@ -103,7 +103,7 @@ DWORD OOSvrBase::Win32::GetNameFromToken(HANDLE hToken, OOBase::SmartPtr<wchar_t
 	return ERROR_SUCCESS;
 }
 
-DWORD OOSvrBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile)
+DWORD OOBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile)
 {
 	// Get the names associated with the user SID
 	OOBase::SmartPtr<wchar_t,OOBase::LocalAllocator> strUserName;
@@ -142,7 +142,7 @@ DWORD OOSvrBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile
 	return ERROR_SUCCESS;
 }
 
-DWORD OOSvrBase::Win32::GetLogonSID(HANDLE hToken, OOBase::SmartPtr<void,OOBase::LocalAllocator>& pSIDLogon)
+DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, OOBase::SmartPtr<void,OOBase::LocalAllocator>& pSIDLogon)
 {
 	// Get the logon SID of the Token
 	OOBase::SmartPtr<TOKEN_GROUPS,OOBase::HeapAllocator> ptrGroups = static_cast<TOKEN_GROUPS*>(GetTokenInfo(hToken,TokenGroups));
@@ -173,7 +173,7 @@ DWORD OOSvrBase::Win32::GetLogonSID(HANDLE hToken, OOBase::SmartPtr<void,OOBase:
 	return ERROR_INVALID_SID;
 }
 
-DWORD OOSvrBase::Win32::SetTokenDefaultDACL(HANDLE hToken)
+DWORD OOBase::Win32::SetTokenDefaultDACL(HANDLE hToken)
 {
 	// Get the current Default DACL
 	OOBase::SmartPtr<TOKEN_DEFAULT_DACL,OOBase::HeapAllocator> ptrDef_dacl = static_cast<TOKEN_DEFAULT_DACL*>(GetTokenInfo(hToken,TokenDefaultDacl));
@@ -210,7 +210,7 @@ DWORD OOSvrBase::Win32::SetTokenDefaultDACL(HANDLE hToken)
 	return dwRes;
 }
 
-DWORD OOSvrBase::Win32::EnableUserAccessToDir(const wchar_t* pszPath, const TOKEN_USER* pUser)
+DWORD OOBase::Win32::EnableUserAccessToDir(const wchar_t* pszPath, const TOKEN_USER* pUser)
 {
 	wchar_t szPath[MAX_PATH] = {0};
 	PathCanonicalizeW(szPath,pszPath);
@@ -244,7 +244,7 @@ DWORD OOSvrBase::Win32::EnableUserAccessToDir(const wchar_t* pszPath, const TOKE
 	return SetNamedSecurityInfoW(szPath,SE_FILE_OBJECT,DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,NULL,NULL,pACLNew,NULL);
 }
 
-DWORD OOSvrBase::Win32::RestrictToken(HANDLE& hToken)
+DWORD OOBase::Win32::RestrictToken(HANDLE& hToken)
 {
 	// Work out what version of windows we are running on...
 	OSVERSIONINFOEXW os = {0};
@@ -301,7 +301,7 @@ DWORD OOSvrBase::Win32::RestrictToken(HANDLE& hToken)
 	return ERROR_SUCCESS;
 }
 
-void* OOSvrBase::Win32::GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls)
+void* OOBase::Win32::GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls)
 {
 	for (DWORD dwLen = 256;;)
 	{
@@ -326,7 +326,7 @@ void* OOSvrBase::Win32::GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls)
 	}
 }
 
-bool OOSvrBase::Win32::MatchSids(ULONG count, PSID_AND_ATTRIBUTES pSids1, PSID_AND_ATTRIBUTES pSids2)
+bool OOBase::Win32::MatchSids(ULONG count, PSID_AND_ATTRIBUTES pSids1, PSID_AND_ATTRIBUTES pSids2)
 {
 	for (ULONG i=0; i<count; ++i)
 	{
@@ -348,7 +348,7 @@ bool OOSvrBase::Win32::MatchSids(ULONG count, PSID_AND_ATTRIBUTES pSids1, PSID_A
 	return true;
 }
 
-bool OOSvrBase::Win32::MatchPrivileges(ULONG count, PLUID_AND_ATTRIBUTES Privs1, PLUID_AND_ATTRIBUTES Privs2)
+bool OOBase::Win32::MatchPrivileges(ULONG count, PLUID_AND_ATTRIBUTES Privs1, PLUID_AND_ATTRIBUTES Privs2)
 {
 	for (ULONG i=0; i<count; ++i)
 	{

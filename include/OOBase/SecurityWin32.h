@@ -2,29 +2,29 @@
 //
 // Copyright (C) 2009 Rick Taylor
 //
-// This file is part of OOSvrBase, the Omega Online Base library.
+// This file is part of OOBase, the Omega Online Base library.
 //
-// OOSvrBase is free software: you can redistribute it and/or modify
+// OOBase is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// OOSvrBase is distributed in the hope that it will be useful,
+// OOBase is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with OOSvrBase.  If not, see <http://www.gnu.org/licenses/>.
+// along with OOBase.  If not, see <http://www.gnu.org/licenses/>.
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#ifndef OOSVRBASE_SECURITY_WIN32_H_INCLUDED_
-#define OOSVRBASE_SECURITY_WIN32_H_INCLUDED_
+#ifndef OOBASE_SECURITY_WIN32_H_INCLUDED_
+#define OOBASE_SECURITY_WIN32_H_INCLUDED_
 
 #if defined(_WIN32)
 
-#include "../OOBase/SmartPtr.h"
+#include "SmartPtr.h"
 
 #include <userenv.h>
 #include <lm.h>
@@ -78,7 +78,7 @@ CreateRestrictedToken(
 #endif
 #if defined(_WIN32) || defined(DOXYGEN)
 
-namespace OOSvrBase
+namespace OOBase
 {
 	namespace Win32
 	{
@@ -123,4 +123,4 @@ namespace OOSvrBase
 
 #endif // _WIN32
 
-#endif // OOSVRBASE_SECURITY_WIN32_H_INCLUDED_
+#endif // OOBASE_SECURITY_WIN32_H_INCLUDED_
