@@ -34,11 +34,7 @@ namespace OOBase
 		static const int MaxAlignment = 8;
 
 		CDRStream(size_t len = 256) :
-#if (OOBASE_BYTE_ORDER == OMEGA_BIG_ENDIAN)
-				m_big_endian(true),
-#else
-				m_big_endian(false),
-#endif
+				m_endianess(OOBASE_BYTE_ORDER),
 				m_last_error(0)
 		{
 			if (len > 0)
@@ -51,11 +47,7 @@ namespace OOBase
 
 		CDRStream(Buffer* buffer) :
 				m_buffer(buffer),
-#if (OOBASE_BYTE_ORDER == OMEGA_BIG_ENDIAN)
-				m_big_endian(true),
-#else
-				m_big_endian(false),
-#endif
+				m_endianess(OOBASE_BYTE_ORDER),
 				m_last_error(0)
 		{ 
 			if (m_buffer)
@@ -64,7 +56,7 @@ namespace OOBase
 
 		CDRStream(const CDRStream& rhs) :
 				m_buffer(rhs.m_buffer),
-				m_big_endian(rhs.m_big_endian),
+				m_endianess(rhs.m_endianess),
 				m_last_error(rhs.m_last_error)
 		{
 		}
@@ -74,7 +66,7 @@ namespace OOBase
 			if (&rhs != this)
 			{
 				m_buffer = rhs.m_buffer;
-				m_big_endian = rhs.m_big_endian;
+				m_endianess = rhs.m_endianess;
 				m_last_error = rhs.m_last_error;
 			}
 			return *this;
@@ -108,15 +100,15 @@ namespace OOBase
 			return m_last_error;
 		}
 
-		void big_endian(bool be)
+		/*void big_endian(bool be)
 		{
-			m_big_endian = be;
+			m_endianess = (be ? OOBASE_BIG_ENDIAN : OOBASE_LITTLE_ENDIAN);
 		}
 
 		bool big_endian() const
 		{
-			return m_big_endian;
-		}
+			return (m_endianess == OOBASE_BIG_ENDIAN);
+		}*/
 
 		int last_error() const
 		{
@@ -126,11 +118,7 @@ namespace OOBase
 		template <typename T>
 		T byte_swap(const T& val) const
 		{
-#if (OOBASE_BYTE_ORDER == OMEGA_BIG_ENDIAN)
-			return (m_big_endian ? val : OOBase::byte_swap(val));
-#else
-			return (!m_big_endian ? val : OOBase::byte_swap(val));
-#endif
+			return (m_endianess == OOBASE_BYTE_ORDER ? val : OOBase::byte_swap(val));
 		}
 
 		/** Templatized variable read function.
@@ -174,7 +162,7 @@ namespace OOBase
 				return false;
 
 			size_t len = 0;
-			if (m_big_endian)
+			if (m_endianess == OOBASE_BIG_ENDIAN)
 			{
 				len = len_buf[0] << (3*8);
 				len += len_buf[1] << (2*8);
@@ -312,7 +300,7 @@ namespace OOBase
 
 			// We do this because we haven't got a safe uint32_t type
 			unsigned char len_buf[4] = {0};
-			if (m_big_endian)
+			if (m_endianess == OOBASE_BIG_ENDIAN)
 			{
 				len_buf[0] = static_cast<unsigned char>(len >> (3*8));
 				len_buf[1] = static_cast<unsigned char>((len & 0x00FF0000) >> (2*8));
@@ -405,7 +393,7 @@ namespace OOBase
 
 	private:
 		RefPtr<Buffer> m_buffer;
-		bool           m_big_endian;
+		unsigned int   m_endianess;
 		int            m_last_error;
 	};
 }
