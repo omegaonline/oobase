@@ -100,16 +100,6 @@ namespace OOBase
 			return m_last_error;
 		}
 
-		void endianess(unsigned short be)
-		{
-			m_endianess = be;
-		}
-
-		unsigned short endianess() const
-		{
-			return m_endianess;
-		}*/
-
 		int last_error() const
 		{
 			return m_last_error;
@@ -119,6 +109,62 @@ namespace OOBase
 		T byte_swap(const T& val) const
 		{
 			return (m_endianess == OOBASE_BYTE_ORDER ? val : OOBase::byte_swap(val));
+		}
+
+		void endianess(unsigned short be)
+		{
+			m_endianess = be;
+		}
+
+		unsigned short endianess() const
+		{
+			return m_endianess;
+		}
+
+		bool write_endianess()
+		{
+			if (m_last_error != 0 || !m_buffer)
+				return false;
+
+			m_last_error = m_buffer->align_wr_ptr(2);
+			if (m_last_error != 0)
+				return false;
+
+			m_last_error = m_buffer->space(2);
+			if (m_last_error != 0)
+				return false;
+
+			char* wr_ptr = m_buffer->wr_ptr();
+			wr_ptr[0] = (m_endianess >> 8);
+			wr_ptr[1] = (m_endianess & 0xFF);
+
+			m_buffer->wr_ptr(2);
+
+			return true;
+		}
+
+		bool read_endianess()
+		{
+			if (m_last_error != 0 || !m_buffer)
+				return false;
+
+			m_buffer->align_rd_ptr(2);
+			if (m_buffer->length() < 2)
+			{
+#if defined(_WIN32)
+				m_last_error = ERROR_HANDLE_EOF;
+#elif defined(HAVE_UNISTD_H)
+				m_last_error = ENOSPC;
+#else
+#error Fix me!
+#endif
+				return false;
+			}
+
+			const char* rd_ptr = m_buffer->rd_ptr();
+			m_endianess = (rd_ptr[0] << 8) | rd_ptr[1];
+			m_buffer->rd_ptr(2);
+			return true;
 		}
 
 		/** Templatized variable read function.
