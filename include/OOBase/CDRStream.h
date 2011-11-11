@@ -100,14 +100,14 @@ namespace OOBase
 			return m_last_error;
 		}
 
-		/*void big_endian(bool be)
+		void endianess(unsigned short be)
 		{
-			m_endianess = (be ? OOBASE_BIG_ENDIAN : OOBASE_LITTLE_ENDIAN);
+			m_endianess = be;
 		}
 
-		bool big_endian() const
+		unsigned short endianess() const
 		{
-			return (m_endianess == OOBASE_BIG_ENDIAN);
+			return m_endianess;
 		}*/
 
 		int last_error() const
@@ -169,12 +169,17 @@ namespace OOBase
 				len += len_buf[2] << (1*8);
 				len += len_buf[3];
 			}
-			else
+			else if (m_endianess == OOBASE_LITTLE_ENDIAN)
 			{
 				len = len_buf[3] << (3*8);
 				len += len_buf[2] << (2*8);
 				len += len_buf[1] << (1*8);
 				len += len_buf[0];
+			}
+			else
+			{
+				m_last_error = EINVAL;
+				return false;
 			}
 
 			if (len == 0)
@@ -307,12 +312,17 @@ namespace OOBase
 				len_buf[2] = static_cast<unsigned char>((len & 0x0000FF00) >> (1*8));
 				len_buf[3] = static_cast<unsigned char>(len & 0x000000FF);
 			}
-			else
+			else if (m_endianess == OOBASE_LITTLE_ENDIAN)
 			{
 				len_buf[3] = static_cast<unsigned char>(len >> (3*8));
 				len_buf[2] = static_cast<unsigned char>((len & 0x00FF0000) >> (2*8));
 				len_buf[1] = static_cast<unsigned char>((len & 0x0000FF00) >> (1*8));
 				len_buf[0] = static_cast<unsigned char>(len & 0x000000FF);
+			}
+			else
+			{
+				m_last_error = EINVAL;
+				return false;
 			}
 
 			// Write the length first
@@ -393,7 +403,7 @@ namespace OOBase
 
 	private:
 		RefPtr<Buffer> m_buffer;
-		unsigned int   m_endianess;
+		unsigned short m_endianess;
 		int            m_last_error;
 	};
 }
