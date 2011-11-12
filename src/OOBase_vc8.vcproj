@@ -300,6 +300,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Logger.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Memory.cpp"
 				>
 			</File>
@@ -313,6 +317,10 @@
 			</File>
 			<File
 				RelativePath=".\Posix.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\SecurityWin32.cpp"
 				>
 			</File>
 			<File
@@ -374,6 +382,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\include\OOBase\Cache.h"
+				>
+			</File>
+			<File
 				RelativePath="..\include\OOBase\CDRStream.h"
 				>
 			</File>
@@ -410,6 +422,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\include\OOBase\Logger.h"
+				>
+			</File>
+			<File
 				RelativePath="..\include\OOBase\Memory.h"
 				>
 			</File>
@@ -435,6 +451,14 @@
 			</File>
 			<File
 				RelativePath="..\include\OOBase\RefCount.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\SecurityWin32.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\OOBase\Set.h"
 				>
 			</File>
 			<File

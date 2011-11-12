@@ -143,13 +143,13 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		size_t find_first(K1 key)
+		size_t find_first(K1 key) const
 		{
 			return find_i(key,true);
 		}
 
 		template <typename K1>
-		size_t find_at(K1 key)
+		size_t find_at(K1 key) const
 		{
 			return find_i(key,false);
 		}

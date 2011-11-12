@@ -202,31 +202,9 @@ namespace OOBase
 			if (m_last_error != 0 || !m_buffer)
 				return false;
 
-			// We do this because we haven't got a safe uint32_t type
-			unsigned char len_buf[4] = {0};
-			if (read_bytes(len_buf,sizeof(len_buf)) != sizeof(len_buf))
-				return false;
-
 			size_t len = 0;
-			if (m_endianess == OOBASE_BIG_ENDIAN)
-			{
-				len = len_buf[0] << (3*8);
-				len += len_buf[1] << (2*8);
-				len += len_buf[2] << (1*8);
-				len += len_buf[3];
-			}
-			else if (m_endianess == OOBASE_LITTLE_ENDIAN)
-			{
-				len = len_buf[3] << (3*8);
-				len += len_buf[2] << (2*8);
-				len += len_buf[1] << (1*8);
-				len += len_buf[0];
-			}
-			else
-			{
-				m_last_error = EINVAL;
+			if (!read4(len))
 				return false;
-			}
 
 			if (len == 0)
 				val.clear();
@@ -283,12 +261,12 @@ namespace OOBase
 		{
 			size_t mark = m_buffer->mark_rd_ptr();
 
-			m_last_error = pSocket->recv(m_buffer,sizeof(uint32_t));
+			m_last_error = pSocket->recv(m_buffer,4);
 			if (m_last_error != 0)
 				return false;
 
-			uint32_t len = 0;
-			if (!read(len))
+			size_t len = 0;
+			if (!read4(len))
 				return false;
 
 			m_last_error = pSocket->recv(m_buffer,len);
@@ -337,42 +315,7 @@ namespace OOBase
 			else if (len == (size_t)-1)
 				len = strlen(pszText);
 
-			if (len > 0xFFFFFFFF)
-			{
-#if defined(_WIN32)
-				m_last_error = ERROR_BUFFER_OVERFLOW;
-#elif defined(HAVE_UNISTD_H)
-				m_last_error = E2BIG;
-#else
-				#error Fix me!
-#endif
-				return false;
-			}
-
-			// We do this because we haven't got a safe uint32_t type
-			unsigned char len_buf[4] = {0};
-			if (m_endianess == OOBASE_BIG_ENDIAN)
-			{
-				len_buf[0] = static_cast<unsigned char>(len >> (3*8));
-				len_buf[1] = static_cast<unsigned char>((len & 0x00FF0000) >> (2*8));
-				len_buf[2] = static_cast<unsigned char>((len & 0x0000FF00) >> (1*8));
-				len_buf[3] = static_cast<unsigned char>(len & 0x000000FF);
-			}
-			else if (m_endianess == OOBASE_LITTLE_ENDIAN)
-			{
-				len_buf[3] = static_cast<unsigned char>(len >> (3*8));
-				len_buf[2] = static_cast<unsigned char>((len & 0x00FF0000) >> (2*8));
-				len_buf[1] = static_cast<unsigned char>((len & 0x0000FF00) >> (1*8));
-				len_buf[0] = static_cast<unsigned char>(len & 0x000000FF);
-			}
-			else
-			{
-				m_last_error = EINVAL;
-				return false;
-			}
-
-			// Write the length first
-			if (!write_bytes(len_buf,sizeof(len_buf)))
+			if (!write4(len))
 				return false;
 
 			// Then the bytes of the string
@@ -451,6 +394,75 @@ namespace OOBase
 		RefPtr<Buffer> m_buffer;
 		unsigned short m_endianess;
 		int            m_last_error;
+
+		bool read4(size_t& len)
+		{
+			// We do this because we haven't got a safe uint32_t type
+			unsigned char len_buf[4] = {0};
+			if (read_bytes(len_buf,4) != 4)
+				return false;
+
+			if (m_endianess == OOBASE_BIG_ENDIAN)
+			{
+				len = len_buf[0] << (3*8);
+				len += len_buf[1] << (2*8);
+				len += len_buf[2] << (1*8);
+				len += len_buf[3];
+				return true;
+			}
+			else if (m_endianess == OOBASE_LITTLE_ENDIAN)
+			{
+				len = len_buf[3] << (3*8);
+				len += len_buf[2] << (2*8);
+				len += len_buf[1] << (1*8);
+				len += len_buf[0];
+				return true;
+			}
+			else
+				m_last_error = EINVAL;
+			
+			return false;
+		}
+
+		bool write4(size_t len)
+		{
+			if (len > 0xFFFFFFFF)
+			{
+#if defined(_WIN32)
+				m_last_error = ERROR_BUFFER_OVERFLOW;
+#elif defined(HAVE_UNISTD_H)
+				m_last_error = E2BIG;
+#else
+				#error Fix me!
+#endif
+				return false;
+			}
+
+			// We do this because we haven't got a safe uint32_t type
+			unsigned char len_buf[4] = {0};
+			if (m_endianess == OOBASE_BIG_ENDIAN)
+			{
+				len_buf[0] = static_cast<unsigned char>(len >> (3*8));
+				len_buf[1] = static_cast<unsigned char>((len & 0x00FF0000) >> (2*8));
+				len_buf[2] = static_cast<unsigned char>((len & 0x0000FF00) >> (1*8));
+				len_buf[3] = static_cast<unsigned char>(len & 0x000000FF);
+			}
+			else if (m_endianess == OOBASE_LITTLE_ENDIAN)
+			{
+				len_buf[3] = static_cast<unsigned char>(len >> (3*8));
+				len_buf[2] = static_cast<unsigned char>((len & 0x00FF0000) >> (2*8));
+				len_buf[1] = static_cast<unsigned char>((len & 0x0000FF00) >> (1*8));
+				len_buf[0] = static_cast<unsigned char>(len & 0x000000FF);
+			}
+			else
+			{
+				m_last_error = EINVAL;
+				return false;
+			}
+
+			// Write the length first
+			return write_bytes(len_buf,4);
+		}
 	};
 }
 

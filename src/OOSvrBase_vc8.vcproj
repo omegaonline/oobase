@@ -296,10 +296,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\Logger.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\Proactor.cpp"
 				>
 			</File>
@@ -328,10 +324,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\SecurityWin32.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\Service.cpp"
 				>
 			</File>
@@ -354,10 +346,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\OOSvrBase\Logger.h"
-				>
-			</File>
-			<File
 				RelativePath="..\include\oobase-msvc.h"
 				>
 			</File>
@@ -371,10 +359,6 @@
 			</File>
 			<File
 				RelativePath=".\ProactorWin32.h"
-				>
-			</File>
-			<File
-				RelativePath="..\include\OOSvrBase\SecurityWin32.h"
 				>
 			</File>
 			<File

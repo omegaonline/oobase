@@ -508,7 +508,7 @@ bool PipeAcceptor::Acceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, 
 	if (bRemove)
 	{		
 		// Remove from pending list
-		m_stkPending.erase(hPipe);
+		m_stkPending.remove(hPipe);
 				
 		bAgain = (m_stkPending.size() < m_backlog);
 		bSignal = (m_stkPending.empty() && m_backlog == 0);
