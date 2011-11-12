@@ -170,15 +170,23 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Database.cpp" />
-    <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Proactor.cpp" />
-    <ClCompile Include="ProactorEv.cpp" />
-    <ClCompile Include="ProactorEvSocket.cpp" />
+    <ClCompile Include="ProactorEv.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="ProactorEvSocket.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="ProactorWin32.cpp" />
     <ClCompile Include="ProactorWin32Pipe.cpp" />
     <ClCompile Include="ProactorWin32Socket.cpp" />
     <ClCompile Include="pw_info.cpp" />
-    <ClCompile Include="SecurityWin32.cpp" />
     <ClCompile Include="Service.cpp" />
     <ClCompile Include="SQLite3_comp.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -187,19 +195,11 @@
   <ItemGroup>
     <ClInclude Include="..\include\config-base.h" />
     <ClInclude Include="..\include\OOSvrBase\Database.h" />
-    <ClInclude Include="..\include\OOSvrBase\Logger.h" />
     <ClInclude Include="..\include\oobase-msvc.h" />
     <ClInclude Include="..\include\OOSvrBase\Proactor.h" />
     <ClInclude Include="ProactorEv.h" />
     <ClInclude Include="ProactorWin32.h" />
-    <ClInclude Include="..\include\OOSvrBase\SecurityWin32.h" />
     <ClInclude Include="..\include\OOSvrBase\Service.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="OOBase_vc10.vcxproj">
-      <Project>{10616ef7-6939-463a-9af6-8a1f3e9f5b16}</Project>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

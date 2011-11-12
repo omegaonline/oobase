@@ -40,11 +40,9 @@ ipch/
 src/Win32/*
 src/x64/*
 *.vcproj.*.user
-*.vcxproj.*
-*.suo
+*.vcxproj.user
 *.sdf
 *.opensdf
-*.ncb
 
 # Unix stuff
 *.so

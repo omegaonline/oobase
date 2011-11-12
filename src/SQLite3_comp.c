@@ -20,6 +20,11 @@
 #pragma warning(disable:4132)
 #pragma warning(disable:4706)
 #pragma warning(disable:4306)
+
+#if (_MSC_VER >= 1600) && defined(CODE_ANALYSIS)
+#include <codeanalysis\warnings.h>
+#pragma warning ( disable : ALL_CODE_ANALYSIS_WARNINGS )
+#endif
 #endif
 
 #include <sqlite3.c>

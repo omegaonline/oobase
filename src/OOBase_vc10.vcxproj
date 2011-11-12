@@ -149,10 +149,12 @@
     <ClCompile Include="Condition.cpp" />
     <ClCompile Include="DLL.cpp" />
     <ClCompile Include="Error.cpp" />
+    <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Memory.cpp" />
     <ClCompile Include="Mutex.cpp" />
     <ClCompile Include="Once.cpp" />
     <ClCompile Include="Posix.cpp" />
+    <ClCompile Include="SecurityWin32.cpp" />
     <ClCompile Include="String.cpp" />
     <ClCompile Include="Thread.cpp" />
     <ClCompile Include="TimeVal.cpp" />
@@ -167,6 +169,11 @@
     <ClInclude Include="..\include\OOBase\BoundedQueue.h" />
     <ClInclude Include="..\include\OOBase\Cache.h" />
     <ClInclude Include="..\include\OOBase\CmdArgs.h" />
+    <ClInclude Include="..\include\OOBase\GlobalNew.h" />
+    <ClInclude Include="..\include\OOBase\Logger.h" />
+    <ClInclude Include="..\include\OOBase\RefCount.h" />
+    <ClInclude Include="..\include\OOBase\SecurityWin32.h" />
+    <ClInclude Include="..\include\OOBase\Set.h" />
     <ClInclude Include="BSDSocket.h" />
     <ClInclude Include="..\include\OOBase\Buffer.h" />
     <ClInclude Include="..\include\OOBase\ByteSwap.h" />

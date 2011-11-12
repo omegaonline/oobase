@@ -124,10 +124,14 @@
 #define OOBase_CallCriticalFailure(expr) \
 	OOBase::CallCriticalFailure(__FILE__,__LINE__,expr)
 
+#if !defined(OOBASE_NORETURN)
+#define OOBASE_NORETURN
+#endif
+
 namespace OOBase
 {
-	void CallCriticalFailure(const char* pszFile, unsigned int nLine, const char*);
-	void CallCriticalFailure(const char* pszFile, unsigned int nLine, int);
+	void OOBASE_NORETURN CallCriticalFailure(const char* pszFile, unsigned int nLine, const char*);
+	void OOBASE_NORETURN CallCriticalFailure(const char* pszFile, unsigned int nLine, int);
 
 	/// Return the system supplied error string from error code 'err' . If err == -1, use errno or GetLastError()
 	const char* system_error_text(int err = -1);

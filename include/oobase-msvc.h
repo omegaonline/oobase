@@ -50,4 +50,6 @@
 	#error What else can MSVC compile?
 #endif
 
+#define OOBASE_NORETURN __declspec(noreturn)
+
 #endif // OOBASE_CONFIG_MSVC_H_INCLUDED_
