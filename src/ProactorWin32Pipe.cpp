@@ -147,7 +147,7 @@ void AsyncPipe::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::de
 		pOv->m_extras[3] -= dwBytes;
 
 		DWORD dwRead = 0;
-		if (!ReadFile(handle,buffer->wr_ptr(),pOv->m_extras[3],&dwRead,pOv))
+		if (!ReadFile(handle,buffer->wr_ptr(),(DWORD)pOv->m_extras[3],&dwRead,pOv))
 		{
 			dwErr = GetLastError();
 			if (dwErr != ERROR_IO_PENDING)
