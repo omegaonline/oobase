@@ -135,8 +135,8 @@ namespace OOBase
 				return false;
 
 			char* wr_ptr = m_buffer->wr_ptr();
-			wr_ptr[0] = (m_endianess >> 8);
-			wr_ptr[1] = (m_endianess & 0xFF);
+			wr_ptr[0] = static_cast<char>(m_endianess >> 8);
+			wr_ptr[1] = static_cast<char>(m_endianess & 0xFF);
 
 			m_buffer->wr_ptr(2);
 

@@ -44,6 +44,7 @@ src/x64/*
 *.suo
 *.sdf
 *.opensdf
+*.ncb
 
 # Unix stuff
 *.so

@@ -298,6 +298,33 @@ int AsyncPipe::get_uid(OOSvrBase::AsyncLocalSocket::uid_t& uid)
 
 namespace
 {	
+	class InternalAcceptor
+	{
+	public:
+		InternalAcceptor(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOSvrBase::Proactor::accept_local_callback_t callback);
+		
+		int start();
+		int stop();
+				
+	private:
+		OOSvrBase::detail::ProactorWin32*            m_pProactor;
+		OOBase::Condition::Mutex                     m_lock;
+		OOBase::Condition                            m_condition;
+		OOBase::String                               m_pipe_name;
+		SECURITY_ATTRIBUTES*                         m_psa;
+		size_t                                       m_backlog;
+		size_t                                       m_refcount;
+		OOBase::Stack<HANDLE>                        m_stkPending;
+		void*                                        m_param;
+		OOSvrBase::Proactor::accept_local_callback_t m_callback;
+	
+		~InternalAcceptor();
+		
+		static void on_completion(HANDLE hPipe, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv);
+		bool on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
+		int do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, bool bFirst);
+	};
+
 	class PipeAcceptor : public OOSvrBase::Acceptor
 	{
 	public:
@@ -308,33 +335,7 @@ namespace
 	private:
 		virtual ~PipeAcceptor();
 
-		class Acceptor
-		{
-		public:
-			Acceptor(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOSvrBase::Proactor::accept_local_callback_t callback);
-			
-			int start();
-			int stop();
-					
-		private:
-			OOSvrBase::detail::ProactorWin32*            m_pProactor;
-			OOBase::Condition::Mutex                     m_lock;
-			OOBase::Condition                            m_condition;
-			OOBase::String                               m_pipe_name;
-			SECURITY_ATTRIBUTES*                         m_psa;
-			size_t                                       m_backlog;
-			size_t                                       m_refcount;
-			OOBase::Stack<HANDLE>                        m_stkPending;
-			void*                                        m_param;
-			OOSvrBase::Proactor::accept_local_callback_t m_callback;
-		
-			~Acceptor();
-			
-			static void on_completion(HANDLE hPipe, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv);
-			bool on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
-			int do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, bool bFirst);
-		};
-		Acceptor* m_pAcceptor;
+		InternalAcceptor* m_pAcceptor;
 	};
 }
 
@@ -350,7 +351,7 @@ PipeAcceptor::~PipeAcceptor()
 
 int PipeAcceptor::bind(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOSvrBase::Proactor::accept_local_callback_t callback)
 {
-	m_pAcceptor = new (std::nothrow) PipeAcceptor::Acceptor(pProactor,pipe_name,psa,param,callback);
+	m_pAcceptor = new (std::nothrow) InternalAcceptor(pProactor,pipe_name,psa,param,callback);
 	if (!m_pAcceptor)
 		return ERROR_OUTOFMEMORY;
 	
@@ -364,7 +365,7 @@ int PipeAcceptor::bind(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase
 	return err;
 }
 
-PipeAcceptor::Acceptor::Acceptor(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOSvrBase::Proactor::accept_local_callback_t callback) :
+InternalAcceptor::InternalAcceptor(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOSvrBase::Proactor::accept_local_callback_t callback) :
 		m_pProactor(pProactor),
 		m_pipe_name(pipe_name),
 		m_psa(psa),
@@ -374,17 +375,17 @@ PipeAcceptor::Acceptor::Acceptor(OOSvrBase::detail::ProactorWin32* pProactor, co
 		m_callback(callback)
 { }
 
-PipeAcceptor::Acceptor::~Acceptor()
+InternalAcceptor::~InternalAcceptor()
 { }
 
-int PipeAcceptor::Acceptor::start()
+int InternalAcceptor::start()
 {	
 	OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 	
 	return do_accept(guard,true);
 }
 
-int PipeAcceptor::Acceptor::stop()
+int InternalAcceptor::stop()
 {
 	OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 	
@@ -410,7 +411,7 @@ int PipeAcceptor::Acceptor::stop()
 	return 0;
 }
 
-int PipeAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, bool bFirst)
+int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, bool bFirst)
 {
 	DWORD dwErr = 0;
 	OOSvrBase::detail::ProactorWin32::Overlapped* pOv = NULL;
@@ -489,9 +490,9 @@ int PipeAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& g
 	return dwErr;
 }
 
-void PipeAcceptor::Acceptor::on_completion(HANDLE hPipe, DWORD /*dwBytes*/, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv)
+void InternalAcceptor::on_completion(HANDLE hPipe, DWORD /*dwBytes*/, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv)
 {	
-	PipeAcceptor::Acceptor* pThis = reinterpret_cast<PipeAcceptor::Acceptor*>(pOv->m_extras[0]);
+	InternalAcceptor* pThis = reinterpret_cast<InternalAcceptor*>(pOv->m_extras[0]);
 	
 	OOBase::Guard<OOBase::Condition::Mutex> guard(pThis->m_lock);
 	
@@ -501,7 +502,7 @@ void PipeAcceptor::Acceptor::on_completion(HANDLE hPipe, DWORD /*dwBytes*/, DWOR
 	delete pOv;
 }
 
-bool PipeAcceptor::Acceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard)
+bool InternalAcceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard)
 {
 	bool bSignal = false;
 	bool bAgain = false;

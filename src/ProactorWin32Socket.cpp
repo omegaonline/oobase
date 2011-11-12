@@ -274,6 +274,40 @@ void AsyncSocket::on_send_v(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase
 
 namespace
 {
+	class InternalAcceptor
+	{
+	public:
+		InternalAcceptor(OOSvrBase::detail::ProactorWin32* pProactor, void* param, OOSvrBase::Proactor::accept_remote_callback_t callback);
+		
+		int listen(size_t backlog);
+		int stop(bool destroy);
+		int bind(const sockaddr* addr, socklen_t addr_len);
+		
+	private:
+		OOSvrBase::detail::ProactorWin32*             m_pProactor;
+		OOBase::Condition::Mutex                      m_lock;
+		OOBase::Condition                             m_condition;
+		sockaddr*                                     m_addr;
+		socklen_t                                     m_addr_len;
+		SOCKET                                        m_socket;
+		size_t                                        m_backlog;
+		size_t                                        m_pending;
+		size_t                                        m_refcount;
+		OOBase::Win32::SmartHandle                    m_hEvent;
+		HANDLE                                        m_hWait;
+		void*                                         m_param;
+		OOSvrBase::Proactor::accept_remote_callback_t m_callback;
+	
+		~InternalAcceptor();
+		
+		static void on_completion(HANDLE hSocket, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv);
+		static void CALLBACK accept_ready(PVOID lpParameter, BOOLEAN TimerOrWaitFired);
+
+		int init_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard);
+		bool on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void* addr_buf, OOBase::Guard<OOBase::Condition::Mutex>& guard);
+		int do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard);
+	};
+
 	class SocketAcceptor : public OOSvrBase::Acceptor
 	{
 	public:
@@ -286,40 +320,7 @@ namespace
 	private:
 		virtual ~SocketAcceptor();
 
-		class Acceptor
-		{
-		public:
-			Acceptor(OOSvrBase::detail::ProactorWin32* pProactor, void* param, OOSvrBase::Proactor::accept_remote_callback_t callback);
-			
-			int listen(size_t backlog);
-			int stop(bool destroy);
-			int bind(const sockaddr* addr, socklen_t addr_len);
-			
-		private:
-			OOSvrBase::detail::ProactorWin32*             m_pProactor;
-			OOBase::Condition::Mutex                      m_lock;
-			OOBase::Condition                             m_condition;
-			sockaddr*                                     m_addr;
-			socklen_t                                     m_addr_len;
-			SOCKET                                        m_socket;
-			size_t                                        m_backlog;
-			size_t                                        m_pending;
-			size_t                                        m_refcount;
-			OOBase::Win32::SmartHandle                    m_hEvent;
-			HANDLE                                        m_hWait;
-			void*                                         m_param;
-			OOSvrBase::Proactor::accept_remote_callback_t m_callback;
-		
-			~Acceptor();
-			
-			static void on_completion(HANDLE hSocket, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv);
-			static void CALLBACK accept_ready(PVOID lpParameter, BOOLEAN TimerOrWaitFired);
-
-			int init_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard);
-			bool on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void* addr_buf, OOBase::Guard<OOBase::Condition::Mutex>& guard);
-			int do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard);
-		};
-		Acceptor* m_pAcceptor;
+		InternalAcceptor* m_pAcceptor;
 	};
 }
 
@@ -351,7 +352,7 @@ int SocketAcceptor::stop()
 
 int SocketAcceptor::bind(OOSvrBase::detail::ProactorWin32* pProactor, void* param, OOSvrBase::Proactor::accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len)
 {
-	m_pAcceptor = new (std::nothrow) SocketAcceptor::Acceptor(pProactor,param,callback);
+	m_pAcceptor = new (std::nothrow) InternalAcceptor(pProactor,param,callback);
 	if (!m_pAcceptor)
 		return ERROR_OUTOFMEMORY;
 	
@@ -365,7 +366,7 @@ int SocketAcceptor::bind(OOSvrBase::detail::ProactorWin32* pProactor, void* para
 	return err;
 }
 
-SocketAcceptor::Acceptor::Acceptor(OOSvrBase::detail::ProactorWin32* pProactor, void* param, OOSvrBase::Proactor::accept_remote_callback_t callback) :
+InternalAcceptor::InternalAcceptor(OOSvrBase::detail::ProactorWin32* pProactor, void* param, OOSvrBase::Proactor::accept_remote_callback_t callback) :
 		m_pProactor(pProactor),
 		m_addr(NULL),
 		m_addr_len(0),
@@ -378,12 +379,12 @@ SocketAcceptor::Acceptor::Acceptor(OOSvrBase::detail::ProactorWin32* pProactor, 
 		m_callback(callback)
 { }
 
-SocketAcceptor::Acceptor::~Acceptor()
+InternalAcceptor::~InternalAcceptor()
 { 
 	OOBase::HeapAllocator::free(m_addr);
 }
 
-int SocketAcceptor::Acceptor::bind(const sockaddr* addr, socklen_t addr_len)
+int InternalAcceptor::bind(const sockaddr* addr, socklen_t addr_len)
 {
 	m_addr = static_cast<sockaddr*>(OOBase::HeapAllocator::allocate(addr_len));
 	if (!m_addr)
@@ -416,7 +417,7 @@ int SocketAcceptor::Acceptor::bind(const sockaddr* addr, socklen_t addr_len)
 	return 0;
 }
 
-int SocketAcceptor::Acceptor::listen(size_t backlog)
+int InternalAcceptor::listen(size_t backlog)
 {
 	OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 	
@@ -436,7 +437,7 @@ int SocketAcceptor::Acceptor::listen(size_t backlog)
 	}
 }
 
-int SocketAcceptor::Acceptor::stop(bool destroy)
+int InternalAcceptor::stop(bool destroy)
 {
 	OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 	
@@ -473,7 +474,7 @@ int SocketAcceptor::Acceptor::stop(bool destroy)
 	return 0;
 }
 
-int SocketAcceptor::Acceptor::init_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
+int InternalAcceptor::init_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 {
 	// Create a new socket
 	int err = 0;
@@ -518,7 +519,7 @@ int SocketAcceptor::Acceptor::init_accept(OOBase::Guard<OOBase::Condition::Mutex
 	return err;
 }
 
-int SocketAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
+int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 {
 	int err = 0;
 	OOSvrBase::detail::ProactorWin32::Overlapped* pOv = NULL;
@@ -596,9 +597,9 @@ int SocketAcceptor::Acceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>&
 	return err;
 }
 
-void SocketAcceptor::Acceptor::accept_ready(PVOID lpParameter, BOOLEAN)
+void InternalAcceptor::accept_ready(PVOID lpParameter, BOOLEAN)
 {
-	SocketAcceptor::Acceptor* pThis = static_cast<SocketAcceptor::Acceptor*>(lpParameter);
+	InternalAcceptor* pThis = static_cast<InternalAcceptor*>(lpParameter);
 	
 	OOBase::Guard<OOBase::Condition::Mutex> guard(pThis->m_lock);
 	
@@ -612,9 +613,9 @@ void SocketAcceptor::Acceptor::accept_ready(PVOID lpParameter, BOOLEAN)
 	}
 }
 
-void SocketAcceptor::Acceptor::on_completion(HANDLE /*hSocket*/, DWORD /*dwBytes*/, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv)
+void InternalAcceptor::on_completion(HANDLE /*hSocket*/, DWORD /*dwBytes*/, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv)
 {	
-	SocketAcceptor::Acceptor* pThis = reinterpret_cast<SocketAcceptor::Acceptor*>(pOv->m_extras[0]);
+	InternalAcceptor* pThis = reinterpret_cast<InternalAcceptor*>(pOv->m_extras[0]);
 	
 	OOBase::Guard<OOBase::Condition::Mutex> guard(pThis->m_lock);
 	
@@ -624,7 +625,7 @@ void SocketAcceptor::Acceptor::on_completion(HANDLE /*hSocket*/, DWORD /*dwBytes
 	delete pOv;
 }
 
-bool SocketAcceptor::Acceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void* addr_buf, OOBase::Guard<OOBase::Condition::Mutex>& guard)
+bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void* addr_buf, OOBase::Guard<OOBase::Condition::Mutex>& guard)
 {
 	bool bSignal = false;
 	bool bAgain = false;
