@@ -269,9 +269,12 @@ namespace OOBase
 			if (!read4(len))
 				return false;
 
-			m_last_error = pSocket->recv(m_buffer,len);
-			if (m_last_error != 0)
-				return false;
+			if (len)
+			{
+				m_last_error = pSocket->recv(m_buffer,len);
+				if (m_last_error != 0)
+					return false;
+			}
 
 			// Now reset rd_ptr and read the string
 			m_buffer->mark_rd_ptr(mark);
@@ -319,14 +322,7 @@ namespace OOBase
 				return false;
 
 			// Then the bytes of the string
-			m_last_error = m_buffer->space(len);
-			if (m_last_error != 0)
-				return false;
-
-			memcpy(m_buffer->wr_ptr(),pszText,len);
-			m_buffer->wr_ptr(len);
-
-			return true;
+			return write_bytes(reinterpret_cast<const unsigned char*>(pszText),len);
 		}
 
 		/// A specialization of write() for type \p bool.
@@ -349,12 +345,16 @@ namespace OOBase
 			if (m_last_error != 0 || !m_buffer)
 				return false;
 
-			m_last_error = m_buffer->space(count);
-			if (m_last_error != 0)
-				return false;
+			if (count)
+			{
+				m_last_error = m_buffer->space(count);
+				if (m_last_error != 0)
+					return false;
 
-			memcpy(m_buffer->wr_ptr(),buffer,count);
-			m_buffer->wr_ptr(count);
+				memcpy(m_buffer->wr_ptr(),buffer,count);
+				m_buffer->wr_ptr(count);
+			}
+
 			return true;
 		}
 
