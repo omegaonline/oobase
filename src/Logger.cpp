@@ -174,28 +174,28 @@ namespace
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
-		WORD wType = 0;
-		switch (priority)
-		{
-		case OOBase::Logger::Error:
-			wType = EVENTLOG_ERROR_TYPE;
-			break;
-
-		case OOBase::Logger::Warning:
-			wType = EVENTLOG_WARNING_TYPE;
-			break;
-
-		case OOBase::Logger::Information:
-			wType = EVENTLOG_INFORMATION_TYPE;
-			break;
-
-		default:
-			break;
-		}
-
 #if !defined(_DEBUG)
 		if (m_hLog && priority != OOBase::Logger::Debug)
 		{
+			WORD wType = 0;
+			switch (priority)
+			{
+			case OOBase::Logger::Error:
+				wType = EVENTLOG_ERROR_TYPE;
+				break;
+
+			case OOBase::Logger::Warning:
+				wType = EVENTLOG_WARNING_TYPE;
+				break;
+
+			case OOBase::Logger::Information:
+				wType = EVENTLOG_INFORMATION_TYPE;
+				break;
+
+			default:
+				break;
+			}
+
 			const char* arrBufs[2] = { msg, NULL };
 
 			OOBase::SmartPtr<TOKEN_USER,OOBase::CrtAllocator> ptrSIDProcess;

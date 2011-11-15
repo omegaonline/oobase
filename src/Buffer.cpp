@@ -22,6 +22,7 @@
 #include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Buffer.h"
 
+#include <stddef.h>
 #include <string.h>
 
 OOBase::Buffer::Buffer(size_t cbSize, size_t align) :
