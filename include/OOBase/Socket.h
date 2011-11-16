@@ -78,6 +78,9 @@ namespace OOBase
 		
 		int send(Buffer* buffer, const timeval_t* timeout = NULL)
 		{
+			if (!buffer)
+				return EINVAL;
+
 			int err = 0;
 			size_t len = send(buffer->rd_ptr(),buffer->length(),err,timeout);
 			buffer->rd_ptr(len);
@@ -101,6 +104,9 @@ namespace OOBase
 
 		int recv(Buffer* buffer, const timeval_t* timeout = NULL)
 		{
+			if (!buffer)
+				return EINVAL;
+
 			int err = 0;
 			size_t len = recv(buffer->wr_ptr(),buffer->space(),false,err,timeout);
 			buffer->wr_ptr(len);
@@ -109,6 +115,9 @@ namespace OOBase
 
 		int recv(Buffer* buffer, size_t len, const timeval_t* timeout = NULL)
 		{
+			if (!buffer)
+				return EINVAL;
+
 			if (len == 0)
 				return 0;
 
