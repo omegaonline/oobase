@@ -59,22 +59,30 @@ namespace OOBase
 
 		static void init()
 		{
-			s_instance = ::new (OOBase::critical) T();
+			T* i = ::new (OOBase::critical) T();
+
+			int err = DLLDestructor<DLL>::add_destructor(&destroy,i);
+			if (err)
+			{
+				delete i;
+				OOBase_CallCriticalFailure(err);
+			}
 			
-			DLLDestructor<DLL>::add_destructor(&destroy,NULL);
+			s_instance = i;
 		}
 
-		static void destroy(void*)
+		static void destroy(void* i)
 		{
-			T* p = s_instance;
-			s_instance = NULL;
-			
-			delete p;
+			if (i == s_instance)
+			{
+				delete static_cast<T*>(i);
+				s_instance = NULL;
+			}
 		}
 	};
 
 	template <typename T, typename DLL>
-	T* Singleton<T,DLL>::s_instance;
+	T* Singleton<T,DLL>::s_instance = NULL;
 }
 
 #endif // OOBASE_SINGLETON_H_INCLUDED_

@@ -116,7 +116,11 @@ void OOBase::Win32::WSAStartup()
 		OOBase_CallCriticalFailure("Very old Winsock dll");
 	}
 
-	OOBase::DLLDestructor<OOBase::Module>::add_destructor(&DoWSACleanup,NULL);
+	if ((err = OOBase::DLLDestructor<OOBase::Module>::add_destructor(&DoWSACleanup,NULL)) != 0)
+	{
+		WSACleanup();
+		OOBase_CallCriticalFailure(err);
+	}
 }
 
 BOOL OOBase::Win32::WSAAcceptEx(SOCKET sListenSocket, SOCKET sAcceptSocket, void* lpOutputBuffer, DWORD dwReceiveDataLength, DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped)

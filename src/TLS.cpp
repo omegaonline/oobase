@@ -167,7 +167,13 @@ namespace
 		if (!inst && create)
 		{
 			inst = new (OOBase::critical) TLSMap();
-			OOBase::DLLDestructor<OOBase::Module>::add_destructor(destroy,inst);
+			int err = OOBase::DLLDestructor<OOBase::Module>::add_destructor(destroy,inst);
+			if (err != 0)
+			{
+				delete inst;
+				OOBase_CallCriticalFailure(err);
+			}
+
 			TLS_GLOBAL::instance().Set(inst);
 		}
 		return inst;
