@@ -681,24 +681,93 @@ namespace
 	{
 		struct
 		{
-			size_t len;
-			size_t magic;
+			size_t  len;
+			Marker* magic;
 		} value;
 		char   padding[16];
 	};
+
+	struct DebugHeapInfo
+	{
+		Marker*          free_head;
+		size_t           page_size;
+		CRITICAL_SECTION lock;
+	} s_heap_info;
+
+	BOOL WINAPI init_debug_heap_i(INIT_ONCE*, void*, void**)
+	{
+		InitializeCriticalSection(&s_heap_info.lock);
+
+		SYSTEM_INFO si = {0};
+		GetSystemInfo(&si);
+		s_heap_info.page_size = si.dwPageSize - 1;
+
+		s_heap_info.free_head = NULL;
+
+		return TRUE;
+	}
+
+	void init_debug_heap()
+	{
+		static INIT_ONCE key = {0};
+		if (!Win32Thunk::impl_InitOnceExecuteOnce(&key,&init_debug_heap_i,NULL,NULL))
+			OOBase_CallCriticalFailure(GetLastError());
+	}
 }
 
 void* OOBase::CrtAllocator::allocate(size_t len)
 {
 	if (!len)
 		return NULL;
+
+	init_debug_heap();
+
+	len = (len + sizeof(Marker) + s_heap_info.page_size) & (~s_heap_info.page_size);
+
+	Marker* m = (Marker*)::VirtualAlloc(NULL,len,MEM_COMMIT | MEM_RESERVE,PAGE_EXECUTE_READWRITE);
+	if (m)
+		m->value.len = len;
+	else
+	{
+		EnterCriticalSection(&s_heap_info.lock);
+
+		m = s_heap_info.free_head;
+		for (Marker* prev = NULL; m != NULL; )
+		{
+			DWORD dwOld = 0;
+			::VirtualProtect(m,sizeof(Marker),PAGE_READONLY,&dwOld);
+
+			if (m->value.len >= len)
+			{
+				::VirtualProtect(m,m->value.len,PAGE_EXECUTE_READWRITE,&dwOld);
+			
+				if (prev)
+				{
+					::VirtualProtect(prev,sizeof(Marker),PAGE_READWRITE,&dwOld);
+					prev->value.magic = m->value.magic;
+					::VirtualProtect(prev,sizeof(Marker),PAGE_NOACCESS,&dwOld);
+				}
+				else
+					s_heap_info.free_head = m->value.magic;
+				break;
+			}
+
+			Marker* next = m->value.magic;
+			
+			::VirtualProtect(m,sizeof(Marker),PAGE_NOACCESS,&dwOld);
 	
-	Marker* m = (Marker*)::VirtualAlloc(NULL,len + sizeof(Marker),MEM_COMMIT | MEM_RESERVE,PAGE_EXECUTE_READWRITE);
+			prev = m;
+			m = next;
+		}
+
+		LeaveCriticalSection(&s_heap_info.lock);
+	}
+
 	if (!m)
 		return NULL;
 
-	m->value.len = len;
-	m->value.magic = 0x12345678;
+	m->value.magic = reinterpret_cast<Marker*>(0x12345678);
+	memset(m+1,0xFF,m->value.len-sizeof(Marker));
 
 	return (m+1);
 }
@@ -711,15 +780,20 @@ void* OOBase::CrtAllocator::reallocate(void* ptr, size_t len)
 	if (!ptr)
 		return allocate(len);
 
-	Marker* m = (static_cast<Marker*>(ptr) - 1);
-	assert(m->value.magic == 0x12345678);
+	init_debug_heap();
 
-	if (m->value.len >= len)
+	Marker* m = (static_cast<Marker*>(ptr) - 1);
+	assert(m->value.magic == reinterpret_cast<void*>(0x12345678));
+
+	if (m->value.len - sizeof(Marker) >= len)
 		return ptr;
 	
 	void* n = allocate(len);
 	if (n)
+	{
 		memcpy(n,ptr,m->value.len);
+		free(ptr);
+	}
 
 	return n;
 }
@@ -728,11 +802,20 @@ void OOBase::CrtAllocator::free(void* ptr)
 {
 	if (ptr)
 	{
+		init_debug_heap();
+
 		Marker* m = (static_cast<Marker*>(ptr) - 1);
-		assert(m->value.magic == 0x12345678);
+		assert(m->value.magic == reinterpret_cast<void*>(0x12345678));
+
+		EnterCriticalSection(&s_heap_info.lock);
+
+		m->value.magic = s_heap_info.free_head;
+		s_heap_info.free_head = m;
 
 		DWORD dwOld = 0;
-		::VirtualProtect(m,m->value.len + sizeof(Marker),PAGE_NOACCESS,&dwOld);
+		::VirtualProtect(m,m->value.len,PAGE_NOACCESS,&dwOld);
+
+		LeaveCriticalSection(&s_heap_info.lock);
 	}
 }
 
