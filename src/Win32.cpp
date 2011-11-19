@@ -675,6 +675,10 @@ void OOBase::Win32::condition_variable_t::broadcast()
 
 #if 1
 
+// VLD plays badly with this set..
+#define WIN32_DEBUG_PAGE_PROTECT PAGE_READONLY
+//#define WIN32_DEBUG_PAGE_PROTECT PAGE_NOACCESS
+
 namespace
 {
 	union Marker
@@ -735,7 +739,7 @@ void* OOBase::CrtAllocator::allocate(size_t len)
 		for (Marker* prev = NULL; m != NULL; )
 		{
 			DWORD dwOld = 0;
-			::VirtualProtect(m,sizeof(Marker),PAGE_READONLY,&dwOld);
+			::VirtualProtect(m,sizeof(Marker),WIN32_DEBUG_PAGE_PROTECT,&dwOld);
 
 			if (m->value.len >= len)
 			{
@@ -745,7 +749,7 @@ void* OOBase::CrtAllocator::allocate(size_t len)
 				{
 					::VirtualProtect(prev,sizeof(Marker),PAGE_READWRITE,&dwOld);
 					prev->value.magic = m->value.magic;
-					::VirtualProtect(prev,sizeof(Marker),PAGE_NOACCESS,&dwOld);
+					::VirtualProtect(prev,sizeof(Marker),WIN32_DEBUG_PAGE_PROTECT,&dwOld);
 				}
 				else
 					s_heap_info.free_head = m->value.magic;
@@ -754,7 +758,7 @@ void* OOBase::CrtAllocator::allocate(size_t len)
 
 			Marker* next = m->value.magic;
 			
-			::VirtualProtect(m,sizeof(Marker),PAGE_NOACCESS,&dwOld);
+			::VirtualProtect(m,sizeof(Marker),WIN32_DEBUG_PAGE_PROTECT,&dwOld);
 	
 			prev = m;
 			m = next;
@@ -813,7 +817,7 @@ void OOBase::CrtAllocator::free(void* ptr)
 		s_heap_info.free_head = m;
 
 		DWORD dwOld = 0;
-		::VirtualProtect(m,m->value.len,PAGE_NOACCESS,&dwOld);
+		::VirtualProtect(m,m->value.len,WIN32_DEBUG_PAGE_PROTECT,&dwOld);
 
 		LeaveCriticalSection(&s_heap_info.lock);
 	}
