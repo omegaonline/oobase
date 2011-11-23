@@ -90,7 +90,7 @@ namespace
 
 	static bool (*s_pfnCriticalFailure)(const char*) = &DefaultOnCriticalFailure;
 
-#if !defined(DOXYGEN)
+#if !defined(DOXYGEN) && !defined(OOBASE_NO_ERROR_HANDLERS)
 	void unexpected()
 	{
 		OOBase::CallCriticalFailure(NULL,0,"Unexpected exception thrown");
@@ -101,24 +101,46 @@ namespace
 		OOBase::CallCriticalFailure(NULL,0,"Unhandled exception");
 	}
 
-#if !defined(OOBASE_NO_ERROR_HANDLERS)
-	static struct install_handlers
+	int install_handlers()
 	{
-		install_handlers()
+		std::set_unexpected(&unexpected);
+		std::set_terminate(&terminate);
+
+		#if defined(_WIN32)
+			const DWORD new_mask = SEM_FAILCRITICALERRORS|SEM_NOOPENFILEERRORBOX;
+			DWORD mask = SetErrorMode(new_mask);
+			SetErrorMode(mask | new_mask);
+		#endif
+		return 0;
+	}
+	const int s_err_handler = install_handlers();
+
+#endif // !defined(DOXYGEN) && !defined(OOBASE_NO_ERROR_HANDLERS)
+
+	int std_write(bool use_stderr, const char* sz, size_t len)
+	{
+		if (len == size_t(-1))
+			len = strlen(sz);
+
+		int err = s_err_handler; // Force usage of s_err_handler
+		if (len > 0)
 		{
-			std::set_unexpected(&unexpected);
-			std::set_terminate(&terminate);
+#if defined(_WIN32)
+			HANDLE h = GetStdHandle(use_stderr ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE);
+			if (h == INVALID_HANDLE_VALUE || !WriteFile(h,sz,(DWORD)len,NULL,NULL))
+				err = GetLastError();
+			else
+				FlushFileBuffers(h);
 
-			#if defined(_WIN32)
-				const DWORD new_mask = SEM_FAILCRITICALERRORS|SEM_NOOPENFILEERRORBOX;
-				DWORD mask = SetErrorMode(new_mask);
-				SetErrorMode(mask | new_mask);
-			#endif
+#elif defined(HAVE_UNISTD_H)
+			int fd = use_stderr ? STDERR_FILENO : STDOUT_FILENO;
+			err = write(fd,sz,len);
+			if (err == 0)
+				fsync(fd);
+#endif
 		}
-	} s_err_handler;
-#endif // !defined(OOBASE_NO_ERROR_HANDLERS)
-
-#endif // !defined(DOXYGEN)
+		return err;
+	}
 }
 
 const char* OOBase::system_error_text(int err)
@@ -175,6 +197,16 @@ const char* OOBase::system_error_text(int err)
 		memcpy(err_buf,unknown_error,sizeof(unknown_error));
 
 	return err_buf;
+}
+
+int OOBase::stderr_write(const char* sz, size_t len)
+{
+	return std_write(true,sz,len);
+}
+
+int OOBase::stdout_write(const char* sz, size_t len)
+{
+	return std_write(false,sz,len);
 }
 
 void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, int err)
@@ -243,10 +275,7 @@ void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, const 
 	}
 
 	if (bReport)
-	{
-		fputs(szBuf,stderr);
-		fflush(stderr);
-	}
+		stderr_write(szBuf);
 
 #if defined(_WIN32)
 	#if defined(_DEBUG)

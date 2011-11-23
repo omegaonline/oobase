@@ -135,6 +135,8 @@ namespace OOBase
 
 	/// Return the system supplied error string from error code 'err' . If err == -1, use errno or GetLastError()
 	const char* system_error_text(int err = -1);
+	int stderr_write(const char* sz, size_t len = -1);
+	int stdout_write(const char* sz, size_t len = -1);
 
 	typedef bool (*OnCriticalFailure)(const char*);
 

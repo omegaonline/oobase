@@ -237,16 +237,18 @@ namespace
 			OutputDebugStringA("\n");
 		}
 
-		FILE* out_file = stdout;
 		switch (priority)
 		{
 		case OOBase::Logger::Error:
-			out_file = stderr;
-			fputs("Error: ",out_file);
+			OOBase::stderr_write("Error: ");
+			OOBase::stderr_write(msg);
+			OOBase::stderr_write("\n");
 			break;
 
 		case OOBase::Logger::Warning:
-			fputs("Warning: ",out_file);
+			OOBase::stdout_write("Warning: ");
+			OOBase::stderr_write(msg);
+			OOBase::stderr_write("\n");
 			break;
 
 #if !defined(_DEBUG)
@@ -257,9 +259,6 @@ namespace
 		default:
 			break;
 		}
-		fputs(msg,out_file);
-		fputs("\n",out_file);
-		fflush(out_file);
 	}
 
 #endif // _WIN32
@@ -312,16 +311,18 @@ namespace
 
 		syslog(wType,"%s",msg);
 
-		FILE* out_file = stdout;
 		switch (priority)
 		{
 		case OOBase::Logger::Error:
-			out_file = stderr;
-			fputs("Error: ",out_file);
+			OOBase::stderr_write("Error: ");
+			OOBase::stderr_write(msg);
+			OOBase::stderr_write("\n");
 			break;
 
 		case OOBase::Logger::Warning:
-			fputs("Warning: ",out_file);
+			OOBase::stdout_write("Warning: ");
+			OOBase::stdout_write(msg);
+			OOBase::stdout_write("\n");
 			break;
 
 #if !defined(_DEBUG)
@@ -332,10 +333,6 @@ namespace
 		default:
 			break;
 		}
-
-		fputs(msg,out_file);
-		fputs("\n",out_file);
-		fflush(out_file);
 	}
 
 #endif // HAVE_SYSLOG_H
