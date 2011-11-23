@@ -22,7 +22,7 @@
 #ifndef OOBASE_TR24731_H_INCLUDED_
 #define OOBASE_TR24731_H_INCLUDED_
 
-#include "../config-base.h"
+#include "../include/config-base.h"
 
 #if !defined(DOXYGEN)
 #define __STDC_WANT_LIB_EXT1__ 1
@@ -40,35 +40,15 @@
 // These are missing from the earlier draft...
 #if defined(HAVE_TR_24731) && (!defined(__STDC_LIB_EXT1__) || (__STDC_LIB_EXT1__ < 200509L))
 #if defined(_MSC_VER)
-inline int vsnprintf_s_fixed(char* s, rsize_t n, const char* format, va_list arg)
-{
-	if (!s || !format)
-	{
-		errno = 22 /*EINVAL*/;
-		return -1;
-	}
 
-	int r = _vsnprintf_s(s,n,_TRUNCATE,format,arg);
-	if (r == -1 && errno == 0)
-		return static_cast<int>(n) * 2;
-	else
-		return r;
+namespace OOBase
+{
+	int vsnprintf_s_fixed(char* s, rsize_t n, const char* format, va_list arg);
+	int snprintf_s_fixed(char* s, size_t n, const char* format, ...);
 }
 
-inline int snprintf_s_fixed(char* s, size_t n, const char* format, ...)
-{
-	va_list args;
-	va_start(args,format);
-
-	int ret = vsnprintf_s_fixed(s,n,format,args);
-
-	va_end(args);
-
-	return ret;
-}
-
-#define vsnprintf_s vsnprintf_s_fixed
-#define snprintf_s snprintf_s_fixed
+#define vsnprintf_s OOBase::vsnprintf_s_fixed
+#define snprintf_s OOBase::snprintf_s_fixed
 #else
 #error Fix for the early safe libc draft
 #endif
@@ -76,19 +56,7 @@ inline int snprintf_s_fixed(char* s, size_t n, const char* format, ...)
 
 #if !defined(HAVE_TR_24731)
 int vsnprintf_s(char* s, size_t n, const char* format, va_list arg);
-
-inline int snprintf_s(char* s, size_t n, const char* format, ...)
-{
-	va_list args;
-	va_start(args,format);
-
-	int ret = vsnprintf_s(s,n,format,args);
-
-	va_end(args);
-
-	return ret;
-}
-
+int snprintf_s(char* s, size_t n, const char* format, ...);
 #endif
 
 #endif // OOBASE_TR24731_H_INCLUDED_

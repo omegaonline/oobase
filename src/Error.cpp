@@ -19,8 +19,9 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/tr24731.h"
 #include "../include/OOBase/SmartPtr.h"
+
+#include "tr24731.h"
 
 #include <stdlib.h>
 #include <signal.h>

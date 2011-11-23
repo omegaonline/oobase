@@ -20,7 +20,8 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/TimeVal.h"
-#include "../include/OOBase/tr24731.h"
+
+#include "tr24731.h"
 
 #include <time.h>
 

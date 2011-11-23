@@ -93,7 +93,6 @@ liboobase_la_SOURCES = \
 	include/OOBase/Thread.h \
 	include/OOBase/TimeVal.h \
 	include/OOBase/TLSSingleton.h \
-	include/OOBase/tr24731.h \
 	include/OOBase/utf8.h \
 	include/OOBase/Win32.h \
 	src/BSDSocket.h \
@@ -115,6 +114,7 @@ liboobase_la_SOURCES = \
 	src/Thread.cpp \
 	src/TimeVal.cpp \
 	src/TLS.cpp \
+	src/tr24731.h \
 	src/tr24731.cpp \
 	src/utf8.cpp \
 	src/Win32.cpp \

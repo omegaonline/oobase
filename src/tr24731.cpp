@@ -19,7 +19,42 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/tr24731.h"
+#include "tr24731.h"
+
+#if defined(HAVE_TR_24731) && (!defined(__STDC_LIB_EXT1__) || (__STDC_LIB_EXT1__ < 200509L))
+#if defined(_MSC_VER)
+
+int OOBase::vsnprintf_s_fixed(char* s, rsize_t n, const char* format, va_list arg)
+{
+	if (!s || !format)
+	{
+		errno = 22 /*EINVAL*/;
+		return -1;
+	}
+
+	int r = _vsnprintf_s(s,n,_TRUNCATE,format,arg);
+	if (r == -1 && errno == 0)
+		return static_cast<int>(n) * 2;
+	else
+		return r;
+}
+
+int OOBase::snprintf_s_fixed(char* s, size_t n, const char* format, ...)
+{
+	va_list args;
+	va_start(args,format);
+
+	int ret = vsnprintf_s_fixed(s,n,format,args);
+
+	va_end(args);
+
+	return ret;
+}
+
+#else
+#error Fix for the early safe libc draft
+#endif
+#endif
 
 #if !defined(HAVE_TR_24731)
 
@@ -40,6 +75,18 @@ int vsnprintf_s(char* s, size_t n, const char* format, va_list arg)
 
 	s[n-1] = '\0';
 	return r;
+}
+
+int snprintf_s(char* s, size_t n, const char* format, ...)
+{
+	va_list args;
+	va_start(args,format);
+
+	int ret = vsnprintf_s(s,n,format,args);
+
+	va_end(args);
+
+	return ret;
 }
 
 #endif

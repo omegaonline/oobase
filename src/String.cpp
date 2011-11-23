@@ -20,7 +20,8 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/String.h"
-#include "../include/OOBase/tr24731.h"
+
+#include "tr24731.h"
 
 #include <stdlib.h>
 

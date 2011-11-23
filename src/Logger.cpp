@@ -22,10 +22,11 @@
 #include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Once.h"
 #include "../include/OOBase/SmartPtr.h"
-#include "../include/OOBase/tr24731.h"
 #include "../include/OOBase/SecurityWin32.h"
 #include "../include/OOBase/String.h"
 #include "../include/OOBase/Logger.h"
+
+#include "tr24731.h"
 
 #if defined(_WIN32)
 #define getpid GetCurrentProcessId
