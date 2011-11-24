@@ -673,7 +673,7 @@ void OOBase::Win32::condition_variable_t::broadcast()
 		LeaveCriticalSection(&m_waiters_lock);
 }
 
-#if 1
+#if 0
 
 // VLD plays badly with this set..
 #define WIN32_DEBUG_PAGE_PROTECT PAGE_READONLY
