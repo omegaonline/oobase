@@ -61,6 +61,9 @@
     <ClCompile Include="SecurityWin32.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="tr24731.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\OOBase\Atomic.h">
@@ -144,9 +147,6 @@
     <ClInclude Include="..\include\OOBase\TLSSingleton.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\tr24731.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\OOBase\utf8.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -179,6 +179,9 @@
     </ClInclude>
     <ClInclude Include="..\include\OOBase\Set.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tr24731.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

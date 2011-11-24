@@ -339,6 +339,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\tr24731.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\tr24731.h"
+				>
+			</File>
+			<File
 				RelativePath=".\utf8.cpp"
 				>
 			</File>
@@ -494,10 +502,6 @@
 			</File>
 			<File
 				RelativePath="..\include\OOBase\TLSSingleton.h"
-				>
-			</File>
-			<File
-				RelativePath="..\include\OOBase\tr24731.h"
 				>
 			</File>
 			<File
