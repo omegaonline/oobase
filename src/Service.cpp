@@ -103,6 +103,8 @@ namespace
 	}
 }
 
+template class OOBase::Singleton<QuitData,OOBase::Module>;
+
 OOSvrBase::Server::Server()
 {
 	QUIT::instance();

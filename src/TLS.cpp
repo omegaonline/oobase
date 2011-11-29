@@ -65,9 +65,12 @@ namespace
 		TLSMap(const TLSMap&);
 		TLSMap& operator = (const TLSMap&);
 	};
+}
 
 #if defined(_WIN32)
 
+namespace
+{
 	struct Win32TLSGlobal
 	{
 		Win32TLSGlobal();
@@ -114,11 +117,16 @@ namespace
 	 *  e.g. \link Win32TLSGlobal \endlink or \link PthreadTLSGlobal \endlink
 	 */
 	typedef OOBase::Singleton<Win32TLSGlobal,OOBase::Module> TLS_GLOBAL;
+}
+
+template class OOBase::Singleton<Win32TLSGlobal,OOBase::Module>;
 
 #endif // _WIN32
 
 #if defined(HAVE_PTHREAD)
 
+namespace
+{
 	struct PthreadTLSGlobal
 	{
 		PthreadTLSGlobal();
@@ -158,9 +166,14 @@ namespace
 	}
 
 	typedef OOBase::Singleton<PthreadTLSGlobal,OOBase::Module> TLS_GLOBAL;
+}
+
+template class OOBase::Singleton<PthreadTLSGlobal,OOBase::Module>;
 
 #endif // HAVE_PTHREAD
 
+namespace
+{
 	TLSMap* TLSMap::instance(bool create)
 	{
 		TLSMap* inst = TLS_GLOBAL::instance().Get();

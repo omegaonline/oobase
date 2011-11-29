@@ -20,6 +20,18 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/DLL.h"
+#include "../include/OOBase/Singleton.h"
+
+namespace OOBase
+{
+	// The discrimination type for singleton scoping for this module
+	struct Module
+	{
+		int unused;
+	};
+}
+
+template class OOBase::DLLDestructor<OOBase::Module>;
 
 #if defined(_WIN32)
 
@@ -64,17 +76,6 @@ void* OOBase::DLL::symbol(const char* sym_name)
 
 #else
 
-#include "../include/OOBase/Singleton.h"
-
-namespace OOBase
-{
-	// The discrimination type for singleton scoping for this module
-	struct Module
-	{
-		int unused;
-	};
-}
-
 namespace
 {
 	struct Libtool_Helper
@@ -100,6 +101,8 @@ namespace
 
 	typedef OOBase::Singleton<Libtool_Helper,OOBase::Module> LT_HELPER;
 }
+
+template class OOBase::Singleton<Libtool_Helper,OOBase::Module>;
 
 OOBase::DLL::DLL() :
 		m_module(NULL)

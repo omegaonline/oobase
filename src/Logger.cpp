@@ -45,15 +45,6 @@
 #include <syslog.h>
 #endif // HAVE_ASL_H/HAVE_SYSLOG_H
 
-namespace OOBase
-{
-	// The discrimination type for singleton scoping for this module
-	struct Module
-	{
-		int unused;
-	};
-}
-
 namespace
 {
 #if defined(_WIN32)
