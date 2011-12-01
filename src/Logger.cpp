@@ -166,7 +166,7 @@ namespace
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
-#if !defined(_DEBUG)
+#if defined(NDEBUG)
 		if (m_hLog && priority != OOBase::Logger::Debug)
 		{
 			WORD wType = 0;
@@ -243,8 +243,11 @@ namespace
 			OOBase::stderr_write("\n");
 			break;
 
-#if !defined(_DEBUG)
+#if !defined(NDEBUG)
 		case OOBase::Logger::Debug:
+			OOBase::stdout_write("Debug: ");
+			OOBase::stdout_write(msg);
+			OOBase::stdout_write("\n");
 			return;
 #endif
 
@@ -278,6 +281,7 @@ namespace
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
+#if defined(NDEBUG)
 		int wType = 0;
 		switch (priority)
 		{
@@ -302,6 +306,7 @@ namespace
 		}
 
 		syslog(wType,"%s",msg);
+#endif
 
 		switch (priority)
 		{
@@ -317,9 +322,12 @@ namespace
 			OOBase::stdout_write("\n");
 			break;
 
-#if !defined(_DEBUG)
+#if !defined(NDEBUG)
 		case OOBase::Logger::Debug:
-			return;
+			OOBase::stdout_write("Debug: ");
+			OOBase::stdout_write(msg);
+			OOBase::stdout_write("\n");
+			break;
 #endif
 
 		default:

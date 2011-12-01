@@ -251,7 +251,7 @@ DWORD OOBase::Win32::RestrictToken(HANDLE& hToken)
 	os.dwOSVersionInfoSize = sizeof(os);
 	GetVersionExW((OSVERSIONINFOW*)&os);
 
-#if !defined(_DEBUG)
+#if 0 && !defined(_DEBUG)
 	if ((os.dwMajorVersion == 5 && os.dwMinorVersion > 0) || os.dwMajorVersion >= 5)
 	{
 		//// Use SAFER API

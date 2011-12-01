@@ -279,13 +279,13 @@ void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, const 
 		stderr_write(szBuf);
 
 #if defined(_WIN32)
-	#if defined(_DEBUG)
+#if !defined(NDEBUG)
 		if (IsDebuggerPresent()) DebugBreak();
 	#endif
 	// We don't want the stupid CRT abort message
 	TerminateProcess(GetCurrentProcess(),EXIT_FAILURE);
 #else
-	#if defined(_DEBUG)
+	#if !defined(NDEBUG)
 		raise(SIGINT);
 	#endif
 	abort();
