@@ -239,8 +239,8 @@ namespace
 
 		case OOBase::Logger::Warning:
 			OOBase::stdout_write("Warning: ");
-			OOBase::stderr_write(msg);
-			OOBase::stderr_write("\n");
+			OOBase::stdout_write(msg);
+			OOBase::stdout_write("\n");
 			break;
 
 #if !defined(NDEBUG)

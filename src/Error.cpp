@@ -128,7 +128,8 @@ namespace
 		{
 #if defined(_WIN32)
 			HANDLE h = GetStdHandle(use_stderr ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE);
-			if (h == INVALID_HANDLE_VALUE || !WriteFile(h,sz,(DWORD)len,NULL,NULL))
+			DWORD dw = 0;
+			if (h == INVALID_HANDLE_VALUE || !WriteFile(h,sz,(DWORD)len,&dw,NULL))
 				err = GetLastError();
 			else
 				FlushFileBuffers(h);
