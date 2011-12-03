@@ -150,7 +150,7 @@ DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, OOBase::SmartPtr<void,OOBase::Lo
 		return GetLastError();
 
 	// Loop through the groups to find the logon SID
-	for (DWORD dwIndex = 0; dwIndex < ptrGroups->GroupCount; ++dwIndex)
+	for (DWORD dwIndex = 0; ptrGroups->GroupCount != 0 && dwIndex < ptrGroups->GroupCount; ++dwIndex)
 	{
 		if ((ptrGroups->Groups[dwIndex].Attributes & SE_GROUP_LOGON_ID) == SE_GROUP_LOGON_ID)
 		{
