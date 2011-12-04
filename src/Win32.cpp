@@ -739,7 +739,7 @@ void* OOBase::CrtAllocator::allocate(size_t len)
 		for (Marker* prev = NULL; m != NULL; )
 		{
 			DWORD dwOld = 0;
-			::VirtualProtect(m,sizeof(Marker),WIN32_DEBUG_PAGE_PROTECT,&dwOld);
+			::VirtualProtect(m,sizeof(Marker),PAGE_EXECUTE_READWRITE,&dwOld);
 
 			if (m->value.len >= len)
 			{
