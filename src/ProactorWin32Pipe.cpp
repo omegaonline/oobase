@@ -132,6 +132,8 @@ int AsyncPipe::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callbac
 		if (err != ERROR_IO_PENDING)
 			on_recv(m_hPipe,dwRead,err,pOv);
 	}
+
+	m_pProactor->delete_overlapped(pOv);
 			
 	return 0;
 }
@@ -146,6 +148,8 @@ void AsyncPipe::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::de
 
 		pOv->m_extras[3] -= dwBytes;
 
+		InterlockedIncrement(&pOv->m_refcount);
+
 		DWORD dwRead = 0;
 		if (!ReadFile(handle,buffer->wr_ptr(),(DWORD)pOv->m_extras[3],&dwRead,pOv))
 		{
@@ -153,17 +157,19 @@ void AsyncPipe::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::de
 			if (dwErr != ERROR_IO_PENDING)
 				on_recv(handle,dwRead,dwErr,pOv);
 		}
+
+		pOv->m_pProactor->delete_overlapped(pOv);
 	}
 	else
 	{
 		void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 		recv_callback_t callback = reinterpret_cast<recv_callback_t>(pOv->m_extras[1]);
 
+		pOv->m_pProactor->delete_overlapped(pOv);
+
 		// Make sure we release() buffer
 		OOBase::RefPtr<OOBase::Buffer> buf2 = buffer;
 
-		delete pOv;
-	
 		// Call callback
 		if (callback)
 		{
@@ -200,6 +206,8 @@ int AsyncPipe::send(void* param, send_callback_t callback, OOBase::Buffer* buffe
 		if (dwErr != ERROR_IO_PENDING)
 			on_send(m_hPipe,dwSent,dwErr,pOv);
 	}
+
+	m_pProactor->delete_overlapped(pOv);
 		
 	return 0;
 }
@@ -210,7 +218,7 @@ void AsyncPipe::on_send(HANDLE /*handle*/, DWORD /*dwBytes*/, DWORD dwErr, OOSvr
 	send_callback_t callback = reinterpret_cast<send_callback_t>(pOv->m_extras[1]);
 	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
 		
-	delete pOv;
+	pOv->m_pProactor->delete_overlapped(pOv);
 	
 	// Call callback
 	if (callback)
@@ -270,6 +278,8 @@ int AsyncPipe::send_v(void* param, send_callback_t callback, OOBase::Buffer* buf
 		if (dwErr != ERROR_IO_PENDING)
 			on_send(m_hPipe,dwSent,dwErr,pOv);
 	}
+
+	m_pProactor->delete_overlapped(pOv);
 	
 	return 0;
 }
@@ -463,6 +473,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 				if (dwErr == 0)
 				{
 					hPipe.detach();
+					m_pProactor->delete_overlapped(pOv);
 					pOv = NULL;
 					continue;
 				}
@@ -485,7 +496,11 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 		}
 	}
 	
-	delete pOv;
+	if (pOv)
+	{
+		m_pProactor->delete_overlapped(pOv);
+		m_pProactor->delete_overlapped(pOv);
+	}
 	
 	return dwErr;
 }
@@ -493,13 +508,13 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 void InternalAcceptor::on_completion(HANDLE hPipe, DWORD /*dwBytes*/, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv)
 {	
 	InternalAcceptor* pThis = reinterpret_cast<InternalAcceptor*>(pOv->m_extras[0]);
+
+	pOv->m_pProactor->delete_overlapped(pOv);
 	
 	OOBase::Guard<OOBase::Condition::Mutex> guard(pThis->m_lock);
 	
 	// Perform the callback
 	pThis->on_accept(hPipe,true,dwErr,guard);
-	
-	delete pOv;
 }
 
 bool InternalAcceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard)

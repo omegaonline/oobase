@@ -673,11 +673,7 @@ void OOBase::Win32::condition_variable_t::broadcast()
 		LeaveCriticalSection(&m_waiters_lock);
 }
 
-#if 0
-
-// VLD plays badly with this set..
-#define WIN32_DEBUG_PAGE_PROTECT PAGE_READONLY
-//#define WIN32_DEBUG_PAGE_PROTECT PAGE_NOACCESS
+#if 1
 
 namespace
 {
@@ -686,14 +682,16 @@ namespace
 		struct
 		{
 			size_t  len;
-			Marker* magic;
+			Marker* next;
+			Marker* prev;
 		} value;
-		char   padding[16];
+		char   padding[32];
 	};
 
 	struct DebugHeapInfo
 	{
 		Marker*          free_head;
+		Marker*          free_tail;
 		size_t           page_size;
 		CRITICAL_SECTION lock;
 	} s_heap_info;
@@ -707,6 +705,7 @@ namespace
 		s_heap_info.page_size = si.dwPageSize - 1;
 
 		s_heap_info.free_head = NULL;
+		s_heap_info.free_tail = NULL;
 
 		return TRUE;
 	}
@@ -728,39 +727,49 @@ void* OOBase::CrtAllocator::allocate(size_t len)
 
 	len = (len + sizeof(Marker) + s_heap_info.page_size) & (~s_heap_info.page_size);
 
-	Marker* m = (Marker*)::VirtualAlloc(NULL,len,MEM_COMMIT | MEM_RESERVE,PAGE_EXECUTE_READWRITE);
+	Marker* m = (Marker*)::VirtualAlloc(NULL,len,MEM_COMMIT | MEM_RESERVE,PAGE_READWRITE);
 	if (m)
 		m->value.len = len;
 	else
 	{
 		EnterCriticalSection(&s_heap_info.lock);
 
-		m = s_heap_info.free_head;
-		for (Marker* prev = NULL; m != NULL; )
+		for (m = s_heap_info.free_head; m != NULL; )
 		{
 			DWORD dwOld = 0;
-			::VirtualProtect(m,sizeof(Marker),PAGE_EXECUTE_READWRITE,&dwOld);
+			::VirtualProtect(m,sizeof(Marker),PAGE_READWRITE,&dwOld);
 
 			if (m->value.len >= len)
 			{
-				::VirtualProtect(m,m->value.len,PAGE_EXECUTE_READWRITE,&dwOld);
+				::VirtualProtect(m,m->value.len,PAGE_READWRITE,&dwOld);
 			
-				if (prev)
+				if (m->value.prev)
 				{
-					::VirtualProtect(prev,sizeof(Marker),PAGE_READWRITE,&dwOld);
-					prev->value.magic = m->value.magic;
-					::VirtualProtect(prev,sizeof(Marker),WIN32_DEBUG_PAGE_PROTECT,&dwOld);
+					DWORD dwPrev = 0;
+					::VirtualProtect(m->value.prev,sizeof(Marker),PAGE_READWRITE,&dwPrev);
+					m->value.prev->value.next = m->value.next;
+					::VirtualProtect(m->value.prev,sizeof(Marker),dwPrev,&dwPrev);
 				}
 				else
-					s_heap_info.free_head = m->value.magic;
+					s_heap_info.free_head = m->value.next;
+
+				if (m->value.next)
+				{
+					DWORD dwPrev = 0;
+					::VirtualProtect(m->value.next,sizeof(Marker),PAGE_READWRITE,&dwPrev);
+					m->value.next->value.prev = m->value.prev;
+					::VirtualProtect(m->value.next,sizeof(Marker),dwPrev,&dwPrev);
+				}
+				else
+					s_heap_info.free_tail = m->value.prev;
+
 				break;
 			}
 
-			Marker* next = m->value.magic;
+			Marker* next = m->value.next;
 			
-			::VirtualProtect(m,sizeof(Marker),WIN32_DEBUG_PAGE_PROTECT,&dwOld);
+			::VirtualProtect(m,sizeof(Marker),dwOld,&dwOld);
 	
-			prev = m;
 			m = next;
 		}
 
@@ -770,7 +779,8 @@ void* OOBase::CrtAllocator::allocate(size_t len)
 	if (!m)
 		return NULL;
 
-	m->value.magic = reinterpret_cast<Marker*>(0x12345678);
+	m->value.next = reinterpret_cast<Marker*>(0x12345678);
+	m->value.prev = reinterpret_cast<Marker*>(0x87654321);
 	memset(m+1,0xFF,m->value.len-sizeof(Marker));
 
 	return (m+1);
@@ -784,10 +794,9 @@ void* OOBase::CrtAllocator::reallocate(void* ptr, size_t len)
 	if (!ptr)
 		return allocate(len);
 
-	init_debug_heap();
-
 	Marker* m = (static_cast<Marker*>(ptr) - 1);
-	assert(m->value.magic == reinterpret_cast<void*>(0x12345678));
+	if (m->value.next != reinterpret_cast<void*>(0x12345678) || m->value.prev != reinterpret_cast<void*>(0x87654321))
+		DebugBreak();
 
 	if (m->value.len - sizeof(Marker) >= len)
 		return ptr;
@@ -809,15 +818,32 @@ void OOBase::CrtAllocator::free(void* ptr)
 		init_debug_heap();
 
 		Marker* m = (static_cast<Marker*>(ptr) - 1);
-		assert(m->value.magic == reinterpret_cast<void*>(0x12345678));
+		if (m->value.next != reinterpret_cast<void*>(0x12345678) || m->value.prev != reinterpret_cast<void*>(0x87654321))
+			DebugBreak();
 
 		EnterCriticalSection(&s_heap_info.lock);
 
-		m->value.magic = s_heap_info.free_head;
-		s_heap_info.free_head = m;
+		if (s_heap_info.free_tail)
+		{
+			m->value.prev = s_heap_info.free_tail;
+			m->value.next = NULL;
+
+			DWORD dwPrev = 0;
+			::VirtualProtect(s_heap_info.free_tail,sizeof(Marker),PAGE_READWRITE,&dwPrev);
+			s_heap_info.free_tail->value.next = m;
+			::VirtualProtect(s_heap_info.free_tail,sizeof(Marker),dwPrev,&dwPrev);
+		}
+		else
+		{
+			m->value.next = NULL;
+			m->value.prev = NULL;
+			s_heap_info.free_head = m;
+		}
+
+		s_heap_info.free_tail = m;
 
 		DWORD dwOld = 0;
-		::VirtualProtect(m,m->value.len,WIN32_DEBUG_PAGE_PROTECT,&dwOld);
+		::VirtualProtect(m,m->value.len,PAGE_NOACCESS,&dwOld);
 
 		LeaveCriticalSection(&s_heap_info.lock);
 	}

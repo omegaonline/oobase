@@ -25,6 +25,11 @@
 
 #include <stdlib.h>
 
+OOBase::LocalString::~LocalString()
+{
+	OOBase::LocalAllocator::free(m_data);
+}
+
 int OOBase::LocalString::assign(const LocalString& str)
 {
 	int err = 0;

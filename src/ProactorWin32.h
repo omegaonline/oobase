@@ -26,6 +26,7 @@
 
 #if defined(_WIN32)
 
+#include "../include/OOBase/GlobalNew.h"
 #include "../include/OOBase/Win32.h"
 #include "Win32Socket.h"
 
@@ -47,13 +48,16 @@ namespace OOSvrBase
 		
 			struct Overlapped : public OVERLAPPED
 			{
+				LONG m_refcount;
+				ProactorWin32* m_pProactor;
 				void (*m_callback)(HANDLE handle, DWORD dwBytes, DWORD dwErr, Overlapped* pOv);
 				ULONG_PTR m_extras[4];
 			};
 			typedef void (*pfnCompletion_t)(HANDLE handle, DWORD dwBytes, DWORD dwErr, Overlapped* pOv);
 		
 			int new_overlapped(Overlapped*& pOv, pfnCompletion_t callback);
-						
+			void delete_overlapped(Overlapped* pOv);
+									
 			int bind(HANDLE hFile);
 			void unbind(HANDLE hFile);
 

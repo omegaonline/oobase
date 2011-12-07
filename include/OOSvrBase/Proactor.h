@@ -40,7 +40,7 @@ namespace OOSvrBase
 		template <typename T>
 		int recv(T* param, void (T::*callback)(OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout = NULL)
 		{
-			ThunkR<T>* thunk = new (std::nothrow) ThunkR<T>(param,callback);
+			ThunkR<T>* thunk = ThunkR<T>::create(param,callback);
 			if (!thunk)
 				return ERROR_OUTOFMEMORY;
 			
@@ -50,7 +50,7 @@ namespace OOSvrBase
 		template <typename T>
 		int send(T* param, void (T::*callback)(int err), OOBase::Buffer* buffer)
 		{
-			ThunkS<T>* thunk = new (std::nothrow) ThunkS<T>(param,callback);
+			ThunkS<T>* thunk = ThunkS<T>::create(param,callback);
 			if (!thunk)
 				return ERROR_OUTOFMEMORY;
 			
@@ -60,7 +60,7 @@ namespace OOSvrBase
 		template <typename T>
 		int send_v(T* param, void (T::*callback)(int err), OOBase::Buffer* buffers[], size_t count)
 		{
-			ThunkS<T>* thunk = new (std::nothrow) ThunkS<T>(param,callback);
+			ThunkS<T>* thunk = ThunkS<T>::create(param,callback);
 			if (!thunk)
 				return ERROR_OUTOFMEMORY;
 			
@@ -88,13 +88,21 @@ namespace OOSvrBase
 			T* m_param;
 			void (T::*m_callback)(OOBase::Buffer* buffer, int err);
 
-			ThunkR(T* param, void (T::*callback)(OOBase::Buffer*,int)) : m_param(param), m_callback(callback)
-			{}
+			static ThunkR* create(T* param, void (T::*callback)(OOBase::Buffer*,int))
+			{
+				ThunkR* t = static_cast<ThunkR*>(OOBase::HeapAllocator::allocate(sizeof(ThunkR)));
+				if (t)
+				{
+					t->m_callback = callback;
+					t->m_param = param;
+				}
+				return t;
+			}
 		
 			static void fn(void* param, OOBase::Buffer* buffer, int err)
 			{
 				ThunkR thunk = *static_cast<ThunkR*>(param);
-				delete static_cast<ThunkR*>(param);
+				OOBase::HeapAllocator::free(param);
 				
 				(thunk.m_param->*thunk.m_callback)(buffer,err);
 			}
@@ -106,13 +114,21 @@ namespace OOSvrBase
 			T* m_param;
 			void (T::*m_callback)(int err);
 
-			ThunkS(T* param, void (T::*callback)(int)) : m_param(param), m_callback(callback)
-			{}
+			static ThunkS* create(T* param, void (T::*callback)(int))
+			{
+				ThunkS* t = static_cast<ThunkS*>(OOBase::HeapAllocator::allocate(sizeof(ThunkS)));
+				if (t)
+				{
+					t->m_callback = callback;
+					t->m_param = param;
+				}
+				return t;
+			}
 		
 			static void fn(void* param, int err)
 			{
 				ThunkS thunk = *static_cast<ThunkS*>(param);
-				delete static_cast<ThunkS*>(param);
+				OOBase::HeapAllocator::free(param);
 				
 				(thunk.m_param->*thunk.m_callback)(err);
 			}

@@ -26,6 +26,7 @@
 
 #if defined(HAVE_EV_H) && !defined(_WIN32)
 
+#include "../include/OOBase/GlobalNew.h"
 #include "../include/OOBase/HandleTable.h"
 #include "../include/OOBase/Queue.h"
 #include "../include/OOBase/Condition.h"

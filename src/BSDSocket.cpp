@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Memory.h"
+#include "../include/OOBase/GlobalNew.h"
 
 #if !defined(_WIN32)
 

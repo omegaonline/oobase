@@ -19,8 +19,10 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOSvrBase/Proactor.h"
+#include "../include/OOBase/GlobalNew.h"
 #include "../include/OOBase/Condition.h"
+
+#include "../include/OOSvrBase/Proactor.h"
 
 #if defined(_WIN32)
 #include "ProactorWin32.h"
