@@ -221,7 +221,7 @@ namespace OOBase
 		const V* bsearch(V1 key) const
 		{
 			// Always sort first
-			const_cast<Table*>(this)->sort();
+			const_cast<Set*>(this)->sort();
 
 			const V* base = m_data;
 			for (size_t span = m_size; span > 0; span /= 2)
