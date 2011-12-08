@@ -673,7 +673,7 @@ void OOBase::Win32::condition_variable_t::broadcast()
 		LeaveCriticalSection(&m_waiters_lock);
 }
 
-#if 1
+#if 0
 
 namespace
 {

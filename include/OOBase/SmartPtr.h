@@ -37,6 +37,16 @@ namespace OOBase
 		}
 	};
 
+	template <typename T>
+	class ArrayDeleteDestructor
+	{
+	public:
+		static void free(T* ptr)
+		{
+			delete [] ptr;
+		}
+	};
+
 	namespace detail
 	{
 		template <typename T, typename Allocator>
