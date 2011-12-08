@@ -32,7 +32,7 @@ namespace OOBase
 	public:
 		static const size_t npos = size_t(-1);
 
-		Table() : m_data(NULL), m_capacity(0), m_size(0)
+		Table() : m_data(NULL), m_capacity(0), m_size(0), m_sorted(true)
 		{}
 			
 		~Table()
@@ -47,7 +47,7 @@ namespace OOBase
 			return reserve_i(capacity + m_size);
 		}
 		
-		int insert(const K& key, const V& value, bool do_sort = true)
+		int insert(const K& key, const V& value)
 		{
 			if (m_size+1 > m_capacity)
 			{
@@ -62,9 +62,7 @@ namespace OOBase
 			
 			// This is exception safe as the increment happens here
 			++m_size;
-			
-			if (do_sort)
-				sort();
+			m_sorted = false;
 			
 			return 0;
 		}
@@ -181,6 +179,12 @@ namespace OOBase
 		
 		void sort()
 		{
+			if (!m_sorted)
+				sort(&default_sort);
+		}
+
+		void sort(bool (*less_than)(const K& k1, const K& k2))
+		{
 			// This is a Shell-sort because we mostly use sort() in cases where qsort() behaves badly
 			// i.e. insertion at the end and then sort
 			// see http://warp.povusers.org/SortComparison
@@ -198,7 +202,7 @@ namespace OOBase
 					Node v = m_data[i];
 					size_t j = i;
 					
-					while (j >= h && v.m_key < m_data[j-h].m_key)
+					while (j >= h && (*less_than)(v.m_key,m_data[j-h].m_key))
 					{
 						m_data[j] = m_data[j-h];
 						j -= h;
@@ -207,6 +211,8 @@ namespace OOBase
 					m_data[j] = v;
 				}
 			}
+
+			m_sorted = (less_than == &default_sort);
 		}
 		
 	private:
@@ -228,6 +234,8 @@ namespace OOBase
 		Node*  m_data;
 		size_t m_capacity;
 		size_t m_size;
+
+		mutable bool m_sorted;
 	
 		int reserve_i(size_t capacity)
 		{
@@ -265,6 +273,9 @@ namespace OOBase
 		template <typename K1>
 		const Node* bsearch(K1 key) const
 		{
+			// Always sort first
+			const_cast<Table*>(this)->sort();
+
 			const Node* base = m_data;
 			for (size_t span = m_size; span > 0; span /= 2) 
 			{
@@ -279,6 +290,11 @@ namespace OOBase
 				}
 			}
 		    return NULL;
+		}
+
+		static bool default_sort(const K& k1, const K& k2)
+		{
+			return (k1 < k2);
 		}
 	};
 }

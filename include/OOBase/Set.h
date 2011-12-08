@@ -32,7 +32,7 @@ namespace OOBase
 	public:
 		static const size_t npos = size_t(-1);
 
-		Set() : m_data(NULL), m_capacity(0), m_size(0)
+		Set() : m_data(NULL), m_capacity(0), m_size(0), m_sorted(true)
 		{}
 
 		~Set()
@@ -47,7 +47,7 @@ namespace OOBase
 			return reserve_i(capacity + m_size);
 		}
 
-		int insert(const V& value, bool do_sort = true)
+		int insert(const V& value)
 		{
 			if (m_size+1 > m_capacity)
 			{
@@ -62,9 +62,7 @@ namespace OOBase
 
 			// This is exception safe as the increment happens here
 			++m_size;
-
-			if (do_sort)
-				sort();
+			m_sorted = false;
 
 			return 0;
 		}
@@ -137,6 +135,12 @@ namespace OOBase
 
 		void sort()
 		{
+			if (!m_sorted)
+				sort(&default_sort);
+		}
+
+		void sort(bool (*less_than)(const V& v1, const V& v2))
+		{
 			// This is a Shell-sort because we mostly use sort() in cases where qsort() behaves badly
 			// i.e. insertion at the end and then sort
 			// see http://warp.povusers.org/SortComparison
@@ -154,7 +158,7 @@ namespace OOBase
 					V v = m_data[i];
 					size_t j = i;
 
-					while (j >= h && v < m_data[j-h])
+					while (j >= h && (*less_than)(v,m_data[j-h]))
 					{
 						m_data[j] = m_data[j-h];
 						j -= h;
@@ -163,6 +167,8 @@ namespace OOBase
 					m_data[j] = v;
 				}
 			}
+
+			m_sorted = (less_than == &default_sort);
 		}
 
 	private:
@@ -175,6 +181,8 @@ namespace OOBase
 		V*     m_data;
 		size_t m_capacity;
 		size_t m_size;
+
+		mutable bool m_sorted;
 
 		int reserve_i(size_t capacity)
 		{
@@ -212,6 +220,9 @@ namespace OOBase
 		template <typename V1>
 		const V* bsearch(V1 key) const
 		{
+			// Always sort first
+			const_cast<Table*>(this)->sort();
+
 			const V* base = m_data;
 			for (size_t span = m_size; span > 0; span /= 2)
 			{
@@ -226,6 +237,11 @@ namespace OOBase
 				}
 			}
 		    return NULL;
+		}
+
+		static bool default_sort(const V& v1, const V& v2)
+		{
+			return (v1 < v2);
 		}
 	};
 }
