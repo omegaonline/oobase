@@ -368,7 +368,7 @@ namespace
 		if (bAutodelete)
 			delete pThread;
 
-		return (void*)ret;
+		return reinterpret_cast<void*>(ret);
 	}
 
 #endif // HAVE_PTHREAD
