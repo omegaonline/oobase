@@ -112,7 +112,7 @@ namespace OOBase
 		static const timeval_t Zero;
 
 		static timeval_t deadline(unsigned long msec);
-		static timeval_t gettimeofday();
+		static timeval_t now();
 
 		::tm gmtime() const;
 		::tm localtime() const;

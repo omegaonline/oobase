@@ -34,24 +34,34 @@
 const OOBase::timeval_t OOBase::timeval_t::MaxTime(LLONG_MAX, 999999);
 const OOBase::timeval_t OOBase::timeval_t::Zero(0, 0);
 
-OOBase::timeval_t OOBase::timeval_t::gettimeofday()
+OOBase::timeval_t OOBase::timeval_t::now()
 {
-
 #if defined(_WIN32)
+	
+	static LONGLONG freq = -1LL;
+	if (freq < 0)
+	{
+		LARGE_INTEGER liFreq;
+		if (QueryPerformanceFrequency(&liFreq))
+			freq = liFreq.QuadPart;
+		else
+			freq = 0;
+	}
 
-	static const ULONGLONG epoch = 116444736000000000LL;
+	if (freq > 0)
+	{
+		LARGE_INTEGER liNow;
+		if (QueryPerformanceCounter(&liNow))
+			return OOBase::timeval_t(liNow.QuadPart / freq,static_cast<int>(liNow.QuadPart % freq));
+	}
+	
+#if (_WIN32_WINNT >= 0x0600)
+	ULONGLONG ullTicks = GetTickCount64();
+	return OOBase::timeval_t(ullTicks / 1000ULL,static_cast<int>(ullTicks % 1000ULL));
+#endif
 
-	FILETIME file_time;
-	GetSystemTimeAsFileTime(&file_time);
-
-	ULARGE_INTEGER ularge;
-	ularge.LowPart = file_time.dwLowDateTime;
-	ularge.HighPart = file_time.dwHighDateTime;
-
-	// Move to epoch
-	ULONGLONG q = (ularge.QuadPart - epoch);
-
-	return OOBase::timeval_t(q / 10000000LL,static_cast<int>((q / 10L) % 1000000L));
+	DWORD dwTicks = GetTickCount();
+	return OOBase::timeval_t(dwTicks / 1000,static_cast<int>(dwTicks % 1000));
 
 #elif defined(HAVE_SYS_TIME_H) && (HAVE_SYS_TIME_H == 1)
 
@@ -61,7 +71,7 @@ OOBase::timeval_t OOBase::timeval_t::gettimeofday()
 	return OOBase::timeval_t(tv.tv_sec,tv.tv_usec);
 
 #else
-#error gettimeofday() !!
+#error now() !!
 #endif
 }
 
@@ -108,7 +118,7 @@ OOBase::timeval_t& OOBase::timeval_t::operator -= (const timeval_t& rhs)
 
 OOBase::timeval_t OOBase::timeval_t::deadline(unsigned long msec)
 {
-	return gettimeofday() + timeval_t(msec / 1000,(msec % 1000) * 1000);
+	return now() + timeval_t(msec / 1000,(msec % 1000) * 1000);
 }
 
 ::tm OOBase::timeval_t::gmtime() const
@@ -145,13 +155,13 @@ OOBase::timeval_t OOBase::timeval_t::deadline(unsigned long msec)
 
 OOBase::Countdown::Countdown(const timeval_t* timeout) :
 		m_null(timeout == NULL),
-		m_end(timeout ? timeval_t::gettimeofday() + *timeout : timeval_t::Zero)
+		m_end(timeout ? timeval_t::now() + *timeout : timeval_t::Zero)
 {
 }
 
 OOBase::Countdown::Countdown(timeval_t::time_64_t s, int us) :
 		m_null(false),
-		m_end(timeval_t::gettimeofday() + timeval_t(s,us))
+		m_end(timeval_t::now() + timeval_t(s,us))
 {
 }
 
@@ -176,7 +186,7 @@ bool OOBase::Countdown::has_ended() const
 	if (m_null)
 		return false;
 
-	return timeval_t::gettimeofday() >= m_end;
+	return timeval_t::now() >= m_end;
 }
 
 void OOBase::Countdown::timeout(timeval_t& timeout) const
@@ -185,7 +195,7 @@ void OOBase::Countdown::timeout(timeval_t& timeout) const
 		timeout = timeval_t::MaxTime;
 	else
 	{
-		timeval_t now = timeval_t::gettimeofday();
+		timeval_t now = timeval_t::now();
 		if (now >= m_end)
 			timeout = timeval_t::Zero;
 		else
@@ -205,7 +215,7 @@ void OOBase::Countdown::timeval(::timeval& timeout) const
 #if defined(_WIN32)
 OOBase::Countdown::Countdown(DWORD millisecs) :
 		m_null(millisecs == INFINITE),
-		m_end(millisecs == INFINITE ? timeval_t::Zero : timeval_t::gettimeofday() + timeval_t(millisecs / 1000, (millisecs % 1000) * 1000))
+		m_end(millisecs == INFINITE ? timeval_t::Zero : timeval_t::now() + timeval_t(millisecs / 1000, (millisecs % 1000) * 1000))
 {
 }
 
@@ -214,7 +224,7 @@ DWORD OOBase::Countdown::msec() const
 	if (m_null)
 		return INFINITE;
 
-	timeval_t now = timeval_t::gettimeofday();
+	timeval_t now = timeval_t::now();
 	if (now >= m_end)
 		return 0;
 		
