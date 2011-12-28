@@ -51,8 +51,10 @@ OOBase::timeval_t OOBase::timeval_t::now()
 	if (freq > 0)
 	{
 		LARGE_INTEGER liNow;
-		if (QueryPerformanceCounter(&liNow))
-			return OOBase::timeval_t(liNow.QuadPart / freq,static_cast<int>(liNow.QuadPart % freq));
+		if (!QueryPerformanceCounter(&liNow))
+			OOBase_CallCriticalFailure(GetLastError());
+
+		return OOBase::timeval_t(liNow.QuadPart / freq,static_cast<int>(liNow.QuadPart % freq));
 	}
 	
 #if (_WIN32_WINNT >= 0x0600)
@@ -119,38 +121,6 @@ OOBase::timeval_t& OOBase::timeval_t::operator -= (const timeval_t& rhs)
 OOBase::timeval_t OOBase::timeval_t::deadline(unsigned long msec)
 {
 	return now() + timeval_t(msec / 1000,(msec % 1000) * 1000);
-}
-
-::tm OOBase::timeval_t::gmtime() const
-{
-	time_t t = this->m_tv_sec;
-	::tm v = {0};
-
-#if defined(HAVE_PTHREAD)
-	gmtime_r(&t,&v);
-#elif defined(HAVE_TR_24731)
-	gmtime_s(&v,&t);
-#else
-	v = *::gmtime(&t);
-#endif
-
-	return v;
-}
-
-::tm OOBase::timeval_t::localtime() const
-{
-	time_t t = this->m_tv_sec;
-	::tm v = {0};
-
-#if defined(HAVE_PTHREAD)
-	localtime_r(&t,&v);
-#elif defined(HAVE_TR_24731)
-	localtime_s(&v,&t);
-#else
-	v = *::localtime(&t);
-#endif
-
-	return v;
 }
 
 OOBase::Countdown::Countdown(const timeval_t* timeout) :

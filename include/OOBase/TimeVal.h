@@ -114,9 +114,6 @@ namespace OOBase
 		static timeval_t deadline(unsigned long msec);
 		static timeval_t now();
 
-		::tm gmtime() const;
-		::tm localtime() const;
-
 	private:
 		int cmp(const timeval_t& rhs) const
 		{
