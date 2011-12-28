@@ -77,7 +77,7 @@ namespace OOBase
 
 		bool is_set();
 		void set();
-		bool wait(const timeval_t* wait = NULL);
+		bool wait(const Countdown& countdown = OOBase::Countdown());
 		void reset();
 
 	private:
