@@ -56,7 +56,7 @@ liboobase_la_LIBADD = -lws2_32 -lnetapi32 -luserenv
 else
 liboobase_la_CFLAGS += $(LTDLINCL)
 liboobase_la_CXXFLAGS += $(LTDLINCL)
-liboobase_la_LIBADD = $(LIBLTDL)
+liboobase_la_LIBADD = $(LIBLTDL) -lrt
 endif 
 
 liboobase_la_SOURCES = \

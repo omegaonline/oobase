@@ -24,11 +24,6 @@
 #include "tr24731.h"
 
 #include <time.h>
-
-#if defined(HAVE_SYS_TIME_H)
-#include <sys/time.h>
-#endif
-
 #include <limits.h>
 
 const OOBase::timeval_t OOBase::timeval_t::MaxTime(LLONG_MAX, 999999);
@@ -59,18 +54,19 @@ OOBase::timeval_t OOBase::timeval_t::now()
 	
 #if (_WIN32_WINNT >= 0x0600)
 	ULONGLONG ullTicks = GetTickCount64();
-	return OOBase::timeval_t(ullTicks / 1000ULL,static_cast<int>(ullTicks % 1000ULL));
+	return OOBase::timeval_t(ullTicks / 1000ULL,static_cast<int>((ullTicks % 1000ULL) * 1000));
 #endif
 
 	DWORD dwTicks = GetTickCount();
-	return OOBase::timeval_t(dwTicks / 1000,static_cast<int>(dwTicks % 1000));
+	return OOBase::timeval_t(dwTicks / 1000,static_cast<int>((dwTicks % 1000) * 1000));
 
-#elif defined(HAVE_SYS_TIME_H) && (HAVE_SYS_TIME_H == 1)
+#elif defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
 
-	timeval tv;
-	::gettimeofday(&tv,NULL);
+	timespec ts;
+	if (clock_gettime(CLOCK_MONOTONIC,&ts) != 0)
+		OOBase_CallCriticalFailure(errno);
 
-	return OOBase::timeval_t(tv.tv_sec,tv.tv_usec);
+	return OOBase::timeval_t(ts.tv_sec,ts.tv_nsec / 1000);
 
 #else
 #error now() !!
