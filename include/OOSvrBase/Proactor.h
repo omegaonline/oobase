@@ -38,7 +38,7 @@ namespace OOSvrBase
 	{
 	public:
 		template <typename T>
-		int recv(T* param, void (T::*callback)(OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout = NULL)
+		int recv(T* param, void (T::*callback)(OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout = OOBase::Timeout())
 		{
 			ThunkR<T>* thunk = ThunkR<T>::create(param,callback);
 			if (!thunk)
@@ -67,11 +67,11 @@ namespace OOSvrBase
 			return send_v(thunk,&ThunkS<T>::fn,buffers,count);
 		}
 
-		int recv(OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout = NULL);
+		int recv(OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout = OOBase::Timeout());
 		int send(OOBase::Buffer* buffer);
 
 		typedef void (*recv_callback_t)(void* param, OOBase::Buffer* buffer, int err);
-		virtual int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout = NULL) = 0;
+		virtual int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout = OOBase::Timeout()) = 0;
 
 		typedef void (*send_callback_t)(void* param, int err);
 		virtual int send(void* param, send_callback_t callback, OOBase::Buffer* buffer) = 0;
@@ -180,10 +180,10 @@ namespace OOSvrBase
 		virtual AsyncSocket* attach_socket(OOBase::socket_t sock, int& err);
 		virtual AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int& err);
 
-		virtual AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::timeval_t* timeout = NULL);
-		virtual AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout = NULL);
+		virtual AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::Timeout& timeout = OOBase::Timeout());
+		virtual AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::Timeout& timeout = OOBase::Timeout());
 
-		virtual int run(int& err, const OOBase::timeval_t* timeout = NULL);
+		virtual int run(int& err, const OOBase::Timeout& timeout = OOBase::Timeout());
 		virtual void stop();
 
 	protected:

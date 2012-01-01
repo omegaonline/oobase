@@ -91,26 +91,20 @@ void OOSvrBase::detail::ProactorEv::io_stop(struct ev_io* io)
 		ev_io_stop(m_pLoop,io);
 }
 
-int OOSvrBase::detail::ProactorEv::run(int& err, const OOBase::timeval_t* timeout)
+int OOSvrBase::detail::ProactorEv::run(int& err, const OOBase::Timeout& timeout)
 {
 	// The loop is written as a leader/follower loop:
 	// Each thread polls, then queues up what needs to be processed
 	// Then lets the next waiting thread poll, while it processes the outstanding queue
 	
-	OOBase::Countdown countdown(timeout);
 	OOBase::Guard<OOBase::SpinLock> guard(m_lock,false);
 	OOBase::Queue<IOEvent,OOBase::LocalAllocator> io_queue;
 
-	for (bool bStop = false;!bStop && !countdown.has_ended();)
+	for (bool bStop = false;!bStop && !timeout.has_expired();)
 	{
-		if (timeout)
-		{
-			if (!guard.acquire(countdown))
-				break;
-		}
-		else
-			guard.acquire();
-
+		if (!guard.acquire(timeout))
+			break;
+	
 		// Swap over the IO queue to our local one...
 		m_pIOQueue = &io_queue;
 
@@ -744,7 +738,7 @@ void OOSvrBase::detail::ProactorEv::pipe_callback()
 	}
 }
 
-int OOSvrBase::detail::ProactorEv::recv(void* handle, void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout)
+int OOSvrBase::detail::ProactorEv::recv(void* handle, void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout)
 {
 	// Must have a callback function
 	assert(callback);

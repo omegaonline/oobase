@@ -54,7 +54,7 @@ namespace OOBase
 			return m_last_error;
 		}
 
-		Result push(const T& val, const Countdown& countdown = Countdown())
+		Result push(const T& val, const Timeout& timeout = Timeout())
 		{
 			Guard<Condition::Mutex> guard(m_lock);
 
@@ -66,7 +66,7 @@ namespace OOBase
 
 			while (m_queue.size() >= m_bound)
 			{
-				if (!m_space.wait(m_lock,countdown))
+				if (!m_space.wait(m_lock,timeout))
 					return timedout;
 
 				if (m_closed)
@@ -82,7 +82,7 @@ namespace OOBase
 			return success;
 		}
 
-		Result pop(T& val, const Countdown& countdown = Countdown())
+		Result pop(T& val, const Timeout& timeout = Timeout())
 		{
 			Guard<Condition::Mutex> guard(m_lock);
 
@@ -105,7 +105,7 @@ namespace OOBase
 
 				++m_waiters;
 
-				if (!m_available.wait(m_lock,countdown))
+				if (!m_available.wait(m_lock,timeout))
 				{
 					--m_waiters;
 					return timedout;

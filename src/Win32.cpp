@@ -540,8 +540,8 @@ OOBase::Win32::condition_variable_t::~condition_variable_t()
 
 bool OOBase::Win32::condition_variable_t::wait(HANDLE hMutex, DWORD dwMilliseconds)
 {
-	// Use a countdown as we do multiple waits
-	Countdown countdown(dwMilliseconds);
+	// Use a timeout as we do multiple waits
+	Timeout timeout(dwMilliseconds / 1000,(dwMilliseconds % 1000) * 1000);
 
 	// Avoid race conditions.
 	EnterCriticalSection(&m_waiters_lock);
@@ -557,14 +557,14 @@ bool OOBase::Win32::condition_variable_t::wait(HANDLE hMutex, DWORD dwMillisecon
 
 			LeaveCriticalSection(&m_waiters_lock);
 
-			if (countdown.has_ended())
+			if (timeout.has_expired())
 				return false;
 		}
 	}
 		
 	bool ret = false;
 	DWORD dwWait;
-	if (!countdown.has_ended())
+	if (!timeout.has_expired())
 	{
 		++m_waiters;
 
@@ -573,7 +573,7 @@ bool OOBase::Win32::condition_variable_t::wait(HANDLE hMutex, DWORD dwMillisecon
 		// This call atomically releases the mutex and waits on the
 		// semaphore until <signal> or <broadcast>
 		// are called by another thread.
-		dwWait = SignalObjectAndWait(hMutex,m_sema,countdown.msec(),FALSE);
+		dwWait = SignalObjectAndWait(hMutex,m_sema,timeout.millisecs(),FALSE);
 		if (dwWait != WAIT_OBJECT_0 && dwWait != WAIT_TIMEOUT)
 			OOBase_CallCriticalFailure(GetLastError());
 

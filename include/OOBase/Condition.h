@@ -45,7 +45,7 @@ namespace OOBase
 		Condition();
 		~Condition();
 
-		bool wait(Condition::Mutex& mutex, const Countdown& countdown = OOBase::Countdown());
+		bool wait(Condition::Mutex& mutex, const Timeout& timeout = OOBase::Timeout());
 		void signal();
 		void broadcast();
 
@@ -77,7 +77,7 @@ namespace OOBase
 
 		bool is_set();
 		void set();
-		bool wait(const Countdown& countdown = OOBase::Countdown());
+		bool wait(const Timeout& timeout = OOBase::Timeout());
 		void reset();
 
 	private:

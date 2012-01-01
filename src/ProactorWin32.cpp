@@ -84,9 +84,11 @@ void OOSvrBase::detail::ProactorWin32::unbind(HANDLE /*hFile*/)
 	}
 }
 
-int OOSvrBase::detail::ProactorWin32::run(int& err, const OOBase::timeval_t* timeout)
+int OOSvrBase::detail::ProactorWin32::run(int& err, const OOBase::Timeout& timeout)
 {
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+	OOBase::Guard<OOBase::SpinLock> guard(m_lock,false);
+	if (!guard.acquire(timeout))
+		return ERROR_TIMEOUT;
 
 	if (!m_hPort)
 	{
@@ -106,7 +108,7 @@ int OOSvrBase::detail::ProactorWin32::run(int& err, const OOBase::timeval_t* tim
 		DWORD dwBytes = 0;
 		ULONG_PTR key = 0;
 		LPOVERLAPPED lpOv = NULL;
-		if (!GetQueuedCompletionStatus(m_hPort,&dwBytes,&key,&lpOv,(timeout ? timeout->msec() : INFINITE)))
+		if (!GetQueuedCompletionStatus(m_hPort,&dwBytes,&key,&lpOv,timeout.millisecs()))
 		{
 			dwErr = GetLastError();
 			if (lpOv)

@@ -68,7 +68,7 @@ namespace
 	
 		int bind(int fd);
 
-		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout);
+		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout);
 		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
 		int send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 
@@ -97,7 +97,7 @@ int AsyncSocket::bind(int fd)
 	return err;
 }
 
-int AsyncSocket::recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout)
+int AsyncSocket::recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout)
 {
 	return m_pProactor->recv(m_handle,param,callback,buffer,bytes,timeout);
 }
@@ -339,7 +339,7 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorEv::accept_local(void* param, vo
 	return pAcceptor;
 }
 
-OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorEv::connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::timeval_t* timeout)
+OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorEv::connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::Timeout& timeout)
 {
 	int fd = -1;
 	if ((fd = create_socket(addr->sa_family,SOCK_STREAM,0,err)) == -1)
@@ -358,7 +358,7 @@ OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorEv::connect_socket(const sock
 	return pSocket;
 }
 
-OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorEv::connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout)
+OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorEv::connect_local_socket(const char* path, int& err, const OOBase::Timeout& timeout)
 {	
 #if defined(HAVE_UNISTD_H)
 		

@@ -169,7 +169,7 @@
     <ClCompile Include="SecurityWin32.cpp" />
     <ClCompile Include="String.cpp" />
     <ClCompile Include="Thread.cpp" />
-    <ClCompile Include="TimeVal.cpp" />
+    <ClCompile Include="Timeout.cpp" />
     <ClCompile Include="TLS.cpp" />
     <ClCompile Include="tr24731.cpp" />
     <ClCompile Include="utf8.cpp" />
@@ -210,7 +210,7 @@
     <ClInclude Include="..\include\OOBase\String.h" />
     <ClInclude Include="..\include\OOBase\Table.h" />
     <ClInclude Include="..\include\OOBase\Thread.h" />
-    <ClInclude Include="..\include\OOBase\TimeVal.h" />
+    <ClInclude Include="..\include\OOBase\Timeout.h" />
     <ClInclude Include="..\include\OOBase\TLSSingleton.h" />
     <ClInclude Include="..\include\OOBase\utf8.h" />
     <ClInclude Include="..\include\OOBase\Win32.h" />

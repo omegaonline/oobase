@@ -43,8 +43,8 @@ namespace OOSvrBase
 			OOSvrBase::AsyncSocket* attach_socket(OOBase::socket_t sock, int& err);
 			OOSvrBase::AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int& err);
 
-			OOSvrBase::AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::timeval_t* timeout);
-			OOSvrBase::AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout);
+			OOSvrBase::AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::Timeout& timeout);
+			OOSvrBase::AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::Timeout& timeout);
 		
 			struct Overlapped : public OVERLAPPED
 			{
@@ -61,7 +61,7 @@ namespace OOSvrBase
 			int bind(HANDLE hFile);
 			void unbind(HANDLE hFile);
 
-			int run(int& err, const OOBase::timeval_t* timeout = NULL);
+			int run(int& err, const OOBase::Timeout& timeout);
 			void stop();
 
 		protected:

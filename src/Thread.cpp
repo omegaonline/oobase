@@ -41,7 +41,7 @@ namespace
 		virtual ~Win32Thread();
 
 		int run(Thread* pThread, bool bAutodelete, int (*thread_fn)(void*), void* param);
-		bool join(const OOBase::timeval_t* wait = NULL);
+		bool join(const OOBase::Timeout& timeout);
 		void abort();
 		bool is_running();
 
@@ -126,14 +126,17 @@ namespace
 		return 0;
 	}
 
-	bool Win32Thread::join(const OOBase::timeval_t* wait)
+	bool Win32Thread::join(const OOBase::Timeout& timeout)
 	{
-		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+		OOBase::Guard<OOBase::SpinLock> guard(m_lock,false);
+
+		if (!guard.acquire(timeout))
+			return false;
 
 		if (!m_hThread.is_valid())
 			return true;
 
-		DWORD dwWait = WaitForSingleObject(m_hThread,(wait ? wait->msec() : INFINITE));
+		DWORD dwWait = WaitForSingleObject(m_hThread,timeout.millisecs());
 		if (dwWait == WAIT_OBJECT_0)
 		{
 			m_hThread.close();
@@ -192,7 +195,7 @@ namespace
 		virtual ~PthreadThread();
 
 		int run(Thread* pThread, bool bAutodelete, int (*thread_fn)(void*), void* param);
-		bool join(const OOBase::timeval_t* wait = NULL);
+		bool join(const OOBase::Timeout& timeout);
 		void abort();
 		bool is_running();
 
@@ -278,14 +281,12 @@ namespace
 		return 0;
 	}
 
-	bool PthreadThread::join(const OOBase::timeval_t* wait)
+	bool PthreadThread::join(const OOBase::Timeout& timeout)
 	{
 		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 		if (wait)
 		{
-			OOBase::Countdown countdown(wait);
-
 			pthread_mutex_t join_mutex = PTHREAD_MUTEX_INITIALIZER;
 			int err = pthread_mutex_lock(&join_mutex);
 			if (err)
@@ -295,7 +296,7 @@ namespace
 			while (m_running)
 			{
 				timespec wt;
-				countdown.abs_timespec(wt);
+				timeout.abs_timespec(wt);
 				err = pthread_cond_timedwait(&m_condition,&join_mutex,&wt);
 				if (err)
 				{
@@ -407,11 +408,11 @@ int OOBase::Thread::run(int (*thread_fn)(void*), void* param)
 	return m_impl->run(this,m_bAutodelete,thread_fn,param);
 }
 
-bool OOBase::Thread::join(const timeval_t* wait)
+bool OOBase::Thread::join(const Timeout& timeout)
 {
 	assert(this != self());
 
-	return m_impl->join(wait);
+	return m_impl->join(timeout);
 }
 
 void OOBase::Thread::abort()
@@ -437,17 +438,17 @@ void OOBase::Thread::yield()
 	pthread_yield();
 #else
 	// Just perform a tiny sleep
-	Thread::sleep(timeval_t(0,1));
+	Thread::sleep(1);
 #endif
 }
 
-void OOBase::Thread::sleep(const timeval_t& wait)
+void OOBase::Thread::sleep(unsigned int millisecs)
 {
-	if (wait == timeval_t::Zero)
+	if (!millisecs)
 		return Thread::yield();
 
 #if defined(_WIN32)
-	::Sleep(wait.msec());
+	::Sleep(static_cast<DWORD>(millisecs));
 #else
 	timespec wt;
 	wt.tv_sec = wait.tv_sec();

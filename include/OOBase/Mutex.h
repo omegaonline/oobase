@@ -22,7 +22,7 @@
 #ifndef OOBASE_MUTEX_H_INCLUDED_
 #define OOBASE_MUTEX_H_INCLUDED_
 
-#include "TimeVal.h"
+#include "Timeout.h"
 #include "Win32.h"
 
 namespace OOBase
@@ -36,7 +36,7 @@ namespace OOBase
 
 		bool tryacquire();
 		void acquire();
-		bool acquire(const Countdown& countdown);
+		bool acquire(const Timeout& timeout);
 		void release();
 
 	private:
@@ -71,6 +71,7 @@ namespace OOBase
 
 		bool tryacquire();
 		void acquire();
+		bool acquire(const Timeout& timeout);
 		void release();
 
 	private:
@@ -146,11 +147,11 @@ namespace OOBase
 			m_acquired = true;
 		}
 
-		bool acquire(const Countdown& countdown)
+		bool acquire(const Timeout& timeout)
 		{
 			assert(!m_acquired);
 
-			if (m_mutex.acquire(countdown))
+			if (m_mutex.acquire(timeout))
 				m_acquired = true;
 
 			return m_acquired;

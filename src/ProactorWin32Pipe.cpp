@@ -43,7 +43,7 @@ namespace
 	public:
 		AsyncPipe(OOSvrBase::detail::ProactorWin32* pProactor, HANDLE hPipe);
 		
-		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout);
+		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout);
 		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
 		int send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 
@@ -102,7 +102,7 @@ void AsyncPipe::translate_error(DWORD& dwErr)
 	}
 }
 
-int AsyncPipe::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout)
+int AsyncPipe::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout)
 {
 	// Must have a callback function
 	assert(callback);
@@ -634,10 +634,8 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorWin32::attach_local_sock
 	return pPipe;
 }
 
-OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorWin32::connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout)
+OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorWin32::connect_local_socket(const char* path, int& err, const OOBase::Timeout& timeout)
 {
-	OOBase::Countdown countdown(timeout);
-
 	OOBase::String pipe_name;
 	err = MakePipeName(pipe_name,path);
 	if (err != 0)
@@ -664,9 +662,9 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorWin32::connect_local_soc
 		err = 0;
 		
 		DWORD dwWait = NMPWAIT_USE_DEFAULT_WAIT;
-		if (timeout)
+		if (!timeout.is_infinite())
 		{
-			dwWait = countdown.msec();
+			dwWait = timeout.millisecs();
 			if (dwWait == NMPWAIT_USE_DEFAULT_WAIT)
 				dwWait = 1;
 		}

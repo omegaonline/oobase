@@ -91,7 +91,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/String.h \
 	include/OOBase/Table.h \
 	include/OOBase/Thread.h \
-	include/OOBase/TimeVal.h \
+	include/OOBase/Timeout.h \
 	include/OOBase/TLSSingleton.h \
 	include/OOBase/utf8.h \
 	include/OOBase/Win32.h \
@@ -112,7 +112,7 @@ liboobase_la_SOURCES = \
 	src/SecurityWin32.cpp \
 	src/String.cpp \
 	src/Thread.cpp \
-	src/TimeVal.cpp \
+	src/Timeout.cpp \
 	src/TLS.cpp \
 	src/tr24731.h \
 	src/tr24731.cpp \

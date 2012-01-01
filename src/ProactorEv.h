@@ -50,8 +50,8 @@ namespace OOSvrBase
 			AsyncSocket* attach_socket(OOBase::socket_t sock, int& err);
 			AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int& err);
 
-			AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::timeval_t* timeout);
-			AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout);
+			AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::Timeout& timeout);
+			AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::Timeout& timeout);
 				
 			void* new_acceptor(int fd, void* param, bool (*callback)(void* param, int fd), int& err);
 			int close_acceptor(void* handle);
@@ -60,14 +60,14 @@ namespace OOSvrBase
 			int unbind(void* handle);
 			int get_fd(void* handle);
 				
-			int recv(void* handle, void* param, OOSvrBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout);
+			int recv(void* handle, void* param, OOSvrBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout);
 			int send(void* handle, void* param, OOSvrBase::AsyncSocket::send_callback_t callback, OOBase::Buffer* buffer);
 			int send_v(void* handle, void* param, OOSvrBase::AsyncSocket::send_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 		
 			OOSvrBase::Acceptor* accept_local(void* param, accept_local_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa);
 			OOSvrBase::Acceptor* accept_remote(void* param, accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err);
 
-			int run(int& err, const OOBase::timeval_t* timeout = NULL);
+			int run(int& err, const OOBase::Timeout& timeout);
 			void stop();
 
 			struct IOOp

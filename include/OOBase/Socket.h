@@ -58,14 +58,14 @@ namespace OOBase
 	class Socket
 	{
 	public:
-		static Socket* connect(const char* address, const char* port, int& err, const timeval_t* timeout = NULL);
-		static Socket* connect_local(const char* path, int& err, const timeval_t* timeout = NULL);
+		static Socket* connect(const char* address, const char* port, int& err, const Timeout& timeout = Timeout());
+		static Socket* connect_local(const char* path, int& err, const Timeout& timeout = Timeout());
 
-		virtual size_t send(const void* buf, size_t len, int& err, const timeval_t* timeout = NULL) = 0;
-		virtual int send_v(Buffer* buffers[], size_t count, const timeval_t* timeout = NULL) = 0;
+		virtual size_t send(const void* buf, size_t len, int& err, const Timeout& timeout = Timeout()) = 0;
+		virtual int send_v(Buffer* buffers[], size_t count, const Timeout& timeout = Timeout()) = 0;
 				
 		template <typename T>
-		int send(const T& val, const timeval_t* timeout = NULL)
+		int send(const T& val, const Timeout& timeout = Timeout())
 		{
 			int err = 0;
 			send(&val,sizeof(T),err,timeout);
@@ -74,9 +74,9 @@ namespace OOBase
 
 		// Do not send pointers!
 		template <typename T>
-		int send(T*, const timeval_t* = NULL);
+		int send(T*, const Timeout& timeout = Timeout());
 		
-		int send(Buffer* buffer, const timeval_t* timeout = NULL)
+		int send(Buffer* buffer, const Timeout& timeout = Timeout())
 		{
 			if (!buffer)
 				return EINVAL;
@@ -87,11 +87,11 @@ namespace OOBase
 			return err;
 		}
 
-		virtual size_t recv(void* buf, size_t len, bool bAll, int& err, const timeval_t* timeout = NULL) = 0;
-		virtual int recv_v(Buffer* buffers[], size_t count, const timeval_t* timeout = NULL) = 0;
+		virtual size_t recv(void* buf, size_t len, bool bAll, int& err, const Timeout& timeout = Timeout()) = 0;
+		virtual int recv_v(Buffer* buffers[], size_t count, const Timeout& timeout = Timeout()) = 0;
 
 		template <typename T>
-		int recv(T& val, const timeval_t* timeout = NULL)
+		int recv(T& val, const Timeout& timeout = Timeout())
 		{
 			int err = 0;
 			recv(&val,sizeof(T),true,err,timeout);
@@ -100,9 +100,21 @@ namespace OOBase
 
 		// Do not recv pointers!
 		template <typename T>
-		int recv(T*, const timeval_t* = NULL);
+		int recv(T*, const Timeout& timeout = Timeout());
 
-		int recv(Buffer* buffer, const timeval_t* timeout = NULL)
+		template <typename T>
+		int recv(RefPtr<T>& val, const Timeout& timeout = Timeout())
+		{
+			return recv(static_cast<T*>(val),timeout);
+		}
+
+		template <typename T>
+		int recv(RefPtr<T>& val, size_t len, const Timeout& timeout = Timeout())
+		{
+			return recv(static_cast<T*>(val),len,timeout);
+		}
+
+		int recv(Buffer* buffer, const Timeout& timeout = Timeout())
 		{
 			if (!buffer)
 				return EINVAL;
@@ -113,7 +125,7 @@ namespace OOBase
 			return err;
 		}
 
-		int recv(Buffer* buffer, size_t len, const timeval_t* timeout = NULL)
+		int recv(Buffer* buffer, size_t len, const Timeout& timeout = Timeout())
 		{
 			if (!buffer)
 				return EINVAL;

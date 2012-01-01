@@ -19,32 +19,53 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#ifndef OOBASE_BSD_SOCKET_H_INCLUDED_
-#define OOBASE_BSD_SOCKET_H_INCLUDED_
+#ifndef OOBASE_TIME_H_INCLUDED_
+#define OOBASE_TIME_H_INCLUDED_
 
-#include "../include/OOBase/Socket.h"
+#include "../config-base.h"
+
+#include <time.h>
+
+#if defined(_WIN32)
+#include <winsock2.h>
+#endif
 
 #if defined(HAVE_UNISTD_H)
-#include <sys/un.h>
+#include <sys/time.h>
 #endif
 
 namespace OOBase
 {
-	namespace BSD
+	class Timeout
 	{
-		int connect(socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::Timeout& timeout = OOBase::Timeout());
+	public:
+		Timeout();
+		Timeout(unsigned long seconds, unsigned int microseconds);
 
-		int set_non_blocking(socket_t sock, bool set);
-	}
+		Timeout(const Timeout&);
+		Timeout& operator = (const Timeout&);
+
+		bool has_expired() const;
+		bool is_infinite() const { return m_null; }
+	
+		void get_timeval(::timeval& timeout) const;
+		unsigned long millisecs() const;
 
 #if defined(HAVE_UNISTD_H)
-	namespace POSIX
-	{
-		void create_unix_socket_address(sockaddr_un& addr, socklen_t& len, const char* path);
-
-		int get_peer_uid(int fd, uid_t& uid);
-	}
+		void get_abs_timespec(::timespec& timeout) const;
 #endif
+
+	private:
+		bool      m_null;
+		
+#if defined(_WIN32)
+		LONGLONG   m_end;
+#elif defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
+		::timespec m_end;
+#else
+#error Fix me!
+#endif
+	};
 }
 
-#endif // OOBASE_BSD_SOCKET_H_INCLUDED_
+#endif // OOBASE_TIME_H_INCLUDED_

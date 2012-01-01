@@ -42,6 +42,29 @@ void OOBase::SpinLock::acquire()
 	assert(m_cs.RecursionCount == 1);
 }
 
+bool OOBase::SpinLock::acquire(const Timeout& timeout)
+{
+	if (timeout.is_infinite())
+	{
+		acquire();
+		return true;
+	}
+
+	do
+	{
+		if (TryEnterCriticalSection(&m_cs))
+		{
+			assert(m_cs.RecursionCount == 1);
+			return true;
+		}
+
+		::Sleep(0);
+	}
+	while (!timeout.has_expired());
+
+	return false;
+}
+
 bool OOBase::SpinLock::tryacquire()
 {
 	if (!TryEnterCriticalSection(&m_cs))
@@ -87,9 +110,9 @@ void OOBase::Mutex::acquire()
 		OOBase_CallCriticalFailure(GetLastError());
 }
 
-bool OOBase::Mutex::acquire(const Countdown& countdown)
+bool OOBase::Mutex::acquire(const Timeout& timeout)
 {
-	DWORD dwWait = WaitForSingleObject(m_mutex,countdown.msec());
+	DWORD dwWait = WaitForSingleObject(m_mutex,timeout.millisecs());
 	if (dwWait == WAIT_OBJECT_0)
 		return true;
 	else if (dwWait != WAIT_TIMEOUT)
@@ -191,16 +214,16 @@ void OOBase::Mutex::acquire()
 		OOBase_CallCriticalFailure(err);
 }
 
-bool OOBase::Mutex::acquire(const Countdown& countdown)
+bool OOBase::Mutex::acquire(const Timeout& timeout)
 {
-	if (countdown.is_infinite())
+	if (timeout.is_infinite())
 	{
 		acquire();
 		return true;
 	}
 
 	timespec ts;
-	countdown.abs_timespec(ts);
+	timeout.abs_timespec(ts);
 	int err = pthread_mutex_timedlock(&m_mutex,&ts);
 	if (err == 0)
 		return true;

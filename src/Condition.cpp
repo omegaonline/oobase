@@ -34,9 +34,9 @@ OOBase::Condition::~Condition()
 	Win32::DeleteConditionVariable(&m_var);
 }
 
-bool OOBase::Condition::wait(Condition::Mutex& mutex, const Countdown& countdown)
+bool OOBase::Condition::wait(Condition::Mutex& mutex, const Timeout& timeout)
 {
-	if (!Win32::SleepConditionVariable(&m_var,&mutex,countdown.msec()))
+	if (!Win32::SleepConditionVariable(&m_var,&mutex,timeout.millisecs()))
 	{
 		DWORD dwErr = GetLastError();
 		if (dwErr == ERROR_TIMEOUT)
@@ -82,15 +82,15 @@ OOBase::Condition::~Condition()
 	pthread_cond_destroy(&m_var);
 }
 
-bool OOBase::Condition::wait(Condition::Mutex& mutex, const Countdown& countdown)
+bool OOBase::Condition::wait(Condition::Mutex& mutex, const Timeout& timeout)
 {
 	int err = 0;
-	if (countdown.is_infinite())
+	if (timeout.is_infinite())
 		err = pthread_cond_wait(&m_var,&mutex.m_mutex);
 	else
 	{
 		timespec wt;
-		countdown.abs_timespec(wt);
+		timeout.abs_timespec(wt);
 		err = pthread_cond_timedwait(&m_var,&mutex.m_mutex,&wt);
 	}
 	
@@ -143,9 +143,9 @@ void OOBase::Event::set()
 		OOBase_CallCriticalFailure(GetLastError());
 }
 
-bool OOBase::Event::wait(const Countdown& countdown)
+bool OOBase::Event::wait(const Timeout& timeout)
 {
-	DWORD dwWait = WaitForSingleObject(m_handle,countdown.msec());
+	DWORD dwWait = WaitForSingleObject(m_handle,timeout.millisecs());
 	if (dwWait == WAIT_OBJECT_0)
 		return true;
 	else if (dwWait != WAIT_TIMEOUT)
@@ -201,15 +201,15 @@ void OOBase::Event::set()
 	}
 }
 
-bool OOBase::Event::wait(const Countdown& countdown)
+bool OOBase::Event::wait(const Timeout& timeout)
 {
 	Guard<Condition::Mutex> guard(m_lock,false);
-	if (!guard.acquire(countdown))
+	if (!guard.acquire(timeout))
 		return false;
 
 	while (!m_bSet)
 	{
-		if (!m_cond.wait(m_lock,countdown))
+		if (!m_cond.wait(m_lock,timeout))
 			return false;
 	}
 

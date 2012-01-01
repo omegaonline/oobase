@@ -98,7 +98,7 @@ int OOSvrBase::Proactor::init()
 	return 0;
 }
 
-int OOSvrBase::Proactor::run(int& err, const OOBase::timeval_t* timeout)
+int OOSvrBase::Proactor::run(int& err, const OOBase::Timeout& timeout)
 {
 	return m_impl->run(err,timeout);
 }
@@ -128,17 +128,17 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::Proactor::attach_local_socket(OOBase::so
 	return m_impl->attach_local_socket(sock,err);
 }
 
-OOSvrBase::AsyncSocket* OOSvrBase::Proactor::connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::timeval_t* timeout)
+OOSvrBase::AsyncSocket* OOSvrBase::Proactor::connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::Timeout& timeout)
 {
 	return m_impl->connect_socket(addr,addr_len,err,timeout);
 }
 
-OOSvrBase::AsyncLocalSocket* OOSvrBase::Proactor::connect_local_socket(const char* path, int& err, const OOBase::timeval_t* timeout)
+OOSvrBase::AsyncLocalSocket* OOSvrBase::Proactor::connect_local_socket(const char* path, int& err, const OOBase::Timeout& timeout)
 {
 	return m_impl->connect_local_socket(path,err,timeout);
 }
 
-int OOSvrBase::AsyncSocket::recv(OOBase::Buffer* buffer, size_t bytes, const OOBase::timeval_t* timeout)
+int OOSvrBase::AsyncSocket::recv(OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout)
 {
 	WaitCallback wait;
 	wait.m_complete = false;

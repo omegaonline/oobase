@@ -35,11 +35,11 @@ namespace OOBase
 
 		int run(int (*thread_fn)(void*), void* param);
 
-		virtual bool join(const timeval_t* wait = NULL);
+		virtual bool join(const Timeout& timeout = Timeout());
 		virtual void abort();
 		virtual bool is_running();
 
-		static void sleep(const timeval_t& wait);
+		static void sleep(unsigned int millisecs);
 		static void yield();
 
 		static Thread* self();

@@ -44,11 +44,11 @@ namespace
 		Pipe(HANDLE handle);
 		virtual ~Pipe();
 
-		size_t recv(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout);
-		int recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout);
+		size_t recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout);
+		int recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
 		
-		size_t send(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout);
-		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout);
+		size_t send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout);
+		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
 		
 		void close();
 					
@@ -61,8 +61,8 @@ namespace
 		bool                       m_send_allowed;
 		bool                       m_recv_allowed;
 		
-		size_t recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::Countdown& countdown);
-		size_t send_i(const void* buf, size_t len, int& err, const OOBase::Countdown& countdown);
+		size_t recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout);
+		size_t send_i(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout);
 	};
 }
 
@@ -77,34 +77,32 @@ Pipe::~Pipe()
 {
 }
 
-size_t Pipe::send(const void* buf, size_t len, int& err, const OOBase::timeval_t* timeout)
+size_t Pipe::send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout)
 {
-	OOBase::Countdown countdown(timeout);
-	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,timeout ? false : true);
-	if (timeout && !guard.acquire(countdown))
+	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,false);
+	if (!guard.acquire(timeout))
 	{
 		err = WSAETIMEDOUT;
 		return 0;
 	}
 
-	return send_i(buf,len,err,countdown);
+	return send_i(buf,len,err,timeout);
 }
 
-int Pipe::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout)
+int Pipe::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout)
 {
 	if (count == 0)
 		return 0;
 
 	int err = 0;
 
-	OOBase::Countdown countdown(timeout);
 	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,true);
 	
 	for (size_t i=0;i<count && err == 0 ;++i)
 	{
 		if (buffers[i]->length() > 0)
 		{
-			size_t len = send_i(buffers[i]->rd_ptr(),buffers[i]->length(),err,countdown);
+			size_t len = send_i(buffers[i]->rd_ptr(),buffers[i]->length(),err,timeout);
 			buffers[i]->wr_ptr(len);
 		}
 	}
@@ -112,7 +110,7 @@ int Pipe::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_
 	return err;
 }
 
-size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::Countdown& countdown)
+size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout)
 {
 	if (!m_send_allowed)
 	{
@@ -148,9 +146,9 @@ size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::Countdo
 					break;
 
 				err = 0;
-				if (!countdown.is_infinite())
+				if (!timeout.is_infinite())
 				{
-					DWORD dwWait = WaitForSingleObject(ov.hEvent,countdown.msec());
+					DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout.millisecs());
 					if (dwWait == WAIT_TIMEOUT)
 					{
 						CancelIo(m_handle);
@@ -188,29 +186,27 @@ size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::Countdo
 	return (len - to_write);
 }
 
-size_t Pipe::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::timeval_t* timeout)
+size_t Pipe::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout)
 {
-	OOBase::Countdown countdown(timeout);
-	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,timeout ? false : true);
-	if (timeout && !guard.acquire(countdown))
+	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,false);
+	if (!guard.acquire(timeout))
 	{
 		err = WSAETIMEDOUT;
 		return 0;
 	}
 
-	return recv_i(buf,len,bAll,err,countdown);
+	return recv_i(buf,len,bAll,err,timeout);
 }
 
-int Pipe::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_t* timeout)
+int Pipe::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout)
 {
 	if (count == 0)
 		return 0;
 
 	int err = 0;
 
-	OOBase::Countdown countdown(timeout);
-	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,timeout ? false : true);
-	if (timeout && !guard.acquire(countdown))
+	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,false);
+	if (!guard.acquire(timeout))
 	{
 		err = WSAETIMEDOUT;
 		return 0;
@@ -220,7 +216,7 @@ int Pipe::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_
 	{
 		if (buffers[i]->space() > 0)
 		{
-			size_t len = recv_i(buffers[i]->wr_ptr(),buffers[i]->space(),true,err,countdown);
+			size_t len = recv_i(buffers[i]->wr_ptr(),buffers[i]->space(),true,err,timeout);
 			buffers[i]->wr_ptr(len);
 		}
 	}
@@ -228,7 +224,7 @@ int Pipe::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::timeval_
 	return err;
 }
 
-size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::Countdown& countdown)
+size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout)
 {
 	if (!m_recv_allowed)
 	{
@@ -266,9 +262,9 @@ size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::Co
 					break;
 
 				err = 0;
-				if (!countdown.is_infinite())
+				if (!timeout.is_infinite())
 				{
-					DWORD dwWait = WaitForSingleObject(ov.hEvent,countdown.msec());
+					DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout.millisecs());
 					if (dwWait == WAIT_TIMEOUT)
 					{
 						CancelIo(m_handle);
@@ -327,7 +323,7 @@ void Pipe::close()
 	OOBase::Guard<OOBase::Mutex> guard2(m_send_lock);
 }
 
-OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const timeval_t* timeout)
+OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const Timeout& timeout)
 {
 	OOBase::LocalString pipe_name;
 	err = pipe_name.assign("\\\\.\\pipe\\");
@@ -335,8 +331,6 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const 
 		err = pipe_name.append(path);
 	if (err != 0)
 		return NULL;
-
-	Countdown countdown(timeout);
 
 	Win32::SmartHandle hPipe;
 	for (;;)
@@ -360,9 +354,9 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const 
 		}
 
 		DWORD dwWait = NMPWAIT_USE_DEFAULT_WAIT;
-		if (timeout)
+		if (!timeout.is_infinite())
 		{
-			dwWait = countdown.msec();
+			dwWait = timeout.millisecs();
 			if (dwWait == NMPWAIT_USE_DEFAULT_WAIT)
 				dwWait = 1;
 		}
