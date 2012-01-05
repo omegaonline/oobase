@@ -20,6 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/Timeout.h"
+#include "../include/OOBase/CDRStream.h"
 
 namespace
 {
@@ -184,7 +185,7 @@ unsigned long OOBase::Timeout::millisecs() const
 	if (m_null)
 		return INFINITE;
 
-	#if defined(_WIN32)
+#if defined(_WIN32)
 
 	LONGLONG diff = m_end - time_now();
 	if (diff < 0)
@@ -219,7 +220,7 @@ unsigned long OOBase::Timeout::millisecs() const
 #endif
 }
 
-#if defined(HAVE_UNISTD_H)
+#if defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
 
 void OOBase::Timeout::get_abs_timespec(timespec& timeout) const
 {
@@ -230,3 +231,53 @@ void OOBase::Timeout::get_abs_timespec(timespec& timeout) const
 }
 
 #endif
+
+bool OOBase::Timeout::operator < (const Timeout& rhs) const
+{
+	if (rhs.m_null)
+		return true;
+	
+	if (!m_null)
+	{
+#if defined(_WIN32)
+		return (m_end < rhs.m_end);
+#elif defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
+		if (m_end.tv_sec < rhs.m_end.tv_sec || (m_end.tv_sec == rhs.m_end.tv_sec && m_end.tv_nsec < rhs.m_end.tv_nsec))
+			return true;
+#endif
+	}
+
+	return false;
+}
+
+bool OOBase::Timeout::read(CDRStream& stream)
+{
+	bool res = stream.read(m_null);
+	if (res && !m_null)
+	{
+#if defined(_WIN32)
+		res = stream.read(m_end);
+#elif defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
+		res = stream.read(m_end.tv_sec);
+		if (res)
+			res = stream.read(m_end.tv_nsec);
+#endif
+	}
+	return res;
+}
+
+bool OOBase::Timeout::write(CDRStream& stream) const
+{
+	bool res = stream.write(m_null);
+	if (res && !m_null)
+	{
+#if defined(_WIN32)
+		res = stream.write(m_end);
+#elif defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
+		res = stream.write(m_end.tv_sec);
+		if (res)
+			res = stream.write(m_end.tv_nsec);
+#endif
+	}
+	return res;
+}

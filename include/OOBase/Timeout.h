@@ -36,6 +36,8 @@
 
 namespace OOBase
 {
+	class CDRStream;
+
 	class Timeout
 	{
 	public:
@@ -50,6 +52,11 @@ namespace OOBase
 	
 		void get_timeval(::timeval& timeout) const;
 		unsigned long millisecs() const;
+
+		bool operator < (const Timeout& rhs) const;
+
+		bool read(CDRStream& stream);
+		bool write(CDRStream& stream) const;
 
 #if defined(HAVE_UNISTD_H)
 		void get_abs_timespec(::timespec& timeout) const;

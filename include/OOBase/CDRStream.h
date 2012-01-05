@@ -195,6 +195,13 @@ namespace OOBase
 			return true;
 		}
 
+		/** A specialization of read() for type \p Timeout.
+		 */
+		bool read(Timeout& val)
+		{
+			return val.read(*this);
+		}
+
 		/** A specialization of read() for type \p LocalString.
 		 */
 		bool read(LocalString& val)
@@ -323,6 +330,12 @@ namespace OOBase
 
 			// Then the bytes of the string
 			return write_bytes(reinterpret_cast<const unsigned char*>(pszText),len);
+		}
+
+		/// A specialization of write() for type \p Timeout.
+		bool write(const Timeout& val)
+		{
+			return val.write(*this);
 		}
 
 		/// A specialization of write() for type \p bool.
