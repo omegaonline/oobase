@@ -141,7 +141,7 @@ namespace OOBase
 
 #if !defined(DOXYGEN)
 
-#if (WINVER < 0x0600)
+#if (_WIN32_WINNT < 0x0600)
 	typedef OOBase::Win32::condition_variable_t* CONDITION_VARIABLE;
 	typedef OOBase::Win32::rwmutex_t* SRWLOCK;
 #endif

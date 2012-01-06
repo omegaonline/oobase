@@ -52,6 +52,7 @@ liboobase_la_CXXFLAGS = $(PTHREAD_CFLAGS)
 liboobase_la_LDFLAGS = $(PTHREAD_LIBS)
 
 if WIN32
+liboobase_la_CPPFLAGS = -D_WIN32_WINNT=0x0502
 liboobase_la_LIBADD = -lws2_32 -lnetapi32 -luserenv
 else
 liboobase_la_CFLAGS += $(LTDLINCL)
@@ -126,7 +127,9 @@ liboosvrbase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
 liboosvrbase_la_LDFLAGS = $(PTHREAD_LIBS)
 liboosvrbase_la_LIBADD = $(SQLITE3_LIBS)
 
-if !WIN32
+if WIN32
+liboosvrbase_la_CPPFLAGS = -D_WIN32_WINNT=0x0502
+else
 liboosvrbase_la_LIBADD += $(EV_LIBS)
 endif
 

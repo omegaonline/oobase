@@ -24,7 +24,7 @@
 
 #include "Win32.h"
 
-#if defined(_WIN32) && (WINVER < 0x0600)
+#if defined(_WIN32) && (_WIN32_WINNT < 0x0600)
 typedef union 
 {       
 	PVOID Ptr;

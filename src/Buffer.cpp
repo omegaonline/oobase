@@ -74,7 +74,7 @@ void OOBase::Buffer::rd_ptr(size_t cbSkip)
 
 void OOBase::Buffer::align_rd_ptr(size_t align)
 {
-	size_t overrun = (reinterpret_cast<uintptr_t>(m_rd_ptr) & (align-1));
+	size_t overrun = (reinterpret_cast<size_t>(m_rd_ptr) & (align-1));
 	if (overrun)
 		rd_ptr(align - overrun);
 }
@@ -105,7 +105,7 @@ int OOBase::Buffer::wr_ptr(size_t cbExpand)
 int OOBase::Buffer::align_wr_ptr(size_t align)
 {
 	int err = 0;
-	size_t overrun = (reinterpret_cast<uintptr_t>(m_wr_ptr) & (align-1));
+	size_t overrun = (reinterpret_cast<size_t>(m_wr_ptr) & (align-1));
 	if (overrun)
 	{
 		overrun = align - overrun;

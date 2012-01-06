@@ -57,7 +57,7 @@ namespace OOBase
 		 *  The platform specific condition variable.
 		 */
 #if defined(_WIN32)
-	#if (WINVER < 0x0600)
+	#if (_WIN32_WINNT < 0x0600)
 		typedef OOBase::Win32::condition_variable_t* CONDITION_VARIABLE;
 	#endif
 

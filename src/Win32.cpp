@@ -109,7 +109,7 @@ namespace
 			instance->m_AcquireSRWLockExclusive = (pfn_AcquireSRWLockExclusive)(GetProcAddress(instance->m_hKernel32,"AcquireSRWLockExclusive"));
 			instance->m_ReleaseSRWLockShared = (pfn_ReleaseSRWLockShared)(GetProcAddress(instance->m_hKernel32,"ReleaseSRWLockShared"));
 			instance->m_ReleaseSRWLockExclusive = (pfn_ReleaseSRWLockExclusive)(GetProcAddress(instance->m_hKernel32,"ReleaseSRWLockExclusive"));
-			
+
 			instance->m_InitializeConditionVariable = (pfn_InitializeConditionVariable)(GetProcAddress(instance->m_hKernel32,"InitializeConditionVariable"));
 			instance->m_SleepConditionVariableCS = (pfn_SleepConditionVariableCS)(GetProcAddress(instance->m_hKernel32,"SleepConditionVariableCS"));
 			instance->m_WakeConditionVariable = (pfn_WakeConditionVariable)(GetProcAddress(instance->m_hKernel32,"WakeConditionVariable"));
@@ -150,9 +150,11 @@ namespace
 			OOBase_CallCriticalFailure(GetLastError());
 
 		init_low_frag_heap(instance->m_hKernel32,instance->m_hHeap);
-#if (WINVER >= 0x0501)
+
+#if defined(_MSC_VER)
 		init_low_frag_heap(instance->m_hKernel32,(HANDLE)_get_heap_handle());
 #endif
+
 		return TRUE;
 	}
 
@@ -168,6 +170,7 @@ namespace
 
 	void Win32Thunk::init_low_frag_heap(HMODULE hKernel32, HANDLE hHeap)
 	{
+#if (_WIN32_WINNT >= 0x0501)
 		typedef BOOL (__stdcall *pfn_HeapSetInformation)(HANDLE HeapHandle, HEAP_INFORMATION_CLASS HeapInformationClass, void* HeapInformation, SIZE_T HeapInformationLength);
 
 		pfn_HeapSetInformation pfn = (pfn_HeapSetInformation)(GetProcAddress(hKernel32,"HeapSetInformation"));
@@ -176,6 +179,7 @@ namespace
 			ULONG ulEnableLFH = 2;
 			(*pfn)(hHeap,HeapCompatibilityInformation,&ulEnableLFH, sizeof(ulEnableLFH));
 		}
+#endif
 	}
 
 	HANDLE get_mutex(void* v)
@@ -301,7 +305,7 @@ BOOL OOBase::Win32::InitOnceExecuteOnce(INIT_ONCE* InitOnce, PINIT_ONCE_FN InitF
 
 void OOBase::Win32::InitializeSRWLock(SRWLOCK* SRWLock)
 {
-#if (WINVER >= 0x0600)
+#if (_WIN32_WINNT >= 0x0600)
 	static_assert(sizeof(rwmutex_t*) >= sizeof(SRWLOCK),"Refer to maintainters");
 #endif
 
@@ -404,7 +408,7 @@ void OOBase::Win32::rwmutex_t::release_read()
 
 void OOBase::Win32::InitializeConditionVariable(CONDITION_VARIABLE* ConditionVariable)
 {
-#if (WINVER >= 0x0600)
+#if (_WIN32_WINNT >= 0x0600)
 	static_assert(sizeof(condition_variable_t*) >= sizeof(CONDITION_VARIABLE),"Refer to maintainters");
 #endif
 

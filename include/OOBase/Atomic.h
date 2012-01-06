@@ -80,7 +80,7 @@
 #define ATOMIC_DEC_32(t) InterlockedDecrement((LONG volatile*)(t))
 #define ATOMIC_ADD_32(t,v) InterlockedExchangeAdd((LONG volatile*)(t),(LONG)(v))
 
-#if (WINVER >= 0x0502)
+#if (_WIN32_WINNT >= 0x0600)
 /* Define if you have atomic compare-and-swap for 64bit values */
 #define ATOMIC_CAS_64(t,c,x) InterlockedCompareExchange64((LONGLONG volatile*)(t),(LONGLONG)(x),(LONGLONG)(c))
 
@@ -92,7 +92,7 @@
 #define ATOMIC_DEC_64(t) InterlockedDecrement64((LONGLONG volatile*)(t))
 #define ATOMIC_ADD_64(t,v) InterlockedExchangeAdd64((LONGLONG volatile*)(t),(LONGLONG)(v))
 
-#endif // WINVER >= 0x0502
+#endif // _WIN32_WINNT >= 0x0600
 
 #endif // defined(HAVE___SYNC_VAL_COMPARE_AND_SWAP)
 
