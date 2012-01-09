@@ -285,7 +285,7 @@ namespace
 	{
 		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-		if (wait)
+		if (!timeout.is_infinite())
 		{
 			pthread_mutex_t join_mutex = PTHREAD_MUTEX_INITIALIZER;
 			int err = pthread_mutex_lock(&join_mutex);
@@ -295,8 +295,8 @@ namespace
 			// Wait for the started signal
 			while (m_running)
 			{
-				timespec wt;
-				timeout.abs_timespec(wt);
+				::timespec wt;
+				timeout.get_abs_timespec(wt);
 				err = pthread_cond_timedwait(&m_condition,&join_mutex,&wt);
 				if (err)
 				{
@@ -450,9 +450,9 @@ void OOBase::Thread::sleep(unsigned int millisecs)
 #if defined(_WIN32)
 	::Sleep(static_cast<DWORD>(millisecs));
 #else
-	timespec wt;
-	wt.tv_sec = wait.tv_sec();
-	wt.tv_nsec = wait.tv_usec() * 1000;
+
+	::timespec wt = {0};
+	Timeout(millisecs / 1000,(millisecs % 1000) * 1000).get_abs_timespec(wt);
 
 	for (;;)
 	{

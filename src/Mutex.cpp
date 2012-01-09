@@ -222,8 +222,8 @@ bool OOBase::Mutex::acquire(const Timeout& timeout)
 		return true;
 	}
 
-	timespec ts;
-	timeout.abs_timespec(ts);
+	::timespec ts = {0};
+	timeout.get_abs_timespec(ts);
 	int err = pthread_mutex_timedlock(&m_mutex,&ts);
 	if (err == 0)
 		return true;

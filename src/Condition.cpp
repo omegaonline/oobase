@@ -89,8 +89,8 @@ bool OOBase::Condition::wait(Condition::Mutex& mutex, const Timeout& timeout)
 		err = pthread_cond_wait(&m_var,&mutex.m_mutex);
 	else
 	{
-		timespec wt;
-		timeout.abs_timespec(wt);
+		::timespec wt = {0};
+		timeout.get_abs_timespec(wt);
 		err = pthread_cond_timedwait(&m_var,&mutex.m_mutex,&wt);
 	}
 	
