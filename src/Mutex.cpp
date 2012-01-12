@@ -216,6 +216,9 @@ void OOBase::Mutex::acquire()
 
 bool OOBase::Mutex::acquire(const Timeout& timeout)
 {
+	if (tryacquire())
+		return true;
+
 	if (timeout.is_infinite())
 	{
 		acquire();
