@@ -141,10 +141,22 @@ namespace OOBase
 				if (!new_data)
 					return ERROR_OUTOFMEMORY;
 				
-				for (size_t i=0;i<m_top;++i)
-					::new (&new_data[i]) T(m_data[i]);
+				size_t i = 0;
+				try
+				{
+					for (i=0;i<m_top;++i)
+						::new (&new_data[i]) T(m_data[i]);
+				}
+				catch (...)
+				{
+					for (;i>0;--i)
+						new_data[i-1].~T();
+
+					Allocator::free(new_data);
+					throw;
+				}
 									
-				for (size_t i=0;i<m_top;++i)
+				for (i=0;i<m_top;++i)
 					m_data[i].~T();
 					
 				Allocator::free(m_data);

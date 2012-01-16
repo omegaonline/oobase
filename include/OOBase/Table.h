@@ -245,10 +245,22 @@ namespace OOBase
 				if (!new_data)
 					return ERROR_OUTOFMEMORY;
 				
-				for (size_t i=0;i<m_size;++i)
-					::new (&new_data[i]) Node(m_data[i].m_key,m_data[i].m_value);
+				size_t i = 0;
+				try
+				{
+					for (i=0;i<m_size;++i)
+						::new (&new_data[i]) Node(m_data[i].m_key,m_data[i].m_value);
+				}
+				catch (...)
+				{
+					for (;i>0;--i)
+						new_data[i-1].~Node();
+
+					Allocator::free(new_data);
+					throw;
+				}
 				
-				for (size_t i=0;i<m_size;++i)
+				for (i=0;i<m_size;++i)
 					m_data[i].~Node();
 										
 				Allocator::free(m_data);
