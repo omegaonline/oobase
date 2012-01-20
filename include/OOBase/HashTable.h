@@ -109,6 +109,17 @@ namespace OOBase
 		}
 	};
 
+#if defined(OOBASE_STRING_H_INCLUDED_)
+	template <>
+	struct Hash<String>
+	{
+		static size_t hash(const String& v)
+		{
+			return Hash<const char*>::hash(v.c_str());
+		}
+	};
+#endif
+
 	template <typename K, typename V, typename Allocator = HeapAllocator, typename H = OOBase::Hash<K> >
 	class HashTable
 	{
