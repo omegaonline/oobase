@@ -216,7 +216,9 @@ size_t OOBase::LocalString::find(const char* sz, size_t start) const
 
 int OOBase::String::copy_on_write(size_t inc)
 {
-	if (!m_node || m_node->m_refcount > 1)
+	node_addref(m_node);
+
+	if (!m_node || m_node->m_refcount > 2)
 	{
 		size_t our_len = (m_node ? length() : 0);
 
@@ -232,20 +234,28 @@ int OOBase::String::copy_on_write(size_t inc)
 		new_node->m_data[our_len] = '\0';
 
 		if (m_node)
+		{
 			node_release(m_node);
+			node_release(m_node);
+		}
 
 		m_node = new_node;
 	}
-	else if (inc > 0)
+	else
 	{
-		size_t our_len = length();
+		if (inc > 0)
+		{
+			size_t our_len = length();
 
-		// It's our buffer to play with... (There is an implicit +1 here)
-		Node* new_node = static_cast<Node*>(OOBase::HeapAllocator::reallocate(m_node,sizeof(Node) + our_len+inc));
-		if (!new_node)
-			return ERROR_OUTOFMEMORY;
+			// It's our buffer to play with... (There is an implicit +1 here)
+			Node* new_node = static_cast<Node*>(OOBase::HeapAllocator::reallocate(m_node,sizeof(Node) + our_len+inc));
+			if (!new_node)
+				return ERROR_OUTOFMEMORY;
 
-		m_node = new_node;
+			m_node = new_node;
+		}
+
+		node_release(m_node);
 	}
 
 	return 0;
@@ -265,6 +275,11 @@ int OOBase::String::assign(const char* sz, size_t len)
 			memcpy(m_node->m_data,sz,len);
 			m_node->m_data[len] = '\0';
 		}
+	}
+	else
+	{
+		node_release(m_node);
+		m_node = NULL;
 	}
 	return err;
 }
