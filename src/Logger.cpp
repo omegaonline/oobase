@@ -349,7 +349,7 @@ void OOBase::Logger::log(Priority priority, const char* fmt, ...)
 	va_list args;
 	va_start(args,fmt);
 
-	OOBase::LocalString msg;
+	LocalString msg;
 	int err = msg.vprintf(fmt,args);
 
 	va_end(args);
@@ -370,7 +370,7 @@ void OOBase::Logger::filenum_t::log(const char* fmt, ...)
 	va_list args;
 	va_start(args,fmt);
 
-	OOBase::LocalString msg;
+	LocalString msg;
 	int err = msg.vprintf(fmt,args);
 
 	va_end(args);
@@ -395,7 +395,7 @@ void OOBase::Logger::filenum_t::log(const char* fmt, ...)
 			m_pszFilename += s;
 		}
 
-		OOBase::LocalString header;
+		LocalString header;
 		if (header.printf("%s(%u): %s",m_pszFilename,m_nLine,msg.c_str()) == 0)
 			LoggerInstance().log(m_priority,header.c_str());
 	}
