@@ -86,6 +86,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/Singleton.h \
 	include/OOBase/SmartPtr.h \
 	include/OOBase/SecurityWin32.h \
+	include/OOBase/Service.h \
 	include/OOBase/Set.h \
 	include/OOBase/Socket.h \
 	include/OOBase/Stack.h \
@@ -110,7 +111,9 @@ liboobase_la_SOURCES = \
 	src/Mutex.cpp \
 	src/Once.cpp \
 	src/Posix.cpp \
+	src/pw_info.cpp \
 	src/SecurityWin32.cpp \
+	src/Service.cpp \
 	src/String.cpp \
 	src/Thread.cpp \
 	src/Timeout.cpp \
@@ -121,7 +124,7 @@ liboobase_la_SOURCES = \
 	src/Win32.cpp \
 	src/Win32Pipe.cpp \
 	src/Win32Socket.cpp	
-
+	
 liboosvrbase_la_CFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
 liboosvrbase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
 liboosvrbase_la_LDFLAGS = $(PTHREAD_LIBS)
@@ -136,7 +139,6 @@ endif
 liboosvrbase_la_SOURCES = \
 	include/OOSvrBase/Database.h \
 	include/OOSvrBase/Proactor.h \
-	include/OOSvrBase/Service.h \
 	src/ProactorEv.h \
 	src/ProactorWin32.h \
 	src/Database.cpp \
@@ -147,6 +149,4 @@ liboosvrbase_la_SOURCES = \
 	src/ProactorWin32.cpp \
 	src/ProactorWin32Pipe.cpp \
 	src/ProactorWin32Socket.cpp \
-	src/pw_info.cpp \
-	src/Service.cpp \
 	src/SQLite3_comp.c
