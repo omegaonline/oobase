@@ -198,7 +198,6 @@
     <ClInclude Include="..\include\OOSvrBase\Proactor.h" />
     <ClInclude Include="ProactorEv.h" />
     <ClInclude Include="ProactorWin32.h" />
-    <ClInclude Include="..\include\OOSvrBase\Service.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

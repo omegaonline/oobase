@@ -2,14 +2,14 @@
 //
 // Copyright (C) 2010 Rick Taylor
 //
-// This file is part of OOSvrBase, the Omega Online Base library.
+// This file is part of OOBase, the Omega Online Base library.
 //
-// OOSvrBase is free software: you can redistribute it and/or modify
+// OOBase is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// OOSvrBase is distributed in the hope that it will be useful,
+// OOBase is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Lesser General Public License for more details.
@@ -19,8 +19,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#ifndef OOSVRBASE_SERVICE_H_INCLUDED_
-#define OOSVRBASE_SERVICE_H_INCLUDED_
+#ifndef OOBASE_SERVICE_H_INCLUDED_
+#define OOBASE_SERVICE_H_INCLUDED_
 
 #include "../OOBase/Condition.h"
 
@@ -28,7 +28,7 @@
 #include <signal.h>
 #endif
 
-namespace OOSvrBase
+namespace OOBase
 {
 	class Server
 	{
@@ -53,8 +53,8 @@ namespace OOSvrBase
 		virtual int wait_for_quit();
 #endif
 
-		bool pid_file(const char* pszPidFile);
+		int pid_file(const char* pszPidFile);
 	};
 }
 
-#endif // OOSVRBASE_SERVICE_H_INCLUDED_
+#endif // OOBASE_SERVICE_H_INCLUDED_

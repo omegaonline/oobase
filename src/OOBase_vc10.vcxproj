@@ -187,6 +187,7 @@
     <ClInclude Include="..\include\OOBase\Logger.h" />
     <ClInclude Include="..\include\OOBase\RefCount.h" />
     <ClInclude Include="..\include\OOBase\SecurityWin32.h" />
+    <ClInclude Include="..\include\OOBase\Service.h" />
     <ClInclude Include="..\include\OOBase\Set.h" />
     <ClInclude Include="BSDSocket.h" />
     <ClInclude Include="..\include\OOBase\Buffer.h" />

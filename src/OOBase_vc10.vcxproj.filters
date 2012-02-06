@@ -186,6 +186,9 @@
     <ClInclude Include="..\include\OOBase\Timeout.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\OOBase\Service.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
