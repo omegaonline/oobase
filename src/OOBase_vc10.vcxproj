@@ -166,6 +166,7 @@
     <ClCompile Include="Mutex.cpp" />
     <ClCompile Include="Once.cpp" />
     <ClCompile Include="Posix.cpp" />
+    <ClCompile Include="pw_info.cpp" />
     <ClCompile Include="SecurityWin32.cpp" />
     <ClCompile Include="String.cpp" />
     <ClCompile Include="Thread.cpp" />

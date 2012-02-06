@@ -186,7 +186,6 @@
     <ClCompile Include="ProactorWin32.cpp" />
     <ClCompile Include="ProactorWin32Pipe.cpp" />
     <ClCompile Include="ProactorWin32Socket.cpp" />
-    <ClCompile Include="pw_info.cpp" />
     <ClCompile Include="Service.cpp" />
     <ClCompile Include="SQLite3_comp.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>

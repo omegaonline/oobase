@@ -25,9 +25,6 @@
     <ClCompile Include="Service.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="pw_info.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="SQLite3_comp.c">
       <Filter>Source Files</Filter>
     </ClCompile>

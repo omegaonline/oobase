@@ -64,6 +64,9 @@
     <ClCompile Include="Timeout.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="pw_info.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\OOBase\Atomic.h">
