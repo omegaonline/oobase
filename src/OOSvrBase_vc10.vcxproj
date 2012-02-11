@@ -87,8 +87,10 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <PreBuildEvent>
-      <Message>Configuring project settings...</Message>
-      <Command>msvcconf_vc10.exe "$(SolutionPath)" $(ProjectName)</Command>
+      <Message>
+      </Message>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <ClCompile>
       <Optimization>Disabled</Optimization>
@@ -125,8 +127,10 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <PreBuildEvent>
-      <Message>Configuring project settings...</Message>
-      <Command>msvcconf_vc10.exe "$(SolutionPath)" $(ProjectName)</Command>
+      <Message>
+      </Message>
+      <Command>
+      </Command>
     </PreBuildEvent>
     <ClCompile>
       <Optimization>Full</Optimization>
@@ -169,7 +173,6 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Database.cpp" />
     <ClCompile Include="Proactor.cpp" />
     <ClCompile Include="ProactorEv.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -186,14 +189,9 @@
     <ClCompile Include="ProactorWin32.cpp" />
     <ClCompile Include="ProactorWin32Pipe.cpp" />
     <ClCompile Include="ProactorWin32Socket.cpp" />
-    <ClCompile Include="Service.cpp" />
-    <ClCompile Include="SQLite3_comp.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\config-base.h" />
-    <ClInclude Include="..\include\OOSvrBase\Database.h" />
     <ClInclude Include="..\include\oobase-msvc.h" />
     <ClInclude Include="..\include\OOSvrBase\Proactor.h" />
     <ClInclude Include="ProactorEv.h" />

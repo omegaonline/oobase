@@ -168,6 +168,7 @@
     <ClCompile Include="Posix.cpp" />
     <ClCompile Include="pw_info.cpp" />
     <ClCompile Include="SecurityWin32.cpp" />
+    <ClCompile Include="Service.cpp" />
     <ClCompile Include="String.cpp" />
     <ClCompile Include="Thread.cpp" />
     <ClCompile Include="Timeout.cpp" />
