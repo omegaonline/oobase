@@ -108,9 +108,6 @@ AC_CHECK_LIB([ev],[ev_loop_new],AC_SUBST([EV_LIBS],["-lev"]))
 # Check for socket options
 OO_CHECK_SOCKOPT([SO_PEERCRED LOCAL_CREDS])
 
-# Find sqlite3
-OO_LIB_SQLITE3([3.5.0])
-
 # Check for specifics of Unix cred passing
 AC_CHECK_FUNCS([getpeereid getpeerucred])
 AC_CHECK_TYPES([struct cmsgcred])

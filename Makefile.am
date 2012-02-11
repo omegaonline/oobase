@@ -125,28 +125,24 @@ liboobase_la_SOURCES = \
 	src/Win32Pipe.cpp \
 	src/Win32Socket.cpp	
 	
-liboosvrbase_la_CFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
-liboosvrbase_la_CXXFLAGS = $(PTHREAD_CFLAGS) $(SQLITE3_CFLAGS)
+liboosvrbase_la_CFLAGS = $(PTHREAD_CFLAGS)
+liboosvrbase_la_CXXFLAGS = $(PTHREAD_CFLAGS)
 liboosvrbase_la_LDFLAGS = $(PTHREAD_LIBS)
-liboosvrbase_la_LIBADD = $(SQLITE3_LIBS)
 
 if WIN32
 liboosvrbase_la_CPPFLAGS = -D_WIN32_WINNT=0x0502
 else
-liboosvrbase_la_LIBADD += $(EV_LIBS)
+liboosvrbase_la_LIBADD = $(EV_LIBS)
 endif
 
 liboosvrbase_la_SOURCES = \
-	include/OOSvrBase/Database.h \
 	include/OOSvrBase/Proactor.h \
 	src/ProactorEv.h \
 	src/ProactorWin32.h \
-	src/Database.cpp \
 	src/GetPeerUid.cpp \
 	src/Proactor.cpp \
 	src/ProactorEv.cpp \
 	src/ProactorEvSocket.cpp \
 	src/ProactorWin32.cpp \
 	src/ProactorWin32Pipe.cpp \
-	src/ProactorWin32Socket.cpp \
-	src/SQLite3_comp.c
+	src/ProactorWin32Socket.cpp

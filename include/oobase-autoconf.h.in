@@ -19,12 +19,6 @@
 /* Define to 1 if you have the SO_PEERCRED socket option */
 #undef HAVE_SO_PEERCRED
 
-/* Define to 1 if you have the SQLite3 library */
-#undef HAVE_SQLITE3_H
-
-/* Define to 1 if you have the SQLite3 amalgamated sources */
-#undef HAVE_SQLITE3_AMALGAMATION
-
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
 
