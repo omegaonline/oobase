@@ -29,6 +29,10 @@
 #include <stdint.h>
 #endif
 
+#if defined(HAVE_SYS_TYPES_H)
+#include <sys/types.h>
+#endif
+
 OOBase::Buffer::Buffer(size_t cbSize, size_t align) :
 		RefCounted(),
 		m_capacity(0),

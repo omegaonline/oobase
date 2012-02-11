@@ -99,6 +99,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <stddef.h>
 
 ////////////////////////////////////////
 // Define some standard errors to avoid lots of #ifdefs.
