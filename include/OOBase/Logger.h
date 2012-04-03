@@ -37,13 +37,23 @@ namespace OOBase
 		};
 
 		void open(const char* name, const char* pszSrcFile = NULL);
+
+#if defined(__GNUC__)
+		void log(Priority priority, const char* fmt, ...) __attribute__((format(printf,2,3)));
+#else
 		void log(Priority priority, const char* fmt, ...);
+#endif
 		
 #if !defined(DOXYGEN)
 		struct filenum_t
 		{
 			filenum_t(Priority priority, const char* pszFilename, unsigned int nLine);
+
+#if defined(__GNUC__)
+			void log(const char* fmt, ...) __attribute__((format(printf,2,3)));
+#else
 			void log(const char* fmt, ...);
+#endif
 
 			Priority     m_priority;
 			const char*  m_pszFilename;
