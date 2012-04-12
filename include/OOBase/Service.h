@@ -34,6 +34,7 @@ namespace OOBase
 	{
 	public:
 		Server();
+		virtual ~Server() {}
 
 		virtual int wait_for_quit();
 		void signal(int how);
