@@ -86,7 +86,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/Singleton.h \
 	include/OOBase/SmartPtr.h \
 	include/OOBase/SecurityWin32.h \
-	include/OOBase/Service.h \
+	include/OOBase/Server.h \
 	include/OOBase/Set.h \
 	include/OOBase/Socket.h \
 	include/OOBase/Stack.h \
@@ -113,7 +113,7 @@ liboobase_la_SOURCES = \
 	src/Posix.cpp \
 	src/pw_info.cpp \
 	src/SecurityWin32.cpp \
-	src/Service.cpp \
+	src/Server.cpp \
 	src/String.cpp \
 	src/Thread.cpp \
 	src/Timeout.cpp \

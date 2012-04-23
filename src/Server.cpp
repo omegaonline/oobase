@@ -24,8 +24,7 @@
 #include "../include/OOBase/Singleton.h"
 #include "../include/OOBase/String.h"
 #include "../include/OOBase/Posix.h"
-
-#include "../include/OOBase/Service.h"
+#include "../include/OOBase/Server.h"
 
 #include "Win32Impl.h"
 
@@ -101,32 +100,7 @@ namespace
 
 		return m_result;
 	}
-}
 
-template class OOBase::Singleton<QuitData,OOBase::Module>;
-
-OOBase::Server::Server()
-{
-	QUIT::instance();
-}
-
-void OOBase::Server::signal(int how)
-{
-	QUIT::instance().signal(how);
-}
-
-int OOBase::Server::wait_for_quit()
-{
-	return QUIT::instance().wait();
-}
-
-void OOBase::Server::quit()
-{
-	signal(CTRL_C_EVENT);
-}
-
-namespace
-{
 	static SERVICE_STATUS_HANDLE s_ssh = (SERVICE_STATUS_HANDLE)NULL;
 
 	VOID WINAPI ServiceCtrl(DWORD dwControl)
@@ -196,7 +170,24 @@ namespace
 	}
 }
 
-int OOBase::Service::wait_for_quit()
+template class OOBase::Singleton<QuitData,OOBase::Module>;
+
+OOBase::Server::Server()
+{
+	QUIT::instance();
+}
+
+void OOBase::Server::signal(int how)
+{
+	QUIT::instance().signal(how);
+}
+
+void OOBase::Server::quit()
+{
+	signal(CTRL_C_EVENT);
+}
+
+int OOBase::Server::wait_for_quit()
 {
 	static wchar_t sn[] = L"";
 	static SERVICE_TABLE_ENTRYW ste[] =
@@ -219,7 +210,7 @@ int OOBase::Service::wait_for_quit()
 			stdout_write("Not a Win32 service");
 
 			// We are running from the shell...
-			return Server::wait_for_quit();
+			return QUIT::instance().wait();
 		}
 		else
 			return GetLastError();
@@ -266,14 +257,14 @@ void OOBase::Server::quit()
 #error Fix me!
 #endif
 
-int OOBase::Service::pid_file(const char* pszPidFile)
+int OOBase::Server::pid_file(const char* pszPidFile)
 {
 #if !defined(HAVE_UNISTD_H)
 	(void)pszPidFile;
 	return 0;
 #else
 
-	int fd = open(pszPidFile, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+	int fd = open(pszPidFile, O_WRONLY|O_CREAT|O_EXCL|O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP);
 	if (fd < 0)
 		return errno;
 
@@ -295,8 +286,6 @@ int OOBase::Service::pid_file(const char* pszPidFile)
 		}
 		else
 		{
-			ftruncate(fd,0);
-
 			LocalString str;
 			if ((err = str.printf("%d",getpid())) == 0)
 				write(fd,str.c_str(),str.length()+1);

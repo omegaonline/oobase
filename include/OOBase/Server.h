@@ -34,27 +34,18 @@ namespace OOBase
 	{
 	public:
 		Server();
-		virtual ~Server() {}
 
-		virtual int wait_for_quit();
+		int wait_for_quit();
 		void signal(int how);
 		void quit();
+
+		static int pid_file(const char* pszPidFile);
 
 	private:
 #if defined(HAVE_UNISTD_H)
 		sigset_t  m_set;
 		pthread_t m_tid;
 #endif
-	};
-
-	class Service : public Server
-	{
-	public:
-#if defined(_WIN32)
-		virtual int wait_for_quit();
-#endif
-
-		int pid_file(const char* pszPidFile);
 	};
 }
 
