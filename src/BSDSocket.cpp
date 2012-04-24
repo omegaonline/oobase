@@ -164,12 +164,12 @@ namespace
 #if defined(HAVE_UNISTD_H)
 					if ((err = OOBase::POSIX::set_close_on_exec(sock,true)) != 0)
 					{
-						::close(sock);
+						OOBase::POSIX::close(sock);
 						break;
 					}
 #endif
 					if ((err = OOBase::BSD::connect(sock,pAddr->ai_addr,pAddr->ai_addrlen,timeout)) != 0)
-						::close(sock);
+						OOBase::POSIX::close(sock);
 					else
 						break;
 				}
@@ -196,7 +196,7 @@ Socket::Socket(int sock) :
 
 Socket::~Socket()
 {
-	::close(m_sock);
+	OOBase::POSIX::close(m_sock);
 }
 
 int Socket::do_select(bool bWrite, const OOBase::Timeout& timeout)
@@ -516,7 +516,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, i
 	if (!pSocket)
 	{
 		err = ENOMEM;
-		::close(sock);
+		OOBase::POSIX::close(sock);
 	}
 
 	return pSocket;
@@ -554,7 +554,7 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const 
 #if defined(HAVE_UNISTD_H)
 	if ((err = OOBase::POSIX::set_close_on_exec(sock,true)) != 0)
 	{
-		::close(sock);
+		OOBase::POSIX::close(sock);
 		return NULL;
 	}
 #endif
@@ -565,7 +565,7 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const 
 	
 	if ((err = BSD::connect(sock,(sockaddr*)(&addr),addr_len,timeout)) != 0)
 	{
-		::close(sock);
+		OOBase::POSIX::close(sock);
 		return NULL;
 	}
 
@@ -573,7 +573,7 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const 
 	if (!pSocket)
 	{
 		err = ENOMEM;
-		::close(sock);
+		OOBase::POSIX::close(sock);
 	}
 
 	return pSocket;

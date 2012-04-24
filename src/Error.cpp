@@ -20,6 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/SmartPtr.h"
+#include "../include/OOBase/Posix.h"
 
 #include "tr24731.h"
 
@@ -136,8 +137,8 @@ namespace
 
 #elif defined(HAVE_UNISTD_H)
 			int fd = use_stderr ? STDERR_FILENO : STDOUT_FILENO;
-			err = write(fd,sz,len);
-			if (err == 0)
+			ssize_t s = OOBase::POSIX::write(fd,sz,len);
+			if (s != -1)
 				fsync(fd);
 #endif
 		}

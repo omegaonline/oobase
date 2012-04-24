@@ -44,8 +44,8 @@ OOSvrBase::detail::ProactorEv::~ProactorEv()
 		ev_loop_destroy(m_pLoop);
 	}
 
-	close(m_pipe_fds[0]);
-	close(m_pipe_fds[1]);
+	OOBase::POSIX::close(m_pipe_fds[0]);
+	OOBase::POSIX::close(m_pipe_fds[1]);
 }
 
 int OOSvrBase::detail::ProactorEv::init()
@@ -237,35 +237,26 @@ namespace
 
 	int recv_msg(int fd, Msg& msg)
 	{
-		int err = 0;
-		ssize_t r = 0;
-
-		do
-		{
-			r = ::read(fd,&msg,sizeof(msg));
-		}
-		while (r == -1 && errno == EINTR);
-
+		ssize_t r = OOBase::POSIX::read(fd,&msg,sizeof(msg));
 		if (r == -1)
-			err = errno;
+			return errno;
 
-		return err;
+		if (r != sizeof(msg))
+			return EIO;
+
+		return 0;
 	}
 
 	int send_msg(int fd, const Msg& msg)
 	{
-		int err = 0;
-		ssize_t s = 0;
-		do
-		{
-			s = ::write(fd,&msg,sizeof(msg));
-		}
-		while (s == -1 && errno == EINTR);
-
+		ssize_t s = OOBase::POSIX::write(fd,&msg,sizeof(msg));
 		if (s == -1)
-			err = errno;
+			return errno;
 
-		return err;
+		if (s != sizeof(msg))
+			return EIO;
+
+		return 0;
 	}
 }
 
@@ -388,7 +379,7 @@ bool OOSvrBase::detail::ProactorEv::deref(AcceptWatcher* watcher)
 		if (ev_is_active(watcher))
 			io_stop(watcher);
 
-		close(watcher->fd);
+		OOBase::POSIX::close(watcher->fd);
 		delete watcher;
 		--m_outstanding;
 	}
@@ -404,7 +395,7 @@ bool OOSvrBase::detail::ProactorEv::deref(IOWatcher* watcher)
 		if (ev_is_active(watcher))
 			io_stop(watcher);
 
-		close(watcher->fd);
+		OOBase::POSIX::close(watcher->fd);
 		delete watcher;
 		--m_outstanding;
 	}

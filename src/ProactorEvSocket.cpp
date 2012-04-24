@@ -44,7 +44,7 @@ namespace
 		err = OOBase::BSD::set_non_blocking(sock,true);
 		if (err != 0)
 		{
-			::close(sock);
+			OOBase::POSIX::close(sock);
 			return -1;
 		}
 
@@ -52,7 +52,7 @@ namespace
 		err = OOBase::POSIX::set_close_on_exec(sock,true);
 		if (err != 0)
 		{
-			::close(sock);
+			OOBase::POSIX::close(sock);
 			return -1;
 		}
 	#endif
@@ -178,14 +178,14 @@ int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len)
 			::listen(fd,SOMAXCONN) == -1)
 	{
 		err = errno;
-		close(fd);
+		OOBase::POSIX::close(fd);
 	}
 	else
 	{
 		// Create a watcher
 		m_handle = m_pProactor->new_acceptor(fd,this,&on_accept,err);
 		if (!m_handle)
-			close(fd);
+			OOBase::POSIX::close(fd);
 	}
 
 	return err;
@@ -248,7 +248,7 @@ bool SocketAcceptor::do_accept(int fd)
 			}
 			
 			if (err != 0)
-				close(new_fd);
+				OOBase::POSIX::close(new_fd);
 		}
 		
 		if (m_callback_local)
@@ -347,13 +347,13 @@ OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorEv::connect_socket(const sock
 	
 	if ((err = OOBase::BSD::connect(fd,addr,addr_len,timeout)) != 0)
 	{
-		close(fd);
+		OOBase::POSIX::close(fd);
 		return NULL;
 	}
 	
 	OOSvrBase::AsyncLocalSocket* pSocket = attach_local_socket(fd,err);
 	if (!pSocket)
-		close(fd);
+		OOBase::POSIX::close(fd);
 	
 	return pSocket;
 }
@@ -373,13 +373,13 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorEv::connect_local_socket
 		
 	if ((err = OOBase::BSD::connect(fd,(sockaddr*)&addr,addr_len,timeout)) != 0)
 	{
-		close(fd);
+		OOBase::POSIX::close(fd);
 		return NULL;
 	}
 
 	OOSvrBase::AsyncLocalSocket* pSocket = attach_local_socket(fd,err);
 	if (!pSocket)
-		close(fd);
+		OOBase::POSIX::close(fd);
 	
 	return pSocket;
 	
