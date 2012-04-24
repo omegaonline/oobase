@@ -27,6 +27,7 @@
 #if defined(HAVE_UNISTD_H) || defined(DOXYGEN)
 
 #include <pwd.h>
+#include <fcntl.h>
 
 namespace OOBase
 {
@@ -35,6 +36,7 @@ namespace OOBase
 		int set_close_on_exec(int fd, bool set);
 		int close_file_descriptors(int* except, size_t ex_count);
 
+		int open(const char *pathname, int flags, mode_t mode = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH);
 		ssize_t read(int fd, void* buf, size_t count);
 		ssize_t write(int fd, const void* buf, size_t count);
 		int close(int fd);

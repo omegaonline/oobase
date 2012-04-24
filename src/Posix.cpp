@@ -28,6 +28,19 @@
 #include <stdlib.h>
 #include <dirent.h>
 
+int OOBase::POSIX::open(const char *pathname, int flags, mode_t mode)
+{
+	for (;;)
+	{
+		int fd = ::open(pathname,flags,mode);
+		if (fd != -1)
+			return fd;
+
+		if (errno != EINTR)
+			return errno;
+	}
+}
+
 ssize_t OOBase::POSIX::read(int fd, void* buf, size_t count)
 {
 	for (;;)
