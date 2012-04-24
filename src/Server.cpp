@@ -30,9 +30,9 @@
 
 #if defined(HAVE_UNISTD_H)
 #include <fcntl.h>
+#include <stdlib.h>
+#include <limits.h>
 #endif
-
-#if defined(_WIN32)
 
 namespace OOBase
 {
@@ -43,6 +43,8 @@ namespace OOBase
 	};
 }
 
+#if defined(_WIN32)
+
 namespace
 {
 	struct QuitData
@@ -52,11 +54,13 @@ namespace
 		void signal(int how);
 		int wait();
 		int get_result();
+		void set_pid_event(OOBase::SmartHandle& h);
 
 	private:
 		OOBase::Condition::Mutex m_lock;
 		OOBase::Condition        m_condition;
 		int                      m_result;
+		OOBase::SmartHandle      m_pid_event;
 	};
 	typedef OOBase::Singleton<QuitData,OOBase::Module> QUIT;
 
@@ -99,6 +103,11 @@ namespace
 		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 
 		return m_result;
+	}
+
+	void QuitData::set_pid_event(OOBase::SmartHandle& h)
+	{
+		m_pid_event = h;
 	}
 
 	static SERVICE_STATUS_HANDLE s_ssh = (SERVICE_STATUS_HANDLE)NULL;
@@ -174,7 +183,6 @@ template class OOBase::Singleton<QuitData,OOBase::Module>;
 
 OOBase::Server::Server()
 {
-	QUIT::instance();
 }
 
 void OOBase::Server::signal(int how)
@@ -220,7 +228,142 @@ int OOBase::Server::wait_for_quit()
 	return QUIT::instance().get_result();
 }
 
+int OOBase::Server::daemonize(const char* pszPidFile, bool& already)
+{
+	// Create a global event named pszPidFile
+	// If it exists, then we are already running
+
+	OOBase::LocalString strPidFile;
+	int err = strPidFile.concat("Global\\",pszPidFile);
+	if (err)
+		return err;
+
+	strPidFile.replace('/','_');
+
+	OOBase::SmartHandle e = CreateEvent(NULL,TRUE,FALSE,strPidFile.c_str());
+	if (!e.is_valid())
+	{
+		err = GetLastError();
+		if (err == ERROR_ALREADY_EXISTS)
+		{
+			already = true;
+			err = 0;
+		}
+		return err;
+	}
+
+	// Ensure it's closed
+	QUIT::instance().set_pid_event(e);
+
+	already = false;
+	return 0;
+}
+
 #elif defined(HAVE_UNISTD_H)
+
+namespace
+{
+	struct QuitData
+	{
+		QuitData();
+		~QuitData();
+
+		void set_pid_file(const OOBase::String& strPidFile, int fd);
+
+	private:
+		int            m_fd;
+		OOBase::String m_strPidFile;
+	};
+	typedef OOBase::Singleton<QuitData,OOBase::Module> QUIT;
+
+	QuitData::QuitData() : m_fd(-1)
+	{ }
+
+	QuitData::~QuitData()
+	{
+		if (m_fd != -1)
+			OOBase::POSIX::close(m_fd);
+
+		if (!m_strPidFile.empty())
+			::unlink(m_strPidFile.c_str());
+	}
+
+	void QuitData::set_pid_file(const OOBase::String& strPidFile, int fd)
+	{
+		m_fd = fd;
+		m_strPidFile = strPidFile;
+	}
+
+	int concat_pidname(OOBase::String& strPidFile, const char* pszPidFile)
+	{
+		if (!pszPidFile)
+			return EINVAL;
+
+		int err = 0;
+		if (*pszPidFile != '/')
+		{
+			// Relative path, prepend cwd
+			char cwd[PATH_MAX] = {0};
+			if (!getcwd(cwd,sizeof(cwd)))
+				return errno;
+
+			err = strPidFile.assign(cwd);
+			if (!err)
+				err = OOBase::Paths::AppendDirSeparator(strPidFile);
+			if (!err)
+				err = strPidFile.append(pszPidFile);
+		}
+		else
+			err = strPidFile.assign(pszPidFile);
+
+		return err;
+	}
+
+	int lock_pidfile(const OOBase::String& strPidFile, int& fd, bool& already)
+	{
+		fd = OOBase::POSIX::open(strPidFile.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP);
+		if (fd == -1)
+			return errno;
+
+		// Try for the lock
+		int err = 0;
+		if (lockf(fd,F_TLOCK,0) == -1)
+		{
+			if (errno == EACCES || errno == EAGAIN)
+			{
+				already = true;
+				OOBase::POSIX::close(fd);
+				return 0;
+			}
+			err = errno;
+		}
+		else
+		{
+			already = false;
+
+			// Make sure the file gets unlinked at the end
+			QUIT::instance().set_pid_file(strPidFile,fd);
+
+			// Write our pid to the file
+			OOBase::LocalString str;
+			err = str.printf("%d",getpid());
+			if (!err)
+			{
+				ftruncate(fd,0);
+
+				if (OOBase::POSIX::write(fd,str.c_str(),str.length()) == -1)
+					err = errno;
+			}
+		}
+
+		if (err)
+			OOBase::POSIX::close(fd);
+
+		return err;
+	}
+}
+
+template class OOBase::Singleton<QuitData,OOBase::Module>;
 
 OOBase::Server::Server() :
 		m_tid(pthread_self())
@@ -250,48 +393,107 @@ void OOBase::Server::signal(int sig)
 
 void OOBase::Server::quit()
 {
-	signal(SIGTERM);
+	signal(SIGQUIT);
+}
+
+int OOBase::Server::create_pid_file(const char* pszPidFile, bool& already)
+{
+	OOBase::String strPidFile;
+	int err = concat_pidname(strPidFile,pszPidFile);
+	if (err)
+		return err;
+
+	int fd;
+	return lock_pidfile(strPidFile,fd,already);
+}
+
+int OOBase::Server::daemonize(const char* pszPidFile, bool& already)
+{
+	OOBase::String strPidFile;
+	int err = concat_pidname(strPidFile,pszPidFile);
+	if (err)
+		return err;
+
+	// Block all SIGCHLD
+	sigset_t sig,prev_sig;
+	sigemptyset(&sig);
+	sigaddset(&sig, SIGCHLD);
+
+	err = pthread_sigmask(SIG_BLOCK,&sig,&prev_sig);
+	if (!err)
+	{
+		// Now daemonize
+		pid_t i = fork();
+		if (i == (pid_t)-1)
+			err = errno;
+		else
+		{
+			// Parent exits
+			if (i != (pid_t)0)
+				_exit(0);
+
+			// Create a new session
+			if (setsid() == (pid_t)-1)
+				err = errno;
+			else
+			{
+				// Now fork again...
+				i = fork();
+				if (i == (pid_t)-1)
+					err = errno;
+				else
+				{
+					// Parent exits
+					if (i != (pid_t)0)
+						_exit(0);
+				}
+			}
+		}
+
+		// Restore previous signal mask
+		int err2 = pthread_sigmask(SIG_SETMASK,&prev_sig,NULL);
+		if (!err)
+			err = err2;
+	}
+
+	if (err)
+		return err;
+
+	// Now block all TTY signals
+	sigemptyset(&sig);
+	sigaddset(&sig, SIGTSTP);
+	sigaddset(&sig, SIGTTOU);
+	sigaddset(&sig, SIGTTIN);
+	err = pthread_sigmask(SIG_BLOCK,&sig,NULL);
+	if (err != 0)
+		return err;
+
+	// Open the pid file
+	int fd;
+	err = lock_pidfile(strPidFile,fd,already);
+	if (err)
+		return err;
+
+	// Now close all open descriptors, except fd
+	int except[] = { STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO, fd };
+	err = POSIX::close_file_descriptors(except,sizeof(except)/sizeof(except[0]));
+	if (err)
+		return errno;
+
+	int n = POSIX::open("/dev/null",O_RDWR);
+	if (n == -1)
+		return errno;
+
+	// Now close off stdin, stdout and stderr
+	dup2(STDIN_FILENO,n);
+	dup2(STDOUT_FILENO,n);
+	dup2(STDERR_FILENO,n);
+
+	POSIX::close(n);
+
+	return 0;
 }
 
 #else
 #error Fix me!
 #endif
-
-int OOBase::Server::pid_file(const char* pszPidFile)
-{
-#if !defined(HAVE_UNISTD_H)
-	(void)pszPidFile;
-	return 0;
-#else
-
-	int fd = open(pszPidFile, O_WRONLY|O_CREAT|O_EXCL|O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP);
-	if (fd < 0)
-		return errno;
-
-	int err = POSIX::set_close_on_exec(fd,true);
-	if (err == 0)
-	{
-		struct flock fl = {0};
-		fl.l_type = F_WRLCK;
-		fl.l_start = 0;
-		fl.l_whence = SEEK_SET;
-		fl.l_len = 0;
-		if (fcntl(fd,F_SETLK,&fl) < 0)
-		{
-			err = errno;
-			close(fd);
-
-			if (err == EAGAIN)
-				err = EACCES;	
-		}
-		else
-		{
-			LocalString str;
-			if ((err = str.printf("%d",getpid())) == 0)
-				write(fd,str.c_str(),str.length()+1);
-		}
-	}
-	return err;
-#endif
-}
-

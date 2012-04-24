@@ -39,7 +39,8 @@ namespace OOBase
 		void signal(int how);
 		void quit();
 
-		static int pid_file(const char* pszPidFile);
+		static int create_pid_file(const char* pszPidFile, bool& already);
+		static int daemonize(const char* pszPidFile, bool& already);
 
 	private:
 #if defined(HAVE_UNISTD_H)
