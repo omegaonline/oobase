@@ -59,7 +59,7 @@ namespace OOBase
 
 		static void init()
 		{
-			T* i = ::new (OOBase::critical) T();
+			T* i = ::new (critical) T();
 
 			int err = DLLDestructor<DLL>::add_destructor(&destroy,i);
 			if (err)

@@ -34,6 +34,8 @@
 // Throws std::bad_alloc
 inline void* operator new(size_t size) THROW_BAD_ALLOC
 {
+	assert(false);
+
 	void* p = OOBase::HeapAllocator::allocate(size);
 	if (!p)
 		throw std::bad_alloc();
@@ -43,6 +45,8 @@ inline void* operator new(size_t size) THROW_BAD_ALLOC
 
 inline void* operator new[](size_t size) THROW_BAD_ALLOC
 {
+	assert(false);
+
 	void* p = OOBase::HeapAllocator::allocate(size);
 	if (!p)
 		throw std::bad_alloc();
