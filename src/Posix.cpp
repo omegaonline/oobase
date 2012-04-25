@@ -33,11 +33,8 @@ int OOBase::POSIX::open(const char *pathname, int flags, mode_t mode)
 	for (;;)
 	{
 		int fd = ::open(pathname,flags,mode);
-		if (fd != -1)
+		if (fd != -1 || errno != EINTR)
 			return fd;
-
-		if (errno != EINTR)
-			return errno;
 	}
 }
 
@@ -46,10 +43,7 @@ ssize_t OOBase::POSIX::read(int fd, void* buf, size_t count)
 	for (;;)
 	{
 		ssize_t r = ::read(fd,buf,count);
-		if (r != -1)
-			return r;
-
-		if (errno != EINTR)
+		if (r != -1 || errno != EINTR)
 			return r;
 	}
 }
@@ -59,10 +53,7 @@ ssize_t OOBase::POSIX::write(int fd, const void* buf, size_t count)
 	for (;;)
 	{
 		ssize_t w = ::write(fd,buf,count);
-		if (w != -1)
-			return w;
-
-		if (errno != EINTR)
+		if (w != -1 || errno != EINTR)
 			return w;
 	}
 }
@@ -75,7 +66,7 @@ int OOBase::POSIX::close(int fd)
 			return 0;
 
 		if (errno != EINTR)
-			return errno;
+			return -1;
 	}
 }
 
