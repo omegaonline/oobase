@@ -485,9 +485,9 @@ int OOBase::Server::daemonize(const char* pszPidFile, bool& already)
 		return errno;
 
 	// Now close off stdin, stdout and stderr
-	dup2(STDIN_FILENO,n);
-	dup2(STDOUT_FILENO,n);
-	dup2(STDERR_FILENO,n);
+	dup2(n,STDIN_FILENO);
+	dup2(n,STDOUT_FILENO);
+	dup2(n,STDERR_FILENO);
 
 	POSIX::close(n);
 
