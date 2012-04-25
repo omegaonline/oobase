@@ -41,6 +41,65 @@ namespace OOBase
 		ssize_t write(int fd, const void* buf, size_t count);
 		int close(int fd);
 
+		class SmartFD
+		{
+		public:
+			SmartFD(int fd = -1) :
+					m_fd(fd)
+			{}
+
+			SmartFD& operator = (int fd)
+			{
+				m_fd = fd;
+				return *this;
+			}
+
+			~SmartFD()
+			{
+				close();
+			}
+
+			int detach()
+			{
+				int fd = m_fd;
+				m_fd = -1;
+				return fd;
+			}
+
+			int close()
+			{
+				if (!is_valid())
+					return 0;
+				else
+					return POSIX::close(m_fd);
+			}
+
+			bool is_valid() const
+			{
+				return (m_fd != -1);
+			}
+
+			int* operator &()
+			{
+				return &m_fd;
+			}
+
+			operator int() const
+			{
+				return m_fd;
+			}
+
+			operator int&()
+			{
+				return m_fd;
+			}
+
+		private:
+			SmartFD(const SmartFD&);
+			SmartFD& operator = (const SmartFD&);
+
+			int m_fd;
+		};
 
 		class pw_info
 		{

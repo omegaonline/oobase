@@ -265,25 +265,18 @@ namespace
 {
 	struct QuitData
 	{
-		QuitData();
 		~QuitData();
 
 		void set_pid_file(const OOBase::String& strPidFile, int fd);
 
 	private:
-		int            m_fd;
-		OOBase::String m_strPidFile;
+		OOBase::POSIX::SmartFD m_fd;
+		OOBase::String         m_strPidFile;
 	};
 	typedef OOBase::Singleton<QuitData,OOBase::Module> QUIT;
 
-	QuitData::QuitData() : m_fd(-1)
-	{ }
-
 	QuitData::~QuitData()
 	{
-		if (m_fd != -1)
-			OOBase::POSIX::close(m_fd);
-
 		if (!m_strPidFile.empty())
 			::unlink(m_strPidFile.c_str());
 	}
