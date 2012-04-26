@@ -467,8 +467,8 @@ int OOBase::Server::daemonize(const char* pszPidFile, bool& already)
 	if (err)
 		return err;
 
-	// Now close all open descriptors, except fd
-	int except[] = { STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO, fd };
+	// Now close all open descriptors, except fd and stderr
+	int except[] = { STDOUT_FILENO, STDERR_FILENO, fd };
 	err = POSIX::close_file_descriptors(except,sizeof(except)/sizeof(except[0]));
 	if (err)
 		return errno;
@@ -481,7 +481,6 @@ int OOBase::Server::daemonize(const char* pszPidFile, bool& already)
 	dup2(n,STDIN_FILENO);
 	dup2(n,STDOUT_FILENO);
 	dup2(n,STDERR_FILENO);
-
 	POSIX::close(n);
 
 	return 0;
