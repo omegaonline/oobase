@@ -88,7 +88,7 @@ int OOSvrBase::detail::ProactorWin32::run(int& err, const OOBase::Timeout& timeo
 {
 	OOBase::Guard<OOBase::SpinLock> guard(m_lock,false);
 	if (!guard.acquire(timeout))
-		return ERROR_TIMEOUT;
+		return 0;
 
 	if (!m_hPort)
 	{

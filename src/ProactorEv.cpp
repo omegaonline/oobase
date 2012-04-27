@@ -141,7 +141,7 @@ int OOSvrBase::detail::ProactorEv::run(int& err, const OOBase::Timeout& timeout)
 		}
 	}
 
-	return 0;
+	return (m_outstanding == 0 ? 1 : 0);
 }
 
 void OOSvrBase::detail::ProactorEv::pipe_callback(struct ev_loop*, struct ev_io* watcher, int)
