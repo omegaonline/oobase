@@ -157,14 +157,10 @@ bool OOBase::Timeout::has_expired() const
 #endif
 }
 
-void OOBase::Timeout::get_timeval(::timeval& timeout) const
+bool OOBase::Timeout::get_timeval(::timeval& timeout) const
 {
 	if (m_null)
-	{
-		timeout.tv_sec = 0;
-		timeout.tv_usec = 0;
-		return;
-	}
+		return false;
 
 #if defined(_WIN32)
 
@@ -203,8 +199,9 @@ void OOBase::Timeout::get_timeval(::timeval& timeout) const
 		timeout.tv_sec = diff.tv_sec;
 		timeout.tv_usec = diff.tv_nsec / 1000;
 	}
-
 #endif
+
+	return true;
 }
 
 unsigned long OOBase::Timeout::millisecs() const
@@ -245,14 +242,10 @@ unsigned long OOBase::Timeout::millisecs() const
 
 #if defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
 
-void OOBase::Timeout::get_abs_timespec(::timespec& timeout) const
+bool OOBase::Timeout::get_abs_timespec(::timespec& timeout) const
 {
 	if (m_null)
-	{
-		timeout.tv_sec = 0;
-		timeout.tv_nsec = 0;
-		return;
-	}
+		return false;
 
 	::timespec mon_now = {0};
 	if (clock_gettime(CLOCK_MONOTONIC,&mon_now) != 0)
@@ -272,6 +265,17 @@ void OOBase::Timeout::get_abs_timespec(::timespec& timeout) const
 		timeout.tv_sec += timeout.tv_nsec / 1000000000;
 		timeout.tv_nsec %= 1000000000;
 	}
+
+	return true;
+}
+
+bool OOBase::Timeout::get_end_timespec(::timespec& timeout) const
+{
+	if (m_null)
+		return false;
+
+	timeout = m_end;
+	return true;
 }
 
 #endif

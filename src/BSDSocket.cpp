@@ -77,8 +77,7 @@ int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, size_t addrlen, co
 			FD_SET(sock,&efds);
 
 			struct ::timeval tv;
-			if (!timeout.is_infinite())
-				timeout.get_timeval(tv);
+			timeout.get_timeval(tv);
 
 			count = ::select(static_cast<int>(sock+1),NULL,&wfds,&efds,timeout.is_infinite() ? NULL : &tv);
 		}
@@ -211,8 +210,7 @@ int Socket::do_select(bool bWrite, const OOBase::Timeout& timeout)
 		FD_SET(m_sock,&efds);
 
 		struct ::timeval tv;
-		if (!timeout.is_infinite())
-			timeout.get_timeval(tv);
+		timeout.get_timeval(tv);
 
 		count = ::select(m_sock+1,(bWrite ? NULL : &fds),(bWrite ? &fds : NULL),&efds,timeout.is_infinite() ? NULL : &tv);
 	}

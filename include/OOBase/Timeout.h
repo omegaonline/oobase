@@ -50,7 +50,7 @@ namespace OOBase
 		bool has_expired() const;
 		bool is_infinite() const { return m_null; }
 	
-		void get_timeval(::timeval& timeout) const;
+		bool get_timeval(::timeval& timeout) const;
 		unsigned long millisecs() const;
 
 		bool operator < (const Timeout& rhs) const;
@@ -58,8 +58,9 @@ namespace OOBase
 		bool read(CDRStream& stream);
 		bool write(CDRStream& stream) const;
 
-#if defined(HAVE_UNISTD_H)
-		void get_abs_timespec(::timespec& timeout) const;
+#if defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
+		bool get_abs_timespec(::timespec& timeout) const;
+		bool get_end_timespec(::timespec& timeout) const;
 #endif
 
 	private:
