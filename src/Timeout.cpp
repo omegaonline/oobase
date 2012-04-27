@@ -159,7 +159,12 @@ bool OOBase::Timeout::has_expired() const
 
 void OOBase::Timeout::get_timeval(::timeval& timeout) const
 {
-	assert(!m_null);
+	if (m_null)
+	{
+		timeout.tv_sec = 0;
+		timeout.tv_usec = 0;
+		return;
+	}
 
 #if defined(_WIN32)
 
@@ -242,6 +247,13 @@ unsigned long OOBase::Timeout::millisecs() const
 
 void OOBase::Timeout::get_abs_timespec(::timespec& timeout) const
 {
+	if (m_null)
+	{
+		timeout.tv_sec = 0;
+		timeout.tv_nsec = 0;
+		return;
+	}
+
 	::timespec mon_now = {0};
 	if (clock_gettime(CLOCK_MONOTONIC,&mon_now) != 0)
 		OOBase_CallCriticalFailure(errno);
@@ -266,11 +278,11 @@ void OOBase::Timeout::get_abs_timespec(::timespec& timeout) const
 
 bool OOBase::Timeout::operator < (const Timeout& rhs) const
 {
-	if (rhs.m_null)
-		return true;
-	
 	if (!m_null)
 	{
+		if (rhs.m_null)
+			return true;
+
 #if defined(_WIN32)
 		return (m_end < rhs.m_end);
 #elif defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
