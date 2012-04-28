@@ -54,13 +54,13 @@ namespace
 		void signal(int how);
 		int wait();
 		int get_result();
-		void set_pid_event(OOBase::SmartHandle& h);
+		void set_pid_event(HANDLE h);
 
 	private:
-		OOBase::Condition::Mutex m_lock;
-		OOBase::Condition        m_condition;
-		int                      m_result;
-		OOBase::SmartHandle      m_pid_event;
+		OOBase::Condition::Mutex   m_lock;
+		OOBase::Condition          m_condition;
+		int                        m_result;
+		OOBase::Win32::SmartHandle m_pid_event;
 	};
 	typedef OOBase::Singleton<QuitData,OOBase::Module> QUIT;
 
@@ -105,7 +105,7 @@ namespace
 		return m_result;
 	}
 
-	void QuitData::set_pid_event(OOBase::SmartHandle& h)
+	void QuitData::set_pid_event(HANDLE h)
 	{
 		m_pid_event = h;
 	}
@@ -228,7 +228,7 @@ int OOBase::Server::wait_for_quit()
 	return QUIT::instance().get_result();
 }
 
-int OOBase::Server::daemonize(const char* pszPidFile, bool& already)
+int OOBase::Server::create_pid_file(const char* pszPidFile, bool& already)
 {
 	// Create a global event named pszPidFile
 	// If it exists, then we are already running
@@ -240,7 +240,7 @@ int OOBase::Server::daemonize(const char* pszPidFile, bool& already)
 
 	strPidFile.replace('/','_');
 
-	OOBase::SmartHandle e = CreateEvent(NULL,TRUE,FALSE,strPidFile.c_str());
+	OOBase::Win32::SmartHandle e = CreateEvent(NULL,TRUE,FALSE,strPidFile.c_str());
 	if (!e.is_valid())
 	{
 		err = GetLastError();
@@ -253,10 +253,15 @@ int OOBase::Server::daemonize(const char* pszPidFile, bool& already)
 	}
 
 	// Ensure it's closed
-	QUIT::instance().set_pid_event(e);
+	QUIT::instance().set_pid_event(e.detach());
 
 	already = false;
 	return 0;
+}
+
+int OOBase::Server::daemonize(const char* pszPidFile, bool& already)
+{
+	return create_pid_file(pszPidFile,already);
 }
 
 #elif defined(HAVE_UNISTD_H)

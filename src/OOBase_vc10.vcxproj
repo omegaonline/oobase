@@ -168,7 +168,7 @@
     <ClCompile Include="Posix.cpp" />
     <ClCompile Include="pw_info.cpp" />
     <ClCompile Include="SecurityWin32.cpp" />
-    <ClCompile Include="Service.cpp" />
+    <ClCompile Include="Server.cpp" />
     <ClCompile Include="String.cpp" />
     <ClCompile Include="Thread.cpp" />
     <ClCompile Include="Timeout.cpp" />
@@ -188,7 +188,7 @@
     <ClInclude Include="..\include\OOBase\Logger.h" />
     <ClInclude Include="..\include\OOBase\RefCount.h" />
     <ClInclude Include="..\include\OOBase\SecurityWin32.h" />
-    <ClInclude Include="..\include\OOBase\Service.h" />
+    <ClInclude Include="..\include\OOBase\Server.h" />
     <ClInclude Include="..\include\OOBase\Set.h" />
     <ClInclude Include="BSDSocket.h" />
     <ClInclude Include="..\include\OOBase\Buffer.h" />

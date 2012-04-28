@@ -67,7 +67,7 @@
     <ClCompile Include="pw_info.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Service.cpp">
+    <ClCompile Include="Server.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -189,7 +189,7 @@
     <ClInclude Include="..\include\OOBase\Timeout.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Service.h">
+    <ClInclude Include="..\include\OOBase\Server.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
