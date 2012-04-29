@@ -240,7 +240,7 @@ int OOBase::Server::create_pid_file(const char* pszPidFile, bool& already)
 
 	strPidFile.replace('/','_');
 
-	OOBase::Win32::SmartHandle e = CreateEvent(NULL,TRUE,FALSE,strPidFile.c_str());
+	OOBase::Win32::SmartHandle e(CreateEvent(NULL,TRUE,FALSE,strPidFile.c_str()));
 	if (!e.is_valid())
 	{
 		err = GetLastError();
