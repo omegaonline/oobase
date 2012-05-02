@@ -49,6 +49,8 @@ int OOSvrBase::detail::ProactorWin32::new_overlapped(Overlapped*& pOv, pfnComple
 	pOv->m_pProactor = this;
 	pOv->m_refcount = 2;
 
+	void* TODO; // Why is the refcount 2 ?!?!?
+
 	return 0;
 }
 

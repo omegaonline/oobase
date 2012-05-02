@@ -196,8 +196,6 @@ int AsyncPipe::send(void* param, send_callback_t callback, OOBase::Buffer* buffe
 	
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
-	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer);
-	buffer->addref();
 	
 	DWORD dwSent = 0;
 	if (!WriteFile(m_hPipe,buffer->rd_ptr(),static_cast<DWORD>(bytes),&dwSent,pOv))
@@ -216,7 +214,6 @@ void AsyncPipe::on_send(HANDLE /*handle*/, DWORD /*dwBytes*/, DWORD dwErr, OOSvr
 {
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	send_callback_t callback = reinterpret_cast<send_callback_t>(pOv->m_extras[1]);
-	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
 		
 	pOv->m_pProactor->delete_overlapped(pOv);
 	
@@ -269,8 +266,7 @@ int AsyncPipe::send_v(void* param, send_callback_t callback, OOBase::Buffer* buf
 	
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
-	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer.addref());
-		
+
 	DWORD dwSent = 0;
 	if (!WriteFile(m_hPipe,buffer->rd_ptr(),static_cast<DWORD>(total),&dwSent,pOv))
 	{
