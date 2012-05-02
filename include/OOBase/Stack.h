@@ -66,22 +66,27 @@ namespace OOBase
 		bool remove(const T& value)
 		{
 			// This is just really useful!
-			size_t pos = 0;
-			for (;pos < m_top;++pos)
+			for (size_t pos = 0;pos < m_top;++pos)
 			{
 				if (m_data[pos] == value)
-					break;
+				{
+					remove_at(pos);
+					return true;
+				}
 			}
 			
-			if (pos == m_top)
-				return false;
-			
-			for(--m_top;pos < m_top;++pos)
-				m_data[pos] = m_data[pos+1];
-			
-			m_data[m_top].~T();
-			
-			return true;
+			return false;
+		}
+
+		void remove_at(size_t pos)
+		{
+			if (m_data && pos < m_top)
+			{
+				for(--m_top;pos < m_top;++pos)
+					m_data[pos] = m_data[pos+1];
+
+				m_data[m_top].~T();
+			}
 		}
 		
 		void clear()
