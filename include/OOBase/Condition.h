@@ -91,7 +91,7 @@ namespace OOBase
 #if defined(_WIN32)
 		Win32::SmartHandle m_handle;
 #else
-		Condition          m_cond;
+		Condition          m_condition;
 		Condition::Mutex   m_lock;
 		bool               m_bAuto;
 		bool               m_bSet;

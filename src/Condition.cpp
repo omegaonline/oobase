@@ -195,9 +195,9 @@ void OOBase::Event::set()
 
 		// If we are an auto event, signal 1 thread only
 		if (m_bAuto)
-			m_cond.signal();
+			m_condition.signal();
 		else
-			m_cond.broadcast();
+			m_condition.broadcast();
 	}
 }
 
@@ -209,7 +209,7 @@ bool OOBase::Event::wait(const Timeout& timeout)
 
 	while (!m_bSet)
 	{
-		if (!m_cond.wait(m_lock,timeout))
+		if (!m_condition.wait(m_lock,timeout))
 			return false;
 	}
 
