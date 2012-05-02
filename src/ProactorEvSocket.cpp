@@ -68,7 +68,7 @@ namespace
 	
 		int bind(int fd);
 
-		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout);
+		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes);
 		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
 		int send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 
@@ -97,9 +97,9 @@ int AsyncSocket::bind(int fd)
 	return err;
 }
 
-int AsyncSocket::recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout)
+int AsyncSocket::recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
 {
-	return m_pProactor->recv(m_handle,param,callback,buffer,bytes,timeout);
+	return m_pProactor->recv(m_handle,param,callback,buffer,bytes);
 }
 
 int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buffer)

@@ -39,7 +39,7 @@ namespace
 	public:
 		AsyncSocket(OOSvrBase::detail::ProactorWin32* pProactor, SOCKET hSocket);
 		
-		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout);
+		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes);
 		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
 		int send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 	
@@ -64,7 +64,7 @@ AsyncSocket::~AsyncSocket()
 	closesocket(m_hSocket);
 }
 
-int AsyncSocket::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout)
+int AsyncSocket::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
 {
 	// Must have a callback function
 	assert(callback);
@@ -83,8 +83,6 @@ int AsyncSocket::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callb
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
 	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer);
 	buffer->addref();
-	
-	void* TODO; // Add timeout support!
 	
 	WSABUF wsa_buf;
 	wsa_buf.buf = buffer->wr_ptr();

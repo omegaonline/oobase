@@ -729,7 +729,7 @@ void OOSvrBase::detail::ProactorEv::pipe_callback()
 	}
 }
 
-int OOSvrBase::detail::ProactorEv::recv(void* handle, void* param, void (*callback)(void* param, OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout)
+int OOSvrBase::detail::ProactorEv::recv(void* handle, void* param, AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
 {
 	// Must have a callback function
 	assert(callback);

@@ -133,7 +133,7 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::Proactor::connect_local_socket(const cha
 int OOSvrBase::AsyncSocket::recv(OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout)
 {
 	WaitCallback wait;
-	int err = recv(&wait,&WaitCallback::callback_recv,buffer,bytes,timeout);
+	int err = recv(&wait,&WaitCallback::callback_recv,buffer,bytes);
 	if (err == 0)
 	{
 		if (!wait.wait(err,timeout))

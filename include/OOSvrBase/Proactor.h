@@ -38,13 +38,13 @@ namespace OOSvrBase
 	{
 	public:
 		template <typename T>
-		int recv(T* param, void (T::*callback)(OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout = OOBase::Timeout())
+		int recv(T* param, void (T::*callback)(OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes)
 		{
 			ThunkR<T>* thunk = ThunkR<T>::create(param,callback);
 			if (!thunk)
 				return ERROR_OUTOFMEMORY;
 			
-			return recv(thunk,&ThunkR<T>::fn,buffer,bytes,timeout);
+			return recv(thunk,&ThunkR<T>::fn,buffer,bytes);
 		}
 
 		template <typename T>
@@ -71,7 +71,7 @@ namespace OOSvrBase
 		int send(OOBase::Buffer* buffer);
 
 		typedef void (*recv_callback_t)(void* param, OOBase::Buffer* buffer, int err);
-		virtual int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout = OOBase::Timeout()) = 0;
+		virtual int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes) = 0;
 
 		typedef void (*send_callback_t)(void* param, int err);
 		virtual int send(void* param, send_callback_t callback, OOBase::Buffer* buffer) = 0;

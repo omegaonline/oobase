@@ -60,7 +60,7 @@ namespace OOSvrBase
 			int unbind(void* handle);
 			int get_fd(void* handle);
 				
-			int recv(void* handle, void* param, OOSvrBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout);
+			int recv(void* handle, void* param, OOSvrBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes);
 			int send(void* handle, void* param, OOSvrBase::AsyncSocket::send_callback_t callback, OOBase::Buffer* buffer);
 			int send_v(void* handle, void* param, OOSvrBase::AsyncSocket::send_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 		

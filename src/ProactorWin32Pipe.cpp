@@ -43,7 +43,7 @@ namespace
 	public:
 		AsyncPipe(OOSvrBase::detail::ProactorWin32* pProactor, HANDLE hPipe);
 		
-		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout);
+		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes);
 		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
 		int send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 
@@ -102,7 +102,7 @@ void AsyncPipe::translate_error(DWORD& dwErr)
 	}
 }
 
-int AsyncPipe::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout)
+int AsyncPipe::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
 {
 	// Must have a callback function
 	assert(callback);
@@ -122,8 +122,6 @@ int AsyncPipe::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callbac
 	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer);
 	pOv->m_extras[3] = bytes;
 	buffer->addref();
-	
-	void* TODO; // Add timeout support!
 	
 	DWORD dwRead = 0;
 	if (!ReadFile(m_hPipe,buffer->wr_ptr(),static_cast<DWORD>(bytes),&dwRead,pOv))
