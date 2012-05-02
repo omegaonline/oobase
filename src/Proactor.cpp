@@ -135,14 +135,18 @@ int OOSvrBase::AsyncSocket::recv(OOBase::Buffer* buffer, size_t bytes, const OOB
 	WaitCallback wait;
 	int err = recv(&wait,&WaitCallback::callback_recv,buffer,bytes,timeout);
 	if (err == 0)
-		err = wait.wait();
-		
+	{
+		if (!wait.wait(err,timeout))
+			err = ETIMEDOUT;
+	}
+
 	return err;
 }
 
 int OOSvrBase::AsyncSocket::send(OOBase::Buffer* buffer)
 {
-	WaitCallback wait;int err = send(&wait,&WaitCallback::callback,buffer);
+	WaitCallback wait;
+	int err = send(&wait,&WaitCallback::callback,buffer);
 	if (err == 0)
 		err = wait.wait();
 
