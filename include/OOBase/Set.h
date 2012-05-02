@@ -71,10 +71,9 @@ namespace OOBase
 		{
 			if (m_data && pos < m_size)
 			{
-				for(--m_size;pos < m_size;++pos)
-					m_data[pos] = m_data[pos+1];
-
-				m_data[pos].~V();
+				m_data[pos] = m_data[--m_size];
+				m_data[m_size].~V();
+				m_sorted = false;
 			}
 		}
 
