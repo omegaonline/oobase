@@ -138,11 +138,16 @@ endif
 liboosvrbase_la_SOURCES = \
 	include/OOSvrBase/Proactor.h \
 	src/ProactorEv.h \
+	src/ProactorPoll.h \
+	src/ProactorPosix.h \
 	src/ProactorWin32.h \
 	src/GetPeerUid.cpp \
 	src/Proactor.cpp \
 	src/ProactorEv.cpp \
 	src/ProactorEvSocket.cpp \
+	src/ProactorPosix.cpp \
+	src/ProactorPosixSocket.cpp \
+	src/ProactorPoll.cpp \
 	src/ProactorWin32.cpp \
 	src/ProactorWin32Pipe.cpp \
 	src/ProactorWin32Socket.cpp
