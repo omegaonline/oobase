@@ -95,19 +95,11 @@ namespace OOSvrBase
 			int              m_pipe_fds[2];
 			size_t           m_outstanding;
 
-			struct Wait
-			{
-				bool                     m_finished;
-				OOBase::Condition::Mutex m_mutex;
-				OOBase::Condition        m_condition;
-			};
-
 			struct AcceptWatcher : public ev_io
 			{
 				OOBase::Atomic<size_t> m_refcount;
 				bool (*m_callback)(void* param, int fd);
 				void* m_param;
-				Wait* m_wait;
 			};
 					
 			struct IOWatcher : public ev_io

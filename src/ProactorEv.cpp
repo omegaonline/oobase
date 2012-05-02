@@ -817,8 +817,7 @@ void* OOSvrBase::detail::ProactorEv::new_acceptor(int fd, void* param, bool (*ca
 	watcher->m_callback = callback;
 	watcher->m_param = param;
 	watcher->m_refcount = 1;
-	watcher->m_wait = NULL;
-	
+
 	Msg msg = { Msg::Accept, watcher, {0} };
 
 	err = send_msg(m_pipe_fds[1],msg);

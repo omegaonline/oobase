@@ -47,19 +47,13 @@ namespace OOBase
 
 namespace
 {
-	struct QuitData
+	struct QuitData : public OOBase::Future<int>
 	{
 		QuitData();
 
-		void signal(int how);
-		int wait();
-		int get_result();
 		void set_pid_event(HANDLE h);
 
 	private:
-		OOBase::Condition::Mutex   m_lock;
-		OOBase::Condition          m_condition;
-		int                        m_result;
 		OOBase::Win32::SmartHandle m_pid_event;
 	};
 	typedef OOBase::Singleton<QuitData,OOBase::Module> QUIT;
@@ -70,39 +64,10 @@ namespace
 		return TRUE;
 	}
 
-	QuitData::QuitData() : m_result(-1)
+	QuitData::QuitData() : OOBase::Future<int>(-1)
 	{
 		if (!SetConsoleCtrlHandler(control_c,TRUE))
 			LOG_ERROR(("SetConsoleCtrlHandler failed: %s",OOBase::system_error_text()));
-	}
-
-	void QuitData::signal(int how)
-	{
-		assert(how != -1);
-
-		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
-		m_result = how;
-		guard.release();
-
-		m_condition.signal();
-	}
-
-	int QuitData::wait()
-	{
-		// Wait for the event to be signalled
-		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
-
-		while (m_result == -1)
-			m_condition.wait(m_lock);
-		
-		return m_result;
-	}
-
-	int QuitData::get_result()
-	{
-		OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
-
-		return m_result;
 	}
 
 	void QuitData::set_pid_event(HANDLE h)
@@ -225,7 +190,7 @@ int OOBase::Server::wait_for_quit()
 	}
 
 	// By the time we get here, it's all over
-	return QUIT::instance().get_result();
+	return QUIT::instance().wait();
 }
 
 int OOBase::Server::create_pid_file(const char* pszPidFile, bool& already)

@@ -34,12 +34,10 @@
 
 namespace
 {
-	struct WaitCallback
+	struct WaitCallback : public OOBase::Future<int>
 	{
-		OOBase::Condition        m_condition;
-		OOBase::Condition::Mutex m_lock;
-		bool                     m_complete;
-		int                      m_err;
+		WaitCallback() : OOBase::Future<int>(0)
+		{}
 
 		static void callback_recv(void* param, OOBase::Buffer*, int err)
 		{
@@ -48,13 +46,7 @@ namespace
 
 		static void callback(void* param, int err)
 		{
-			WaitCallback* pThis = static_cast<WaitCallback*>(param);
-
-			OOBase::Guard<OOBase::Condition::Mutex> guard(pThis->m_lock);
-
-			pThis->m_err = err;
-			pThis->m_complete = true;
-			pThis->m_condition.signal();
+			static_cast<WaitCallback*>(param)->signal(err);
 		}
 	};
 }
@@ -141,39 +133,18 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::Proactor::connect_local_socket(const cha
 int OOSvrBase::AsyncSocket::recv(OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout)
 {
 	WaitCallback wait;
-	wait.m_complete = false;
-	wait.m_err = 0;
-
-	OOBase::Guard<OOBase::Condition::Mutex> guard(wait.m_lock);
-
 	int err = recv(&wait,&WaitCallback::callback_recv,buffer,bytes,timeout);
 	if (err == 0)
-	{
-		while (!wait.m_complete)
-			wait.m_condition.wait(wait.m_lock);
+		err = wait.wait();
 		
-		err = wait.m_err;
-	}
-
 	return err;
 }
 
 int OOSvrBase::AsyncSocket::send(OOBase::Buffer* buffer)
 {
-	WaitCallback wait;
-	wait.m_complete = false;
-	wait.m_err = 0;
-
-	OOBase::Guard<OOBase::Condition::Mutex> guard(wait.m_lock);
-
-	int err = send(&wait,&WaitCallback::callback,buffer);
+	WaitCallback wait;int err = send(&wait,&WaitCallback::callback,buffer);
 	if (err == 0)
-	{
-		while (!wait.m_complete)
-			wait.m_condition.wait(wait.m_lock);
-		
-		err = wait.m_err;
-	}
+		err = wait.wait();
 
 	return err;
 }

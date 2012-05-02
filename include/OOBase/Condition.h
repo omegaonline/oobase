@@ -97,6 +97,63 @@ namespace OOBase
 		bool               m_bSet;
 #endif
 	};
+
+	template <typename T>
+	class Future
+	{
+	public:
+		Future() : m_complete(false)
+		{}
+
+		Future(const T& v) : m_complete(false), m_value(v)
+		{}
+
+		void signal(const T& v)
+		{
+			Guard<Condition::Mutex> guard(m_lock);
+			m_complete = true;
+			m_value = v;
+			m_condition.signal();
+		}
+
+		void broadcast(const T& v)
+		{
+			Guard<Condition::Mutex> guard(m_lock);
+			m_complete = true;
+			m_value = v;
+			m_condition.broadcast();
+		}
+
+		bool wait(T& v, const Timeout& timeout)
+		{
+			OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
+			while (!m_complete)
+			{
+				if (!m_condition.wait(m_lock,timeout))
+					return false;
+			}
+			v = m_value;
+			return true;
+		}
+
+		const T& wait()
+		{
+			OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
+			while (!m_complete)
+				m_condition.wait(m_lock);
+
+			return m_value;
+		}
+
+	private:
+		Future(const Future&);
+		Future& operator = (const Future&);
+
+		Condition        m_condition;
+		Condition::Mutex m_lock;
+		bool             m_complete;
+		T                m_value;
+	};
 }
 
 #endif // OOBASE_CONDITION_H_INCLUDED_
