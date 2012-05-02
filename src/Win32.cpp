@@ -466,7 +466,7 @@ OOBase::Win32::condition_mutex_t::~condition_mutex_t()
 		DeleteCriticalSection(&u.m_cs);
 }
 
-bool OOBase::Win32::condition_mutex_t::tryacquire()
+bool OOBase::Win32::condition_mutex_t::try_acquire()
 {
 	if (Win32Thunk::instance().m_InitializeConditionVariable == Win32Thunk::impl_InitializeConditionVariable)
 	{

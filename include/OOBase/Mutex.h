@@ -34,7 +34,7 @@ namespace OOBase
 		Mutex();
 		~Mutex();
 
-		bool tryacquire();
+		bool try_acquire();
 		void acquire();
 		bool acquire(const Timeout& timeout);
 		void release();
@@ -69,7 +69,7 @@ namespace OOBase
 		SpinLock(unsigned int max_spin = 401);
 		~SpinLock();
 
-		bool tryacquire();
+		bool try_acquire();
 		void acquire();
 		bool acquire(const Timeout& timeout);
 		void release();
@@ -136,6 +136,17 @@ namespace OOBase
 		{
 			if (m_acquired)
 				release();
+		}
+
+		bool try_acquire()
+		{
+			assert(!m_acquired);
+
+			if (!m_mutex.try_acquire())
+				return false;
+
+			m_acquired = true;
+			return true;
 		}
 
 		void acquire()

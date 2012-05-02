@@ -65,7 +65,7 @@ bool OOBase::SpinLock::acquire(const Timeout& timeout)
 	return false;
 }
 
-bool OOBase::SpinLock::tryacquire()
+bool OOBase::SpinLock::try_acquire()
 {
 	if (!TryEnterCriticalSection(&m_cs))
 		return false;
@@ -92,7 +92,7 @@ OOBase::Mutex::~Mutex()
 {
 }
 
-bool OOBase::Mutex::tryacquire()
+bool OOBase::Mutex::try_acquire()
 {
 	DWORD dwWait = WaitForSingleObject(m_mutex,0);
 	if (dwWait == WAIT_OBJECT_0)
@@ -195,7 +195,7 @@ OOBase::Mutex::~Mutex()
 	pthread_mutex_destroy(&m_mutex);
 }
 
-bool OOBase::Mutex::tryacquire()
+bool OOBase::Mutex::try_acquire()
 {
 	int err = pthread_mutex_trylock(&m_mutex);
 	if (err == 0)
@@ -216,7 +216,7 @@ void OOBase::Mutex::acquire()
 
 bool OOBase::Mutex::acquire(const Timeout& timeout)
 {
-	if (tryacquire())
+	if (try_acquire())
 		return true;
 
 	if (timeout.is_infinite())

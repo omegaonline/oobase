@@ -159,7 +159,7 @@ namespace OOBase
 			condition_mutex_t();
 			~condition_mutex_t();
 
-			bool tryacquire();
+			bool try_acquire();
 			void acquire();
 			void release();
 
