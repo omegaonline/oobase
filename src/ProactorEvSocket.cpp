@@ -21,7 +21,7 @@
 
 #include "ProactorEv.h"
 
-#if defined(HAVE_EV_H) && !defined(_WIN32)
+#if defined(HAVE_EV_H) //&& defined(USE_LIB_EV)
 
 #include "../include/OOBase/Condition.h"
 #include "../include/OOBase/Posix.h"
@@ -42,20 +42,14 @@ namespace
 		}
 
 		err = OOBase::BSD::set_non_blocking(sock,true);
-		if (err != 0)
-		{
-			OOBase::POSIX::close(sock);
-			return -1;
-		}
+		if (!err)
+			err = OOBase::POSIX::set_close_on_exec(sock,true);
 
-	#if defined(HAVE_UNISTD_H)
-		err = OOBase::POSIX::set_close_on_exec(sock,true);
-		if (err != 0)
+		if (err)
 		{
 			OOBase::POSIX::close(sock);
 			return -1;
 		}
-	#endif
 
 		return sock;
 	}
@@ -114,11 +108,7 @@ int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* b
 
 int AsyncSocket::get_uid(OOSvrBase::AsyncLocalSocket::uid_t& uid)
 {
-#if defined(HAVE_UNISTD_H)
 	return OOBase::POSIX::get_peer_uid(m_pProactor->get_fd(m_handle),uid);
-#else
-	return EINVAL;
-#endif
 }
 
 namespace
@@ -298,10 +288,7 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorEv::accept_local(void* param, vo
 		return NULL;
 	}
 	
-	SocketAcceptor* pAcceptor = NULL;
-	
-#if defined(HAVE_UNISTD_H)
-	pAcceptor = new (std::nothrow) SocketAcceptor(this,param,callback);
+	SocketAcceptor* pAcceptor = new (std::nothrow) SocketAcceptor(this,param,callback);
 	if (!pAcceptor)
 		err = ENOMEM;
 	else
@@ -328,13 +315,6 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorEv::accept_local(void* param, vo
 			pAcceptor = NULL;
 		}
 	}
-#else
-	// If we don't have UNIX sockets, we can't do much, use Win32 Proactor instead
-	err = ENOENT;
-
-	(void)param;
-	(void)psa;
-#endif
 
 	return pAcceptor;
 }
@@ -360,8 +340,6 @@ OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorEv::connect_socket(const sock
 
 OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorEv::connect_local_socket(const char* path, int& err, const OOBase::Timeout& timeout)
 {	
-#if defined(HAVE_UNISTD_H)
-		
 	int fd = -1;
 	if ((fd = create_socket(AF_UNIX,SOCK_STREAM,0,err)) == -1)
 		return NULL;
@@ -382,17 +360,6 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorEv::connect_local_socket
 		OOBase::POSIX::close(fd);
 	
 	return pSocket;
-	
-#else
-	
-	// If we don't have UNIX sockets, we can't do much, use Win32 Proactor instead
-	err = ENOENT;
-
-	(void)path;
-
-	return NULL;
-
-#endif
 }
 
 OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorEv::attach_socket(OOBase::socket_t sock, int& err)

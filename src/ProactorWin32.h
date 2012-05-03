@@ -40,6 +40,9 @@ namespace OOSvrBase
 			ProactorWin32();
 			virtual ~ProactorWin32();
 
+			int init();
+			void stop();
+
 			OOSvrBase::AsyncSocket* attach_socket(OOBase::socket_t sock, int& err);
 			OOSvrBase::AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int& err);
 
@@ -62,7 +65,6 @@ namespace OOSvrBase
 			void unbind(HANDLE hFile);
 
 			int run(int& err, const OOBase::Timeout& timeout);
-			void stop();
 
 		protected:
 			OOSvrBase::Acceptor* accept_local(void* param, accept_local_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa);

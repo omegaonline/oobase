@@ -24,6 +24,7 @@
 
 #include "../OOBase/Memory.h"
 #include "../OOBase/Socket.h"
+#include "../OOBase/Singleton.h"
 
 #if !defined(_WIN32)
 typedef struct
@@ -168,36 +169,97 @@ namespace OOSvrBase
 	class Proactor
 	{
 	public:
-		Proactor();
-		virtual ~Proactor();
+		// Factory creation functions
+		static Proactor* create(int& err);
+		static void destroy(Proactor* proactor);
 
 		typedef void (*accept_local_callback_t)(void* param, AsyncLocalSocket* pSocket, int err);
-		virtual Acceptor* accept_local(void* param, accept_local_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa);
+		virtual Acceptor* accept_local(void* param, accept_local_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa) = 0;
 
 		typedef void (*accept_remote_callback_t)(void* param, AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err);
-		virtual Acceptor* accept_remote(void* param, accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err);
+		virtual Acceptor* accept_remote(void* param, accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err) = 0;
 
-		virtual AsyncSocket* attach_socket(OOBase::socket_t sock, int& err);
-		virtual AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int& err);
+		virtual AsyncSocket* attach_socket(OOBase::socket_t sock, int& err) = 0;
+		virtual AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int& err) = 0;
 
-		virtual AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::Timeout& timeout = OOBase::Timeout());
-		virtual AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::Timeout& timeout = OOBase::Timeout());
+		virtual AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::Timeout& timeout = OOBase::Timeout()) = 0;
+		virtual AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::Timeout& timeout = OOBase::Timeout()) = 0;
 
-		virtual int run(int& err, const OOBase::Timeout& timeout = OOBase::Timeout());
-		virtual void stop();
+		virtual int run(int& err, const OOBase::Timeout& timeout = OOBase::Timeout()) = 0;
+		virtual void stop() = 0;
 
 	protected:
-		explicit Proactor(bool);
-
-		virtual int init();
+		Proactor() {}
+		virtual ~Proactor() {}
 
 	private:
 		// Don't copy or assign proactors, they're just too big
 		Proactor(const Proactor&);
 		Proactor& operator = (const Proactor&);
-
-		Proactor* m_impl;
 	};
+}
+
+namespace OOBase
+{
+	template <typename DLL>
+	class Singleton<OOSvrBase::Proactor,DLL>
+	{
+	public:
+		static OOSvrBase::Proactor* instance_ptr()
+		{
+			static Once::once_t key = ONCE_T_INIT;
+			Once::Run(&key,init);
+
+			return s_instance;
+		}
+
+		static OOSvrBase::Proactor& instance()
+		{
+			OOSvrBase::Proactor* i = instance_ptr();
+			if (!i)
+				OOBase_CallCriticalFailure("Null instance pointer");
+
+			return *i;
+		}
+
+	private:
+		// Prevent creation
+		Singleton();
+		Singleton(const Singleton&);
+		Singleton& operator = (const Singleton&);
+		~Singleton();
+
+		static OOSvrBase::Proactor* s_instance;
+
+		static void init()
+		{
+			int err = 0;
+			OOSvrBase::Proactor* i = OOSvrBase::Proactor::create(err);
+			if (err)
+				OOBase_CallCriticalFailure(err);
+
+			err = DLLDestructor<DLL>::add_destructor(&destroy,i);
+			if (err)
+			{
+				OOSvrBase::Proactor::destroy(i);
+				OOBase_CallCriticalFailure(err);
+			}
+
+			s_instance = i;
+		}
+
+		static void destroy(void* i)
+		{
+			if (i == s_instance)
+			{
+				OOSvrBase::Proactor::destroy(static_cast<OOSvrBase::Proactor*>(i));
+				s_instance = NULL;
+			}
+		}
+	};
+
+	template <typename DLL>
+	OOSvrBase::Proactor* Singleton<OOSvrBase::Proactor,DLL>::s_instance = NULL;
 }
 
 #endif // OOSVRBASE_PROACTOR_H_INCLUDED_

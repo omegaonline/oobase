@@ -24,7 +24,7 @@
 
 #include "../include/OOSvrBase/Proactor.h"
 
-#if defined(HAVE_EV_H) && !defined(_WIN32)
+#if defined(HAVE_EV_H) //&& defined(USE_LIB_EV)
 
 #include "../include/OOBase/GlobalNew.h"
 #include "../include/OOBase/HandleTable.h"
@@ -46,6 +46,7 @@ namespace OOSvrBase
 			virtual ~ProactorEv();
 
 			int init();
+			void stop();
 
 			AsyncSocket* attach_socket(OOBase::socket_t sock, int& err);
 			AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int& err);
@@ -68,7 +69,6 @@ namespace OOSvrBase
 			OOSvrBase::Acceptor* accept_remote(void* param, accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err);
 
 			int run(int& err, const OOBase::Timeout& timeout);
-			void stop();
 
 			struct IOOp
 			{

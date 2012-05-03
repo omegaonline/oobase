@@ -26,6 +26,27 @@
 #include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Thread.h"
 
+OOSvrBase::Proactor* OOSvrBase::Proactor::create(int& err)
+{
+	detail::ProactorWin32* proactor = new (OOBase::critical) detail::ProactorWin32();
+	err = proactor->init();
+	if (err)
+	{
+		delete proactor;
+		proactor = NULL;
+	}
+	return proactor;
+}
+
+void OOSvrBase::Proactor::destroy(Proactor* proactor)
+{
+	if (proactor)
+	{
+		proactor->stop();
+		delete proactor;
+	}
+}
+
 OOSvrBase::detail::ProactorWin32::ProactorWin32() :
 		Proactor(false),
 		m_hPort(NULL),

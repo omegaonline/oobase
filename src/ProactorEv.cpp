@@ -21,13 +21,34 @@
 
 #include "ProactorEv.h"
 
-#if defined(HAVE_EV_H) && !defined(_WIN32)
+#if defined(HAVE_EV_H) //&& defined(USE_LIB_EV)
 
 #include "../include/OOBase/Posix.h"
 #include "./BSDSocket.h"
 
+OOSvrBase::Proactor* OOSvrBase::Proactor::create(int& err)
+{
+	detail::ProactorEv* proactor = new (OOBase::critical) detail::ProactorEv();
+	err = proactor->init();
+	if (err)
+	{
+		delete proactor;
+		proactor = NULL;
+	}
+	return proactor;
+}
+
+void OOSvrBase::Proactor::destroy(Proactor* proactor)
+{
+	if (proactor)
+	{
+		proactor->stop();
+		delete proactor;
+	}
+}
+
 OOSvrBase::detail::ProactorEv::ProactorEv() : 
-		Proactor(false),
+		Proactor(),
 		m_pLoop(NULL),
 		m_outstanding(1)
 { 
