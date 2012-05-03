@@ -50,13 +50,18 @@ void OOSvrBase::Proactor::destroy(Proactor* proactor)
 OOSvrBase::detail::ProactorWin32::ProactorWin32() :
 		Proactor(false),
 		m_hPort(NULL),
-		m_outstanding(1)
+		m_bound(1)
 {
 	OOBase::Win32::WSAStartup();
 }
 
 OOSvrBase::detail::ProactorWin32::~ProactorWin32()
 {
+}
+
+int OOSvrBase::detail::ProactorWin32::init()
+{
+	return 0;
 }
 
 int OOSvrBase::detail::ProactorWin32::new_overlapped(Overlapped*& pOv, pfnCompletion_t callback)
@@ -91,7 +96,7 @@ int OOSvrBase::detail::ProactorWin32::bind(HANDLE hFile)
 	if (!m_hPort)
 		m_hPort = hPort;
 
-	++m_outstanding;
+	++m_bound;
 
 	return 0;
 }
@@ -100,7 +105,7 @@ void OOSvrBase::detail::ProactorWin32::unbind(HANDLE /*hFile*/)
 {
 	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
-	if (--m_outstanding == 0)
+	if (--m_bound == 0)
 	{
 		CloseHandle(m_hPort);
 		m_hPort = NULL;
@@ -157,7 +162,7 @@ int OOSvrBase::detail::ProactorWin32::run(int& err, const OOBase::Timeout& timeo
 
 		guard.acquire();
 	}
-	while (m_outstanding > 0);
+	while (m_bound > 0);
 
 	err = 0;
 	return 1;

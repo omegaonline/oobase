@@ -73,7 +73,7 @@ namespace OOSvrBase
 		private:
 			HANDLE           m_hPort;
 			OOBase::SpinLock m_lock;
-			size_t           m_outstanding;
+			size_t           m_bound;
 		};
 	}
 }
