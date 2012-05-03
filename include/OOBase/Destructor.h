@@ -81,13 +81,16 @@ namespace OOBase
 			{
 				guard.release();
 
+#if defined(OOBASE_HAVE_EXCEPTIONS)
 				try
 				{
 					(*node.m_pfn)(node.m_param);
 				}
 				catch (...)
 				{}
-
+#else
+				(*node.m_pfn)(node.m_param);
+#endif
 				guard.acquire();
 			}
 		}

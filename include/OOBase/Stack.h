@@ -146,6 +146,7 @@ namespace OOBase
 				if (!new_data)
 					return ERROR_OUTOFMEMORY;
 				
+#if defined(OOBASE_HAVE_EXCEPTIONS)
 				size_t i = 0;
 				try
 				{
@@ -163,7 +164,13 @@ namespace OOBase
 									
 				for (i=0;i<m_top;++i)
 					m_data[i].~T();
-					
+#else
+				for (size_t i=0;i<m_top;++i)
+				{
+					::new (&new_data[i]) T(m_data[i]);
+					new_data[i-1].~T();
+				}
+#endif
 				Allocator::free(m_data);
 				m_data = new_data;
 				m_capacity = capacity;

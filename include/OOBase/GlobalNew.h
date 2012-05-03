@@ -25,31 +25,38 @@
 #include "Memory.h"
 
 // Global operator new overloads
-#if defined(_MSC_VER)
-#define THROW_BAD_ALLOC
+
+#if defined(OOBASE_HAS_EXCEPTIONS)
+	#if defined(_MSC_VER)
+		#define OOBASE_THROW_BAD_ALLOC_DECL
+	#elif defined(__GNUC__)
+		#define OOBASE_THROW_BAD_ALLOC_DECL throw(std::bad_alloc)
+	#endif
+	#define OOBASE_THROW_BAD_ALLOC throw std::bad_alloc()
 #else
-#define THROW_BAD_ALLOC throw(std::bad_alloc)
+	#define OOBASE_THROW_BAD_ALLOC_DECL
+	#define OOBASE_THROW_BAD_ALLOC OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY)
 #endif
 
 // Throws std::bad_alloc
-inline void* operator new(size_t size) THROW_BAD_ALLOC
+inline void* operator new(size_t size) OOBASE_THROW_BAD_ALLOC_DECL
 {
 	assert(false);
 
 	void* p = OOBase::HeapAllocator::allocate(size);
 	if (!p)
-		throw std::bad_alloc();
+		OOBASE_THROW_BAD_ALLOC;
 
 	return p;
 }
 
-inline void* operator new[](size_t size) THROW_BAD_ALLOC
+inline void* operator new[](size_t size) OOBASE_THROW_BAD_ALLOC_DECL
 {
 	assert(false);
 
 	void* p = OOBase::HeapAllocator::allocate(size);
 	if (!p)
-		throw std::bad_alloc();
+		OOBASE_THROW_BAD_ALLOC;
 
 	return p;
 }

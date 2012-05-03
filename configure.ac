@@ -65,6 +65,7 @@ AS_IF([test "x$oo_test_CXXFLAGS" != "xset"],
   # Always try to hide symbols
   AX_CXXFLAGS_GCC_OPTION([-fvisibility=hidden])
   AX_CXXFLAGS_GCC_OPTION([-fno-rtti])
+  AX_CXXFLAGS_GCC_OPTION([-fno-exceptions])
 
   # Always add full warnings
   AX_CXXFLAGS_WARN_ALL

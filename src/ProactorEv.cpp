@@ -332,22 +332,13 @@ void OOSvrBase::detail::ProactorEv::process_recv(int send_fd, IOWatcher* watcher
 				continue;
 		}
 		
+		// Make sure the buffer is released
+		OOBase::RefPtr<OOBase::Buffer> buf = op->m_buffer;
+
 		// Notify callback of status/error
-		try
-		{
+		if (op->m_recv_callback)
 			(*op->m_recv_callback)(op->m_param,op->m_buffer,err);
-		}
-		catch (...)
-		{
-			if (op->m_buffer)
-				op->m_buffer->release();
-			throw;
-		}
 		
-		// Done with buffer
-		if (op->m_buffer)
-			op->m_buffer->release();
-				
 		// Pop queue front and line up the next operation...
 		watcher->m_queueRecv.pop();
 		op = watcher->m_queueRecv.front();
@@ -440,24 +431,12 @@ void OOSvrBase::detail::ProactorEv::process_send(int send_fd, IOWatcher* watcher
 					continue;
 			}
 			
+			// Make sure the buffer is released
+			OOBase::RefPtr<OOBase::Buffer> buf = op->m_buffer;
+
 			// Notify callback of status/error
 			if (op->m_send_callback)
-			{
-				try
-				{
-					(*op->m_send_callback)(op->m_param,err);
-				}
-				catch (...)
-				{
-					if (op->m_buffer)
-						op->m_buffer->release();
-					throw;
-				}
-			}
-			
-			// Done with buffer
-			if (op->m_buffer)
-				op->m_buffer->release();
+				(*op->m_send_callback)(op->m_param,err);
 		}
 		else
 		{
@@ -559,21 +538,8 @@ void OOSvrBase::detail::ProactorEv::process_send(int send_fd, IOWatcher* watcher
 			
 			// Notify callback of status/error
 			if (op->m_send_callback)
-			{
-				try
-				{
-					(*op->m_send_callback)(op->m_param,err);
-				}
-				catch (...)
-				{
-					for (size_t i=0;i<op->m_count;++i)
-						op->m_buffers[i]->release();
+				(*op->m_send_callback)(op->m_param,err);
 
-					delete [] op->m_buffers;
-					throw;
-				}
-			}
-			
 			for (size_t i=0;i<op->m_count;++i)
 				op->m_buffers[i]->release();
 			

@@ -121,6 +121,11 @@
 #define OOBASE_NORETURN
 #endif
 
+#if ((defined(_MSC_VER) && defined(_CPPUNWIND)) || \
+		(defined(__GNUC__) && defined(__EXCEPTIONS)))
+	#define OOBASE_HAVE_EXCEPTIONS 1
+#endif
+
 namespace OOBase
 {
 	void OOBASE_NORETURN CallCriticalFailure(const char* pszFile, unsigned int nLine, const char*);
