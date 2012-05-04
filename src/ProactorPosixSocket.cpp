@@ -19,6 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/OOBase/GlobalNew.h"
 #include "ProactorPosix.h"
 
 #if defined(HAVE_UNISTD_H) && !defined(_WIN32)
@@ -85,6 +86,14 @@ namespace
 			size_t          m_bytes;
 		};
 
+		struct RecvNotify
+		{
+			int             m_err;
+			void*           m_param;
+			recv_callback_t m_callback;
+			OOBase::Buffer* m_buffer;
+		};
+
 		struct SendItem
 		{
 			void*           m_param;
@@ -97,16 +106,23 @@ namespace
 			};
 		};
 
+		struct SendNotify
+		{
+			int             m_err;
+			void*           m_param;
+			send_callback_t m_callback;
+		};
+
 		OOSvrBase::detail::ProactorPosix* m_pProactor;
 		int                               m_fd;
-		OOBase::SpinLock                  m_recv_lock;
-		OOBase::SpinLock                  m_send_lock;
+		OOBase::SpinLock                  m_lock;
 		OOBase::Queue<RecvItem>           m_recv_queue;
 		OOBase::Queue<SendItem>           m_send_queue;
 
 		static void fd_callback(int fd, void* param, unsigned int events);
-		void process_recv();
-		void process_send();
+		void process_recv(OOBase::Queue<RecvNotify,OOBase::LocalAllocator>& notify_queue);
+		int process_recv_i(RecvItem* item, bool& watch_again);
+		void process_send(OOBase::Queue<SendNotify,OOBase::LocalAllocator>& notify_queue);
 		int process_send_i(SendItem* item, bool& watch_again);
 		int process_send_v(SendItem* item, bool& watch_again);
 	};
@@ -159,13 +175,22 @@ int AsyncSocket::init()
 
 int AsyncSocket::recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
 {
-	if (!bytes && !buffer->space())
+	if (!buffer)
+		return EINVAL;
+
+	if (bytes)
+	{
+		int err = buffer->space(bytes);
+		if (err)
+			return err;
+	}
+	else if (!buffer->space())
 		return 0;
 
 	RecvItem item = { param, callback, buffer, bytes};
 	item.m_buffer->addref();
 
-	OOBase::Guard<OOBase::SpinLock> guard(m_recv_lock);
+	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 	bool watch = m_recv_queue.empty();
 	int err = m_recv_queue.push(item);
@@ -183,14 +208,14 @@ int AsyncSocket::recv(void* param, recv_callback_t callback, OOBase::Buffer* buf
 
 int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buffer)
 {
-	if (buffer->length() == 0)
+	if (!buffer || buffer->length() == 0)
 		return 0;
 
 	SendItem item = { param, callback, 1 };
 	item.m_buffer = buffer;
 	item.m_buffer->addref();
 
-	OOBase::Guard<OOBase::SpinLock> guard(m_send_lock);
+	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 	bool watch = m_send_queue.empty();
 	int err = m_send_queue.push(item);
@@ -208,6 +233,9 @@ int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buf
 
 int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count)
 {
+	if (!buffers)
+		return EINVAL;
+
 	// Count how many actual buffers we have
 	size_t actual_count = 0;
 	OOBase::Buffer* single = NULL;
@@ -240,10 +268,11 @@ int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* b
 		{
 			item.m_buffers[idx] = buffers[i];
 			item.m_buffers[idx]->addref();
+			++idx;
 		}
 	}
 
-	OOBase::Guard<OOBase::SpinLock> guard(m_send_lock);
+	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 	bool watch = m_send_queue.empty();
 	int err = m_send_queue.push(item);
@@ -267,74 +296,109 @@ void AsyncSocket::fd_callback(int fd, void* param, unsigned int events)
 	AsyncSocket* pThis = static_cast<AsyncSocket*>(param);
 	if (pThis->m_fd == fd)
 	{
-		if (events & OOSvrBase::detail::eTXSend)
-			pThis->process_send();
+		OOBase::Queue<RecvNotify,OOBase::LocalAllocator> recv_notify_queue;
+		OOBase::Queue<SendNotify,OOBase::LocalAllocator> send_notify_queue;
+
+		OOBase::Guard<OOBase::SpinLock> guard(pThis->m_lock);
 
 		if (events & OOSvrBase::detail::eTXRecv)
-			pThis->process_recv();
+			pThis->process_recv(recv_notify_queue);
+
+		if (events & OOSvrBase::detail::eTXSend)
+			pThis->process_send(send_notify_queue);
+
+		guard.release();
+
+		RecvNotify recv_notify;
+		while (recv_notify_queue.pop(&recv_notify))
+		{
+			(*recv_notify.m_callback)(recv_notify.m_param,recv_notify.m_buffer,recv_notify.m_err);
+			recv_notify.m_buffer->release();
+		}
+
+		SendNotify send_notify;
+		while (send_notify_queue.pop(&send_notify))
+			(*send_notify.m_callback)(send_notify.m_param,send_notify.m_err);
 	}
 }
 
-void AsyncSocket::process_recv()
+int AsyncSocket::process_recv_i(RecvItem* item, bool& watch_again)
 {
-	OOBase::Guard<OOBase::SpinLock> guard(m_recv_lock);
+	// We read again on EOF, as we only return error codes
+	int err = 0;
+	for (;;)
+	{
+		size_t to_read = (item->m_bytes ? item->m_bytes : item->m_buffer->space());
+		ssize_t r = 0;
+		do
+		{
+			r = ::recv(m_fd,item->m_buffer->wr_ptr(),to_read,0);
+		}
+		while (r == -1 && errno == EINTR);
 
+		if (r == -1)
+		{
+			if (errno == EAGAIN || errno == EWOULDBLOCK)
+				watch_again = true;
+			else
+				err = errno;
+			break;
+		}
+
+		if (r == 0)
+			break;
+
+		err = item->m_buffer->wr_ptr(r);
+		if (err)
+			break;
+
+		if (item->m_bytes)
+			item->m_bytes -= r;
+
+		if (item->m_bytes == 0)
+			break;
+	}
+
+	return err;
+}
+
+void AsyncSocket::process_recv(OOBase::Queue<RecvNotify,OOBase::LocalAllocator>& notify_queue)
+{
+	int err = 0;
 	while (!m_recv_queue.empty())
 	{
-		RecvItem* front = m_recv_queue.front();
-
-		// We read again on EOF, as we only return error codes
-		int err = 0;
-		for (;;)
+		if (!err)
 		{
-			size_t to_read = (front->m_bytes ? front->m_bytes : front->m_buffer->space());
-			ssize_t r = 0;
-			do
+			RecvItem* front = m_recv_queue.front();
+
+			bool watch_again = false;
+			err = process_recv_i(front,watch_again);
+
+			if (!err && watch_again)
 			{
-				r = ::recv(m_fd,front->m_buffer->wr_ptr(),to_read,0);
+				// Watch for eTXRecv again
+				err = m_pProactor->watch_fd(m_fd,OOSvrBase::detail::eTXRecv);
+				if (!err)
+					break;
 			}
-			while (r == -1 && errno == EINTR);
-
-			if (r == -1)
-			{
-				if (errno == EAGAIN || errno == EWOULDBLOCK)
-				{
-					// Watch for eTXRecv again
-					err = m_pProactor->watch_fd(m_fd,OOSvrBase::detail::eTXRecv);
-					if (!err)
-						return;
-				}
-
-				err = errno;
-				break;
-			}
-
-			err = front->m_buffer->wr_ptr(r);
-			if (err)
-				break;
-
-			if (front->m_bytes)
-				front->m_bytes -= r;
-
-			if (front->m_bytes == 0)
-				break;
 		}
 
 		// By the time we get here, we have a complete recv or an error
 		RecvItem item;
 		m_recv_queue.pop(&item);
 
-		// We don't need the lock here...
-		guard.release();
-
-		// Make sure the buffer is released()
-		OOBase::RefPtr<OOBase::Buffer> buffer = item.m_buffer;
-
-		// Notify callback of status/error
-		(*item.m_callback)(item.m_param,item.m_buffer,err);
-
-		// Re-acquire the lock, and loop
-		guard.acquire();
+		if (!item.m_callback)
+			item.m_buffer->release();
+		else
+		{
+			RecvNotify notify = { err, item.m_param, item.m_callback, item.m_buffer };
+			err = notify_queue.push(notify);
+			if (err)
+			{
+				item.m_buffer->release();
+				OOBase_CallCriticalFailure(err);
+			}
+		}
 	}
 }
 
@@ -403,7 +467,7 @@ int AsyncSocket::process_send_v(SendItem* item, bool& watch_again)
 		if (msg.msg_iovlen > sizeof(static_bufs)/sizeof(static_bufs[0]))
 		{
 			if (!ptrBufs.allocate(msg.msg_iovlen * sizeof(struct iovec)))
-				err = ENOMEM;
+				err = ERROR_OUTOFMEMORY;
 			else
 				msg.msg_iov = ptrBufs;
 		}
@@ -464,8 +528,11 @@ int AsyncSocket::process_send_v(SendItem* item, bool& watch_again)
 
 	if (!watch_again)
 	{
-		for (size_t i = first_buffer;i<item->m_count;++i)
-			item->m_buffers[i]->release();
+		for (size_t i = 0;i<item->m_count;++i)
+		{
+			if (item->m_buffers[i])
+				item->m_buffers[i]->release();
+		}
 
 		OOBase::HeapAllocator::free(item->m_buffers);
 		item->m_buffers = NULL;
@@ -474,29 +541,27 @@ int AsyncSocket::process_send_v(SendItem* item, bool& watch_again)
 	return err;
 }
 
-void AsyncSocket::process_send()
+void AsyncSocket::process_send(OOBase::Queue<SendNotify,OOBase::LocalAllocator>& notify_queue)
 {
-	OOBase::Guard<OOBase::SpinLock> guard(m_send_lock);
-
+	int err = 0;
 	while (!m_send_queue.empty())
 	{
-		SendItem* front = m_send_queue.front();
-
-		int err = 0;
-		while (!err)
+		if (!err)
 		{
+			SendItem* front = m_send_queue.front();
+
 			bool watch_again = false;
 			if (front->m_count == 1)
 				err = process_send_i(front,watch_again);
 			else
 				err = process_send_v(front,watch_again);
 
-			if (watch_again)
+			if (!err && watch_again)
 			{
 				// Watch for eTXRecv again
 				err = m_pProactor->watch_fd(m_fd,OOSvrBase::detail::eTXSend);
 				if (!err)
-					return;
+					break;
 			}
 		}
 
@@ -504,14 +569,13 @@ void AsyncSocket::process_send()
 		SendItem item;
 		m_send_queue.pop(&item);
 
-		// We don't need the lock here...
-		guard.release();
-
-		// Notify callback of status/error
-		(*item.m_callback)(item.m_param,err);
-
-		// Re-acquire the lock, and loop
-		guard.acquire();
+		if (item.m_callback)
+		{
+			SendNotify notify = { err, item.m_param, item.m_callback };
+			err = notify_queue.push(notify);
+			if (err)
+				OOBase_CallCriticalFailure(err);
+		}
 	}
 }
 

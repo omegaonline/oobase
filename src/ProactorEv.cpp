@@ -21,7 +21,7 @@
 
 #include "ProactorEv.h"
 
-#if defined(HAVE_EV_H) //&& defined(USE_LIB_EV)
+#if defined(HAVE_EV_H) && defined(USE_LIB_EV)
 
 #include "../include/OOBase/Posix.h"
 #include "./BSDSocket.h"

@@ -37,11 +37,10 @@ namespace OOSvrBase
 		class ProactorPoll : public ProactorPosix
 		{
 		public:
-			ProactorPoll() : ProactorPosix()
-			{}
+			ProactorPoll();
+			virtual ~ProactorPoll();
 
-			virtual ~ProactorPoll()
-			{}
+			int init();
 
 			int run(int& err, const OOBase::Timeout& timeout = OOBase::Timeout());
 
@@ -63,15 +62,12 @@ namespace OOSvrBase
 			OOBase::Stack<pollfd>         m_poll_fds;
 			OOBase::HashTable<int,FdItem> m_items;
 
-			int init();
-
 			int do_bind_fd(int fd, void* param, fd_callback_t callback);
 			int do_unbind_fd(int fd);
 			int do_watch_fd(int fd, unsigned int events);
 
-			int update_fds(OOBase::Stack<FdEvent>& fd_events, int poll_count);
-			int process_socketset(OOBase::Stack<FdEvent>& fd_set);
-			bool is_busy() const;
+			int update_fds(OOBase::Stack<FdEvent,OOBase::LocalAllocator>& fd_events, int poll_count);
+			int process_socketset(OOBase::Stack<FdEvent,OOBase::LocalAllocator>& fd_set);
 		};
 	}
 }

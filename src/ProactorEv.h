@@ -24,7 +24,7 @@
 
 #include "../include/OOSvrBase/Proactor.h"
 
-#if defined(HAVE_EV_H) //&& defined(USE_LIB_EV)
+#if defined(HAVE_EV_H) && defined(USE_LIB_EV)
 
 #include "../include/OOBase/GlobalNew.h"
 #include "../include/OOBase/HandleTable.h"

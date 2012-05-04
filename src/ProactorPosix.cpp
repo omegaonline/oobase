@@ -33,6 +33,7 @@ namespace
 {
 	enum ControlType
 	{
+		eCTStop,
 		eCTBind,
 		eCTWatch,
 		eCTUnbind,
@@ -77,8 +78,20 @@ namespace
 
 OOSvrBase::detail::ProactorPosix::ProactorPosix() :
 		m_read_fd(-1),
-		m_write_fd(-1)
+		m_write_fd(-1),
+		m_stopped(false)
 {
+}
+
+OOSvrBase::detail::ProactorPosix::~ProactorPosix()
+{
+	if (m_read_fd != -1)
+	{
+		unbind_fd(m_read_fd);
+		OOBase::POSIX::close(m_read_fd);
+	}
+
+	OOBase::POSIX::close(m_write_fd);
 }
 
 int OOSvrBase::detail::ProactorPosix::init()
@@ -109,18 +122,7 @@ int OOSvrBase::detail::ProactorPosix::init()
 	return err;
 }
 
-OOSvrBase::detail::ProactorPosix::~ProactorPosix()
-{
-	if (m_read_fd != -1)
-	{
-		unbind_fd(m_read_fd);
-		OOBase::POSIX::close(m_read_fd);
-	}
-
-	OOBase::POSIX::close(m_write_fd);
-}
-
-int OOSvrBase::detail::ProactorPosix::update_timers(OOBase::Stack<TimerItem>& timer_set, OOBase::Timeout& timeout)
+int OOSvrBase::detail::ProactorPosix::update_timers(OOBase::Stack<TimerItem,OOBase::LocalAllocator>& timer_set, OOBase::Timeout& timeout)
 {
 	// Sort the timer set, so soonest is last
 	m_timers.sort();
@@ -153,7 +155,7 @@ int OOSvrBase::detail::ProactorPosix::update_timers(OOBase::Stack<TimerItem>& ti
 	return 0;
 }
 
-int OOSvrBase::detail::ProactorPosix::process_timerset(OOBase::Stack<TimerItem>& timer_set)
+int OOSvrBase::detail::ProactorPosix::process_timerset(OOBase::Stack<TimerItem,OOBase::LocalAllocator>& timer_set)
 {
 	TimerItem item;
 	while (timer_set.pop(&item))
@@ -177,7 +179,8 @@ int OOSvrBase::detail::ProactorPosix::start_timer(void* param, timer_callback_t 
 
 	OOBase::Future<int> future(0);
 
-    ControlMessage msg;
+	ControlMessage msg;
+	memset(&msg,0,sizeof(msg));
 	msg.m_type = eCTTimerAdd;
 	msg.m_future = &future;
 	msg.m_timer_add_info.m_param = param;
@@ -202,7 +205,8 @@ int OOSvrBase::detail::ProactorPosix::stop_timer(void* param)
 
 	OOBase::Future<int> future(0);
 
-    ControlMessage msg;
+	ControlMessage msg;
+	memset(&msg,0,sizeof(msg));
 	msg.m_type = eCTTimerRemove;
 	msg.m_future = &future;
 	msg.m_timer_remove_info.m_param = param;
@@ -216,6 +220,22 @@ int OOSvrBase::detail::ProactorPosix::stop_timer(void* param)
 	return future.wait();
 }
 
+void OOSvrBase::detail::ProactorPosix::stop()
+{
+	OOBase::Guard<OOBase::SpinLock> guard(m_lock,false);
+	if (guard.try_acquire())
+		m_stopped = true;
+	else
+	{
+		ControlMessage msg;
+		memset(&msg,0,sizeof(msg));
+		msg.m_type = eCTStop;
+		msg.m_future = NULL;
+
+		OOBase::POSIX::write(m_write_fd,&msg,sizeof(msg));
+	}
+}
+
 int OOSvrBase::detail::ProactorPosix::bind_fd(int fd, void* param, fd_callback_t callback)
 {
 	OOBase::Guard<OOBase::SpinLock> guard(m_lock,false);
@@ -225,6 +245,7 @@ int OOSvrBase::detail::ProactorPosix::bind_fd(int fd, void* param, fd_callback_t
 	OOBase::Future<int> future;
 
 	ControlMessage msg;
+	memset(&msg,0,sizeof(msg));
 	msg.m_type = eCTBind;
 	msg.m_future = &future;
 	msg.m_bind_info.m_fd = fd;
@@ -247,6 +268,7 @@ int OOSvrBase::detail::ProactorPosix::watch_fd(int fd, unsigned int events)
 		return do_watch_fd(fd,events);
 
 	ControlMessage msg;
+	memset(&msg,0,sizeof(msg));
 	msg.m_type = eCTWatch;
 	msg.m_future = NULL;
 	msg.m_watch_info.m_fd = fd;
@@ -270,6 +292,7 @@ int OOSvrBase::detail::ProactorPosix::unbind_fd(int fd)
 	OOBase::Future<int> future;
 
 	ControlMessage msg;
+	memset(&msg,0,sizeof(msg));
 	msg.m_type = eCTUnbind;
 	msg.m_future = &future;
 	msg.m_unbind_info.m_fd = fd;
@@ -308,10 +331,11 @@ int OOSvrBase::detail::ProactorPosix::remove_timer(void* param)
 int OOSvrBase::detail::ProactorPosix::read_control()
 {
 	for (;;)
-    {
-        ControlMessage msg;
-        ssize_t recv = OOBase::POSIX::read(m_read_fd,&msg,sizeof(msg));
-        if (recv == -1)
+	{
+		ControlMessage msg;
+		memset(&msg, 0, sizeof(msg));
+		ssize_t recv = OOBase::POSIX::read(m_read_fd, &msg, sizeof(msg));
+		if (recv == -1)
 		{
 			if (errno == EWOULDBLOCK || errno == EAGAIN)
 				return 0;
@@ -319,45 +343,49 @@ int OOSvrBase::detail::ProactorPosix::read_control()
 			return errno;
 		}
 
-        if (recv != sizeof(msg))
-        	return EPIPE;
+		if (recv != sizeof(msg))
+			return EPIPE;
 
-        int err = 0;
-        switch (msg.m_type)
-        {
-        case eCTBind:
-			err = do_bind_fd(msg.m_bind_info.m_fd,msg.m_bind_info.m_param,msg.m_bind_info.m_callback);
+		int err = 0;
+		switch (msg.m_type)
+		{
+		case eCTStop:
+			m_stopped = true;
 			break;
 
-        case eCTWatch:
-        	err = do_watch_fd(msg.m_watch_info.m_fd,msg.m_watch_info.m_events);
-        	break;
+		case eCTBind:
+			err = do_bind_fd(msg.m_bind_info.m_fd, msg.m_bind_info.m_param, msg.m_bind_info.m_callback);
+			break;
 
-        case eCTUnbind:
+		case eCTWatch:
+			err = do_watch_fd(msg.m_watch_info.m_fd, msg.m_watch_info.m_events);
+			break;
+
+		case eCTUnbind:
 			err = do_unbind_fd(msg.m_unbind_info.m_fd);
 			break;
 
-        case eCTTimerAdd:
-        	err = add_timer(msg.m_timer_add_info.m_param,msg.m_timer_add_info.m_pfn,OOBase::Timeout(msg.m_timer_add_info.m_timeval.tv_sec,msg.m_timer_add_info.m_timeval.tv_usec));
-        	break;
+		case eCTTimerAdd:
+			err = add_timer(msg.m_timer_add_info.m_param, msg.m_timer_add_info.m_pfn, OOBase::Timeout(msg.m_timer_add_info.m_timeval.tv_sec, msg.m_timer_add_info.m_timeval.tv_usec));
+			break;
 
-        case eCTTimerRemove:
-        	err = remove_timer(msg.m_timer_remove_info.m_param);
-        	break;
+		case eCTTimerRemove:
+			err = remove_timer(msg.m_timer_remove_info.m_param);
+			break;
 
 		default:
 			err = EINVAL;
-        	break;
-        }
+			break;
+		}
 
-        if (msg.m_future)
-        	msg.m_future->signal(err);
-    }
+		if (msg.m_future)
+			msg.m_future->signal(err);
+	}
 }
 
-bool OOSvrBase::detail::ProactorPosix::is_busy() const
+bool OOSvrBase::detail::ProactorPosix::stopped() const
 {
-	return !m_timers.empty();
+	return m_stopped;
 }
 
 int OOSvrBase::detail::ProactorPosix::get_control_fd() const
