@@ -85,13 +85,8 @@ OOSvrBase::detail::ProactorPosix::ProactorPosix() :
 
 OOSvrBase::detail::ProactorPosix::~ProactorPosix()
 {
-	if (m_read_fd != -1)
-	{
-		unbind_fd(m_read_fd);
-		OOBase::POSIX::close(m_read_fd);
-	}
-
 	OOBase::POSIX::close(m_write_fd);
+	OOBase::POSIX::close(m_read_fd);
 }
 
 int OOSvrBase::detail::ProactorPosix::init()
