@@ -44,7 +44,13 @@ namespace OOBase
 		int append(const char* sz, size_t len = npos);
 		int replace(char from, char to);
 		int truncate(size_t len);
+
+#if defined(__GNUC__)
+		int printf(const char* format, ...) __attribute__((format(printf,2,3)));
+#else
 		int printf(const char* format, ...);
+#endif
+
 		int vprintf(const char* format, va_list args);
 		int getenv(const char* envvar);
 
@@ -158,7 +164,12 @@ namespace OOBase
 		int append(const char* sz, size_t len = npos);
 		int replace(char from, char to);
 		int truncate(size_t len);
+
+#if defined(__GNUC__)
+		int printf(const char* format, ...) __attribute__((format(printf,2,3)));
+#else
 		int printf(const char* format, ...);
+#endif
 
 		int concat(const char* sz1, const char* sz2)
 		{
