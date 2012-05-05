@@ -637,18 +637,9 @@ bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void
 		closesocket(hSocket);
 	}
 	
-	try
-	{
+	if (m_callback)
 		(*m_callback)(m_param,pSocket,remote_addr,remote_addr_len,dwErr);
-	}
-	catch (...)
-	{
-		if (bRemove)
-			OOBase::HeapAllocator::free(addr_buf);
-
-		throw;
-	}
-		
+			
 	if (bRemove)
 		OOBase::HeapAllocator::free(addr_buf);
 	

@@ -228,17 +228,8 @@ namespace
 			InterlockedExchange(check,3);
 
 			// First in...
-			try
-			{
-				if (!(*InitFn)(InitOnce,Parameter,Context))
-					InterlockedExchange(check,2);
-			}
-			catch (...)
-			{
+			if (!(*InitFn)(InitOnce,Parameter,Context))
 				InterlockedExchange(check,2);
-				ReleaseMutex(mutex);
-				throw;
-			}
 		}
 		else
 		{

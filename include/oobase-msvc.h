@@ -35,10 +35,6 @@
 	#error Omega Online will not compile with a pre Visual C++ .NET 2003 compiler
 #endif
 
-#if defined(__cplusplus) && !defined(_CPPUNWIND)
-#error You must enable exception handling /GX
-#endif
-
 #ifndef _MT
 #error You must enable multithreaded library use /MT, /MTd, /MD or /MDd
 #endif
