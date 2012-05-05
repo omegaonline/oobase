@@ -75,7 +75,7 @@ int OOSvrBase::detail::ProactorPoll::init()
 		return err;
 
 	// Add the control pipe to m_poll_fds
-	pollfd pfd = { get_control_fd(), POLLIN | POLLRDHUP, 0 };
+	pollfd pfd = { m_read_fd, POLLIN | POLLRDHUP, 0 };
 	return m_poll_fds.push(pfd);
 }
 
@@ -141,7 +141,7 @@ int OOSvrBase::detail::ProactorPoll::update_fds(OOBase::Stack<FdEvent,OOBase::Lo
 			--poll_count;
 
 			// Handle the control pipe first
-			if (pfd->fd == get_control_fd())
+			if (pfd->fd == m_read_fd)
 			{
 				int err = read_control();
 				if (err)
@@ -236,6 +236,9 @@ int OOSvrBase::detail::ProactorPoll::run(int& err, const OOBase::Timeout& timeou
 	if (!guard.acquire(timeout))
 		return 0;
 
+	// Reset stopped
+	m_stopped = false;
+
 	OOBase::Stack<TimerItem,OOBase::LocalAllocator> timer_set;
 	OOBase::Stack<FdEvent,OOBase::LocalAllocator> fd_set;
 
@@ -305,12 +308,12 @@ int OOSvrBase::detail::ProactorPoll::run(int& err, const OOBase::Timeout& timeou
 				return 0;
 		}
 
-	} while (!stopped() && !timeout.has_expired());
+	} while (!m_stopped && !timeout.has_expired());
 
     if (err)
     	return -1;
 
-	return (stopped() ? 1 : 0);
+	return (timeout.has_expired() ? 0 : 1);
 }
 
 #endif

@@ -89,8 +89,6 @@ namespace OOSvrBase
 			int init();
 
 			int read_control();
-			int get_control_fd() const;
-			bool stopped() const;
 
 			int update_timers(OOBase::Stack<TimerItem,OOBase::LocalAllocator>& timer_set, OOBase::Timeout& timeout);
 			int process_timerset(OOBase::Stack<TimerItem,OOBase::LocalAllocator>& timer_set);
@@ -100,12 +98,12 @@ namespace OOSvrBase
 			virtual int do_unbind_fd(int fd) = 0;
 
 			OOBase::SpinLock       m_lock;
+			bool                   m_stopped;
+			int                    m_read_fd;
 
 		private:
 			OOBase::Set<TimerItem> m_timers;
-			int                    m_read_fd;
 			int                    m_write_fd;
-			bool                   m_stopped;
 
 			int add_timer(void* param, timer_callback_t callback, const OOBase::Timeout& timeout);
 			int remove_timer(void* param);

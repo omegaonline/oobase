@@ -77,9 +77,9 @@ namespace
 }
 
 OOSvrBase::detail::ProactorPosix::ProactorPosix() :
+		m_stopped(false),
 		m_read_fd(-1),
-		m_write_fd(-1),
-		m_stopped(false)
+		m_write_fd(-1)
 {
 }
 
@@ -376,16 +376,6 @@ int OOSvrBase::detail::ProactorPosix::read_control()
 		if (msg.m_future)
 			msg.m_future->signal(err);
 	}
-}
-
-bool OOSvrBase::detail::ProactorPosix::stopped() const
-{
-	return m_stopped;
-}
-
-int OOSvrBase::detail::ProactorPosix::get_control_fd() const
-{
-	return m_read_fd;
 }
 
 #endif // defined(HAVE_UNISTD_H)

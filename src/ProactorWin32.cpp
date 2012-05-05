@@ -45,7 +45,7 @@ void OOSvrBase::Proactor::destroy(Proactor* proactor)
 
 OOSvrBase::detail::ProactorWin32::ProactorWin32() : Proactor(),
 		m_hPort(NULL),
-		m_bound(1)
+		m_bound(0)
 {
 	OOBase::Win32::WSAStartup();
 }
@@ -116,6 +116,8 @@ int OOSvrBase::detail::ProactorWin32::run(int& err, const OOBase::Timeout& timeo
 			err = GetLastError();
 			return -1;
 		}
+
+		++m_bound;
 	}
 	
 	do
