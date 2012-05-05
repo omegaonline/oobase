@@ -4,12 +4,6 @@
     <ClCompile Include="Proactor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ProactorEv.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ProactorEvSocket.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ProactorWin32.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -38,9 +32,6 @@
     </ClInclude>
     <ClInclude Include="..\include\OOSvrBase\Proactor.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ProactorEv.h">
-      <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="ProactorWin32.h">
       <Filter>Source Files</Filter>

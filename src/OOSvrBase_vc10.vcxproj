@@ -178,8 +178,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Proactor.cpp" />
-    <ClCompile Include="ProactorEv.cpp" />
-    <ClCompile Include="ProactorEvSocket.cpp" />
     <ClCompile Include="ProactorPoll.cpp" />
     <ClCompile Include="ProactorPosix.cpp" />
     <ClCompile Include="ProactorPosixSocket.cpp" />
@@ -191,7 +189,6 @@
     <ClInclude Include="..\include\config-base.h" />
     <ClInclude Include="..\include\oobase-msvc.h" />
     <ClInclude Include="..\include\OOSvrBase\Proactor.h" />
-    <ClInclude Include="ProactorEv.h" />
     <ClInclude Include="ProactorPoll.h" />
     <ClInclude Include="ProactorPosix.h" />
     <ClInclude Include="ProactorWin32.h" />
