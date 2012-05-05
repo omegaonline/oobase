@@ -101,10 +101,10 @@ OO_MULTI_THREAD
 OO_C_BUILTINS
 
 # Check for the headers we use
-AC_CHECK_HEADERS([stdint.h windows.h asl.h syslog.h sys.types.h unistd.h ev.h])
+AC_CHECK_HEADERS([stdint.h windows.h asl.h syslog.h sys.types.h unistd.h])
 
 # Add the correct libs to LIBS
-AC_CHECK_LIB([ev],[ev_loop_new],AC_SUBST([EV_LIBS],["-lev"]))
+#AC_CHECK_LIB([ev],[ev_loop_new],AC_SUBST([EV_LIBS],["-lev"]))
 
 # Check for socket options
 OO_CHECK_SOCKOPT([SO_PEERCRED LOCAL_CREDS])

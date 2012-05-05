@@ -131,20 +131,15 @@ liboosvrbase_la_LDFLAGS = $(PTHREAD_LIBS)
 
 if WIN32
 liboosvrbase_la_CPPFLAGS = -D_WIN32_WINNT=0x0502
-else
-liboosvrbase_la_LIBADD = $(EV_LIBS)
 endif
 
 liboosvrbase_la_SOURCES = \
 	include/OOSvrBase/Proactor.h \
-	src/ProactorEv.h \
 	src/ProactorPoll.h \
 	src/ProactorPosix.h \
 	src/ProactorWin32.h \
 	src/GetPeerUid.cpp \
 	src/Proactor.cpp \
-	src/ProactorEv.cpp \
-	src/ProactorEvSocket.cpp \
 	src/ProactorPosix.cpp \
 	src/ProactorPosixSocket.cpp \
 	src/ProactorPoll.cpp \

@@ -1,9 +1,6 @@
 /* Define to 1 if you have the <asl.h> header file. */
 #undef HAVE_ASL_H
 
-/* Define to 1 if you have the <ev.h> header file. */
-#undef HAVE_EV_H
-
 /* Define to 1 if you have the `getpeereid' function. */
 #undef HAVE_GETPEEREID
 

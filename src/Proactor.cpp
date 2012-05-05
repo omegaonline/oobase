@@ -24,14 +24,6 @@
 
 #include "../include/OOSvrBase/Proactor.h"
 
-#if defined(_WIN32)
-#include "ProactorWin32.h"
-#elif defined(HAVE_EV_H)
-#include "ProactorEv.h"
-#else
-#error No suitable proactor implementation!
-#endif
-
 namespace
 {
 	struct WaitCallback : public OOBase::Future<int>
