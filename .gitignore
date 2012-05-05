@@ -1,8 +1,5 @@
 # Stuff we don't want to track
 
-# doxygen docs
-doc/
-
 # automake stuff
 configure
 aclocal.m4
@@ -10,7 +7,6 @@ Makefile.in
 autom4te.cache/
 build-aux/
 libltdl/
-*/libltdl/
 m4/argz.m4
 m4/libtool.m4
 m4/ltdl.m4
@@ -24,25 +20,17 @@ config.log
 config.status
 libtool
 stamp-h*
-config-autoconf.h
+*-autoconf.h
 
-# build stuff
-*.Plo
-*.Po
-*.[oa]
-*.l[oa]
-*.lai
-lt-*.c
-*_ltshwrapper
-
-# msvc stuff
+# MSVC stuff
 ipch/
-src/Win32/*
-src/x64/*
+bin/
+Debug*/
+Release*/
 *.vcproj.*.user
 *.vcxproj.user
 *.sdf
 *.opensdf
-
-# Unix stuff
-*.so
+*.ncb
+*.suo
+*.aps
