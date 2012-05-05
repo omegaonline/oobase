@@ -68,7 +68,7 @@ namespace OOSvrBase
 			return send_v(thunk,&ThunkS<T>::fn,buffers,count);
 		}
 
-		int recv(OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout = OOBase::Timeout());
+		int recv(OOBase::Buffer* buffer, size_t bytes);
 		int send(OOBase::Buffer* buffer);
 
 		typedef void (*recv_callback_t)(void* param, OOBase::Buffer* buffer, int err);

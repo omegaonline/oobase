@@ -51,15 +51,12 @@ namespace
 	};
 }
 
-int OOSvrBase::AsyncSocket::recv(OOBase::Buffer* buffer, size_t bytes, const OOBase::Timeout& timeout)
+int OOSvrBase::AsyncSocket::recv(OOBase::Buffer* buffer, size_t bytes)
 {
 	WaitCallback wait;
 	int err = recv(&wait,&WaitCallback::callback_recv,buffer,bytes);
 	if (err == 0)
-	{
-		if (!wait.wait(err,timeout))
-			err = ETIMEDOUT;
-	}
+		err = wait.wait();
 
 	return err;
 }
