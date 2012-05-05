@@ -36,12 +36,17 @@
 
 OOSvrBase::Proactor* OOSvrBase::Proactor::create(int& err)
 {
-	detail::ProactorPoll* proactor = new (OOBase::critical) detail::ProactorPoll();
-	err = proactor->init();
-	if (err)
+	detail::ProactorPoll* proactor = new (std::nothrow) detail::ProactorPoll();
+	if (!proactor)
+		err = ERROR_OUTOFMEMORY;
+	else
 	{
-		delete proactor;
-		proactor = NULL;
+		err = proactor->init();
+		if (err)
+		{
+			delete proactor;
+			proactor = NULL;
+		}
 	}
 	return proactor;
 }

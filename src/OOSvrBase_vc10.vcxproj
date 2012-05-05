@@ -174,18 +174,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Proactor.cpp" />
-    <ClCompile Include="ProactorEv.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="ProactorEvSocket.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
+    <ClCompile Include="ProactorEv.cpp" />
+    <ClCompile Include="ProactorEvSocket.cpp" />
+    <ClCompile Include="ProactorPoll.cpp" />
+    <ClCompile Include="ProactorPosix.cpp" />
+    <ClCompile Include="ProactorPosixSocket.cpp" />
     <ClCompile Include="ProactorWin32.cpp" />
     <ClCompile Include="ProactorWin32Pipe.cpp" />
     <ClCompile Include="ProactorWin32Socket.cpp" />
@@ -195,6 +188,8 @@
     <ClInclude Include="..\include\oobase-msvc.h" />
     <ClInclude Include="..\include\OOSvrBase\Proactor.h" />
     <ClInclude Include="ProactorEv.h" />
+    <ClInclude Include="ProactorPoll.h" />
+    <ClInclude Include="ProactorPosix.h" />
     <ClInclude Include="ProactorWin32.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

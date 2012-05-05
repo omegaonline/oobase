@@ -40,7 +40,6 @@ namespace OOSvrBase
 			ProactorWin32();
 			virtual ~ProactorWin32();
 
-			int init();
 			void stop();
 
 			OOSvrBase::AsyncSocket* attach_socket(OOBase::socket_t sock, int& err);

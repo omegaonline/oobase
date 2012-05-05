@@ -28,13 +28,9 @@
 
 OOSvrBase::Proactor* OOSvrBase::Proactor::create(int& err)
 {
-	detail::ProactorWin32* proactor = new (OOBase::critical) detail::ProactorWin32();
-	err = proactor->init();
-	if (err)
-	{
-		delete proactor;
-		proactor = NULL;
-	}
+	detail::ProactorWin32* proactor = new (std::nothrow) detail::ProactorWin32();
+	if (!proactor)
+		err = ERROR_OUTOFMEMORY;
 	return proactor;
 }
 
@@ -47,8 +43,7 @@ void OOSvrBase::Proactor::destroy(Proactor* proactor)
 	}
 }
 
-OOSvrBase::detail::ProactorWin32::ProactorWin32() :
-		Proactor(false),
+OOSvrBase::detail::ProactorWin32::ProactorWin32() : Proactor(),
 		m_hPort(NULL),
 		m_bound(1)
 {
@@ -57,11 +52,6 @@ OOSvrBase::detail::ProactorWin32::ProactorWin32() :
 
 OOSvrBase::detail::ProactorWin32::~ProactorWin32()
 {
-}
-
-int OOSvrBase::detail::ProactorWin32::init()
-{
-	return 0;
 }
 
 int OOSvrBase::detail::ProactorWin32::new_overlapped(Overlapped*& pOv, pfnCompletion_t callback)

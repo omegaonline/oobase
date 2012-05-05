@@ -19,6 +19,15 @@
     <ClCompile Include="ProactorWin32Socket.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ProactorPoll.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ProactorPosix.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ProactorPosixSocket.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\config-base.h">
@@ -34,6 +43,12 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="ProactorWin32.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ProactorPoll.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ProactorPosix.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
