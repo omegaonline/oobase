@@ -272,7 +272,11 @@ namespace
 
 			err = strPidFile.assign(cwd);
 			if (!err)
-				err = OOBase::Paths::AppendDirSeparator(strPidFile);
+			{
+				if (strPidFile[strPidFile.length()-1] != '/')
+					err = strPidFile.append("/",1);
+			}
+
 			if (!err)
 				err = strPidFile.append(pszPidFile);
 		}

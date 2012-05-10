@@ -245,55 +245,6 @@ namespace OOBase
 		static void node_release(Node* node);
 		int copy_on_write(size_t inc);
 	};
-	
-	namespace Paths
-	{
-		template <typename T>
-		inline int AppendDirSeparator(T& str)
-		{
-			int err = 0;
-		#if defined(_WIN32)
-			if (str[str.length()-1] != '\\' && str[str.length()-1] != '/')
-				err = str.append("\\",1);
-		#else
-			if (str[str.length()-1] != '/')
-				err = str.append("/",1);
-		#endif
-			return err;
-		}
-
-		template <typename T>
-		inline int CorrectDirSeparators(T& str)
-		{
-		#if defined(_WIN32)
-			return str.replace('/','\\');
-		#else
-			return str.replace('\\','/');
-		#endif
-		}
-
-		template <typename T1, typename T2>
-		inline int SplitDirAndFilename(const char* path, T1& dir, T2& filename)
-		{
-			int err = dir.assign(path);
-			if (err == 0)
-			{
-				CorrectDirSeparators(dir);
-			#if defined(_WIN32)
-				static const char sep = '\\';
-			#else
-				static const char sep = '/';
-			#endif
-				const char* s = strrchr(dir.c_str(),sep);
-				if (s)
-				{
-					if ((err = dir.truncate(s-dir.c_str())) == 0)
-						err = filename.assign(dir.c_str()+1);
-				}
-			}
-			return err;
-		}
-	}
 }
 
 #endif // OOBASE_STRING_H_INCLUDED_
