@@ -49,6 +49,11 @@ namespace OOBase
 				m_last_error(0)
 		{}
 
+		~BoundedQueue()
+		{
+			close();
+		}
+
 		int last_error() const
 		{
 			return m_last_error;
@@ -119,13 +124,10 @@ namespace OOBase
 		{
 			Guard<Condition::Mutex> guard(m_lock);
 
-			if (!m_closed)
-			{
-				m_closed = true;
+			m_closed = true;
 
-				m_available.broadcast();
-				m_space.broadcast();
-			}			
+			m_available.broadcast();
+			m_space.broadcast();			
 		}
 
 		void pulse()
