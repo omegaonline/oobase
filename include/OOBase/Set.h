@@ -79,7 +79,7 @@ namespace OOBase
 
 		bool remove(const V& value)
 		{
-			size_t pos = find_i(value,false);
+			size_t pos = find(value,false);
 			if (pos == npos)
 				return false;
 
@@ -109,7 +109,7 @@ namespace OOBase
 		template <typename V1>
 		bool exists(V1 key) const
 		{
-			return (find_i(key,false) != npos);
+			return (find(key) != npos);
 		}
 
 		bool empty() const
@@ -121,6 +121,19 @@ namespace OOBase
 		{
 			return m_size;
 		}
+
+		template <typename V1>
+		size_t find(V1 key, bool first = false) const
+		{
+			const V* p = bsearch(key);
+
+			// Scan for the first
+			while (p && first && p > m_data && *(p-1) == *p)
+				--p;
+
+			return (p ? static_cast<size_t>(p - m_data) : npos);
+		}
+
 
 		V* at(size_t pos)
 		{
@@ -221,18 +234,6 @@ namespace OOBase
 				m_capacity = capacity;
 			}
 			return 0;
-		}
-
-		template <typename V1>
-		size_t find_i(V1 key, bool first) const
-		{
-			const V* p = bsearch(key);
-
-			// Scan for the first
-			while (p && first && p > m_data && *(p-1) == *p)
-				--p;
-
-			return (p ? static_cast<size_t>(p - m_data) : npos);
 		}
 
 		template <typename V1>
