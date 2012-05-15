@@ -73,6 +73,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/Condition.h \
 	include/OOBase/Destructor.h \
 	include/OOBase/DLL.h \
+	include/OOBase/Environment.h \
 	include/OOBase/GlobalNew.h \
 	include/OOBase/HandleTable.h \
 	include/OOBase/HashTable.h \
@@ -105,6 +106,7 @@ liboobase_la_SOURCES = \
 	src/CmdArgs.cpp \
 	src/Condition.cpp \
 	src/DLL.cpp \
+	src/Environment.cpp \
 	src/Error.cpp \
 	src/Logger.cpp \
 	src/Memory.cpp \
