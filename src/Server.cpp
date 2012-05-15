@@ -387,41 +387,41 @@ int OOBase::Server::daemonize(const char* pszPidFile, bool& already)
 	sigaddset(&sig, SIGCHLD);
 
 	err = pthread_sigmask(SIG_BLOCK,&sig,&prev_sig);
-	if (!err)
+	if (err)
+		return err;
+
+	// Now daemonize
+	pid_t i = fork();
+	if (i == (pid_t)-1)
+		err = errno;
+	else
 	{
-		// Now daemonize
-		pid_t i = fork();
-		if (i == (pid_t)-1)
+		// Parent exits
+		if (i != (pid_t)0)
+			_exit(0);
+
+		// Create a new session
+		if (setsid() == (pid_t)-1)
 			err = errno;
 		else
 		{
-			// Parent exits
-			if (i != (pid_t)0)
-				_exit(0);
-
-			// Create a new session
-			if (setsid() == (pid_t)-1)
+			// Now fork again...
+			i = fork();
+			if (i == (pid_t)-1)
 				err = errno;
 			else
 			{
-				// Now fork again...
-				i = fork();
-				if (i == (pid_t)-1)
-					err = errno;
-				else
-				{
-					// Parent exits
-					if (i != (pid_t)0)
-						_exit(0);
-				}
+				// Parent exits
+				if (i != (pid_t)0)
+					_exit(0);
 			}
 		}
-
-		// Restore previous signal mask
-		int err2 = pthread_sigmask(SIG_SETMASK,&prev_sig,NULL);
-		if (!err)
-			err = err2;
 	}
+
+	// Restore previous signal mask
+	int err2 = pthread_sigmask(SIG_SETMASK,&prev_sig,NULL);
+	if (!err)
+		err = err2;
 
 	if (err)
 		return err;
