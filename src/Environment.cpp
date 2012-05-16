@@ -25,6 +25,48 @@
 
 #error FIX ME!
 
+string_t from_wchar_t(const wchar_t* wstr)
+	{
+		string_t ret;
+		char szBuf[1024] = {0};
+		int len = WideCharToMultiByte(CP_UTF8,0,wstr,-1,szBuf,sizeof(szBuf)-1,NULL,NULL);
+		if (len != 0)
+			ret = string_t(szBuf,len);
+		else
+		{
+			DWORD dwErr = GetLastError();
+			if (dwErr != ERROR_INSUFFICIENT_BUFFER)
+				OMEGA_THROW(dwErr);
+
+			len = WideCharToMultiByte(CP_UTF8,0,wstr,-1,NULL,0,NULL,NULL);
+			char* sz = static_cast<char*>(OOBase::LocalAllocator::allocate(len + 1));
+			if (!sz)
+				OMEGA_THROW(ERROR_OUTOFMEMORY);
+
+			len = WideCharToMultiByte(CP_UTF8,0,wstr,-1,sz,len,NULL,NULL);
+			string_t(szBuf,len);
+			OOBase::LocalAllocator::free(sz);
+		}
+
+		return ret;
+	}
+
+const wchar_t* env = GetEnvironmentStringsW();
+		for (const wchar_t* e=env;e != NULL && *e != L'\0';++envc)
+			e += wcslen(e)+1;
+
+		if (envc)
+		{
+			envp = new (OOCore::throwing) string_t[envc];
+
+			size_t i = 0;
+			for (const wchar_t* e=env;e != NULL && *e != L'\0';++i)
+			{
+				envp[i] = from_wchar_t(e);
+				e += wcslen(e)+1;
+			}
+		}
+
 #elif defined(HAVE_UNISTD_H)
 
 int OOBase::Environment::get_current(Table<String,String,LocalAllocator>& tabEnv)
