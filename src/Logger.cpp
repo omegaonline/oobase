@@ -85,6 +85,7 @@ namespace
 	private:
 		OOBase::Mutex m_lock;
 		const char*   m_pszSrcFile;
+		bool          m_use_term;
 	};
 #endif
 
@@ -272,6 +273,10 @@ namespace
 	void SysLogLogger::init()
 	{
 		s_instance.m_pszSrcFile = "";
+
+		OOBase::LocalString term;
+		term.getenv("TERM");
+		s_instance.m_use_term = !term.empty();
 	}
 
 	void SysLogLogger::open(const char* name, const char* pszSrcFile)
@@ -316,14 +321,18 @@ namespace
 		switch (priority)
 		{
 		case OOBase::Logger::Error:
+			if (m_use_term) OOBase::stdout_write("\x1b[31m");
 			OOBase::stderr_write("Error: ");
 			OOBase::stderr_write(msg);
-			OOBase::stderr_write("\n");
+			if (m_use_term) OOBase::stdout_write("\x1b[0m");
+			OOBase::stdout_write("\n");
 			break;
 
 		case OOBase::Logger::Warning:
+			if (m_use_term) OOBase::stdout_write("\x1b[33m");
 			OOBase::stdout_write("Warning: ");
 			OOBase::stdout_write(msg);
+			if (m_use_term) OOBase::stdout_write("\x1b[0m");
 			OOBase::stdout_write("\n");
 			break;
 
@@ -334,8 +343,10 @@ namespace
 
 #if !defined(NDEBUG)
 		case OOBase::Logger::Debug:
+			if (m_use_term) OOBase::stdout_write("\x1b[32m");
 			OOBase::stdout_write("Debug: ");
 			OOBase::stdout_write(msg);
+			if (m_use_term) OOBase::stdout_write("\x1b[0m");
 			OOBase::stdout_write("\n");
 			break;
 #endif
