@@ -243,6 +243,11 @@ namespace
 			OOBase::stdout_write("\n");
 			break;
 
+		case OOBase::Logger::Information:
+			OOBase::stdout_write(msg);
+			OOBase::stdout_write("\n");
+			break;
+
 #if !defined(NDEBUG)
 		case OOBase::Logger::Debug:
 			OOBase::stdout_write("Debug: ");
@@ -318,6 +323,11 @@ namespace
 
 		case OOBase::Logger::Warning:
 			OOBase::stdout_write("Warning: ");
+			OOBase::stdout_write(msg);
+			OOBase::stdout_write("\n");
+			break;
+
+		case OOBase::Logger::Information:
 			OOBase::stdout_write(msg);
 			OOBase::stdout_write("\n");
 			break;
