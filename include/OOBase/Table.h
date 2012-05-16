@@ -129,6 +129,16 @@ namespace OOBase
 		}
 
 		template <typename K1>
+		const V* find(K1 key) const
+		{
+			size_t pos = find_i(key,false);
+			if (pos == npos)
+				return NULL;
+
+			return &m_data[pos].m_value;
+		}
+
+		template <typename K1>
 		bool find(K1 key, V& value, bool first = false) const
 		{
 			size_t pos = find_i(key,first);
