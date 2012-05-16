@@ -23,13 +23,13 @@
 #define OOBASE_ENVIRONMENT_H_INCLUDED_
 
 #include "String.h"
-#include "Set.h"
+#include "Table.h"
 
 namespace OOBase
 {
 	namespace Environment
 	{
-		int get_current(Set<String,LocalAllocator>& setEnv);
+		int get_current(Table<String,String,LocalAllocator>& tabEnv);
 	}
 }
 

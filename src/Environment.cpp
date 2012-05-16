@@ -27,11 +27,8 @@
 
 #elif defined(HAVE_UNISTD_H)
 
-int OOBase::Environment::get_current(Set<String,LocalAllocator>& setEnv)
+int OOBase::Environment::get_current(Table<String,String,LocalAllocator>& tabEnv)
 {
-	// Keep a set of var names to use for uniqueness testing
-	Set<String,LocalAllocator> setVals;
-
 	for (const char** env = (const char**)environ;*env != NULL;++env)
 	{
 		String str;
@@ -42,26 +39,25 @@ int OOBase::Environment::get_current(Set<String,LocalAllocator>& setEnv)
 		size_t eq = str.find('=');
 		if (eq == String::npos)
 		{
-			if (setVals.exists(str))
+			if (tabEnv.exists(str))
 				continue;
 
-			err = setVals.insert(str);
+			err = tabEnv.insert(String(),str);
 		}
 		else
 		{
-			String str2;
-			err = str2.assign(str.c_str(),eq);
+			String strK,strV;
+			err = strK.assign(str.c_str(),eq);
 			if (err)
 				return err;
 
-			if (setVals.exists(str2))
+			if (tabEnv.exists(strK))
 				continue;
 
-			err = setVals.insert(str2);
+			err = strV.assign(str.c_str()+eq+1);
+			if (!err)
+				err = tabEnv.insert(strK,strV);
 		}
-
-		if (!err)
-			err = setEnv.insert(str);
 
 		if (err)
 			return err;
