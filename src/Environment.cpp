@@ -129,3 +129,39 @@ int OOBase::Environment::substitute(Table<String,String,LocalAllocator>& tabEnv,
 
 	return 0;
 }
+
+OOBase::SmartPtr<char*,OOBase::LocalAllocator> OOBase::Environment::get_envp(const Table<String,String,LocalAllocator>& tabEnv)
+{
+	// We cheat here and allocate the strings and the array in one block.
+
+	// Count the size needed
+	size_t len = (tabEnv.size()+1) * sizeof(char*);
+	for (size_t idx = 0; idx < tabEnv.size(); ++idx)
+		len += tabEnv.key_at(idx)->length() + tabEnv.at(idx)->length() + 2; // = and NUL
+
+	SmartPtr<char*,LocalAllocator> ptr = static_cast<char**>(LocalAllocator::allocate(len));
+	if (ptr)
+	{
+		char** envp = ptr;
+		char* char_data = reinterpret_cast<char*>(envp) + ((tabEnv.size()+1) * sizeof(char*));
+
+		for (size_t idx = 0; idx < tabEnv.size(); ++idx)
+		{
+			*envp++ = char_data;
+
+			const String* key = tabEnv.key_at(idx);
+			const String* val = tabEnv.at(idx);
+			strncpy(char_data,key->c_str(),key->length());
+			char_data += key->length();
+			*char_data++ = '=';
+			strncpy(char_data,val->c_str(),val->length());
+			char_data += val->length();
+			*char_data++ = '\0';
+		}
+
+		// Add terminating NULL
+		*envp = NULL;
+	}
+
+	return ptr;
+}
