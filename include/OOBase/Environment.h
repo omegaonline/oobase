@@ -30,6 +30,7 @@ namespace OOBase
 	namespace Environment
 	{
 		int get_current(Table<String,String,LocalAllocator>& tabEnv);
+		int substitute(Table<String,String,LocalAllocator>& tabEnv, const Table<String,String,LocalAllocator>& tabSrc);
 	}
 }
 
