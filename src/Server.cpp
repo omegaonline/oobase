@@ -381,10 +381,16 @@ int OOBase::Server::daemonize(const char* pszPidFile, bool& already)
 	if (err)
 		return err;
 
-	// Block all SIGCHLD
+	// Block all SIGCHLD, and SIGHUP (as we disconnect from the controlling terminal)
 	sigset_t sig,prev_sig;
 	sigemptyset(&sig);
 	sigaddset(&sig, SIGCHLD);
+	sigaddset(&sig, SIGHUP);
+
+	// Ignore all the terminal signals
+	sigaddset(&sig, SIGTSTP);
+	sigaddset(&sig, SIGTTOU);
+	sigaddset(&sig, SIGTTIN);
 
 	err = pthread_sigmask(SIG_BLOCK,&sig,&prev_sig);
 	if (err)
@@ -405,7 +411,7 @@ int OOBase::Server::daemonize(const char* pszPidFile, bool& already)
 			err = errno;
 		else
 		{
-			// Now fork again...
+			// Now fork again to prevent re-acquisition of a tty...
 			i = fork();
 			if (i == (pid_t)-1)
 				err = errno;
@@ -424,15 +430,6 @@ int OOBase::Server::daemonize(const char* pszPidFile, bool& already)
 		err = err2;
 
 	if (err)
-		return err;
-
-	// Now block all TTY signals
-	sigemptyset(&sig);
-	sigaddset(&sig, SIGTSTP);
-	sigaddset(&sig, SIGTTOU);
-	sigaddset(&sig, SIGTTIN);
-	err = pthread_sigmask(SIG_BLOCK,&sig,NULL);
-	if (err != 0)
 		return err;
 
 	// Open the pid file
