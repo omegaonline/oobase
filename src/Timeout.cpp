@@ -186,18 +186,16 @@ bool OOBase::Timeout::get_timeval(::timeval& timeout) const
 	if (clock_gettime(CLOCK_MONOTONIC,&now) != 0)
 		OOBase_CallCriticalFailure(errno);
 
-	if (now.tv_sec < m_end.tv_sec || (now.tv_sec == m_end.tv_sec && now.tv_nsec < m_end.tv_nsec))
+	::timespec diff = {0};
+	timespec_subtract(diff,m_end,now);
+
+	timeout.tv_sec = diff.tv_sec;
+	timeout.tv_usec = diff.tv_nsec / 1000;
+
+	if (timeout.tv_sec < 0)
 	{
 		timeout.tv_sec = 0;
 		timeout.tv_usec = 0;
-	}
-	else
-	{
-		::timespec diff = {0};
-		timespec_subtract(diff,m_end,now);
-
-		timeout.tv_sec = diff.tv_sec;
-		timeout.tv_usec = diff.tv_nsec / 1000;
 	}
 #endif
 
@@ -229,11 +227,11 @@ unsigned long OOBase::Timeout::millisecs() const
 	if (clock_gettime(CLOCK_MONOTONIC,&now) != 0)
 		OOBase_CallCriticalFailure(errno);
 
-	if (now.tv_sec < m_end.tv_sec || (now.tv_sec == m_end.tv_sec && now.tv_nsec < m_end.tv_nsec))
-		return 0;
-
 	::timespec diff = {0};
 	timespec_subtract(diff,m_end,now);
+
+	if (diff.tv_sec < 0)
+		return 0;
 
 	return (diff.tv_sec * 1000) + (diff.tv_nsec / 1000000);
 
