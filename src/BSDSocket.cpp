@@ -160,13 +160,6 @@ namespace
 				}
 				else
 				{
-#if defined(HAVE_UNISTD_H)
-					if ((err = OOBase::POSIX::set_close_on_exec(sock,true)) != 0)
-					{
-						OOBase::POSIX::close(sock);
-						break;
-					}
-#endif
 					if ((err = OOBase::BSD::connect(sock,pAddr->ai_addr,pAddr->ai_addrlen,timeout)) != 0)
 						OOBase::POSIX::close(sock);
 					else
@@ -548,14 +541,6 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const 
 		err = errno;
 		return NULL;
 	}
-
-#if defined(HAVE_UNISTD_H)
-	if ((err = OOBase::POSIX::set_close_on_exec(sock,true)) != 0)
-	{
-		OOBase::POSIX::close(sock);
-		return NULL;
-	}
-#endif
 
 	sockaddr_un addr;
 	socklen_t addr_len = 0;
