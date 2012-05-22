@@ -33,6 +33,11 @@ namespace OOBase
 		int get_current(Table<String,String,LocalAllocator>& tabEnv);
 		int substitute(Table<String,String,LocalAllocator>& tabEnv, const Table<String,String,LocalAllocator>& tabSrc);
 		SmartPtr<char*,LocalAllocator> get_envp(const Table<String,String,LocalAllocator>& tabEnv);
+
+#if defined(_WIN32)
+		int get_user(HANDLE hToken, Table<String,String,LocalAllocator>& tabEnv);
+		SmartPtr<void,LocalAllocator> get_block(const Table<String,String,LocalAllocator>& tabEnv);
+#endif
 	}
 }
 

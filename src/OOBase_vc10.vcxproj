@@ -164,6 +164,7 @@
     <ClCompile Include="CmdArgs.cpp" />
     <ClCompile Include="Condition.cpp" />
     <ClCompile Include="DLL.cpp" />
+    <ClCompile Include="Environment.cpp" />
     <ClCompile Include="Error.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Memory.cpp" />
@@ -188,6 +189,7 @@
     <ClInclude Include="..\include\OOBase\BoundedQueue.h" />
     <ClInclude Include="..\include\OOBase\Cache.h" />
     <ClInclude Include="..\include\OOBase\CmdArgs.h" />
+    <ClInclude Include="..\include\OOBase\Environment.h" />
     <ClInclude Include="..\include\OOBase\GlobalNew.h" />
     <ClInclude Include="..\include\OOBase\Logger.h" />
     <ClInclude Include="..\include\OOBase\RefCount.h" />
