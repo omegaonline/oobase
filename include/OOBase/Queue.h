@@ -76,6 +76,17 @@ namespace OOBase
 			return true;
 		}
 		
+		template <typename T1>
+		bool find(const T1& v) const
+		{
+			for (size_t pos = m_front;m_capacity != 0 && pos != m_back;pos = (pos+1) % m_capacity)
+			{
+				if (m_data[pos] == v)
+					return true;
+			}
+			return false;
+		}
+
 		void clear()
 		{
 			for (;m_capacity != 0 && m_front != m_back;m_front = (m_front+1) % m_capacity)
