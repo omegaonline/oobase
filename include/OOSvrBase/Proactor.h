@@ -174,7 +174,7 @@ namespace OOSvrBase
 		static void destroy(Proactor* proactor);
 
 		typedef void (*accept_local_callback_t)(void* param, AsyncLocalSocket* pSocket, int err);
-		virtual Acceptor* accept_local(void* param, accept_local_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa) = 0;
+		virtual Acceptor* accept_local(void* param, accept_local_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa = NULL) = 0;
 
 		typedef void (*accept_remote_callback_t)(void* param, AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err);
 		virtual Acceptor* accept_remote(void* param, accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err) = 0;
