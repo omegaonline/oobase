@@ -232,17 +232,17 @@ int OOSvrBase::detail::ProactorPoll::process_socketset(OOBase::Stack<FdEvent,OOB
 
 int OOSvrBase::detail::ProactorPoll::run(int& err, const OOBase::Timeout& timeout)
 {
+	// Reset stopped
+	m_stopped = false;
+
 	OOBase::Guard<OOBase::SpinLock> guard(m_lock,false);
 	if (!guard.acquire(timeout))
 		return 0;
 
-	// Reset stopped
-	m_stopped = false;
-
 	OOBase::Stack<TimerItem,OOBase::LocalAllocator> timer_set;
 	OOBase::Stack<FdEvent,OOBase::LocalAllocator> fd_set;
 
-    do
+	while (!m_stopped && !timeout.has_expired())
 	{
 		// Check timers and update timeout
 		OOBase::Timeout local_timeout(timeout);
@@ -307,8 +307,7 @@ int OOSvrBase::detail::ProactorPoll::run(int& err, const OOBase::Timeout& timeou
 			if (!guard.acquire(timeout))
 				return 0;
 		}
-
-	} while (!m_stopped && !timeout.has_expired());
+	}
 
     if (err)
     	return -1;
