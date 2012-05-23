@@ -792,7 +792,7 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorPosix::accept_local(void* param,
 		err = pAcceptor->bind((sockaddr*)&addr,addr_len);
 		if (err == 0)
 		{
-			if (::chmod(path,mode) == -1)
+			if (path[0] != '\0' && ::chmod(path,mode) == -1)
 				err = errno;
 		}
 
