@@ -389,13 +389,11 @@ size_t Socket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Ti
 			if (!bAll)
 				break;
 		}
+		else if (recvd == 0)
+			break;
 		else
 		{
-			if (recvd == 0)
-				err = ECONNRESET;
-			else
-				err = errno;
-
+			err = errno;
 			if (err == EAGAIN)
 			{
 				// Do the select...
@@ -473,13 +471,11 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 			}
 			while (recvd > 0);
 		}
+		else if (recvd == 0)
+			break;
 		else
 		{
-			if (recvd == 0)
-				err = ECONNRESET;
-			else
-				err = errno;
-
+			err = errno;
 			if (err == EAGAIN)
 			{
 				// Do the select...
