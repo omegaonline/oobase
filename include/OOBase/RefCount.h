@@ -23,10 +23,12 @@
 #define OOBASE_REFCOUNT_H_INCLUDED_
 
 #include "Atomic.h"
+#include "Memory.h"
 
 namespace OOBase
 {
-	class RefCounted
+	template <typename Allocator>
+	class RefCounted : public CustomNew<Allocator>
 	{
 	public:
 		RefCounted() : m_refcount(1)

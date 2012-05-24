@@ -34,7 +34,6 @@
 #endif
 
 OOBase::Buffer::Buffer(size_t cbSize, size_t align) :
-		RefCounted(),
 		m_capacity(0),
 		m_buffer(NULL),
 		m_wr_ptr(NULL),

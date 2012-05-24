@@ -35,7 +35,7 @@ typedef struct
 
 namespace OOSvrBase
 {
-	class AsyncSocket : public OOBase::RefCounted
+	class AsyncSocket : public OOBase::RefCounted<OOBase::HeapAllocator>
 	{
 	public:
 		template <typename T>
@@ -156,7 +156,7 @@ namespace OOSvrBase
 		virtual ~AsyncLocalSocket() {}
 	};
 	
-	class Acceptor : public OOBase::RefCounted
+	class Acceptor : public OOBase::RefCounted<OOBase::HeapAllocator>
 	{
 	public:
 		// No members, just release() to close

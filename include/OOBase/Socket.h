@@ -55,7 +55,7 @@ namespace OOBase
 	typedef int socket_t;
 #endif
 
-	class Socket
+	class Socket : public RefCounted<HeapAllocator>
 	{
 	public:
 		static Socket* connect(const char* address, const char* port, int& err, const Timeout& timeout = Timeout());
@@ -144,14 +144,9 @@ namespace OOBase
 
 		virtual void close() = 0;
 
-		virtual ~Socket() {};
-
 	protected:
 		Socket() {}
-
-	private:
-		Socket(const Socket&);
-		Socket& operator = (const Socket&);
+		virtual ~Socket() {};
 	};
 }
 

@@ -52,12 +52,10 @@ namespace OOBase
 		template <typename T, typename Allocator>
 		class SmartPtrImpl
 		{
-			class SmartPtrNode : public RefCounted, public CustomNew<HeapAllocator>
+			class SmartPtrNode : public RefCounted<HeapAllocator>
 			{
 			public:
-				SmartPtrNode(T* data = NULL) :
-						RefCounted(),
-						m_data(data)
+				SmartPtrNode(T* data = NULL) : m_data(data)
 				{}
 
 				T* value()
@@ -83,7 +81,7 @@ namespace OOBase
 					Allocator::free(m_data);
 				}
 
-				T*             m_data;
+				T* m_data;
 			};
 
 		public:
