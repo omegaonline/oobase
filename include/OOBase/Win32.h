@@ -33,6 +33,8 @@ namespace OOBase
 		class LocalAllocDestructor
 		{
 		public:
+			typedef HeapAllocator Allocator;
+
 			static void free(void* ptr)
 			{
 				::LocalFree(ptr);

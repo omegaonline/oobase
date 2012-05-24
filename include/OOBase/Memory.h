@@ -36,6 +36,7 @@ namespace OOBase
 	class CrtAllocator
 	{
 	public:
+		typedef CrtAllocator Allocator;
 		static void* allocate(size_t bytes);
 		static void* reallocate(void* ptr, size_t bytes);
 		static void free(void* ptr);
@@ -44,6 +45,8 @@ namespace OOBase
 	class HeapAllocator
 	{
 	public:
+		typedef HeapAllocator Allocator;
+
 		static void* allocate(size_t bytes);
 		static void* reallocate(void* ptr, size_t bytes);
 		static void free(void* ptr);
@@ -52,6 +55,8 @@ namespace OOBase
 	class LocalAllocator
 	{
 	public:
+		typedef LocalAllocator Allocator;
+
 		static void* allocate(size_t bytes);
 		static void* reallocate(void* ptr, size_t bytes);
 		static void free(void* ptr);

@@ -31,6 +31,8 @@ namespace OOBase
 	class DeleteDestructor
 	{
 	public:
+		typedef HeapAllocator Allocator;
+
 		static void free(T* ptr)
 		{
 			delete ptr;
@@ -41,6 +43,8 @@ namespace OOBase
 	class ArrayDeleteDestructor
 	{
 	public:
+		typedef HeapAllocator Allocator;
+
 		static void free(T* ptr)
 		{
 			delete [] ptr;
@@ -49,10 +53,10 @@ namespace OOBase
 
 	namespace detail
 	{
-		template <typename T, typename Allocator>
+		template <typename T, typename Destructor, typename Allocator>
 		class SmartPtrImpl
 		{
-			class SmartPtrNode : public RefCounted<HeapAllocator>
+			class SmartPtrNode : public RefCounted<Allocator>
 			{
 			public:
 				SmartPtrNode(T* data = NULL) : m_data(data)
@@ -78,7 +82,7 @@ namespace OOBase
 			private:
 				~SmartPtrNode()
 				{
-					Allocator::free(m_data);
+					Destructor::free(m_data);
 				}
 
 				T* m_data;
@@ -170,10 +174,10 @@ namespace OOBase
 		};
 	}
 
-	template <typename T, typename Allocator = DeleteDestructor<T> >
-	class SmartPtr : public detail::SmartPtrImpl<T,Allocator>
+	template <typename T, typename Destructor = DeleteDestructor<T> >
+	class SmartPtr : public detail::SmartPtrImpl<T,Destructor,typename Destructor::Allocator>
 	{
-		typedef detail::SmartPtrImpl<T,Allocator> baseClass;
+		typedef detail::SmartPtrImpl<T,Destructor,typename Destructor::Allocator> baseClass;
 
 	public:
 		SmartPtr(T* ptr = NULL) : baseClass(ptr)
@@ -198,7 +202,7 @@ namespace OOBase
 
 		bool allocate(size_t size)
 		{
-			T* p = static_cast<T*>(Allocator::allocate(size));
+			T* p = static_cast<T*>(Destructor::Allocator::allocate(size));
 			if (p)
 				baseClass::operator=(p);
 			return (p != NULL);
@@ -220,9 +224,10 @@ namespace OOBase
 	};
 
 	template <typename Allocator>
-	class SmartPtr<void,Allocator> : public detail::SmartPtrImpl<void,Allocator>
+	class SmartPtr<void,Allocator> : public detail::SmartPtrImpl<void,Allocator,Allocator>
 	{
-		typedef detail::SmartPtrImpl<void,Allocator> baseClass;
+		typedef detail::SmartPtrImpl<void,Allocator,Allocator> baseClass;
+
 	public:
 		SmartPtr(void* ptr = NULL) : baseClass(ptr)
 		{}
