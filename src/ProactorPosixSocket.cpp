@@ -593,7 +593,7 @@ namespace
 		SocketAcceptor(OOSvrBase::detail::ProactorPosix* pProactor, void* param, OOSvrBase::Proactor::accept_local_callback_t callback);
 		virtual ~SocketAcceptor();
 
-		int bind(const sockaddr* addr, socklen_t addr_len);
+		int bind(const sockaddr* addr, socklen_t addr_len, mode_t mode);
 
 	private:
 		OOSvrBase::detail::ProactorPosix*             m_pProactor;
@@ -632,7 +632,7 @@ SocketAcceptor::~SocketAcceptor()
 	}
 }
 
-int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len)
+int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len, mode_t mode)
 {
 	// Create a new socket
 	int err = 0;
@@ -640,8 +640,10 @@ int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len)
 	if ((fd = create_socket(addr->sa_family,SOCK_STREAM,0,err)) == -1)
 		return err;
 
+	// Apparently, chmod before bind()
+
 	// Bind to the address
-	if (::bind(fd,addr,addr_len) == -1 || ::listen(fd,SOMAXCONN) == -1)
+	if (::fchmod(fd,mode) != 0 || ::bind(fd,addr,addr_len) != 0 || ::listen(fd,SOMAXCONN) != 0)
 		err = errno;
 	else
 	{
@@ -755,7 +757,7 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorPosix::accept_remote(void* param
 		err = ENOMEM;
 	else
 	{
-		err = pAcceptor->bind(addr,addr_len);
+		err = pAcceptor->bind(addr,addr_len,0666);
 		if (err != 0)
 		{
 			delete pAcceptor;
@@ -789,13 +791,7 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorPosix::accept_local(void* param,
 		socklen_t addr_len;
 		OOBase::POSIX::create_unix_socket_address(addr,addr_len,path);
 
-		err = pAcceptor->bind((sockaddr*)&addr,addr_len);
-		if (err == 0)
-		{
-			if (path[0] != '\0' && ::chmod(path,mode) == -1)
-				err = errno;
-		}
-
+		err = pAcceptor->bind((sockaddr*)&addr,addr_len,mode);
 		if (err != 0)
 		{
 			delete pAcceptor;
