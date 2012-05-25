@@ -86,7 +86,7 @@ int OOBase::LocalString::append(const char* sz, size_t len)
 	return 0;
 }
 
-int OOBase::LocalString::replace(char from, char to)
+int OOBase::LocalString::replace_all(char from, char to)
 {
 	size_t i = length();
 	while (i > 0)
@@ -303,7 +303,7 @@ int OOBase::String::append(const char* sz, size_t len)
 	return err;
 }
 
-int OOBase::String::replace(char from, char to)
+int OOBase::String::replace_all(char from, char to)
 {
 	bool copied = false;
 	size_t i = length();

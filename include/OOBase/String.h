@@ -42,7 +42,7 @@ namespace OOBase
 		int assign(const LocalString& str);
 		int assign(const char* sz, size_t len = npos);
 		int append(const char* sz, size_t len = npos);
-		int replace(char from, char to);
+		int replace_all(char from, char to);
 		int truncate(size_t len);
 
 #if defined(__GNUC__)
@@ -113,6 +113,15 @@ namespace OOBase
 			return m_data[idx];
 		}
 
+		bool replace_at(size_t idx, char c)
+		{
+			if (idx >= length())
+				return false;
+
+			m_data[idx] = c;
+			return true;
+		}
+
 		size_t find(char c, size_t start = 0) const;
 		size_t find(const char* sz, size_t start = 0) const;
 
@@ -162,7 +171,7 @@ namespace OOBase
 
 		int assign(const char* sz, size_t len = npos);
 		int append(const char* sz, size_t len = npos);
-		int replace(char from, char to);
+		int replace_all(char from, char to);
 		int truncate(size_t len);
 
 #if defined(__GNUC__)
@@ -228,6 +237,15 @@ namespace OOBase
 				return '\0';
 
 			return m_node->m_data[idx];
+		}
+
+		bool replace_at(size_t idx, char c)
+		{
+			if (idx >= length())
+				return false;
+
+			m_node->m_data[idx] = c;
+			return true;
 		}
 
 		size_t find(char c, size_t start = 0) const;

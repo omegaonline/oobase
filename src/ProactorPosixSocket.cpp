@@ -877,4 +877,4 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorPosix::attach_local_sock
 	return pSocket;
 }
 
-#endif // defined(HAVE_EV_H)
+#endif // defined(HAVE_UNISTD_H) && !defined(_WIN32)
