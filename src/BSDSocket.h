@@ -25,26 +25,25 @@
 #include "../include/OOBase/Socket.h"
 
 #if defined(HAVE_UNISTD_H)
+
 #include <sys/un.h>
-#endif
 
 namespace OOBase
 {
 	namespace BSD
 	{
-		int connect(socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::Timeout& timeout = OOBase::Timeout());
-
 		int set_non_blocking(socket_t sock, bool set);
+		int get_non_blocking(socket_t sock, bool& set);
 	}
 
-#if defined(HAVE_UNISTD_H)
 	namespace POSIX
 	{
 		void create_unix_socket_address(sockaddr_un& addr, socklen_t& len, const char* path);
 
 		int get_peer_uid(int fd, uid_t& uid);
 	}
-#endif
 }
+
+#endif // HAVE_UNISTD_H
 
 #endif // OOBASE_BSD_SOCKET_H_INCLUDED_

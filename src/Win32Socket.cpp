@@ -188,11 +188,13 @@ SOCKET OOBase::Win32::create_socket(int family, int socktype, int protocol, int&
 	return sock;
 }
 
-int OOBase::Win32::connect(SOCKET sock, const sockaddr* addr, socklen_t addrlen, const Timeout& timeout)
+int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen, const Timeout& timeout)
 {
 	static const GUID guid_ConnectEx = WSAID_CONNECTEX;
 
 	LPFN_CONNECTEX lpfnConnectEx = NULL;
+
+	Win32::WSAStartup();
 
 	if (!timeout.is_infinite())
 	{
@@ -242,11 +244,16 @@ int OOBase::Win32::connect(SOCKET sock, const sockaddr* addr, socklen_t addrlen,
 	else
 	{
 		// Do the connect
-		if (connect(sock,addr,static_cast<int>(addrlen)) != SOCKET_ERROR)
+		if (::connect(sock,addr,static_cast<int>(addrlen)) != SOCKET_ERROR)
 			return 0;
 		else
 			return WSAGetLastError();
 	}
+}
+
+int OOBase::BSD::accept(socket_t accept_sock, socket_t& new_sock, const Timeout& timeout)
+{
+#error Fix Me!
 }
 
 namespace
@@ -307,7 +314,7 @@ namespace
 					break;
 				else
 				{
-					if ((err = OOBase::Win32::connect(sock,pAddr->ai_addr,static_cast<socklen_t>(pAddr->ai_addrlen),timeout)) != 0)
+					if ((err = OOBase::BSD::connect(sock,pAddr->ai_addr,static_cast<socklen_t>(pAddr->ai_addrlen),timeout)) != 0)
 						closesocket(sock);
 					else
 						break;
@@ -666,6 +673,15 @@ void WinSocket::close()
 	void* CHECK_ME;
 
 	::shutdown(m_socket,SD_SEND);
+}
+
+OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)
+{
+	OOBase::Socket* pSocket = new (std::nothrow) WinSocket(sock);
+	if (!pSocket)
+		err = ERROR_OUTOFMEMORY;
+
+	return pSocket;
 }
 
 OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, int& err, const Timeout& timeout)

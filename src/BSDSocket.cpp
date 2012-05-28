@@ -21,22 +21,19 @@
 
 #include "../include/OOBase/GlobalNew.h"
 
-#if !defined(_WIN32)
+#if defined(HAVE_UNISTD_H)
 
+#include "../include/OOBase/Socket.h"
 #include "../include/OOBase/Posix.h"
 
 #include "BSDSocket.h"
 
-#if defined(HAVE_UNISTD_H)
 #include <fcntl.h>
 #include <netdb.h>
 #include <sys/un.h>
-#endif
 
 int OOBase::BSD::set_non_blocking(socket_t sock, bool set)
 {
-#if defined(HAVE_UNISTD_H)
-
 	int flags = fcntl(sock,F_GETFL);
 	if (flags == -1)
 		return errno;
@@ -45,61 +42,168 @@ int OOBase::BSD::set_non_blocking(socket_t sock, bool set)
 	if (fcntl(sock,F_SETFL,flags) == -1)
 		return errno;
 
-#endif
-
 	return 0;
 }
 
-int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, size_t addrlen, const OOBase::Timeout& timeout)
+int OOBase::BSD::get_non_blocking(socket_t sock, bool& set)
 {
-	// Do the connect
-	if (::connect(sock,addr,static_cast<int>(addrlen)) != -1)
-		return 0;
+	int flags = fcntl(sock,F_GETFL);
+	if (flags == -1)
+		return errno;
 
-	// Check to see if we actually have an error
-	int err = errno;
-	if (err != EINPROGRESS)
+	set = ((flags & O_NONBLOCK) != 0);
+	return 0;
+}
+
+int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen, const Timeout& timeout)
+{
+	// Check blocking state
+	bool non_blocking = false;
+	bool changed_blocking = false;
+	int err = get_non_blocking(sock,non_blocking);
+	if (err)
 		return err;
 
-	// Wait for the connect to go ahead - by select()ing on write
+	// Make sure we are non-blocking if we have a timeout
+	if (!timeout.is_infinite() && !non_blocking)
+	{
+		changed_blocking = true;
+		err = set_non_blocking(sock,true);
+		if (err)
+			return err;
+	}
 
-	fd_set wfds;
-	fd_set efds; // Annoyingly Winsock uses the exceptions not just the writes
+	// Do the connect
+	do
+	{
+		err = ::connect(sock,addr,addrlen);
+	}
+	while (err != 0 && errno == EINTR);
 
-	for (;;)
+	if (!err)
+	{
+		if (changed_blocking)
+		{
+			err = set_non_blocking(sock,non_blocking);
+			if (err)
+				return err;
+		}
+		return 0;
+	}
+
+	// Check to see if we actually have an error
+	if (errno != EINPROGRESS)
+		err = errno;
+	else
+	{
+		// Wait for the connect to go ahead - by select()ing on write
+		fd_set wfds;
+		while (!timeout.has_expired())
+		{
+			int count = 0;
+			do
+			{
+				FD_ZERO(&wfds);
+				FD_SET(sock,&wfds);
+
+				struct ::timeval tv;
+				timeout.get_timeval(tv);
+
+				count = ::select(static_cast<int>(sock)+1,NULL,&wfds,NULL,timeout.is_infinite() ? NULL : &tv);
+			}
+			while (count == -1 && errno == EINTR);
+
+			if (count == -1)
+				err = errno;
+			else if (count == 0)
+				err = ETIMEDOUT;
+			else
+			{
+				// If connect() did something...
+				socklen_t len = sizeof(err);
+				if (getsockopt(sock,SOL_SOCKET,SO_ERROR,(char*)&err,&len) == -1)
+					err = errno;
+			}
+			break;
+		}
+	}
+
+	if (changed_blocking)
+	{
+		int err2 = set_non_blocking(sock,non_blocking);
+		if (!err)
+			err = err2;
+	}
+
+	return err;
+}
+
+int OOBase::BSD::accept(socket_t accept_sock, socket_t& new_sock, const Timeout& timeout)
+{
+	new_sock = -1;
+
+	// Check blocking state
+	bool non_blocking = false;
+	bool changed_blocking = false;
+	int err = get_non_blocking(accept_sock,non_blocking);
+	if (err)
+		return err;
+
+	// Make sure we are non-blocking if we have a timeout
+	if (!timeout.is_infinite() && !non_blocking)
+	{
+		changed_blocking = true;
+		err = set_non_blocking(accept_sock,true);
+		if (err)
+			return err;
+	}
+
+	fd_set read_fds;
+	while (!timeout.has_expired())
 	{
 		int count = 0;
 		do
 		{
-			FD_ZERO(&wfds);
-			FD_ZERO(&efds);
-			FD_SET(sock,&wfds);
-			FD_SET(sock,&efds);
+			FD_ZERO(&read_fds);
+			FD_SET(accept_sock,&read_fds);
 
 			struct ::timeval tv;
 			timeout.get_timeval(tv);
 
-			count = ::select(static_cast<int>(sock+1),NULL,&wfds,&efds,timeout.is_infinite() ? NULL : &tv);
+			count = ::select(static_cast<int>(accept_sock)+1,&read_fds,NULL,NULL,timeout.is_infinite() ? NULL : &tv);
 		}
 		while (count == -1 && errno == EINTR);
 
 		if (count == -1)
-		{
 			err = errno;
-			return err;
-		}
-		else if (count == 1)
-		{
-			// If connect() did something...
-			socklen_t len = sizeof(err);
-			if (getsockopt(sock,SOL_SOCKET,SO_ERROR,(char*)&err,&len) == -1)
-				return errno;
-
-			return err;
-		}
+		else if (count == 0)
+			err = ETIMEDOUT;
 		else
-			return ETIMEDOUT;
+		{
+			do
+			{
+				new_sock = ::accept(accept_sock,NULL,NULL);
+			}
+			while (new_sock == -1 && errno == EINTR);
+
+			if (new_sock != -1)
+				break;
+			else if (errno != EAGAIN && errno != EWOULDBLOCK)
+			{
+				err = errno;
+				break;
+			}
+		}
 	}
+
+	if (changed_blocking)
+	{
+		int err2 = set_non_blocking(accept_sock,non_blocking);
+		if (!err)
+			err = err2;
+	}
+
+	return err;
 }
 
 namespace
@@ -160,7 +264,9 @@ namespace
 				}
 				else
 				{
-					if ((err = OOBase::BSD::connect(sock,pAddr->ai_addr,pAddr->ai_addrlen,timeout)) != 0)
+					if ((err = OOBase::BSD::set_non_blocking(sock,true)) != 0)
+						OOBase::POSIX::close(sock);
+					else if ((err = OOBase::BSD::connect(sock,pAddr->ai_addr,pAddr->ai_addrlen,timeout)) != 0)
 						OOBase::POSIX::close(sock);
 					else
 						break;
@@ -493,6 +599,19 @@ void Socket::close()
 	::shutdown(m_sock,SHUT_WR);
 }
 
+OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)
+{
+	err = OOBase::BSD::set_non_blocking(sock,true);
+	if (err)
+		return NULL;
+
+	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock);
+	if (!pSocket)
+		err = ENOMEM;
+
+	return pSocket;
+}
+
 OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, int& err, const Timeout& timeout)
 {
 	socket_t sock = connect_i(address,port,err,timeout);
@@ -508,8 +627,6 @@ OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, i
 
 	return pSocket;
 }
-
-#if defined(HAVE_UNISTD_H)
 
 void OOBase::POSIX::create_unix_socket_address(sockaddr_un& addr, socklen_t& len, const char* path)
 {
@@ -538,6 +655,13 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const 
 		return NULL;
 	}
 
+	err = BSD::set_non_blocking(sock,true);
+	if (err)
+	{
+		OOBase::POSIX::close(sock);
+		return NULL;
+	}
+
 	sockaddr_un addr;
 	socklen_t addr_len = 0;
 	POSIX::create_unix_socket_address(addr,addr_len,path);
@@ -557,6 +681,5 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const 
 
 	return pSocket;
 }
-#endif // defined(HAVE_UNISTD_H)
 
-#endif //  !defined(_WIN32)
+#endif // defined(HAVE_UNISTD_H)
