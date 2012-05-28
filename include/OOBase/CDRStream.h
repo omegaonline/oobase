@@ -332,6 +332,13 @@ namespace OOBase
 			return write_bytes(reinterpret_cast<const unsigned char*>(pszText),len);
 		}
 
+		/// A specialization of write() for character arrays.
+		template <size_t S>
+		bool write(const char (&arr)[S])
+		{
+			return write(arr,S);
+		}
+
 		/// A specialization of write() for type \p Timeout.
 		bool write(const Timeout& val)
 		{
