@@ -215,6 +215,8 @@ namespace OOBase
 
 			if (len == 0)
 				val.clear();
+			else if (len > m_buffer->length())
+				m_last_error = E2BIG;
 			else
 			{
 				m_last_error = val.assign(m_buffer->rd_ptr(),len);
