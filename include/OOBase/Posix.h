@@ -41,6 +41,9 @@ namespace OOBase
 		ssize_t write(int fd, const void* buf, size_t count);
 		int close(int fd);
 
+		int random_bytes(void* buffer, size_t len);
+		int random_chars(char* buffer, size_t len);
+
 		class SmartFD
 		{
 		public:
