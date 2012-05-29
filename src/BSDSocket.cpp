@@ -221,6 +221,8 @@ namespace
 
 		void close();
 
+		int get_peer_uid(uid_t& uid) const;
+
 	private:
 		int  m_sock;
 
@@ -597,6 +599,11 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 void Socket::close()
 {
 	::shutdown(m_sock,SHUT_WR);
+}
+
+int Socket::get_peer_uid(uid_t& uid) const
+{
+	return OOBase::POSIX::get_peer_uid(m_sock,uid);
 }
 
 OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)

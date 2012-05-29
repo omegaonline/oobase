@@ -102,6 +102,7 @@ liboobase_la_SOURCES = \
 	src/Win32Impl.h \
 	src/Win32Socket.h \
 	src/BSDSocket.cpp \
+	src/GetPeerUid.cpp \
 	src/Buffer.cpp \
 	src/CmdArgs.cpp \
 	src/Condition.cpp \
@@ -140,7 +141,6 @@ liboosvrbase_la_SOURCES = \
 	src/ProactorPoll.h \
 	src/ProactorPosix.h \
 	src/ProactorWin32.h \
-	src/GetPeerUid.cpp \
 	src/Proactor.cpp \
 	src/ProactorPosix.cpp \
 	src/ProactorPosixSocket.cpp \

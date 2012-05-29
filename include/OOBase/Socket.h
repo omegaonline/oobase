@@ -152,9 +152,12 @@ namespace OOBase
 
 		virtual void close() = 0;
 
-	protected:
-		Socket() {}
-		virtual ~Socket() {};
+#if defined(HAVE_UNISTD_H)
+		virtual int get_peer_uid(uid_t& uid) const
+		{
+			return EPERM;
+		}
+#endif
 	};
 }
 
