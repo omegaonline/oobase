@@ -60,17 +60,22 @@ int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen,
 	// Check blocking state
 	bool non_blocking = false;
 	bool changed_blocking = false;
-	int err = get_non_blocking(sock,non_blocking);
-	if (err)
-		return err;
+	int err = 0;
 
-	// Make sure we are non-blocking if we have a timeout
-	if (!timeout.is_infinite() && !non_blocking)
+	// Make sure we are non-blocking
+	if (!timeout.is_infinite())
 	{
-		changed_blocking = true;
-		err = set_non_blocking(sock,true);
+		err = get_non_blocking(sock,non_blocking);
 		if (err)
 			return err;
+
+		if (!non_blocking)
+		{
+			changed_blocking = true;
+			err = set_non_blocking(sock,true);
+			if (err)
+				return err;
+		}
 	}
 
 	// Do the connect
@@ -83,12 +88,9 @@ int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen,
 	if (!err)
 	{
 		if (changed_blocking)
-		{
 			err = set_non_blocking(sock,non_blocking);
-			if (err)
-				return err;
-		}
-		return 0;
+
+		return err;
 	}
 
 	// Check to see if we actually have an error
@@ -145,22 +147,42 @@ int OOBase::BSD::accept(socket_t accept_sock, socket_t& new_sock, const Timeout&
 	// Check blocking state
 	bool non_blocking = false;
 	bool changed_blocking = false;
-	int err = get_non_blocking(accept_sock,non_blocking);
-	if (err)
-		return err;
+	int err = 0;
 
-	// Make sure we are non-blocking if we have a timeout
-	if (!timeout.is_infinite() && !non_blocking)
+	// Make sure we are non-blocking
+	if (!timeout.is_infinite())
 	{
-		changed_blocking = true;
-		err = set_non_blocking(accept_sock,true);
+		err = get_non_blocking(accept_sock,non_blocking);
 		if (err)
 			return err;
+
+		if (!non_blocking)
+		{
+			changed_blocking = true;
+			err = set_non_blocking(accept_sock,true);
+			if (err)
+				return err;
+		}
 	}
 
-	fd_set read_fds;
-	while (!timeout.has_expired())
+	while (!err && !timeout.has_expired())
 	{
+		do
+		{
+			new_sock = ::accept(accept_sock,NULL,NULL);
+		}
+		while (new_sock == -1 && errno == EINTR);
+
+		if (new_sock != -1)
+			break;
+
+		if (errno != EAGAIN && errno != EWOULDBLOCK)
+		{
+			err = errno;
+			break;
+		}
+
+		fd_set read_fds;
 		int count = 0;
 		do
 		{
@@ -178,22 +200,6 @@ int OOBase::BSD::accept(socket_t accept_sock, socket_t& new_sock, const Timeout&
 			err = errno;
 		else if (count == 0)
 			err = ETIMEDOUT;
-		else
-		{
-			do
-			{
-				new_sock = ::accept(accept_sock,NULL,NULL);
-			}
-			while (new_sock == -1 && errno == EINTR);
-
-			if (new_sock != -1)
-				break;
-			else if (errno != EAGAIN && errno != EWOULDBLOCK)
-			{
-				err = errno;
-				break;
-			}
-		}
 	}
 
 	if (changed_blocking)
@@ -201,6 +207,12 @@ int OOBase::BSD::accept(socket_t accept_sock, socket_t& new_sock, const Timeout&
 		int err2 = set_non_blocking(accept_sock,non_blocking);
 		if (!err)
 			err = err2;
+	}
+
+	if (err && new_sock != -1)
+	{
+		POSIX::close(new_sock);
+		new_sock = -1;
 	}
 
 	return err;
