@@ -76,6 +76,7 @@ namespace
 	}
 
 	static SERVICE_STATUS_HANDLE s_ssh = (SERVICE_STATUS_HANDLE)NULL;
+	static bool s_daemonized = false;
 
 	VOID WINAPI ServiceCtrl(DWORD dwControl)
 	{
@@ -162,31 +163,25 @@ void OOBase::Server::quit()
 
 int OOBase::Server::wait_for_quit()
 {
-	static wchar_t sn[] = L"";
-	static SERVICE_TABLE_ENTRYW ste[] =
+	if (s_daemonized)
 	{
-		{sn, &ServiceMain },
-		{NULL, NULL}
-	};
-
-	// Because it can take a while to determine if we are a service or not,
-	// install the Ctrl+C handlers first
-	QUIT::instance();
-
-	stdout_write("Attempting Win32 service start...");
-
-	if (!StartServiceCtrlDispatcherW(ste))
-	{
-		DWORD err = GetLastError();
-		if (err == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT)
+		static wchar_t sn[] = L"";
+		static SERVICE_TABLE_ENTRYW ste[] =
 		{
-			stdout_write("Not a Win32 service");
+			{sn, &ServiceMain },
+			{NULL, NULL}
+		};
 
-			// We are running from the shell...
-			return QUIT::instance().wait();
+		// Because it can take a while to determine if we are a service or not,
+		// install the Ctrl+C handlers first
+		QUIT::instance();
+
+		if (!StartServiceCtrlDispatcherW(ste))
+		{
+			DWORD err = GetLastError();
+			if (err != ERROR_FAILED_SERVICE_CONTROLLER_CONNECT)
+				return GetLastError();
 		}
-		else
-			return GetLastError();
 	}
 
 	// By the time we get here, it's all over
@@ -226,7 +221,10 @@ int OOBase::Server::create_pid_file(const char* pszPidFile, bool& already)
 
 int OOBase::Server::daemonize(const char* pszPidFile, bool& already)
 {
-	return create_pid_file(pszPidFile,already);
+	int err = create_pid_file(pszPidFile,already);
+	if (!err)
+		s_daemonized = true;
+	return err;
 }
 
 #elif defined(HAVE_UNISTD_H)
