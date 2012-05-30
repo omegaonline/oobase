@@ -22,7 +22,7 @@
 #ifndef OOBASE_WIN32_H_INCLUDED_
 #define OOBASE_WIN32_H_INCLUDED_
 
-#include "../config-base.h"
+#include "Memory.h"
 
 #if defined(_WIN32) || defined(DOXYGEN)
 
@@ -33,7 +33,12 @@ namespace OOBase
 		class LocalAllocDestructor
 		{
 		public:
-			typedef HeapAllocator Allocator;
+			typedef LocalAllocDestructor Allocator;
+
+			static void* allocate(size_t bytes)
+			{
+				return ::LocalAlloc(LMEM_FIXED,bytes);
+			}
 
 			static void free(void* ptr)
 			{

@@ -29,12 +29,21 @@
 
 namespace
 {
-	class NetApiDestructor
+	class NetApiAllocator
 	{
 	public:
+		typedef NetApiAllocator Allocator;
+
+		static void* allocate(size_t bytes)
+		{
+			void* ptr = NULL;
+			NetApiBufferAllocate(bytes,&ptr);
+			return ptr;
+		}
+
 		static void free(void* ptr)
 		{
-			NetApiBufferFree(ptr);			
+			NetApiBufferFree(ptr);
 		}
 	};
 }
@@ -116,12 +125,12 @@ DWORD OOBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile)
 	// Lookup a DC for pszDomain
 	LPBYTE v = NULL;
 	NetGetAnyDCName(NULL,strDomainName,&v);
-	OOBase::SmartPtr<wchar_t,NetApiDestructor> ptrDCName = reinterpret_cast<wchar_t*>(v);
+	OOBase::SmartPtr<wchar_t,NetApiAllocator> ptrDCName = reinterpret_cast<wchar_t*>(v);
 
 	// Try to find the user's profile path...
 	v = NULL;
 	NetUserGetInfo(ptrDCName,strUserName,3,&v);
-	OOBase::SmartPtr<USER_INFO_3,NetApiDestructor> pInfo = reinterpret_cast<USER_INFO_3*>(v);
+	OOBase::SmartPtr<USER_INFO_3,NetApiAllocator> pInfo = reinterpret_cast<USER_INFO_3*>(v);
 
 	// Load the Users Profile
 	PROFILEINFOW profile_info = {0};

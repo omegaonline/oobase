@@ -708,7 +708,7 @@ OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorWin32::connect_socket(const s
 	if ((sock = OOBase::Win32::create_socket(addr->sa_family,SOCK_STREAM,0,err)) == INVALID_SOCKET)
 		return NULL;
 	
-	if ((err = OOBase::Win32::connect(sock,addr,addr_len,timeout)) != 0)
+	if ((err = OOBase::BSD::connect(sock,addr,addr_len,timeout)) != 0)
 	{
 		closesocket(sock);
 		return NULL;
