@@ -32,7 +32,8 @@ namespace
 	class NetApiAllocator
 	{
 	public:
-		typedef NetApiAllocator Allocator;
+		// We can use the local allocator here, as we are only ever using stack local pointers
+		typedef OOBase::LocalAllocator Allocator;
 
 		static void* allocate(size_t bytes)
 		{

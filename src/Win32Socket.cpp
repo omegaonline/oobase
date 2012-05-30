@@ -251,10 +251,10 @@ int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen,
 	}
 }
 
-int OOBase::BSD::accept(socket_t accept_sock, socket_t& new_sock, const Timeout& timeout)
+/*int OOBase::BSD::accept(socket_t accept_sock, socket_t& new_sock, const Timeout& timeout)
 {
-#error Fix Me!
-}
+	return ERROR_NOT_FOUND;
+}*/
 
 namespace
 {

@@ -85,6 +85,8 @@ namespace OOBase
 		class SIDDestructor
 		{
 		public:
+			typedef HeapAllocator Allocator;
+
 			static void free(PSID ptr)
 			{
 				FreeSid(ptr);

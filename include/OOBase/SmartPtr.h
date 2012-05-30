@@ -202,7 +202,7 @@ namespace OOBase
 
 		bool allocate(size_t size)
 		{
-			T* p = static_cast<T*>(Destructor::Allocator::allocate(size));
+			T* p = static_cast<T*>(Destructor::allocate(size));
 			if (p)
 				baseClass::operator=(p);
 			return (p != NULL);
@@ -223,10 +223,10 @@ namespace OOBase
 		}
 	};
 
-	template <typename Allocator>
-	class SmartPtr<void,Allocator> : public detail::SmartPtrImpl<void,Allocator,Allocator>
+	template <typename Destructor>
+	class SmartPtr<void,Destructor> : public detail::SmartPtrImpl<void,Destructor,typename Destructor::Allocator>
 	{
-		typedef detail::SmartPtrImpl<void,Allocator,Allocator> baseClass;
+		typedef detail::SmartPtrImpl<void,Destructor,typename Destructor::Allocator> baseClass;
 
 	public:
 		SmartPtr(void* ptr = NULL) : baseClass(ptr)
