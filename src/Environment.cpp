@@ -120,7 +120,7 @@ int OOBase::Environment::get_current(Table<String,String,LocalAllocator>& tabEnv
 int OOBase::Environment::get_user(HANDLE hToken, OOBase::Table<OOBase::String,OOBase::String,OOBase::LocalAllocator>& tabEnv)
 {
 	LPVOID lpEnv = NULL;
-	if (!CreateEnvironmentBlock(&lpEnv,hToken,TRUE))
+	if (!CreateEnvironmentBlock(&lpEnv,hToken,FALSE))
 		return GetLastError();
 
 	int err = process_block(static_cast<wchar_t*>(lpEnv),tabEnv);
@@ -171,29 +171,28 @@ OOBase::SmartPtr<void,OOBase::LocalAllocator> OOBase::Environment::get_block(con
 		wchar_t* pout = static_cast<wchar_t*>(static_cast<void*>(ptr));
 		for (size_t i=0;i<wenv.size();++i)
 		{
-			const SmartPtr<wchar_t,LocalAllocator>* p = wenv.key_at(i);
-			size_t l = wcslen(*p);
+			const wchar_t* p = *wenv.key_at(i);
 
-			memcpy(pout,*p,l);
-			pout += l;
+			while (*p != L'\0')
+				*pout++ = *p++;
 
-			p = wenv.at(i);
-			l = wcslen(*p);
-			if (l)
+			p = *wenv.at(i);
+			if (*p != L'\0')
 			{
 				*pout++ = L'=';
 				
-				memcpy(pout,*p,l);
-				pout += l;
+				while (*p != L'\0')
+					*pout++ = *p++;
 			}
 
 			*pout++ = L'\0';
 		}
 
 		// Terminate with \0
-		memcpy(pout,L"\0",sizeof(wchar_t));
+		*pout++ = L'\0';
+		*pout++ = L'\0';
 	}	
-	
+
 	return ptr;
 }
 		
