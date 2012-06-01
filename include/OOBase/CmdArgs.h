@@ -48,7 +48,7 @@ namespace OOBase
 		
 		int parse_long_option(results_t& results, const char** argv, int& arg, int argc) const;
 		int parse_short_options(results_t& results, const char** argv, int& arg, int argc) const;
-		int parse_arg(results_t& results, const char* opt, int position) const;
+		int parse_arg(results_t& results, const char* opt, size_t position) const;
 	};
 }
 

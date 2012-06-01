@@ -54,7 +54,7 @@ int OOBase::CmdArgs::parse(int argc, char* argv[], results_t& results, int skip)
 int OOBase::CmdArgs::parse(int argc, const char* argv[], results_t& results, int skip) const
 {
 	bool bEndOfOpts = false;
-	int pos = 0;
+	size_t pos = 0;
 	int err = 0;
 	for (int i=skip; i<argc && err==0; ++i)
 	{
@@ -233,7 +233,7 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 	return 0;
 }
 
-int OOBase::CmdArgs::parse_arg(results_t& results, const char* arg, int position) const
+int OOBase::CmdArgs::parse_arg(results_t& results, const char* arg, size_t position) const
 {
 	String strArg;
 	int err = strArg.assign(arg);
@@ -241,7 +241,7 @@ int OOBase::CmdArgs::parse_arg(results_t& results, const char* arg, int position
 		return err;
 
 	String strResult;
-	if ((err = strResult.printf("@%d",position)) != 0)
+	if ((err = strResult.printf("@%u",position)) != 0)
 		return err;
 
 	return results.insert(strResult,strArg);
