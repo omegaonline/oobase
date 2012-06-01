@@ -631,6 +631,11 @@ OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)
 	return pSocket;
 }
 
+OOBase::Socket* OOBase::Socket::attach_local(socket_t sock, int& err)
+{
+	return attach(sock,err);
+}
+
 OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, int& err, const Timeout& timeout)
 {
 	socket_t sock = connect_i(address,port,err,timeout);

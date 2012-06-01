@@ -65,6 +65,7 @@ namespace OOBase
 	{
 	public:
 		static Socket* attach(socket_t sock, int& err);
+		static Socket* attach_local(socket_t sock, int& err);
 
 		static Socket* connect(const char* address, const char* port, int& err, const Timeout& timeout = Timeout());
 		static Socket* connect_local(const char* path, int& err, const Timeout& timeout = Timeout());
