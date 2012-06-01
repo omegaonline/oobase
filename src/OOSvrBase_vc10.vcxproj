@@ -94,7 +94,7 @@
     </PreBuildEvent>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>C:\Work\sqlite\sqlite-autoconf-3070603</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Work\sqlite3</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>HAVE_SQLITE3_AMALGAMATION</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PrecompiledHeader>
