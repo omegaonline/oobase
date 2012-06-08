@@ -38,7 +38,7 @@ namespace
 		static void* allocate(size_t bytes)
 		{
 			void* ptr = NULL;
-			NetApiBufferAllocate(bytes,&ptr);
+			NetApiBufferAllocate((DWORD)bytes,&ptr);
 			return ptr;
 		}
 
