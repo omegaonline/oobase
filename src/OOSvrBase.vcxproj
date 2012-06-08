@@ -107,10 +107,7 @@
     <Lib />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <PreBuildEvent>
-      <Message>Configuring project settings...</Message>
-      <Command>msvcconf_vc10.exe "$(SolutionPath)" $(ProjectName)</Command>
-    </PreBuildEvent>
+    <PreBuildEvent />
     <Midl>
       <TargetEnvironment>X64</TargetEnvironment>
     </Midl>
@@ -152,10 +149,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <PreBuildEvent>
-      <Message>Configuring project settings...</Message>
-      <Command>msvcconf_vc10.exe "$(SolutionPath)" $(ProjectName)</Command>
-    </PreBuildEvent>
+    <PreBuildEvent />
     <Midl>
       <TargetEnvironment>X64</TargetEnvironment>
     </Midl>
