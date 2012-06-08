@@ -88,10 +88,13 @@ AS_IF([test "x$oo_test_CXXFLAGS" != "xset"],
 
 	AX_CXXFLAGS_GCC_OPTION([-static-libgcc])
 	AX_CXXFLAGS_GCC_OPTION([-static-libstdc++])
+  ])
+])
 
+AS_CASE([$host_os],[mingw*],
+[
 	# Rename libstdc++.dll.a to libstdc++.dll.a.dontlink as well!!
 	AC_CHECK_LIB([stdc++.dll],[__cxa_throw],[AC_MSG_ERROR([Rename your libstdc++.dll.a to libstdc++.dll.a.dontlink!])])
-  ])
 ])
 
 # Add debug defines
