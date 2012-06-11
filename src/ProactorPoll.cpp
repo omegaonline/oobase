@@ -92,7 +92,17 @@ int OOSvrBase::detail::ProactorPoll::do_unbind_fd(int fd)
 		return ENOENT;
 
 	if (item.m_poll_pos != size_t(-1))
-		m_poll_fds.remove_at(item.m_poll_pos);
+	{
+		// Replace current with top of stack
+		pollfd* pfd = m_poll_fds.at(item.m_poll_pos);
+
+		m_poll_fds.pop(pfd);
+
+		// Reassign index
+		FdItem* pi = m_items.find(pfd->fd);
+		if (pi)
+			pi->m_poll_pos = item.m_poll_pos;
+	}
 
 	return 0;
 }
