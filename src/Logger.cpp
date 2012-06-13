@@ -199,7 +199,7 @@ namespace
 			{
 				for (DWORD dwLen = 256;;)
 				{
-					ptrSIDProcess = static_cast<TOKEN_USER*>(OOBase::CrtAllocator::allocate(dwLen));
+					ptrSIDProcess.allocate(dwLen);
 					if (!ptrSIDProcess)
 						break;
 

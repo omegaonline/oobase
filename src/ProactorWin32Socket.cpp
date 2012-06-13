@@ -193,7 +193,7 @@ int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* b
 	if (count == 0)
 		return 0;
 
-	OOBase::SmartPtr<WSABUF,OOBase::HeapAllocator> wsa_bufs(static_cast<WSABUF*>(OOBase::HeapAllocator::allocate(sizeof(WSABUF) * count)));
+	OOBase::SmartPtr<WSABUF,OOBase::HeapAllocator> wsa_bufs(sizeof(WSABUF) * count));
 	if (!wsa_bufs)
 		return ERROR_OUTOFMEMORY;
 	
@@ -250,22 +250,20 @@ namespace
 		int bind(const sockaddr* addr, socklen_t addr_len);
 		
 	private:
-		OOSvrBase::detail::ProactorWin32*             m_pProactor;
-		OOBase::Condition::Mutex                      m_lock;
-		OOBase::Condition                             m_condition;
-		sockaddr*                                     m_addr;
-		socklen_t                                     m_addr_len;
-		SOCKET                                        m_socket;
-		size_t                                        m_backlog;
-		size_t                                        m_pending;
-		size_t                                        m_refcount;
-		OOBase::Win32::SmartHandle                    m_hEvent;
-		HANDLE                                        m_hWait;
-		void*                                         m_param;
-		OOSvrBase::Proactor::accept_remote_callback_t m_callback;
-	
-		~InternalAcceptor();
-		
+		OOSvrBase::detail::ProactorWin32*                m_pProactor;
+		OOBase::Condition::Mutex                         m_lock;
+		OOBase::Condition                                m_condition;
+		OOBase::SmartPtr<sockaddr,OOBase::HeapAllocator> m_addr;
+		socklen_t                                        m_addr_len;
+		SOCKET                                           m_socket;
+		size_t                                           m_backlog;
+		size_t                                           m_pending;
+		size_t                                           m_refcount;
+		OOBase::Win32::SmartHandle                       m_hEvent;
+		HANDLE                                           m_hWait;
+		void*                                            m_param;
+		OOSvrBase::Proactor::accept_remote_callback_t    m_callback;
+
 		static void on_completion(HANDLE hSocket, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv);
 		static void CALLBACK accept_ready(PVOID lpParameter, BOOLEAN TimerOrWaitFired);
 
@@ -334,7 +332,6 @@ int SocketAcceptor::bind(OOSvrBase::detail::ProactorWin32* pProactor, void* para
 
 InternalAcceptor::InternalAcceptor(OOSvrBase::detail::ProactorWin32* pProactor, void* param, OOSvrBase::Proactor::accept_remote_callback_t callback) :
 		m_pProactor(pProactor),
-		m_addr(NULL),
 		m_addr_len(0),
 		m_socket(INVALID_SOCKET),
 		m_backlog(0),
@@ -345,14 +342,9 @@ InternalAcceptor::InternalAcceptor(OOSvrBase::detail::ProactorWin32* pProactor, 
 		m_callback(callback)
 { }
 
-InternalAcceptor::~InternalAcceptor()
-{ 
-	OOBase::HeapAllocator::free(m_addr);
-}
-
 int InternalAcceptor::bind(const sockaddr* addr, socklen_t addr_len)
 {
-	m_addr = static_cast<sockaddr*>(OOBase::HeapAllocator::allocate(addr_len));
+	m_addr.allocate(addr_len);
 	if (!m_addr)
 		return ERROR_OUTOFMEMORY;
 	
@@ -362,24 +354,12 @@ int InternalAcceptor::bind(const sockaddr* addr, socklen_t addr_len)
 	// Create an event to wait on
 	m_hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
 	if (!m_hEvent.is_valid())
-	{
-		int err = GetLastError();
-		OOBase::HeapAllocator::free(m_addr);
-		m_addr = NULL;
-		m_addr_len = 0;
-		return err;
-	}
-	
+		return GetLastError();
+
 	// Set up a registered wait
 	if (!RegisterWaitForSingleObject(&m_hWait,m_hEvent,&accept_ready,this,INFINITE,WT_EXECUTEDEFAULT))
-	{
-		int err = GetLastError();
-		OOBase::HeapAllocator::free(m_addr);
-		m_addr = NULL;
-		m_addr_len = 0;
-		return err;
-	}
-	
+		return GetLastError();
+
 	return 0;
 }
 

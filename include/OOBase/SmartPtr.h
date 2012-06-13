@@ -183,6 +183,9 @@ namespace OOBase
 		SmartPtr(T* ptr = NULL) : baseClass(ptr)
 		{}
 
+		SmartPtr(size_t bytes) : baseClass(static_cast<T*>(Destructor::allocate(bytes)))
+		{}
+
 		SmartPtr(const SmartPtr& rhs) : baseClass(rhs)
 		{}
 
@@ -230,6 +233,9 @@ namespace OOBase
 
 	public:
 		SmartPtr(void* ptr = NULL) : baseClass(ptr)
+		{}
+
+		SmartPtr(size_t bytes) : baseClass(Destructor::allocate(bytes))
 		{}
 
 		SmartPtr(const SmartPtr& rhs) : baseClass(rhs)

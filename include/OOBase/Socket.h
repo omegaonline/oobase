@@ -23,6 +23,7 @@
 #define OOBASE_SOCKET_H_INCLUDED_
 
 #include "Buffer.h"
+#include "SmartPtr.h"
 
 #if defined(_WIN32)
 #include <winsock2.h>
@@ -121,6 +122,12 @@ namespace OOBase
 		int recv(RefPtr<T>& val, size_t len, const Timeout& timeout = Timeout())
 		{
 			return recv(static_cast<T*>(val),len,timeout);
+		}
+
+		template <typename T, typename D>
+		size_t recv(SmartPtr<T,D>& buf, size_t len, bool bAll, int& err, const Timeout& timeout = Timeout())
+		{
+			return recv(static_cast<T*>(buf),len,bAll,err,timeout);
 		}
 
 		int recv(Buffer* buffer, const Timeout& timeout = Timeout())

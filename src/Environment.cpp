@@ -40,13 +40,12 @@ namespace
 			if (err == ERROR_INSUFFICIENT_BUFFER)
 			{
 				len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,NULL,0,NULL,NULL);
-				char* sz = static_cast<char*>(OOBase::LocalAllocator::allocate(len + 1));
+				OOBase::SmartPtr<char,OOBase::LocalAllocator> sz(len + 1);
 				if (!sz)
 					return ERROR_OUTOFMEMORY;
 
 				len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,sz,len,NULL,NULL);
 				err = str.assign(sz,len);
-				OOBase::LocalAllocator::free(sz);
 			}
 		}
 		return err;
@@ -80,7 +79,6 @@ namespace
 
 	OOBase::SmartPtr<wchar_t,OOBase::LocalAllocator> to_wchar_t(const OOBase::String& str)
 	{
-		OOBase::SmartPtr<wchar_t,OOBase::LocalAllocator> wsz;
 		int len = MultiByteToWideChar(CP_UTF8,0,str.c_str(),-1,NULL,0);
 		if (len <= 0)
 		{
@@ -89,12 +87,12 @@ namespace
 				return NULL;
 		}
 
-		wsz = static_cast<wchar_t*>(OOBase::LocalAllocator::allocate((len+1) * sizeof(wchar_t)));
-		if (!wsz)
-			return NULL;
-		
-		MultiByteToWideChar(CP_UTF8,0,str.c_str(),-1,wsz,len);
-		wsz[len] = L'\0';
+		OOBase::SmartPtr<wchar_t,OOBase::LocalAllocator> wsz((len+1) * sizeof(wchar_t));
+		if (wsz)
+		{
+			MultiByteToWideChar(CP_UTF8,0,str.c_str(),-1,wsz,len);
+			wsz[len] = L'\0';
+		}
 		return wsz;
 	}
 
@@ -165,7 +163,7 @@ OOBase::SmartPtr<void,OOBase::LocalAllocator> OOBase::Environment::get_block(con
 	wenv.sort(&env_sort);
 
 	// And now copy into one giant block
-	SmartPtr<void,LocalAllocator> ptr = LocalAllocator::allocate((total_size + 2) * sizeof(wchar_t));
+	SmartPtr<void,LocalAllocator> ptr((total_size + 2) * sizeof(wchar_t));
 	if (ptr)
 	{
 		wchar_t* pout = static_cast<wchar_t*>(static_cast<void*>(ptr));
@@ -310,7 +308,7 @@ OOBase::SmartPtr<char*,OOBase::LocalAllocator> OOBase::Environment::get_envp(con
 	for (size_t idx = 0; idx < tabEnv.size(); ++idx)
 		len += tabEnv.key_at(idx)->length() + tabEnv.at(idx)->length() + 2; // = and NUL
 
-	SmartPtr<char*,LocalAllocator> ptr = static_cast<char**>(LocalAllocator::allocate(len));
+	SmartPtr<char*,LocalAllocator> ptr(len);
 	if (ptr)
 	{
 		char** envp = ptr;
