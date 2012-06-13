@@ -55,6 +55,44 @@ int OOBase::BSD::get_non_blocking(socket_t sock, bool& set)
 	return 0;
 }
 
+OOBase::socket_t OOBase::BSD::open_socket(int family, int type, int protocol, int& err)
+{
+#if defined(SOCK_NONBLOCK)
+	socket_t sock = ::socket(family,type | SOCK_NONBLOCK,protocol);
+#else
+	socket_t sock = ::socket(family,type,protocol);
+#endif
+
+	if (sock == -1)
+		err = errno;
+	else
+		err = 0;
+
+
+#if !defined(SOCK_NONBLOCK)
+	if ((err = OOBase::BSD::set_non_blocking(sock,true)) != 0)
+	{
+		OOBase::BSD::close_socket(sock);
+		sock = -1;
+	}
+#endif
+
+	return sock;
+}
+
+int OOBase::BSD::close_socket(socket_t sock)
+{
+	return POSIX::close(sock);
+}
+
+int OOBase::BSD::bind(socket_t sock, const sockaddr* addr, socklen_t addr_len)
+{
+	if (::bind(sock,addr,addr_len) == -1)
+		return errno;
+
+	return 0;
+}
+
 int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen, const Timeout& timeout)
 {
 	// Check blocking state
@@ -123,7 +161,7 @@ int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen,
 			{
 				// If connect() did something...
 				socklen_t len = sizeof(err);
-				if (getsockopt(sock,SOL_SOCKET,SO_ERROR,(char*)&err,&len) == -1)
+				if (::getsockopt(sock,SOL_SOCKET,SO_ERROR,(char*)&err,&len) == -1)
 					err = errno;
 			}
 			break;
@@ -211,7 +249,7 @@ int OOBase::BSD::accept(socket_t accept_sock, socket_t& new_sock, const Timeout&
 
 	if (err && new_sock != -1)
 	{
-		POSIX::close(new_sock);
+		BSD::close_socket(new_sock);
 		new_sock = -1;
 	}
 
@@ -223,7 +261,7 @@ namespace
 	class Socket : public OOBase::Socket
 	{
 	public:
-		Socket(OOBase::socket_t sock);
+		Socket(OOBase::socket_t sock, bool local);
 		virtual ~Socket();
 
 		size_t send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout);
@@ -234,9 +272,12 @@ namespace
 		void close();
 
 		int get_peer_uid(uid_t& uid) const;
+		int send_socket(OOBase::socket_t sock, pid_t pid, const OOBase::Timeout& timeout);
+		int recv_socket(OOBase::socket_t& sock, const OOBase::Timeout& timeout);
 
 	private:
-		int  m_sock;
+		const int  m_sock;
+		const bool m_local;
 
 		OOBase::Mutex              m_recv_lock;  // These are mutexes to enforce ordering
 		OOBase::Mutex              m_send_lock;
@@ -252,7 +293,7 @@ namespace
 		hints.ai_socktype = SOCK_STREAM;
 
 		addrinfo* pResults = NULL;
-		if (getaddrinfo(address,port,&hints,&pResults) != 0)
+		if (::getaddrinfo(address,port,&hints,&pResults) != 0)
 		{
 			err = errno;
 			return -1;
@@ -269,22 +310,14 @@ namespace
 			for (addrinfo* pAddr = pResults; pAddr != NULL; pAddr = pAddr->ai_next)
 			{
 				// Clear error
-				err = 0;
-				sock = ::socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol);
-				if (sock == -1)
-				{
-					err = errno;
+				sock = OOBase::BSD::open_socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,err);
+				if (err)
 					break;
-				}
+
+				if ((err = OOBase::BSD::connect(sock,pAddr->ai_addr,pAddr->ai_addrlen,timeout)) != 0)
+					OOBase::BSD::close_socket(sock);
 				else
-				{
-					if ((err = OOBase::BSD::set_non_blocking(sock,true)) != 0)
-						OOBase::POSIX::close(sock);
-					else if ((err = OOBase::BSD::connect(sock,pAddr->ai_addr,pAddr->ai_addrlen,timeout)) != 0)
-						OOBase::POSIX::close(sock);
-					else
-						break;
-				}
+					break;
 
 				if (timeout.has_expired())
 				{
@@ -295,20 +328,21 @@ namespace
 		}
 
 		// Done with address info
-		freeaddrinfo(pResults);
+		::freeaddrinfo(pResults);
 
 		return sock;
 	}
 }
 
-Socket::Socket(int sock) :
-		m_sock(sock)
+Socket::Socket(int sock, bool local) :
+		m_sock(sock),
+		m_local(local)
 {
 }
 
 Socket::~Socket()
 {
-	OOBase::POSIX::close(m_sock);
+	OOBase::BSD::close_socket(m_sock);
 }
 
 int Socket::do_select(bool bWrite, const OOBase::Timeout& timeout)
@@ -340,7 +374,7 @@ int Socket::do_select(bool bWrite, const OOBase::Timeout& timeout)
 		// Error
 		int err = 0;
 		socklen_t len = sizeof(err);
-		if (getsockopt(m_sock,SOL_SOCKET,SO_ERROR,(char*)&err,&len) == -1)
+		if (::getsockopt(m_sock,SOL_SOCKET,SO_ERROR,(char*)&err,&len) == -1)
 			err = errno;
 
 		return err;
@@ -383,7 +417,7 @@ size_t Socket::send(const void* buf, size_t len, int& err, const OOBase::Timeout
 		else
 		{
 			err = errno;
-			if (err == EAGAIN)
+			if (err == EAGAIN || err == EWOULDBLOCK)
 			{
 				// Do the select...
 				err = do_select(true,timeout);
@@ -467,7 +501,7 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 		else
 		{
 			err = errno;
-			if (err == EAGAIN)
+			if (err == EAGAIN || err == EWOULDBLOCK)
 			{
 				// Do the select...
 				err = do_select(true,timeout);
@@ -475,6 +509,59 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 		}
 	}
 	while (err == 0 && msg.msg_iovlen);
+
+	return err;
+}
+
+int Socket::send_socket(OOBase::socket_t sock, pid_t /*pid*/, const OOBase::Timeout& timeout)
+{
+	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,false);
+	if (!guard.acquire(timeout))
+		return ETIMEDOUT;
+
+	int err = 0;
+	do
+	{
+		struct iovec iov;
+		iov.iov_base = const_cast<char*>("F");
+		iov.iov_len = 1;
+
+		char control[CMSG_SPACE(sizeof(OOBase::socket_t))] = {0};
+
+		struct msghdr msg = {0};
+		msg.msg_iov = &iov;
+		msg.msg_iovlen = 1;
+		msg.msg_control = control;
+		msg.msg_controllen = sizeof(control);
+
+		struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
+		cmsg->cmsg_level = SOL_SOCKET;
+		cmsg->cmsg_type = SCM_RIGHTS;
+		cmsg->cmsg_len = CMSG_LEN(sizeof(OOBase::socket_t));
+		*reinterpret_cast<OOBase::socket_t*>(CMSG_DATA(cmsg)) = sock;
+
+		ssize_t sent = 0;
+		do
+		{
+			sent = ::sendmsg(m_sock,&msg,0
+#if defined(MSG_NOSIGNAL)
+				| MSG_NOSIGNAL
+#endif
+			);
+		}
+		while (sent == -1 && errno == EINTR);
+
+		if (sent != 1)
+		{
+			err = errno;
+			if (err == EAGAIN || err == EWOULDBLOCK)
+			{
+				// Do the select...
+				err = do_select(true,timeout);
+			}
+		}
+	}
+	while (err == 0);
 
 	return err;
 }
@@ -514,7 +601,7 @@ size_t Socket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Ti
 		else
 		{
 			err = errno;
-			if (err == EAGAIN)
+			if (err == EAGAIN || err == EWOULDBLOCK)
 			{
 				// Do the select...
 				err = do_select(false,timeout);
@@ -596,7 +683,7 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 		else
 		{
 			err = errno;
-			if (err == EAGAIN)
+			if (err == EAGAIN || err == EWOULDBLOCK)
 			{
 				// Do the select...
 				err = do_select(false,timeout);
@@ -608,6 +695,63 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 	return err;
 }
 
+int Socket::recv_socket(OOBase::socket_t& sock, const OOBase::Timeout& timeout)
+{
+	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,false);
+	if (!guard.acquire(timeout))
+		return ETIMEDOUT;
+
+	int err = 0;
+	do
+	{
+		char c;
+		struct iovec iov;
+		iov.iov_base = &c;
+		iov.iov_len = 1;
+
+		char control[CMSG_SPACE(sizeof(OOBase::socket_t))] = {0};
+
+		struct msghdr msg = {0};
+		msg.msg_iov = &iov;
+		msg.msg_iovlen = 1;
+		msg.msg_control = control;
+		msg.msg_controllen = sizeof(control);
+
+		struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
+		cmsg->cmsg_level = SOL_SOCKET;
+		cmsg->cmsg_type = SCM_RIGHTS;
+		cmsg->cmsg_len = CMSG_LEN(sizeof(OOBase::socket_t));
+
+		ssize_t recvd = 0;
+		do
+		{
+			recvd = ::recvmsg(m_sock,&msg,0);
+		}
+		while (recvd == -1 && errno == EINTR);
+
+		if (recvd > 0)
+		{
+			sock = *reinterpret_cast<OOBase::socket_t*>(CMSG_DATA(cmsg));
+			break;
+		}
+
+		if (recvd == 0)
+			err = ECONNABORTED;
+		else
+		{
+			err = errno;
+			if (err == EAGAIN || err == EWOULDBLOCK)
+			{
+				// Do the select...
+				err = do_select(false,timeout);
+			}
+		}
+	}
+	while (err == 0);
+
+	return err;
+}
+
 void Socket::close()
 {
 	::shutdown(m_sock,SHUT_WR);
@@ -615,6 +759,9 @@ void Socket::close()
 
 int Socket::get_peer_uid(uid_t& uid) const
 {
+	if (!m_local)
+		return ENOTSUP;
+
 	return OOBase::POSIX::get_peer_uid(m_sock,uid);
 }
 
@@ -624,7 +771,7 @@ OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)
 	if (err)
 		return NULL;
 
-	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock);
+	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock,false);
 	if (!pSocket)
 		err = ENOMEM;
 
@@ -633,7 +780,15 @@ OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)
 
 OOBase::Socket* OOBase::Socket::attach_local(socket_t sock, int& err)
 {
-	return attach(sock,err);
+	err = OOBase::BSD::set_non_blocking(sock,true);
+	if (err)
+		return NULL;
+
+	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock,true);
+	if (!pSocket)
+		err = ENOMEM;
+
+	return pSocket;
 }
 
 OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, int& err, const Timeout& timeout)
@@ -642,11 +797,11 @@ OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, i
 	if (sock == -1)
 		return NULL;
 
-	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock);
+	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock,false);
 	if (!pSocket)
 	{
 		err = ENOMEM;
-		OOBase::POSIX::close(sock);
+		OOBase::BSD::close_socket(sock);
 	}
 
 	return pSocket;
@@ -672,19 +827,9 @@ void OOBase::POSIX::create_unix_socket_address(sockaddr_un& addr, socklen_t& len
 
 OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const Timeout& timeout)
 {
-	int sock = ::socket(AF_UNIX,SOCK_STREAM,0);
-	if (sock == -1)
-	{
-		err = errno;
-		return NULL;
-	}
-
-	err = BSD::set_non_blocking(sock,true);
+	int sock = BSD::open_socket(AF_UNIX,SOCK_STREAM,0,err);
 	if (err)
-	{
-		OOBase::POSIX::close(sock);
 		return NULL;
-	}
 
 	sockaddr_un addr;
 	socklen_t addr_len = 0;
@@ -692,15 +837,15 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const 
 	
 	if ((err = BSD::connect(sock,(sockaddr*)(&addr),addr_len,timeout)) != 0)
 	{
-		OOBase::POSIX::close(sock);
+		OOBase::BSD::close_socket(sock);
 		return NULL;
 	}
 
-	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock);
+	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock,true);
 	if (!pSocket)
 	{
 		err = ENOMEM;
-		OOBase::POSIX::close(sock);
+		OOBase::BSD::close_socket(sock);
 	}
 
 	return pSocket;

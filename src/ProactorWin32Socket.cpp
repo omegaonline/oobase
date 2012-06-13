@@ -61,7 +61,7 @@ AsyncSocket::AsyncSocket(OOSvrBase::detail::ProactorWin32* pProactor, SOCKET hSo
 
 AsyncSocket::~AsyncSocket()
 {
-	closesocket(m_hSocket);
+	OOBase::BSD::close_socket(m_hSocket);
 }
 
 int AsyncSocket::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
@@ -403,7 +403,7 @@ int InternalAcceptor::stop(bool destroy)
 	{
 		m_backlog = 0;
 		
-		closesocket(m_socket);
+		OOBase::BSD::close_socket(m_socket);
 		m_socket = INVALID_SOCKET;
 	}
 	
@@ -424,7 +424,8 @@ int InternalAcceptor::init_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard
 {
 	// Create a new socket
 	int err = 0;
-	if ((m_socket = OOBase::Win32::create_socket(m_addr->sa_family,SOCK_STREAM,0,err)) == INVALID_SOCKET)
+	m_socket = OOBase::BSD::open_socket(m_addr->sa_family,SOCK_STREAM,0,err);
+	if (err)
 		return err;
 		
 	// Bind to the address
@@ -458,7 +459,7 @@ int InternalAcceptor::init_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard
 	
 	if (err != 0)
 	{
-		closesocket(m_socket);
+		OOBase::BSD::close_socket(m_socket);
 		m_socket = INVALID_SOCKET;
 	}
 	
@@ -475,7 +476,8 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 	
 	while (m_pending < m_backlog)
 	{
-		if ((sockNew = OOBase::Win32::create_socket(m_addr->sa_family,SOCK_STREAM,0,err)) == INVALID_SOCKET)
+		sockNew = OOBase::BSD::open_socket(m_addr->sa_family,SOCK_STREAM,0,err);
+		if (err)
 			break;
 
 		err = m_pProactor->bind((HANDLE)sockNew);
@@ -537,7 +539,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 	}
 	
 	if (sockNew != INVALID_SOCKET)
-		closesocket(sockNew);
+		OOBase::BSD::close_socket(sockNew);
 	
 	if (buf)
 		OOBase::HeapAllocator::free(buf);
@@ -614,7 +616,7 @@ bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void
 	{
 		remote_addr = NULL;
 		remote_addr_len = 0;
-		closesocket(hSocket);
+		OOBase::BSD::close_socket(hSocket);
 	}
 	
 	if (m_callback)
@@ -684,20 +686,20 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorWin32::accept_remote(void* param
 
 OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorWin32::connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::Timeout& timeout)
 {
-	SOCKET sock = INVALID_SOCKET;
-	if ((sock = OOBase::Win32::create_socket(addr->sa_family,SOCK_STREAM,0,err)) == INVALID_SOCKET)
+	SOCKET sock = OOBase::BSD::open_socket(addr->sa_family,SOCK_STREAM,0,err);
+	if (err)
 		return NULL;
 	
 	if ((err = OOBase::BSD::connect(sock,addr,addr_len,timeout)) != 0)
 	{
-		closesocket(sock);
+		OOBase::BSD::close_socket(sock);
 		return NULL;
 	}
 
 	err = bind((HANDLE)sock);
 	if (err != 0)
 	{
-		closesocket(sock);
+		OOBase::BSD::close_socket(sock);
 		return NULL;
 	}
 	
@@ -705,7 +707,7 @@ OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorWin32::connect_socket(const s
 	if (!pSocket)
 	{
 		unbind((HANDLE)sock);
-		closesocket(sock);
+		OOBase::BSD::close_socket(sock);
 		err = ERROR_OUTOFMEMORY;
 	}
 		

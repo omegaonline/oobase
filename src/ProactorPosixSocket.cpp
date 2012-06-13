@@ -37,29 +37,6 @@
 
 namespace
 {
-	int create_socket(int family, int socktype, int protocol, int& err)
-	{
-		err = 0;
-		int sock = ::socket(family,socktype,protocol);
-		if (sock == -1)
-		{
-			err = errno;
-			return sock;
-		}
-
-		err = OOBase::BSD::set_non_blocking(sock,true);
-		if (!err)
-			err = OOBase::POSIX::set_close_on_exec(sock,true);
-
-		if (err != 0)
-		{
-			OOBase::POSIX::close(sock);
-			return -1;
-		}
-
-		return sock;
-	}
-
 	class AsyncSocket : public OOSvrBase::AsyncLocalSocket
 	{
 	public:
@@ -137,7 +114,7 @@ AsyncSocket::~AsyncSocket()
 {
 	m_pProactor->unbind_fd(m_fd);
 
-	OOBase::POSIX::close(m_fd);
+	OOBase::BSD::close_socket(m_fd);
 
 	// Free all items
 	RecvItem recv_item;
@@ -628,7 +605,7 @@ SocketAcceptor::~SocketAcceptor()
 	if (m_fd != -1)
 	{
 		m_pProactor->unbind_fd(m_fd);
-		OOBase::POSIX::close(m_fd);
+		OOBase::BSD::close_socket(m_fd);
 	}
 }
 
@@ -636,8 +613,8 @@ int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len, mode_t mode)
 {
 	// Create a new socket
 	int err = 0;
-	int fd = -1;
-	if ((fd = create_socket(addr->sa_family,SOCK_STREAM,0,err)) == -1)
+	int fd = OOBase::BSD::open_socket(addr->sa_family,SOCK_STREAM,0,err);
+	if (err)
 		return err;
 
 	// Apparently, chmod before bind()
@@ -661,7 +638,7 @@ int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len, mode_t mode)
 	}
 
 	if (err)
-		OOBase::POSIX::close(fd);
+		OOBase::BSD::close_socket(fd);
 
 	return err;
 }
@@ -685,7 +662,11 @@ void SocketAcceptor::do_accept()
 		{
 			addr_len = sizeof(addr);
 
+#if defined(_GNU_SOURCE)
+			new_fd = ::accept4(m_fd,(sockaddr*)&addr,&addr_len,SOCK_NONBLOCK | SOCK_CLOEXEC);
+#else
 			new_fd = ::accept(m_fd,(sockaddr*)&addr,&addr_len);
+#endif
 		}
 		while (new_fd == -1 && errno == EINTR);
 
@@ -705,10 +686,11 @@ void SocketAcceptor::do_accept()
 		}
 		else
 		{
+#if !defined(_GNU_SOURCE)
 			err = OOBase::POSIX::set_close_on_exec(new_fd,true);
 			if (err == 0)
 				err = OOBase::BSD::set_non_blocking(new_fd,true);
-
+#endif
 			if (err == 0)
 			{
 				// Wrap the handle
@@ -727,7 +709,7 @@ void SocketAcceptor::do_accept()
 			}
 
 			if (err && !pSocket)
-				OOBase::POSIX::close(new_fd);
+				OOBase::BSD::close_socket(new_fd);
 		}
 
 		if (m_callback_local)
@@ -804,27 +786,27 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorPosix::accept_local(void* param,
 
 OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorPosix::connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::Timeout& timeout)
 {
-	int fd = -1;
-	if ((fd = create_socket(addr->sa_family,SOCK_STREAM,0,err)) == -1)
+	int fd = OOBase::BSD::open_socket(addr->sa_family,SOCK_STREAM,0,err);
+	if (err)
 		return NULL;
 
 	if ((err = OOBase::BSD::connect(fd,addr,addr_len,timeout)) != 0)
 	{
-		OOBase::POSIX::close(fd);
+		OOBase::BSD::close_socket(fd);
 		return NULL;
 	}
 
 	OOSvrBase::AsyncLocalSocket* pSocket = attach_local_socket(fd,err);
 	if (!pSocket)
-		OOBase::POSIX::close(fd);
+		OOBase::BSD::close_socket(fd);
 
 	return pSocket;
 }
 
 OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorPosix::connect_local_socket(const char* path, int& err, const OOBase::Timeout& timeout)
 {
-	int fd = -1;
-	if ((fd = create_socket(AF_UNIX,SOCK_STREAM,0,err)) == -1)
+	int fd = OOBase::BSD::open_socket(AF_UNIX,SOCK_STREAM,0,err);
+	if (err)
 		return NULL;
 
 	// Compose filename
@@ -834,13 +816,13 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorPosix::connect_local_soc
 
 	if ((err = OOBase::BSD::connect(fd,(sockaddr*)&addr,addr_len,timeout)) != 0)
 	{
-		OOBase::POSIX::close(fd);
+		OOBase::BSD::close_socket(fd);
 		return NULL;
 	}
 
 	OOSvrBase::AsyncLocalSocket* pSocket = attach_local_socket(fd,err);
 	if (!pSocket)
-		OOBase::POSIX::close(fd);
+		OOBase::BSD::close_socket(fd);
 
 	return pSocket;
 }

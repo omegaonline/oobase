@@ -34,8 +34,6 @@ namespace OOBase
 
 		BOOL WSAAcceptEx(SOCKET sListenSocket, SOCKET sAcceptSocket, void* lpOutputBuffer, DWORD dwReceiveDataLength, DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped);
 		void WSAGetAcceptExSockAddrs(SOCKET sListenSocket, void* lpOutputBuffer, DWORD dwReceiveDataLength, DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, sockaddr **LocalSockaddr, int* LocalSockaddrLength, sockaddr **RemoteSockaddr, int* RemoteSockaddrLength);
-
-		SOCKET create_socket(int family, int socktype, int protocol, int& err);
 	}
 }
 

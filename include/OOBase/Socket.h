@@ -52,12 +52,16 @@ namespace OOBase
 	 */
 #if defined(_WIN32)
 	typedef SOCKET socket_t;
+	typedef DWORD pid_t;
 #else
 	typedef int socket_t;
 #endif
 
 	namespace BSD
 	{
+		socket_t open_socket(int family, int type, int protocol, int& err);
+		int close_socket(socket_t sock);
+		int bind(socket_t sock, const sockaddr* addr, socklen_t addr_len);
 		int connect(socket_t sock, const sockaddr* addr, socklen_t addrlen, const Timeout& timeout = Timeout());
 		int accept(socket_t accept_sock, socket_t& new_sock, const Timeout& timeout = Timeout());
 	}
@@ -96,6 +100,8 @@ namespace OOBase
 			buffer->rd_ptr(len);
 			return err;
 		}
+
+		virtual int send_socket(socket_t sock, pid_t pid, const Timeout& timeout = Timeout()) = 0;
 
 		virtual size_t recv(void* buf, size_t len, bool bAll, int& err, const Timeout& timeout = Timeout()) = 0;
 		virtual int recv_v(Buffer* buffers[], size_t count, const Timeout& timeout = Timeout()) = 0;
@@ -157,6 +163,8 @@ namespace OOBase
 			}
 			return err;
 		}
+
+		virtual int recv_socket(socket_t& sock, const Timeout& timeout = Timeout()) = 0;
 
 		virtual void close() = 0;
 

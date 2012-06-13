@@ -175,7 +175,7 @@ void OOBase::Win32::WSAGetAcceptExSockAddrs(SOCKET sListenSocket, void* lpOutput
 	return (*lpfnGetAcceptExSockAddrs)(lpOutputBuffer,dwReceiveDataLength,dwLocalAddressLength,dwRemoteAddressLength,LocalSockaddr,LocalSockaddrLength,RemoteSockaddr,RemoteSockaddrLength);
 }
 
-SOCKET OOBase::Win32::create_socket(int family, int socktype, int protocol, int& err)
+OOBase::socket_t OOBase::BSD::create_socket(int family, int socktype, int protocol, int& err)
 {
 	Win32::WSAStartup();
 
@@ -308,17 +308,14 @@ namespace
 			for (addrinfo* pAddr = pResults; pAddr != NULL; pAddr = pAddr->ai_next)
 			{
 				// Clear error
-				err = 0;
-				sock = OOBase::Win32::create_socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,err);
-				if (sock == INVALID_SOCKET)
+				sock = OOBase::BSD::open_socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,err);
+				if (err)
 					break;
+
+				if ((err = OOBase::BSD::connect(sock,pAddr->ai_addr,static_cast<socklen_t>(pAddr->ai_addrlen),timeout)) != 0)
+					OOBase::BSD::close_socket(sock);
 				else
-				{
-					if ((err = OOBase::BSD::connect(sock,pAddr->ai_addr,static_cast<socklen_t>(pAddr->ai_addrlen),timeout)) != 0)
-						closesocket(sock);
-					else
-						break;
-				}
+					break;
 
 				if (timeout.has_expired())
 				{
@@ -343,7 +340,7 @@ WinSocket::WinSocket(SOCKET sock) :
 
 WinSocket::~WinSocket()
 {
-	closesocket(m_socket);
+	OOBase::BSD::close_socket(m_socket);
 }
 
 size_t WinSocket::send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout)
@@ -697,7 +694,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, i
 	if (!pSocket)
 	{
 		err = ERROR_OUTOFMEMORY;
-		closesocket(sock);
+		OOBase::BSD::close_socketsock);
 	}
 
 	return pSocket;
