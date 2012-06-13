@@ -79,15 +79,16 @@ namespace
 
 	OOBase::SmartPtr<wchar_t,OOBase::LocalAllocator> to_wchar_t(const OOBase::String& str)
 	{
+		OOBase::SmartPtr<wchar_t,OOBase::LocalAllocator> wsz;
 		int len = MultiByteToWideChar(CP_UTF8,0,str.c_str(),-1,NULL,0);
 		if (len <= 0)
 		{
 			DWORD dwErr = GetLastError();
 			if (dwErr != ERROR_INSUFFICIENT_BUFFER)
-				return NULL;
+				return wsz;
 		}
 
-		OOBase::SmartPtr<wchar_t,OOBase::LocalAllocator> wsz((len+1) * sizeof(wchar_t));
+		wsz.allocate((len+1) * sizeof(wchar_t));
 		if (wsz)
 		{
 			MultiByteToWideChar(CP_UTF8,0,str.c_str(),-1,wsz,len);
