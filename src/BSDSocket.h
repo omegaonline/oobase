@@ -30,12 +30,6 @@
 
 namespace OOBase
 {
-	namespace BSD
-	{
-		int set_non_blocking(socket_t sock, bool set);
-		int get_non_blocking(socket_t sock, bool& set);
-	}
-
 	namespace POSIX
 	{
 		void create_unix_socket_address(sockaddr_un& addr, socklen_t& len, const char* path);

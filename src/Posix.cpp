@@ -70,6 +70,29 @@ int OOBase::POSIX::close(int fd)
 	}
 }
 
+int OOBase::POSIX::set_non_blocking(int sock, bool set)
+{
+	int flags = fcntl(sock,F_GETFL);
+	if (flags == -1)
+		return errno;
+
+	flags = (set ? flags | O_NONBLOCK : flags & ~O_NONBLOCK);
+	if (fcntl(sock,F_SETFL,flags) == -1)
+		return errno;
+
+	return 0;
+}
+
+int OOBase::POSIX::get_non_blocking(int sock, bool& set)
+{
+	int flags = fcntl(sock,F_GETFL);
+	if (flags == -1)
+		return errno;
+
+	set = ((flags & O_NONBLOCK) != 0);
+	return 0;
+}
+
 int OOBase::POSIX::set_close_on_exec(int sock, bool set)
 {
 	int flags = fcntl(sock,F_GETFD);

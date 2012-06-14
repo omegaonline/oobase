@@ -97,7 +97,7 @@ int OOSvrBase::detail::ProactorPosix::init()
 		return errno;
 
 	// Set non-blocking and close-on-exec
-	int err = OOBase::BSD::set_non_blocking(pipe_ends[0],true);
+	int err = OOBase::POSIX::set_non_blocking(pipe_ends[0],true);
 	if (!err)
 		err = OOBase::POSIX::set_close_on_exec(pipe_ends[0],true);
 	if (!err)

@@ -57,7 +57,7 @@ namespace OOBase
 	typedef int socket_t;
 #endif
 
-	namespace BSD
+	namespace Net
 	{
 		socket_t open_socket(int family, int type, int protocol, int& err);
 		int close_socket(socket_t sock);

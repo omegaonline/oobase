@@ -33,6 +33,9 @@ namespace OOBase
 {
 	namespace POSIX
 	{
+		int set_non_blocking(int fd, bool set);
+		int get_non_blocking(int fd, bool& set);
+
 		int set_close_on_exec(int fd, bool set);
 		int close_file_descriptors(int* except, size_t ex_count);
 

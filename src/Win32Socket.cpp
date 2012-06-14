@@ -175,7 +175,7 @@ void OOBase::Win32::WSAGetAcceptExSockAddrs(SOCKET sListenSocket, void* lpOutput
 	return (*lpfnGetAcceptExSockAddrs)(lpOutputBuffer,dwReceiveDataLength,dwLocalAddressLength,dwRemoteAddressLength,LocalSockaddr,LocalSockaddrLength,RemoteSockaddr,RemoteSockaddrLength);
 }
 
-OOBase::socket_t OOBase::BSD::create_socket(int family, int socktype, int protocol, int& err)
+OOBase::socket_t OOBase::Net::create_socket(int family, int socktype, int protocol, int& err)
 {
 	Win32::WSAStartup();
 
@@ -188,7 +188,7 @@ OOBase::socket_t OOBase::BSD::create_socket(int family, int socktype, int protoc
 	return sock;
 }
 
-int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen, const Timeout& timeout)
+int OOBase::Net::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen, const Timeout& timeout)
 {
 	static const GUID guid_ConnectEx = WSAID_CONNECTEX;
 
@@ -251,7 +251,7 @@ int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen,
 	}
 }
 
-/*int OOBase::BSD::accept(socket_t accept_sock, socket_t& new_sock, const Timeout& timeout)
+/*int OOBase::Net::accept(socket_t accept_sock, socket_t& new_sock, const Timeout& timeout)
 {
 	return ERROR_NOT_FOUND;
 }*/
@@ -308,12 +308,12 @@ namespace
 			for (addrinfo* pAddr = pResults; pAddr != NULL; pAddr = pAddr->ai_next)
 			{
 				// Clear error
-				sock = OOBase::BSD::open_socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,err);
+				sock = OOBase::Net::open_socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,err);
 				if (err)
 					break;
 
-				if ((err = OOBase::BSD::connect(sock,pAddr->ai_addr,static_cast<socklen_t>(pAddr->ai_addrlen),timeout)) != 0)
-					OOBase::BSD::close_socket(sock);
+				if ((err = OOBase::Net::connect(sock,pAddr->ai_addr,static_cast<socklen_t>(pAddr->ai_addrlen),timeout)) != 0)
+					OOBase::Net::close_socket(sock);
 				else
 					break;
 
@@ -340,7 +340,7 @@ WinSocket::WinSocket(SOCKET sock) :
 
 WinSocket::~WinSocket()
 {
-	OOBase::BSD::close_socket(m_socket);
+	OOBase::Net::close_socket(m_socket);
 }
 
 size_t WinSocket::send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout)
@@ -694,7 +694,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, i
 	if (!pSocket)
 	{
 		err = ERROR_OUTOFMEMORY;
-		OOBase::BSD::close_socketsock);
+		OOBase::Net::close_socketsock);
 	}
 
 	return pSocket;

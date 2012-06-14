@@ -114,7 +114,7 @@ AsyncSocket::~AsyncSocket()
 {
 	m_pProactor->unbind_fd(m_fd);
 
-	OOBase::BSD::close_socket(m_fd);
+	OOBase::Net::close_socket(m_fd);
 
 	// Free all items
 	RecvItem recv_item;
@@ -605,7 +605,7 @@ SocketAcceptor::~SocketAcceptor()
 	if (m_fd != -1)
 	{
 		m_pProactor->unbind_fd(m_fd);
-		OOBase::BSD::close_socket(m_fd);
+		OOBase::Net::close_socket(m_fd);
 	}
 }
 
@@ -613,7 +613,7 @@ int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len, mode_t mode)
 {
 	// Create a new socket
 	int err = 0;
-	int fd = OOBase::BSD::open_socket(addr->sa_family,SOCK_STREAM,0,err);
+	int fd = OOBase::Net::open_socket(addr->sa_family,SOCK_STREAM,0,err);
 	if (err)
 		return err;
 
@@ -638,7 +638,7 @@ int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len, mode_t mode)
 	}
 
 	if (err)
-		OOBase::BSD::close_socket(fd);
+		OOBase::Net::close_socket(fd);
 
 	return err;
 }
@@ -689,7 +689,7 @@ void SocketAcceptor::do_accept()
 #if !defined(_GNU_SOURCE)
 			err = OOBase::POSIX::set_close_on_exec(new_fd,true);
 			if (err == 0)
-				err = OOBase::BSD::set_non_blocking(new_fd,true);
+				err = OOBase::POSIX::set_non_blocking(new_fd,true);
 #endif
 			if (err == 0)
 			{
@@ -709,7 +709,7 @@ void SocketAcceptor::do_accept()
 			}
 
 			if (err && !pSocket)
-				OOBase::BSD::close_socket(new_fd);
+				OOBase::Net::close_socket(new_fd);
 		}
 
 		if (m_callback_local)
@@ -786,26 +786,26 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorPosix::accept_local(void* param,
 
 OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorPosix::connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::Timeout& timeout)
 {
-	int fd = OOBase::BSD::open_socket(addr->sa_family,SOCK_STREAM,0,err);
+	int fd = OOBase::Net::open_socket(addr->sa_family,SOCK_STREAM,0,err);
 	if (err)
 		return NULL;
 
-	if ((err = OOBase::BSD::connect(fd,addr,addr_len,timeout)) != 0)
+	if ((err = OOBase::Net::connect(fd,addr,addr_len,timeout)) != 0)
 	{
-		OOBase::BSD::close_socket(fd);
+		OOBase::Net::close_socket(fd);
 		return NULL;
 	}
 
 	OOSvrBase::AsyncLocalSocket* pSocket = attach_local_socket(fd,err);
 	if (!pSocket)
-		OOBase::BSD::close_socket(fd);
+		OOBase::Net::close_socket(fd);
 
 	return pSocket;
 }
 
 OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorPosix::connect_local_socket(const char* path, int& err, const OOBase::Timeout& timeout)
 {
-	int fd = OOBase::BSD::open_socket(AF_UNIX,SOCK_STREAM,0,err);
+	int fd = OOBase::Net::open_socket(AF_UNIX,SOCK_STREAM,0,err);
 	if (err)
 		return NULL;
 
@@ -814,15 +814,15 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorPosix::connect_local_soc
 	socklen_t addr_len;
 	OOBase::POSIX::create_unix_socket_address(addr,addr_len,path);
 
-	if ((err = OOBase::BSD::connect(fd,(sockaddr*)&addr,addr_len,timeout)) != 0)
+	if ((err = OOBase::Net::connect(fd,(sockaddr*)&addr,addr_len,timeout)) != 0)
 	{
-		OOBase::BSD::close_socket(fd);
+		OOBase::Net::close_socket(fd);
 		return NULL;
 	}
 
 	OOSvrBase::AsyncLocalSocket* pSocket = attach_local_socket(fd,err);
 	if (!pSocket)
-		OOBase::BSD::close_socket(fd);
+		OOBase::Net::close_socket(fd);
 
 	return pSocket;
 }
@@ -835,7 +835,7 @@ OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorPosix::attach_socket(OOBase::
 OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorPosix::attach_local_socket(OOBase::socket_t sock, int& err)
 {
 	// Set non-blocking...
-	err = OOBase::BSD::set_non_blocking(sock,true);
+	err = OOBase::POSIX::set_non_blocking(sock,true);
 	if (err)
 		return NULL;
 

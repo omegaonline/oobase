@@ -32,30 +32,7 @@
 #include <netdb.h>
 #include <sys/un.h>
 
-int OOBase::BSD::set_non_blocking(socket_t sock, bool set)
-{
-	int flags = fcntl(sock,F_GETFL);
-	if (flags == -1)
-		return errno;
-
-	flags = (set ? flags | O_NONBLOCK : flags & ~O_NONBLOCK);
-	if (fcntl(sock,F_SETFL,flags) == -1)
-		return errno;
-
-	return 0;
-}
-
-int OOBase::BSD::get_non_blocking(socket_t sock, bool& set)
-{
-	int flags = fcntl(sock,F_GETFL);
-	if (flags == -1)
-		return errno;
-
-	set = ((flags & O_NONBLOCK) != 0);
-	return 0;
-}
-
-OOBase::socket_t OOBase::BSD::open_socket(int family, int type, int protocol, int& err)
+OOBase::socket_t OOBase::Net::open_socket(int family, int type, int protocol, int& err)
 {
 #if defined(SOCK_NONBLOCK)
 	socket_t sock = ::socket(family,type | SOCK_NONBLOCK,protocol);
@@ -70,9 +47,9 @@ OOBase::socket_t OOBase::BSD::open_socket(int family, int type, int protocol, in
 
 
 #if !defined(SOCK_NONBLOCK)
-	if ((err = OOBase::BSD::set_non_blocking(sock,true)) != 0)
+	if ((err = OOBase::POSIX::set_non_blocking(sock,true)) != 0)
 	{
-		OOBase::BSD::close_socket(sock);
+		OOBase::Net::close_socket(sock);
 		sock = -1;
 	}
 #endif
@@ -80,12 +57,12 @@ OOBase::socket_t OOBase::BSD::open_socket(int family, int type, int protocol, in
 	return sock;
 }
 
-int OOBase::BSD::close_socket(socket_t sock)
+int OOBase::Net::close_socket(socket_t sock)
 {
 	return POSIX::close(sock);
 }
 
-int OOBase::BSD::bind(socket_t sock, const sockaddr* addr, socklen_t addr_len)
+int OOBase::Net::bind(socket_t sock, const sockaddr* addr, socklen_t addr_len)
 {
 	if (::bind(sock,addr,addr_len) == -1)
 		return errno;
@@ -93,7 +70,7 @@ int OOBase::BSD::bind(socket_t sock, const sockaddr* addr, socklen_t addr_len)
 	return 0;
 }
 
-int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen, const Timeout& timeout)
+int OOBase::Net::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen, const Timeout& timeout)
 {
 	// Check blocking state
 	bool non_blocking = false;
@@ -103,14 +80,14 @@ int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen,
 	// Make sure we are non-blocking
 	if (!timeout.is_infinite())
 	{
-		err = get_non_blocking(sock,non_blocking);
+		err = POSIX::get_non_blocking(sock,non_blocking);
 		if (err)
 			return err;
 
 		if (!non_blocking)
 		{
 			changed_blocking = true;
-			err = set_non_blocking(sock,true);
+			err = POSIX::set_non_blocking(sock,true);
 			if (err)
 				return err;
 		}
@@ -126,7 +103,7 @@ int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen,
 	if (!err)
 	{
 		if (changed_blocking)
-			err = set_non_blocking(sock,non_blocking);
+			err = POSIX::set_non_blocking(sock,non_blocking);
 
 		return err;
 	}
@@ -170,7 +147,7 @@ int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen,
 
 	if (changed_blocking)
 	{
-		int err2 = set_non_blocking(sock,non_blocking);
+		int err2 = POSIX::set_non_blocking(sock,non_blocking);
 		if (!err)
 			err = err2;
 	}
@@ -178,7 +155,7 @@ int OOBase::BSD::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen,
 	return err;
 }
 
-int OOBase::BSD::accept(socket_t accept_sock, socket_t& new_sock, const Timeout& timeout)
+int OOBase::Net::accept(socket_t accept_sock, socket_t& new_sock, const Timeout& timeout)
 {
 	new_sock = -1;
 
@@ -190,14 +167,14 @@ int OOBase::BSD::accept(socket_t accept_sock, socket_t& new_sock, const Timeout&
 	// Make sure we are non-blocking
 	if (!timeout.is_infinite())
 	{
-		err = get_non_blocking(accept_sock,non_blocking);
+		err = POSIX::get_non_blocking(accept_sock,non_blocking);
 		if (err)
 			return err;
 
 		if (!non_blocking)
 		{
 			changed_blocking = true;
-			err = set_non_blocking(accept_sock,true);
+			err = POSIX::set_non_blocking(accept_sock,true);
 			if (err)
 				return err;
 		}
@@ -242,14 +219,14 @@ int OOBase::BSD::accept(socket_t accept_sock, socket_t& new_sock, const Timeout&
 
 	if (changed_blocking)
 	{
-		int err2 = set_non_blocking(accept_sock,non_blocking);
+		int err2 = POSIX::set_non_blocking(accept_sock,non_blocking);
 		if (!err)
 			err = err2;
 	}
 
 	if (err && new_sock != -1)
 	{
-		BSD::close_socket(new_sock);
+		Net::close_socket(new_sock);
 		new_sock = -1;
 	}
 
@@ -310,12 +287,12 @@ namespace
 			for (addrinfo* pAddr = pResults; pAddr != NULL; pAddr = pAddr->ai_next)
 			{
 				// Clear error
-				sock = OOBase::BSD::open_socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,err);
+				sock = OOBase::Net::open_socket(pAddr->ai_family,pAddr->ai_socktype,pAddr->ai_protocol,err);
 				if (err)
 					break;
 
-				if ((err = OOBase::BSD::connect(sock,pAddr->ai_addr,pAddr->ai_addrlen,timeout)) != 0)
-					OOBase::BSD::close_socket(sock);
+				if ((err = OOBase::Net::connect(sock,pAddr->ai_addr,pAddr->ai_addrlen,timeout)) != 0)
+					OOBase::Net::close_socket(sock);
 				else
 					break;
 
@@ -342,7 +319,7 @@ Socket::Socket(int sock, bool local) :
 
 Socket::~Socket()
 {
-	OOBase::BSD::close_socket(m_sock);
+	OOBase::Net::close_socket(m_sock);
 }
 
 int Socket::do_select(bool bWrite, const OOBase::Timeout& timeout)
@@ -767,7 +744,7 @@ int Socket::get_peer_uid(uid_t& uid) const
 
 OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)
 {
-	err = OOBase::BSD::set_non_blocking(sock,true);
+	err = OOBase::POSIX::set_non_blocking(sock,true);
 	if (err)
 		return NULL;
 
@@ -780,7 +757,7 @@ OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)
 
 OOBase::Socket* OOBase::Socket::attach_local(socket_t sock, int& err)
 {
-	err = OOBase::BSD::set_non_blocking(sock,true);
+	err = OOBase::POSIX::set_non_blocking(sock,true);
 	if (err)
 		return NULL;
 
@@ -801,7 +778,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, i
 	if (!pSocket)
 	{
 		err = ENOMEM;
-		OOBase::BSD::close_socket(sock);
+		OOBase::Net::close_socket(sock);
 	}
 
 	return pSocket;
@@ -827,7 +804,7 @@ void OOBase::POSIX::create_unix_socket_address(sockaddr_un& addr, socklen_t& len
 
 OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const Timeout& timeout)
 {
-	int sock = BSD::open_socket(AF_UNIX,SOCK_STREAM,0,err);
+	int sock = Net::open_socket(AF_UNIX,SOCK_STREAM,0,err);
 	if (err)
 		return NULL;
 
@@ -835,9 +812,9 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const 
 	socklen_t addr_len = 0;
 	POSIX::create_unix_socket_address(addr,addr_len,path);
 	
-	if ((err = BSD::connect(sock,(sockaddr*)(&addr),addr_len,timeout)) != 0)
+	if ((err = Net::connect(sock,(sockaddr*)(&addr),addr_len,timeout)) != 0)
 	{
-		OOBase::BSD::close_socket(sock);
+		OOBase::Net::close_socket(sock);
 		return NULL;
 	}
 
@@ -845,7 +822,7 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const 
 	if (!pSocket)
 	{
 		err = ENOMEM;
-		OOBase::BSD::close_socket(sock);
+		OOBase::Net::close_socket(sock);
 	}
 
 	return pSocket;
