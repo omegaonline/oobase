@@ -47,6 +47,8 @@ OOBase::DLL::~DLL()
 
 int OOBase::DLL::load(const char* full_path)
 {
+	void* TODO;  // Use LoadLibraryW
+
 	m_module = LoadLibraryA(full_path);
 	if (!m_module)
 		return GetLastError();

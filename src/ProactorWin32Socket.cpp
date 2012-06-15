@@ -193,7 +193,7 @@ int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* b
 	if (count == 0)
 		return 0;
 
-	OOBase::SmartPtr<WSABUF,OOBase::HeapAllocator> wsa_bufs(sizeof(WSABUF) * count));
+	OOBase::SmartPtr<WSABUF,OOBase::HeapAllocator> wsa_bufs(sizeof(WSABUF) * count);
 	if (!wsa_bufs)
 		return ERROR_OUTOFMEMORY;
 	

@@ -132,6 +132,8 @@ int OOBase::Environment::get_user(HANDLE hToken, OOBase::Table<OOBase::String,OO
 
 OOBase::SmartPtr<void,OOBase::LocalAllocator> OOBase::Environment::get_block(const Table<String,String,LocalAllocator>& tabEnv)
 {
+	SmartPtr<void,OOBase::LocalAllocator> ptr;
+
 	// Copy and widen to UNICODE
 	size_t total_size = 0;
 	Table<SmartPtr<wchar_t,LocalAllocator>,SmartPtr<wchar_t,LocalAllocator>,LocalAllocator> wenv;
@@ -139,17 +141,17 @@ OOBase::SmartPtr<void,OOBase::LocalAllocator> OOBase::Environment::get_block(con
 	{
 		SmartPtr<wchar_t,LocalAllocator> key = to_wchar_t(*tabEnv.key_at(i));
 		if (!key)
-			return NULL;
+			return ptr;
 
 		SmartPtr<wchar_t,LocalAllocator> val = to_wchar_t(*tabEnv.at(i));
 		if (!val)
-			return NULL;
+			return ptr;
 
 		int err = wenv.insert(key,val);
 		if (err)
 		{
 			SetLastError(err);
-			return NULL;
+			return ptr;
 		}
 
 		// Include \0 and optionally '=' length
@@ -164,7 +166,7 @@ OOBase::SmartPtr<void,OOBase::LocalAllocator> OOBase::Environment::get_block(con
 	wenv.sort(&env_sort);
 
 	// And now copy into one giant block
-	SmartPtr<void,LocalAllocator> ptr((total_size + 2) * sizeof(wchar_t));
+	ptr = OOBase::LocalAllocator::allocate((total_size + 2) * sizeof(wchar_t));
 	if (ptr)
 	{
 		wchar_t* pout = static_cast<wchar_t*>(static_cast<void*>(ptr));

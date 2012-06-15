@@ -49,6 +49,9 @@ namespace
 		
 		size_t send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout);
 		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
+
+		int recv_socket(OOBase::socket_t& sock, const OOBase::Timeout& timeout);
+		int send_socket(OOBase::socket_t sock, pid_t pid, const OOBase::Timeout& timeout);
 		
 		void close();
 					
@@ -186,6 +189,17 @@ size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::Timeout
 	return (len - to_write);
 }
 
+int Pipe::send_socket(OOBase::socket_t sock, pid_t pid, const OOBase::Timeout& timeout)
+{
+	WSAPROTOCOL_INFOW pi = {0};
+	if (WSADuplicateSocketW(sock,pid,&pi) != 0)
+		return WSAGetLastError();
+
+	int err = 0;
+	send(&pi,sizeof(pi),err,timeout);
+	return err;
+}
+
 size_t Pipe::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout)
 {
 	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,false);
@@ -303,6 +317,21 @@ size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::Ti
 	}
 
 	return (len - to_read);
+}
+
+int Pipe::recv_socket(OOBase::socket_t& sock, const OOBase::Timeout& timeout)
+{
+	int err = 0;
+	WSAPROTOCOL_INFOW pi = {0};
+	recv(&pi,sizeof(pi),true,err,timeout);
+	if (err)
+		return err;
+
+	sock = WSASocketW(pi.iAddressFamily,pi.iSocketType,pi.iProtocol,&pi,0,WSA_FLAG_OVERLAPPED);
+	if (sock == INVALID_SOCKET)
+		return WSAGetLastError();
+
+	return 0;
 }
 
 void Pipe::close()

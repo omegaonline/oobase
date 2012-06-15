@@ -175,7 +175,7 @@ void OOBase::Win32::WSAGetAcceptExSockAddrs(SOCKET sListenSocket, void* lpOutput
 	return (*lpfnGetAcceptExSockAddrs)(lpOutputBuffer,dwReceiveDataLength,dwLocalAddressLength,dwRemoteAddressLength,LocalSockaddr,LocalSockaddrLength,RemoteSockaddr,RemoteSockaddrLength);
 }
 
-OOBase::socket_t OOBase::Net::create_socket(int family, int socktype, int protocol, int& err)
+OOBase::socket_t OOBase::Net::open_socket(int family, int socktype, int protocol, int& err)
 {
 	Win32::WSAStartup();
 
@@ -186,6 +186,11 @@ OOBase::socket_t OOBase::Net::create_socket(int family, int socktype, int protoc
 		err = WSAGetLastError();
 
 	return sock;
+}
+
+int OOBase::Net::close_socket(socket_t sock)
+{
+	return (::closesocket(sock) == 0 ? 0 : WSAGetLastError());
 }
 
 int OOBase::Net::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen, const Timeout& timeout)
@@ -256,6 +261,11 @@ int OOBase::Net::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen,
 	return ERROR_NOT_FOUND;
 }*/
 
+int OOBase::Net::bind(socket_t sock, const sockaddr* addr, socklen_t addr_len)
+{
+	return (::bind(sock,addr,addr_len) != 0 ? WSAGetLastError() : 0);
+}
+
 namespace
 {
 	class WinSocket : public OOBase::Socket
@@ -269,6 +279,16 @@ namespace
 		
 		size_t send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout);
 		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
+
+		int recv_socket(OOBase::socket_t& /*sock*/, const OOBase::Timeout& /*timeout*/)
+		{
+			return ERROR_NOT_SUPPORTED;
+		}
+
+		int send_socket(OOBase::socket_t /*sock*/, pid_t /*pid*/, const OOBase::Timeout& /*timeout*/)
+		{
+			return ERROR_NOT_SUPPORTED;
+		}
 
 		void close();
 					
@@ -694,7 +714,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, i
 	if (!pSocket)
 	{
 		err = ERROR_OUTOFMEMORY;
-		OOBase::Net::close_socketsock);
+		OOBase::Net::close_socket(sock);
 	}
 
 	return pSocket;

@@ -39,6 +39,7 @@
 #pragma warning(pop)
 #endif
 
+typedef DWORD pid_t;
 #endif
 
 #if defined(HAVE_UNISTD_H)
@@ -52,7 +53,6 @@ namespace OOBase
 	 */
 #if defined(_WIN32)
 	typedef SOCKET socket_t;
-	typedef DWORD pid_t;
 #else
 	typedef int socket_t;
 #endif
