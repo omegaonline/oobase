@@ -528,14 +528,14 @@ int Socket::send_socket(OOBase::socket_t sock, pid_t /*pid*/, const OOBase::Time
 		}
 		while (sent == -1 && errno == EINTR);
 
-		if (sent != 1)
+		if (sent == 1)
+			break;
+
+		err = errno;
+		if (err == EAGAIN || err == EWOULDBLOCK)
 		{
-			err = errno;
-			if (err == EAGAIN || err == EWOULDBLOCK)
-			{
-				// Do the select...
-				err = do_select(true,timeout);
-			}
+			// Do the select...
+			err = do_select(true,timeout);
 		}
 	}
 	while (err == 0);
