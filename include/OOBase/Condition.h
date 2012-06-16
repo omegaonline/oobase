@@ -124,7 +124,7 @@ namespace OOBase
 			m_condition.broadcast();
 		}
 
-		bool wait(T& v, const Timeout& timeout)
+		bool wait(T& v, bool bReset, const Timeout& timeout)
 		{
 			OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 			while (!m_complete)
@@ -136,11 +136,14 @@ namespace OOBase
 			return true;
 		}
 
-		const T& wait()
+		const T& wait(bool bReset)
 		{
 			OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 			while (!m_complete)
 				m_condition.wait(m_lock);
+
+			if (bReset)
+				m_complete = false;
 
 			return m_value;
 		}

@@ -48,7 +48,7 @@ int OOSvrBase::AsyncSocket::recv(OOBase::Buffer* buffer, size_t bytes)
 	WaitCallback wait;
 	int err = recv(&wait,&WaitCallback::callback_recv,buffer,bytes);
 	if (err == 0)
-		err = wait.wait();
+		err = wait.wait(false);
 
 	return err;
 }
@@ -58,7 +58,7 @@ int OOSvrBase::AsyncSocket::send(OOBase::Buffer* buffer)
 	WaitCallback wait;
 	int err = send(&wait,&WaitCallback::callback,buffer);
 	if (err == 0)
-		err = wait.wait();
+		err = wait.wait(false);
 
 	return err;
 }

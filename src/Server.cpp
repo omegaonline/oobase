@@ -135,7 +135,7 @@ namespace
 		}
 
 		// Wait for the event to be signalled
-		QUIT::instance().wait();
+		QUIT::instance().wait(true);
 
 		if (s_ssh)
 		{
@@ -185,7 +185,7 @@ int OOBase::Server::wait_for_quit()
 	}
 
 	// By the time we get here, it's all over
-	return QUIT::instance().wait();
+	return QUIT::instance().wait(true);
 }
 
 int OOBase::Server::create_pid_file(const char* pszPidFile, bool& already)
