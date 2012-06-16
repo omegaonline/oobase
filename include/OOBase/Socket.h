@@ -53,11 +53,6 @@ namespace OOBase
 	 */
 #if defined(_WIN32)
 	typedef SOCKET socket_t;
-
-	namespace Win32
-	{
-		void WSAStartup();
-	}
 #else
 	typedef int socket_t;
 #endif

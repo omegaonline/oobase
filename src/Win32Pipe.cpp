@@ -26,6 +26,7 @@
 #include "../include/OOBase/String.h"
 #include "../include/OOBase/Socket.h"
 #include "../include/OOBase/Win32.h"
+#include "Win32Socket.h"
 
 namespace
 {
@@ -191,6 +192,8 @@ size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::Timeout
 
 int Pipe::send_socket(OOBase::socket_t sock, pid_t pid, const OOBase::Timeout& timeout)
 {
+	OOBase::Win32::WSAStartup();
+
 	WSAPROTOCOL_INFOW pi = {0};
 	if (WSADuplicateSocketW(sock,pid,&pi) != 0)
 		return WSAGetLastError();
@@ -321,6 +324,8 @@ size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::Ti
 
 int Pipe::recv_socket(OOBase::socket_t& sock, const OOBase::Timeout& timeout)
 {
+	OOBase::Win32::WSAStartup();
+
 	int err = 0;
 	WSAPROTOCOL_INFOW pi = {0};
 	recv(&pi,sizeof(pi),true,err,timeout);

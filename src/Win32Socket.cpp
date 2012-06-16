@@ -87,10 +87,29 @@ typedef BOOL (PASCAL * LPFN_CONNECTEX)(
 
 namespace
 {
-	void DoWSACleanup(void*)
+	class WSAStarter
 	{
-		WSACleanup();
-	}
+	public:
+		WSAStarter()
+		{
+			// Start Winsock
+			WSADATA wsa;
+			int err = WSAStartup(MAKEWORD(2,2),&wsa);
+			if (err != 0)
+				OOBase_CallCriticalFailure(WSAGetLastError());
+	
+			if (LOBYTE(wsa.wVersion) != 2 || HIBYTE(wsa.wVersion) != 2)
+			{
+				WSACleanup();
+				OOBase_CallCriticalFailure("Very old Winsock dll");
+			}
+		}	
+		
+		~WSAStarter()
+		{
+			WSACleanup();
+		}
+	};
 }
 
 namespace OOBase
@@ -104,23 +123,8 @@ namespace OOBase
 
 void OOBase::Win32::WSAStartup()
 {
-	// Start Winsock
-	WSADATA wsa;
-	int err = WSAStartup(MAKEWORD(2,2),&wsa);
-	if (err != 0)
-		OOBase_CallCriticalFailure(WSAGetLastError());
-	
-	if (LOBYTE(wsa.wVersion) != 2 || HIBYTE(wsa.wVersion) != 2)
-	{
-		WSACleanup();
-		OOBase_CallCriticalFailure("Very old Winsock dll");
-	}
-
-	if ((err = OOBase::DLLDestructor<OOBase::Module>::add_destructor(&DoWSACleanup,NULL)) != 0)
-	{
-		WSACleanup();
-		OOBase_CallCriticalFailure(err);
-	}
+	// Use a singleton to ensure WSAStartup() and WSACleanup() are called as a pair, once
+	Singleton<WSAStarter,Module>::instance();
 }
 
 BOOL OOBase::Win32::WSAAcceptEx(SOCKET sListenSocket, SOCKET sAcceptSocket, void* lpOutputBuffer, DWORD dwReceiveDataLength, DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped)
