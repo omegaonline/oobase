@@ -189,7 +189,7 @@ int OOSvrBase::detail::ProactorPosix::start_timer(void* param, timer_callback_t 
 	else if (sent != sizeof(msg))
 		return EIO;
 
-    return future.wait();
+    return future.wait(false);
 }
 
 int OOSvrBase::detail::ProactorPosix::stop_timer(void* param)
@@ -212,7 +212,7 @@ int OOSvrBase::detail::ProactorPosix::stop_timer(void* param)
 	else if (sent != sizeof(msg))
 		return EIO;
 
-	return future.wait();
+	return future.wait(false);
 }
 
 void OOSvrBase::detail::ProactorPosix::stop()
@@ -253,7 +253,7 @@ int OOSvrBase::detail::ProactorPosix::bind_fd(int fd, void* param, fd_callback_t
 	else if (sent != sizeof(msg))
 		return EIO;
 
-	return future.wait();
+	return future.wait(false);
 }
 
 int OOSvrBase::detail::ProactorPosix::watch_fd(int fd, unsigned int events)
@@ -298,7 +298,7 @@ int OOSvrBase::detail::ProactorPosix::unbind_fd(int fd)
 	else if (sent != sizeof(msg))
 		return EIO;
 
-	return future.wait();
+	return future.wait(false);
 }
 
 int OOSvrBase::detail::ProactorPosix::add_timer(void* param, timer_callback_t callback, const OOBase::Timeout& timeout)
