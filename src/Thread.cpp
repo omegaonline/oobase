@@ -432,9 +432,7 @@ bool OOBase::Thread::is_running()
 
 void OOBase::Thread::yield()
 {
-#if defined(_WIN32)
-	::Sleep(0);
-#elif defined(HAVE_PTHREAD)
+#if defined(HAVE_PTHREAD)
 	pthread_yield();
 #else
 	// Just perform a tiny sleep
@@ -452,7 +450,7 @@ void OOBase::Thread::sleep(unsigned int millisecs)
 #else
 
 	::timespec wt = {0};
-	Timeout(millisecs / 1000,(millisecs % 1000) * 1000).get_abs_timespec(wt);
+	Timeout(millisecs / 1000,(millisecs % 1000) * 1000).get_timespec(wt);
 
 	for (;;)
 	{

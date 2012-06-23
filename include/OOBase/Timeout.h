@@ -60,7 +60,7 @@ namespace OOBase
 
 #if defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
 		bool get_abs_timespec(::timespec& timeout) const;
-		bool get_end_timespec(::timespec& timeout) const;
+		bool get_timespec(::timespec& timeout) const;
 #endif
 
 	private:

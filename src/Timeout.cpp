@@ -267,12 +267,16 @@ bool OOBase::Timeout::get_abs_timespec(::timespec& timeout) const
 	return true;
 }
 
-bool OOBase::Timeout::get_end_timespec(::timespec& timeout) const
+bool OOBase::Timeout::get_timespec(::timespec& timeout) const
 {
 	if (m_null)
 		return false;
 
-	timeout = m_end;
+	::timespec now = {0};
+	if (clock_gettime(CLOCK_MONOTONIC,&now) != 0)
+		OOBase_CallCriticalFailure(errno);
+
+	timespec_subtract(timeout,m_end,now);
 	return true;
 }
 
