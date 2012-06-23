@@ -111,10 +111,6 @@ namespace
 			QUIT::instance().signal(CTRL_SHUTDOWN_EVENT);
 			break;
 
-		case SERVICE_CONTROL_PARAMCHANGE:
-			QUIT::instance().signal(CTRL_BREAK_EVENT);
-			break;
-
 		default:
 			break;
 		}
@@ -135,7 +131,7 @@ namespace
 		}
 
 		// Wait for the event to be signalled
-		QUIT::instance().wait(true);
+		QUIT::instance().wait(false);
 
 		if (s_ssh)
 		{
@@ -185,7 +181,7 @@ int OOBase::Server::wait_for_quit()
 	}
 
 	// By the time we get here, it's all over
-	return QUIT::instance().wait(true);
+	return QUIT::instance().wait(false);
 }
 
 int OOBase::Server::create_pid_file(const char* pszPidFile, bool& already)
@@ -336,8 +332,7 @@ OOBase::Server::Server() :
 	sigemptyset(&m_set);
 	sigaddset(&m_set, SIGQUIT);
 	sigaddset(&m_set, SIGTERM);
-	sigaddset(&m_set, SIGHUP);
-
+	
 	int err = pthread_sigmask(SIG_BLOCK, &m_set, NULL);
 	if (err != 0)
 		LOG_ERROR(("pthread_sigmask failed: %s",system_error_text(err)));
