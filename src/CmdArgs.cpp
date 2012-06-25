@@ -241,7 +241,7 @@ int OOBase::CmdArgs::parse_arg(results_t& results, const char* arg, size_t posit
 		return err;
 
 	String strResult;
-	if ((err = strResult.printf("@%u",position)) != 0)
+	if ((err = strResult.printf("@%lu",position)) != 0)
 		return err;
 
 	return results.insert(strResult,strArg);
