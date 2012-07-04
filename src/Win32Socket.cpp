@@ -289,7 +289,7 @@ namespace
 			return ERROR_NOT_SUPPORTED;
 		}
 
-		int send_socket(OOBase::socket_t /*sock*/, pid_t /*pid*/, const OOBase::Timeout& /*timeout*/)
+		int send_socket(OOBase::socket_t /*sock*/, DWORD /*pid*/, const OOBase::Timeout& /*timeout*/)
 		{
 			return ERROR_NOT_SUPPORTED;
 		}

@@ -52,7 +52,7 @@ namespace
 		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
 
 		int recv_socket(OOBase::socket_t& sock, const OOBase::Timeout& timeout);
-		int send_socket(OOBase::socket_t sock, pid_t pid, const OOBase::Timeout& timeout);
+		int send_socket(OOBase::socket_t sock, DWORD pid, const OOBase::Timeout& timeout);
 		
 		void close();
 					
@@ -190,7 +190,7 @@ size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::Timeout
 	return (len - to_write);
 }
 
-int Pipe::send_socket(OOBase::socket_t sock, pid_t pid, const OOBase::Timeout& timeout)
+int Pipe::send_socket(OOBase::socket_t sock, DWORD pid, const OOBase::Timeout& timeout)
 {
 	OOBase::Win32::WSAStartup();
 

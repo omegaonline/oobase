@@ -249,7 +249,7 @@ namespace
 		void close();
 
 		int get_peer_uid(uid_t& uid) const;
-		int send_socket(OOBase::socket_t sock, pid_t pid, const OOBase::Timeout& timeout);
+		int send_socket(OOBase::socket_t sock, DWORD pid, const OOBase::Timeout& timeout);
 		int recv_socket(OOBase::socket_t& sock, const OOBase::Timeout& timeout);
 
 	private:
@@ -490,7 +490,7 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 	return err;
 }
 
-int Socket::send_socket(OOBase::socket_t sock, pid_t /*pid*/, const OOBase::Timeout& timeout)
+int Socket::send_socket(OOBase::socket_t sock, DWORD /*pid*/, const OOBase::Timeout& timeout)
 {
 	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,false);
 	if (!guard.acquire(timeout))
