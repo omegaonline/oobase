@@ -38,8 +38,6 @@
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
-#else
-typedef unsigned int DWORD;
 #endif
 
 #if defined(HAVE_UNISTD_H)
@@ -101,7 +99,11 @@ namespace OOBase
 			return err;
 		}
 
+#if defined(_WIN32)
 		virtual int send_socket(socket_t sock, DWORD pid, const Timeout& timeout = Timeout()) = 0;
+#else
+		virtual int send_socket(socket_t sock, const Timeout& timeout = Timeout()) = 0;
+#endif
 
 		virtual size_t recv(void* buf, size_t len, bool bAll, int& err, const Timeout& timeout = Timeout()) = 0;
 		virtual int recv_v(Buffer* buffers[], size_t count, const Timeout& timeout = Timeout()) = 0;
