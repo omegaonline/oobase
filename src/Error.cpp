@@ -103,6 +103,23 @@ namespace
 		OOBase::CallCriticalFailure(NULL,0,"Unhandled exception");
 	}
 
+	#if defined(_MSC_VER)
+	void purecall_handler()
+	{
+		OOBase::CallCriticalFailure(NULL,0,"Pure call");
+	}
+
+	void invalid_parameter_handler(const wchar_t * expression, const wchar_t * function, const wchar_t * file, unsigned int line, uintptr_t pReserved)
+	{
+		OOBase::CallCriticalFailure(NULL,0,"CRT Invalid parameter");
+	}
+
+	void __cdecl abort_handler(int)
+	{
+		OOBase::CallCriticalFailure(NULL,0,"CRT aborted");
+	}
+	#endif
+
 	int install_handlers()
 	{
 		std::set_unexpected(&unexpected);
@@ -113,6 +130,15 @@ namespace
 			DWORD mask = SetErrorMode(new_mask);
 			SetErrorMode(mask | new_mask);
 		#endif
+
+		#if defined(_MSC_VER)
+			_set_abort_behavior(_CALL_REPORTFAULT, _CALL_REPORTFAULT);
+			signal(SIGABRT,&abort_handler);
+
+			_set_purecall_handler(&purecall_handler);
+			_set_invalid_parameter_handler(&invalid_parameter_handler);
+		#endif
+
 		return 0;
 	}
 	const int s_err_handler = install_handlers();
