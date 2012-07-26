@@ -150,16 +150,7 @@ namespace OOBase
 
 			m_buffer->align_rd_ptr(2);
 			if (m_buffer->length() < 2)
-			{
-#if defined(_WIN32)
-				m_last_error = ERROR_HANDLE_EOF;
-#elif defined(HAVE_UNISTD_H)
-				m_last_error = ENOSPC;
-#else
-#error Fix me!
-#endif
-				return false;
-			}
+				return error_eof();
 
 			const char* rd_ptr = m_buffer->rd_ptr();
 			m_endianess = (rd_ptr[0] << 8) | rd_ptr[1];
@@ -179,16 +170,7 @@ namespace OOBase
 
 			m_buffer->align_rd_ptr(sizeof(T));
 			if (m_buffer->length() < sizeof(T))
-			{
-#if defined(_WIN32)
-				m_last_error = ERROR_HANDLE_EOF;
-#elif defined(HAVE_UNISTD_H)
-				m_last_error = ENOSPC;
-#else
-#error Fix me!
-#endif
-				return false;
-			}
+				return error_eof();
 
 			val = byte_swap(*reinterpret_cast<const T*>(m_buffer->rd_ptr()));
 			m_buffer->rd_ptr(sizeof(T));
@@ -214,15 +196,18 @@ namespace OOBase
 				return false;
 
 			if (len == 0)
-				val.clear();
-			else if (len > m_buffer->length())
-				m_last_error = E2BIG;
-			else
 			{
-				m_last_error = val.assign(m_buffer->rd_ptr(),len);
-				if (m_last_error == 0)
-					m_buffer->rd_ptr(len);				
+				val.clear();
+				return true;
 			}
+
+			if (len > m_buffer->length())
+				return error_too_big();
+
+			m_last_error = val.assign(m_buffer->rd_ptr(),len);
+			if (m_last_error == 0)
+				m_buffer->rd_ptr(len);
+
 			return (m_last_error == 0);
 		}
 
@@ -234,16 +219,7 @@ namespace OOBase
 				return false;
 
 			if (m_buffer->length() < 1)
-			{
-#if defined(_WIN32)
-				m_last_error = ERROR_HANDLE_EOF;
-#elif defined(HAVE_UNISTD_H)
-				m_last_error = ENOSPC;
-#else
-#error Fix me!
-#endif
-				return false;
-			}
+				return error_eof();
 
 			val = (*m_buffer->rd_ptr() == 0 ? false : true);
 			m_buffer->rd_ptr(1);
@@ -417,6 +393,26 @@ namespace OOBase
 		unsigned short m_endianess;
 		int            m_last_error;
 
+		bool error_eof()
+		{
+#if defined(_WIN32)
+			m_last_error = ERROR_HANDLE_EOF;
+#else
+			m_last_error = ENOSPC;
+#endif
+			return false;
+		}
+
+		bool error_too_big()
+		{
+#if defined(_WIN32)
+			m_last_error = ERROR_BUFFER_OVERFLOW;
+#else
+			m_last_error = E2BIG;
+#endif
+			return false;
+		}
+
 		bool read4(size_t& len)
 		{
 			// We do this because we haven't got a safe uint32_t type
@@ -449,16 +445,7 @@ namespace OOBase
 		bool write4(size_t len)
 		{
 			if (len > 0xFFFFFFFF)
-			{
-#if defined(_WIN32)
-				m_last_error = ERROR_BUFFER_OVERFLOW;
-#elif defined(HAVE_UNISTD_H)
-				m_last_error = E2BIG;
-#else
-				#error Fix me!
-#endif
-				return false;
-			}
+				return error_too_big();
 
 			// We do this because we haven't got a safe uint32_t type
 			unsigned char len_buf[4] = {0};
