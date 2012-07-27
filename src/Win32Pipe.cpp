@@ -100,7 +100,12 @@ int Pipe::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout&
 
 	int err = 0;
 
-	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,true);
+	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,false);
+	if (!guard.acquire(timeout))
+	{
+		err = WSAETIMEDOUT;
+		return 0;
+	}
 	
 	for (size_t i=0;i<count && err == 0 ;++i)
 	{
@@ -156,7 +161,7 @@ size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::Timeout
 					if (dwWait == WAIT_TIMEOUT)
 					{
 						CancelIo(m_handle);
-						err = WAIT_TIMEOUT;
+						err = WSAETIMEDOUT;
 					}
 					else if (dwWait != WAIT_OBJECT_0)
 					{
