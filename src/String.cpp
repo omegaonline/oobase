@@ -110,7 +110,10 @@ int OOBase::LocalString::vprintf(const char* format, va_list args)
 	char szBuf[256];
 	char* new_buf = szBuf;
 
-	int r = vsnprintf_s(new_buf,sizeof(szBuf),format,args);
+	va_list args_copy;
+	va_copy(args_copy,args);
+
+	int r = vsnprintf_s(new_buf,sizeof(szBuf),format,args_copy);
 	if (r == -1)
 		return errno;
 
@@ -122,7 +125,8 @@ int OOBase::LocalString::vprintf(const char* format, va_list args)
 			if (!new_buf)
 				return ERROR_OUTOFMEMORY;
 
-			int r1 = vsnprintf_s(new_buf,r+1,format,args);
+			va_copy(args_copy,args);
+			int r1 = vsnprintf_s(new_buf,r+1,format,args_copy);
 			if (r1 == -1)
 				return errno;
 
@@ -343,6 +347,9 @@ int OOBase::String::printf(const char* format, ...)
 	char* new_buf = NULL;
 	char szBuf[256];
 	int r = vsnprintf_s(szBuf,sizeof(szBuf),format,args);
+
+	va_end(args);
+
 	if (r == -1)
 		return errno;
 
@@ -356,7 +363,12 @@ int OOBase::String::printf(const char* format, ...)
 			if (!new_buf)
 				return ERROR_OUTOFMEMORY;
 
+			va_start(args,format);
+
 			int r1 = vsnprintf_s(new_buf,r+1,format,args);
+
+			va_end(args);
+
 			if (r1 == -1)
 				return errno;
 
@@ -371,8 +383,6 @@ int OOBase::String::printf(const char* format, ...)
 
 	if (new_buf != szBuf)
 		OOBase::LocalAllocator::free(new_buf);
-
-	va_end(args);
 
 	return err;
 }
