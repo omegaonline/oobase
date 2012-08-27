@@ -131,7 +131,7 @@ namespace
 		if (!instance->m_InitOnceExecuteOnce)
 			instance->m_InitOnceExecuteOnce = impl_InitOnceExecuteOnce;
 
-		if (!instance->m_InitializeSRWLock)
+		if (!instance->m_TryAcquireSRWLockExclusive)
 		{
 			instance->m_InitializeSRWLock = impl_InitializeSRWLock;
 			instance->m_AcquireSRWLockShared = impl_AcquireSRWLockShared;
