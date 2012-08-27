@@ -114,8 +114,10 @@ namespace OOBase
 			~rwmutex_t();
 
 			void acquire();
+			BOOL try_acquire();
 			void release();
 			void acquire_read();
+			BOOL try_acquire_read();
 			void release_read();
 
 		private:

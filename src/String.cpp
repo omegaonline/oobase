@@ -25,6 +25,10 @@
 
 #include <stdlib.h>
 
+#if !defined(va_copy)
+#define va_copy(a,b) ((a) = (b))
+#endif
+
 OOBase::LocalString::~LocalString()
 {
 	OOBase::LocalAllocator::free(m_data);

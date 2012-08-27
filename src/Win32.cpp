@@ -58,13 +58,13 @@ namespace
 		pfn_AcquireSRWLockExclusive m_AcquireSRWLockExclusive;
 		static void __stdcall impl_AcquireSRWLockExclusive(SRWLOCK* SRWLock);
 
-		typedef BOOLEAN (__stdcall *pfn_TryAcquireSRWLockShared)(SRWLOCK* SRWLock);
+		typedef BOOL (__stdcall *pfn_TryAcquireSRWLockShared)(SRWLOCK* SRWLock);
 		pfn_TryAcquireSRWLockShared m_TryAcquireSRWLockShared;
-		static BOOLEAN __stdcall impl_TryAcquireSRWLockShared(SRWLOCK* SRWLock);
+		static BOOL __stdcall impl_TryAcquireSRWLockShared(SRWLOCK* SRWLock);
 
-		typedef BOOLEAN (__stdcall *pfn_TryAcquireSRWLockExclusive)(SRWLOCK* SRWLock);
+		typedef BOOL (__stdcall *pfn_TryAcquireSRWLockExclusive)(SRWLOCK* SRWLock);
 		pfn_TryAcquireSRWLockExclusive m_TryAcquireSRWLockExclusive;
-		static BOOLEAN __stdcall impl_TryAcquireSRWLockExclusive(SRWLOCK* SRWLock);
+		static BOOL __stdcall impl_TryAcquireSRWLockExclusive(SRWLOCK* SRWLock);
 
 		typedef void (__stdcall *pfn_ReleaseSRWLockShared)(SRWLOCK* SRWLock);
 		pfn_ReleaseSRWLockShared m_ReleaseSRWLockShared;
@@ -269,12 +269,12 @@ namespace
 		(*reinterpret_cast<OOBase::Win32::rwmutex_t**>(SRWLock))->acquire();
 	}
 
-	BOOLEAN Win32Thunk::impl_TryAcquireSRWLockShared(SRWLOCK* SRWLock)
+	BOOL Win32Thunk::impl_TryAcquireSRWLockShared(SRWLOCK* SRWLock)
 	{
 		return (*reinterpret_cast<OOBase::Win32::rwmutex_t**>(SRWLock))->try_acquire_read();
 	}
 
-	BOOLEAN Win32Thunk::impl_TryAcquireSRWLockExclusive(SRWLOCK* SRWLock)
+	BOOL Win32Thunk::impl_TryAcquireSRWLockExclusive(SRWLOCK* SRWLock)
 	{
 		return (*reinterpret_cast<OOBase::Win32::rwmutex_t**>(SRWLock))->try_acquire();
 	}
@@ -331,14 +331,14 @@ void OOBase::Win32::AcquireSRWLockExclusive(SRWLOCK* SRWLock)
 	(*Win32Thunk::instance().m_AcquireSRWLockExclusive)(SRWLock);
 }
 
-BOOLEAN OOBase::Win32::TryAcquireSRWLockShared(SRWLOCK* SRWLock)
+BOOL OOBase::Win32::TryAcquireSRWLockShared(SRWLOCK* SRWLock)
 {
-	(*Win32Thunk::instance().m_TryAcquireSRWLockShared)(SRWLock);
+	return (*Win32Thunk::instance().m_TryAcquireSRWLockShared)(SRWLock);
 }
 
-BOOLEAN OOBase::Win32::TryAcquireSRWLockExclusive(SRWLOCK* SRWLock)
+BOOL OOBase::Win32::TryAcquireSRWLockExclusive(SRWLOCK* SRWLock)
 {
-	(*Win32Thunk::instance().m_TryAcquireSRWLockExclusive)(SRWLock);
+	return (*Win32Thunk::instance().m_TryAcquireSRWLockExclusive)(SRWLock);
 }
 
 void OOBase::Win32::ReleaseSRWLockShared(SRWLOCK* SRWLock)
@@ -380,7 +380,7 @@ OOBase::Win32::rwmutex_t::~rwmutex_t()
 {
 }
 
-BOOLEAN OOBase::Win32::rwmutex_t::try_acquire()
+BOOL OOBase::Win32::rwmutex_t::try_acquire()
 {
 	HANDLE handles[2];
 	handles[0] = m_hWriterMutex;
@@ -431,7 +431,7 @@ void OOBase::Win32::rwmutex_t::release()
 		OOBase_CallCriticalFailure(GetLastError());
 }
 
-BOOLEAN OOBase::Win32::rwmutex_t::try_acquire_read()
+BOOL OOBase::Win32::rwmutex_t::try_acquire_read()
 {
 	if (InterlockedIncrement(&m_nReaders) == 0)
 	{
