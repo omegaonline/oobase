@@ -58,6 +58,14 @@ namespace
 		pfn_AcquireSRWLockExclusive m_AcquireSRWLockExclusive;
 		static void __stdcall impl_AcquireSRWLockExclusive(SRWLOCK* SRWLock);
 
+		typedef BOOLEAN (__stdcall *pfn_TryAcquireSRWLockShared)(SRWLOCK* SRWLock);
+		pfn_TryAcquireSRWLockShared m_TryAcquireSRWLockShared;
+		static BOOLEAN __stdcall impl_TryAcquireSRWLockShared(SRWLOCK* SRWLock);
+
+		typedef BOOLEAN (__stdcall *pfn_TryAcquireSRWLockExclusive)(SRWLOCK* SRWLock);
+		pfn_TryAcquireSRWLockExclusive m_TryAcquireSRWLockExclusive;
+		static BOOLEAN __stdcall impl_TryAcquireSRWLockExclusive(SRWLOCK* SRWLock);
+
 		typedef void (__stdcall *pfn_ReleaseSRWLockShared)(SRWLOCK* SRWLock);
 		pfn_ReleaseSRWLockShared m_ReleaseSRWLockShared;
 		static void __stdcall impl_ReleaseSRWLockShared(SRWLOCK* SRWLock);
@@ -107,6 +115,8 @@ namespace
 			instance->m_InitializeSRWLock = (pfn_InitializeSRWLock)(GetProcAddress(instance->m_hKernel32,"InitializeSRWLock"));
 			instance->m_AcquireSRWLockShared = (pfn_AcquireSRWLockShared)(GetProcAddress(instance->m_hKernel32,"AcquireSRWLockShared"));
 			instance->m_AcquireSRWLockExclusive = (pfn_AcquireSRWLockExclusive)(GetProcAddress(instance->m_hKernel32,"AcquireSRWLockExclusive"));
+			instance->m_TryAcquireSRWLockShared = (pfn_TryAcquireSRWLockShared)(GetProcAddress(instance->m_hKernel32,"TryAcquireSRWLockShared"));
+			instance->m_TryAcquireSRWLockExclusive = (pfn_TryAcquireSRWLockExclusive)(GetProcAddress(instance->m_hKernel32,"TryAcquireSRWLockExclusive"));
 			instance->m_ReleaseSRWLockShared = (pfn_ReleaseSRWLockShared)(GetProcAddress(instance->m_hKernel32,"ReleaseSRWLockShared"));
 			instance->m_ReleaseSRWLockExclusive = (pfn_ReleaseSRWLockExclusive)(GetProcAddress(instance->m_hKernel32,"ReleaseSRWLockExclusive"));
 
@@ -121,15 +131,13 @@ namespace
 		if (!instance->m_InitOnceExecuteOnce)
 			instance->m_InitOnceExecuteOnce = impl_InitOnceExecuteOnce;
 
-		if (!instance->m_InitializeSRWLock ||
-				!instance->m_AcquireSRWLockShared ||
-				!instance->m_AcquireSRWLockExclusive ||
-				!instance->m_ReleaseSRWLockShared ||
-				!instance->m_ReleaseSRWLockExclusive)
+		if (!instance->m_InitializeSRWLock)
 		{
 			instance->m_InitializeSRWLock = impl_InitializeSRWLock;
 			instance->m_AcquireSRWLockShared = impl_AcquireSRWLockShared;
 			instance->m_AcquireSRWLockExclusive = impl_AcquireSRWLockExclusive;
+			instance->m_TryAcquireSRWLockShared = impl_TryAcquireSRWLockShared;
+			instance->m_TryAcquireSRWLockExclusive = impl_TryAcquireSRWLockExclusive;
 			instance->m_ReleaseSRWLockShared = impl_ReleaseSRWLockShared;
 			instance->m_ReleaseSRWLockExclusive = impl_ReleaseSRWLockExclusive;
 		}		
@@ -261,9 +269,19 @@ namespace
 		(*reinterpret_cast<OOBase::Win32::rwmutex_t**>(SRWLock))->acquire();
 	}
 
+	BOOLEAN Win32Thunk::impl_TryAcquireSRWLockShared(SRWLOCK* SRWLock)
+	{
+		return (*reinterpret_cast<OOBase::Win32::rwmutex_t**>(SRWLock))->try_acquire_read();
+	}
+
+	BOOLEAN Win32Thunk::impl_TryAcquireSRWLockExclusive(SRWLOCK* SRWLock)
+	{
+		return (*reinterpret_cast<OOBase::Win32::rwmutex_t**>(SRWLock))->try_acquire();
+	}
+
 	void Win32Thunk::impl_ReleaseSRWLockShared(SRWLOCK* SRWLock)
 	{
-		(*reinterpret_cast<OOBase::Win32::rwmutex_t**>(SRWLock))->release_read();
+		return (*reinterpret_cast<OOBase::Win32::rwmutex_t**>(SRWLock))->release_read();
 	}
 
 	void Win32Thunk::impl_ReleaseSRWLockExclusive(SRWLOCK* SRWLock)
@@ -313,6 +331,16 @@ void OOBase::Win32::AcquireSRWLockExclusive(SRWLOCK* SRWLock)
 	(*Win32Thunk::instance().m_AcquireSRWLockExclusive)(SRWLock);
 }
 
+BOOLEAN OOBase::Win32::TryAcquireSRWLockShared(SRWLOCK* SRWLock)
+{
+	(*Win32Thunk::instance().m_TryAcquireSRWLockShared)(SRWLock);
+}
+
+BOOLEAN OOBase::Win32::TryAcquireSRWLockExclusive(SRWLOCK* SRWLock)
+{
+	(*Win32Thunk::instance().m_TryAcquireSRWLockExclusive)(SRWLock);
+}
+
 void OOBase::Win32::ReleaseSRWLockShared(SRWLOCK* SRWLock)
 {
 	(*Win32Thunk::instance().m_ReleaseSRWLockShared)(SRWLock);
@@ -352,13 +380,46 @@ OOBase::Win32::rwmutex_t::~rwmutex_t()
 {
 }
 
-void OOBase::Win32::rwmutex_t::acquire()
+BOOLEAN OOBase::Win32::rwmutex_t::try_acquire()
 {
-	if (WaitForSingleObject(m_hWriterMutex, INFINITE) != WAIT_OBJECT_0)
+	HANDLE handles[2];
+	handles[0] = m_hWriterMutex;
+	handles[1] = m_hEvent;
+
+	DWORD dwWait = WaitForMultipleObjects(2,handles,TRUE,0);
+	if (dwWait == WAIT_TIMEOUT)
+		return false;
+
+	if (dwWait != WAIT_OBJECT_0)
+		OOBase_CallCriticalFailure(GetLastError());
+
+	/*DWORD dwWait = WaitForSingleObject(m_hWriterMutex, 0);
+	if (dwWait == WAIT_TIMEOUT)
+		return false;
+
+	if (dwWait != WAIT_OBJECT_0)
 		OOBase_CallCriticalFailure(GetLastError());
 
 	if (WaitForSingleObject(m_hEvent, INFINITE) != WAIT_OBJECT_0)
+		OOBase_CallCriticalFailure(GetLastError());*/
+
+	return true;
+}
+
+void OOBase::Win32::rwmutex_t::acquire()
+{
+	HANDLE handles[2];
+	handles[0] = m_hWriterMutex;
+	handles[1] = m_hEvent;
+
+	if (WaitForMultipleObjects(2,handles,TRUE,INFINITE) != WAIT_OBJECT_0)
 		OOBase_CallCriticalFailure(GetLastError());
+
+	/*if (WaitForSingleObject(m_hWriterMutex, INFINITE) != WAIT_OBJECT_0)
+		OOBase_CallCriticalFailure(GetLastError());
+
+	if (WaitForSingleObject(m_hEvent, INFINITE) != WAIT_OBJECT_0)
+		OOBase_CallCriticalFailure(GetLastError());*/
 }
 
 void OOBase::Win32::rwmutex_t::release()
@@ -368,6 +429,39 @@ void OOBase::Win32::rwmutex_t::release()
 
 	if (!ReleaseMutex(m_hWriterMutex))
 		OOBase_CallCriticalFailure(GetLastError());
+}
+
+BOOLEAN OOBase::Win32::rwmutex_t::try_acquire_read()
+{
+	if (InterlockedIncrement(&m_nReaders) == 0)
+	{
+		DWORD dwWait = WaitForSingleObject(m_hEvent, 0);
+		if (dwWait == WAIT_TIMEOUT)
+		{
+			InterlockedDecrement(&m_nReaders);
+			return false;
+		}
+
+		if (dwWait != WAIT_OBJECT_0)
+			OOBase_CallCriticalFailure(GetLastError());
+
+		if (!SetEvent(m_hReaderEvent))
+			OOBase_CallCriticalFailure(GetLastError());
+	}
+	else
+	{
+		DWORD dwWait = WaitForSingleObject(m_hReaderEvent, 0);
+		if (dwWait == WAIT_TIMEOUT)
+		{
+			InterlockedDecrement(&m_nReaders);
+			return false;
+		}
+
+		if (dwWait != WAIT_OBJECT_0)
+			OOBase_CallCriticalFailure(GetLastError());
+	}
+
+	return true;
 }
 
 void OOBase::Win32::rwmutex_t::acquire_read()
@@ -380,8 +474,7 @@ void OOBase::Win32::rwmutex_t::acquire_read()
 		if (!SetEvent(m_hReaderEvent))
 			OOBase_CallCriticalFailure(GetLastError());
 	}
-
-	if (WaitForSingleObject(m_hReaderEvent, INFINITE) != WAIT_OBJECT_0)
+	else if (WaitForSingleObject(m_hReaderEvent, INFINITE) != WAIT_OBJECT_0)
 		OOBase_CallCriticalFailure(GetLastError());
 }
 

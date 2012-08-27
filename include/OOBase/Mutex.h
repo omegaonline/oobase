@@ -99,10 +99,12 @@ namespace OOBase
 		~RWMutex();
 
 		// Write lock
+		bool try_acquire();
 		void acquire();
 		void release();
 
 		// Read lock
+		bool try_acquire_read();
 		void acquire_read();
 		void release_read();
 
@@ -140,8 +142,6 @@ namespace OOBase
 
 		bool try_acquire()
 		{
-			assert(!m_acquired);
-
 			if (!m_mutex.try_acquire())
 				return false;
 
@@ -151,8 +151,6 @@ namespace OOBase
 
 		void acquire()
 		{
-			assert(!m_acquired);
-
 			m_mutex.acquire();
 
 			m_acquired = true;
@@ -160,8 +158,6 @@ namespace OOBase
 
 		bool acquire(const Timeout& timeout)
 		{
-			assert(!m_acquired);
-
 			if (m_mutex.acquire(timeout))
 				m_acquired = true;
 
@@ -170,8 +166,6 @@ namespace OOBase
 
 		void release()
 		{
-			assert(m_acquired);
-
 			m_acquired = false;
 
 			m_mutex.release();
@@ -203,10 +197,17 @@ namespace OOBase
 				release();
 		}
 
+		bool try_acquire()
+		{
+			if (!m_mutex.try_acquire_read())
+				return false;
+
+			m_acquired = true;
+			return true;
+		}
+
 		void acquire()
 		{
-			assert(!m_acquired);
-
 			m_mutex.acquire_read();
 
 			m_acquired = true;
@@ -214,8 +215,6 @@ namespace OOBase
 
 		void release()
 		{
-			assert(m_acquired);
-
 			m_acquired = false;
 
 			m_mutex.release_read();

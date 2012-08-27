@@ -39,6 +39,8 @@ namespace OOBase
 		void InitializeSRWLock(SRWLOCK* SRWLock);
 		void AcquireSRWLockShared(SRWLOCK* SRWLock);
 		void AcquireSRWLockExclusive(SRWLOCK* SRWLock);
+		BOOL TryAcquireSRWLockShared(SRWLOCK* SRWLock);
+		BOOL TryAcquireSRWLockExclusive(SRWLOCK* SRWLock);
 		void ReleaseSRWLockShared(SRWLOCK* SRWLock);
 		void ReleaseSRWLockExclusive(SRWLOCK* SRWLock);
 		void DeleteSRWLock(SRWLOCK* SRWLock);

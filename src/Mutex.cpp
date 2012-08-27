@@ -137,6 +137,11 @@ OOBase::RWMutex::~RWMutex()
 	Win32::DeleteSRWLock(&m_lock);
 }
 
+bool OOBase::RWMutex::try_acquire()
+{
+	return (Win32::TryAcquireSRWLockExclusive(&m_lock) == TRUE);
+}
+
 void OOBase::RWMutex::acquire()
 {
 	Win32::AcquireSRWLockExclusive(&m_lock);
@@ -145,6 +150,11 @@ void OOBase::RWMutex::acquire()
 void OOBase::RWMutex::release()
 {
 	Win32::ReleaseSRWLockExclusive(&m_lock);
+}
+
+bool OOBase::RWMutex::try_acquire_read()
+{
+	return (Win32::TryAcquireSRWLockShared(&m_lock) == TRUE);
 }
 
 void OOBase::RWMutex::acquire_read()
@@ -266,6 +276,18 @@ OOBase::RWMutex::~RWMutex()
 	pthread_rwlock_destroy(&m_mutex);
 }
 
+bool OOBase::RWMutex::try_acquire()
+{
+	int err = pthread_rwlock_trywrlock(&m_mutex);
+	if (err == 0)
+		return true;
+
+	if (err != EBUSY)
+		OOBase_CallCriticalFailure(err);
+
+	return false;
+}
+
 void OOBase::RWMutex::acquire()
 {
 	int err = pthread_rwlock_wrlock(&m_mutex);
@@ -278,6 +300,18 @@ void OOBase::RWMutex::release()
 	int err = pthread_rwlock_unlock(&m_mutex);
 	if (err != 0)
 		OOBase_CallCriticalFailure(err);
+}
+
+bool OOBase::RWMutex::try_acquire_read()
+{
+	int err = pthread_rwlock_tryrdlock(&m_mutex);
+	if (err == 0)
+		return true;
+
+	if (err != EBUSY)
+		OOBase_CallCriticalFailure(err);
+
+	return false;
 }
 
 void OOBase::RWMutex::acquire_read()
