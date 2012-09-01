@@ -201,8 +201,8 @@ namespace OOSvrBase
 
 namespace OOBase
 {
-	template <typename DLL>
-	class Singleton<OOSvrBase::Proactor,DLL>
+	template <typename LibraryType>
+	class Singleton<OOSvrBase::Proactor,LibraryType>
 	{
 	public:
 		static OOSvrBase::Proactor* instance_ptr()
@@ -238,7 +238,7 @@ namespace OOBase
 			if (err)
 				OOBase_CallCriticalFailure(err);
 
-			err = DLLDestructor<DLL>::add_destructor(&destroy,i);
+			err = DLLDestructor<LibraryType>::add_destructor(&destroy,i);
 			if (err)
 			{
 				OOSvrBase::Proactor::destroy(i);
@@ -258,8 +258,8 @@ namespace OOBase
 		}
 	};
 
-	template <typename DLL>
-	OOSvrBase::Proactor* Singleton<OOSvrBase::Proactor,DLL>::s_instance = NULL;
+	template <typename LibraryType>
+	OOSvrBase::Proactor* Singleton<OOSvrBase::Proactor,LibraryType>::s_instance = NULL;
 }
 
 #endif // OOSVRBASE_PROACTOR_H_INCLUDED_
