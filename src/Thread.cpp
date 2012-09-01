@@ -214,12 +214,19 @@ namespace
 		pthread_t        m_thread;
 		pthread_cond_t   m_condition;
 
+		static const pthread_t pthread_t_def()
+		{
+			static const pthread_t t = {0};
+			return t;
+		}
+
 		static void* oobase_thread_fn(void* param);
 	};
 
 	PthreadThread::PthreadThread() :
 			OOBase::Thread(false,false),
-			m_running(false)
+			m_running(false),
+			m_thread(pthread_t_def())
 	{
 		int err = pthread_cond_init(&m_condition,NULL);
 		if (err)

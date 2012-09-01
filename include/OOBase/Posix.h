@@ -124,7 +124,7 @@ namespace OOBase
 			}
 
 		private:
-			pw_info() {};
+			pw_info();
 
 			struct passwd* m_pwd;
 			struct passwd  m_pwd2;
