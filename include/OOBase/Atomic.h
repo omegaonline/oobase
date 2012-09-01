@@ -60,6 +60,9 @@
 #define ATOMIC_CAS_64(t,c,x)  __sync_val_compare_and_swap((long volatile*)(t),(long)c,(long)x)
 #define ATOMIC_ADD_32(t,v) __sync_add_and_fetch((int volatile*)(t),(int)v)
 #define ATOMIC_ADD_64(t,v) __sync_add_and_fetch((long volatile*)(t),(long)v)
+#elif defined(ECLIPSE_PARSER)
+#define ATOMIC_CAS_32(t,c,x)
+#define ATOMIC_CAS_64(t,c,x)
 #else
 #define ATOMIC_CAS_32(t,c,x) __sync_val_compare_and_swap(t,c,x)
 #define ATOMIC_CAS_64(t,c,x)  __sync_val_compare_and_swap(t,c,x)

@@ -128,4 +128,4 @@ LT_CONFIG_LTDL_DIR([libltdl])
 LT_INIT([dlopen])
 LTDL_INIT
 
-AC_OUTPUT()
+AC_OUTPUT

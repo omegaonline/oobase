@@ -37,7 +37,11 @@
 #define FAST_BYTESWAP_4(x) _byteswap_ulong((unsigned long)(x))
 #define FAST_BYTESWAP_8(x) _byteswap_uint64((unsigned __int64)(x))
 
-#else
+#elif !defined(ECLIPSE_PARSER) && !defined(DOXYGEN)
+
+#if defined(HAVE___BUILTIN_BSWAP16)
+#define FAST_BYTESWAP_2(x) __builtin_bswap16((x))
+#endif
 
 #if defined(HAVE___BUILTIN_BSWAP32)
 #define FAST_BYTESWAP_4(x) __builtin_bswap32((long)(x))
@@ -105,7 +109,11 @@ namespace OOBase
 	namespace detail
 	{
 		template <const size_t S>
-		struct byte_swapper;
+		struct byte_swapper
+		{
+			template <typename T>
+			static T byte_swap(T val);
+		};
 	}
 
 	template <typename T>

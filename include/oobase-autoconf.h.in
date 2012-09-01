@@ -40,6 +40,9 @@
 /* Define to 1 if you have the <windows.h> header file. */
 #undef HAVE_WINDOWS_H
 
+/* Define to 1 if you have the __builtin_bswap16 compiler intrinsic */
+#undef HAVE___BUILTIN_BSWAP16
+
 /* Define to 1 if you have the __builtin_bswap32 compiler intrinsic */
 #undef HAVE___BUILTIN_BSWAP32
 
