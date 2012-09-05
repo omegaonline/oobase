@@ -52,13 +52,17 @@ liboobase_la_CXXFLAGS = $(PTHREAD_CFLAGS)
 liboobase_la_LDFLAGS = $(PTHREAD_LIBS)
 
 if WIN32
-liboobase_la_CPPFLAGS = -D_WIN32_WINNT=0x0502
+liboobase_la_CPPFLAGS = -D_WIN32_WINNT=0x0502 $(AM_CPPFLAGS)
 liboobase_la_LIBADD = -lws2_32 -lnetapi32 -luserenv
 else
 liboobase_la_CFLAGS += $(LTDLINCL)
 liboobase_la_CXXFLAGS += $(LTDLINCL)
 liboobase_la_LIBADD = $(LIBLTDL) -lrt
 endif 
+
+liboobase_la_CFLAGS += $(AM_CFLAGS)
+liboobase_la_CXXFLAGS += $(AM_CXXFLAGS)
+liboobase_la_LDFLAGS += $(AM_LDFLAGS)
 
 liboobase_la_SOURCES = \
 	include/config-base.h \
@@ -133,8 +137,12 @@ liboosvrbase_la_CXXFLAGS = $(PTHREAD_CFLAGS)
 liboosvrbase_la_LDFLAGS = $(PTHREAD_LIBS)
 
 if WIN32
-liboosvrbase_la_CPPFLAGS = -D_WIN32_WINNT=0x0502
+liboosvrbase_la_CPPFLAGS = -D_WIN32_WINNT=0x0502 $(AM_CPPFLAGS)
 endif
+
+liboosvrbase_la_CFLAGS += $(AM_CFLAGS)
+liboosvrbase_la_CXXFLAGS += $(AM_CXXFLAGS)
+liboosvrbase_la_LDFLAGS += $(AM_LDFLAGS)
 
 liboosvrbase_la_SOURCES = \
 	include/OOSvrBase/Proactor.h \
