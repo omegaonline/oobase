@@ -52,7 +52,12 @@ AM_CXXFLAGS = $(PTHREAD_CFLAGS)
 AM_LDFLAGS = $(PTHREAD_LIBS)
 
 if WIN32
-liboobase_la_CPPFLAGS = -D_WIN32_WINNT=0x0502 $(AM_CPPFLAGS)
+AM_CPPFLAGS = -D_WIN32_WINNT=0x0502 $(AM_CPPFLAGS)
+endif
+
+if WIN32
+liboobase_la_CFLAGS = $(AM_CFLAGS)
+liboobase_la_CXXFLAGS = $(AM_CXXFLAGS)
 liboobase_la_LIBADD = -lws2_32 -lnetapi32 -luserenv
 else
 liboobase_la_CFLAGS = $(LTDLINCL) $(AM_CFLAGS)
@@ -128,11 +133,6 @@ liboobase_la_SOURCES = \
 	src/Win32Pipe.cpp \
 	src/Win32Socket.cpp	
 	
-
-if WIN32
-liboosvrbase_la_CPPFLAGS = -D_WIN32_WINNT=0x0502 $(AM_CPPFLAGS)
-endif
-
 liboosvrbase_la_SOURCES = \
 	include/OOSvrBase/Proactor.h \
 	src/ProactorPoll.h \
