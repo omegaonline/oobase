@@ -228,6 +228,8 @@ namespace
 			m_running(false),
 			m_thread(pthread_t_def())
 	{
+		void* TODO; // Use CLOCK_MONOTONIC!
+
 		int err = pthread_cond_init(&m_condition,NULL);
 		if (err)
 			OOBase_CallCriticalFailure(err);
@@ -309,7 +311,8 @@ namespace
 				{
 					if (err != ETIMEDOUT)
 						OOBase_CallCriticalFailure(err);
-					break;
+					else if (timeout.has_expired())
+						break;
 				}
 			}
 

@@ -66,6 +66,8 @@ OOBase::Condition::Condition()
 	int err = pthread_condattr_init(&attr);
 	if (!err)
 	{
+		void* TODO; // Use CLOCK_MONOTONIC!
+
 		err = pthread_condattr_setpshared(&attr,PTHREAD_PROCESS_PRIVATE);
 		if (!err)
 			err = pthread_cond_init(&m_var,&attr);
@@ -89,9 +91,13 @@ bool OOBase::Condition::wait(Condition::Mutex& mutex, const Timeout& timeout)
 		err = pthread_cond_wait(&m_var,&mutex.m_mutex);
 	else
 	{
-		::timespec wt = {0};
-		timeout.get_abs_timespec(wt);
-		err = pthread_cond_timedwait(&m_var,&mutex.m_mutex,&wt);
+		do
+		{
+			::timespec wt = {0};
+			timeout.get_abs_timespec(wt);
+			err = pthread_cond_timedwait(&m_var,&mutex.m_mutex,&wt);
+		}
+		while (err == ETIMEDOUT && !timeout.has_expired());
 	}
 	
 	if (err == 0)

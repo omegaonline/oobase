@@ -42,29 +42,6 @@ void OOBase::SpinLock::acquire()
 	assert(m_cs.RecursionCount == 1);
 }
 
-bool OOBase::SpinLock::acquire(const Timeout& timeout)
-{
-	if (timeout.is_infinite())
-	{
-		acquire();
-		return true;
-	}
-
-	do
-	{
-		if (TryEnterCriticalSection(&m_cs))
-		{
-			assert(m_cs.RecursionCount == 1);
-			return true;
-		}
-
-		::Sleep(0);
-	}
-	while (!timeout.has_expired());
-
-	return false;
-}
-
 bool OOBase::SpinLock::try_acquire()
 {
 	if (!TryEnterCriticalSection(&m_cs))
@@ -235,11 +212,16 @@ bool OOBase::Mutex::acquire(const Timeout& timeout)
 		return true;
 	}
 
-	::timespec ts = {0};
-	timeout.get_abs_timespec(ts);
-	int err = pthread_mutex_timedlock(&m_mutex,&ts);
-	if (err == 0)
-		return true;
+	int err = 0;
+	do
+	{
+		::timespec ts = {0};
+		timeout.get_abs_timespec(ts);
+		err = pthread_mutex_timedlock(&m_mutex,&ts);
+		if (err == 0)
+			return true;
+	}
+	while (err == ETIMEDOUT && !timeout.has_expired());
 	
 	if (err != ETIMEDOUT)
 		OOBase_CallCriticalFailure(err);	

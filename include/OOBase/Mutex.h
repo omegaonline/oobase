@@ -71,7 +71,6 @@ namespace OOBase
 
 		bool try_acquire();
 		void acquire();
-		bool acquire(const Timeout& timeout);
 		void release();
 
 	private:
