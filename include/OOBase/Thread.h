@@ -23,7 +23,7 @@
 #define OOBASE_THREAD_H_INCLUDED_
 
 #include "Mutex.h"
-#include "Stack.h"
+#include "Bag.h"
 
 namespace OOBase
 {
@@ -71,8 +71,8 @@ namespace OOBase
 		size_t number_running();
 
 	private:
-		SpinLock       m_lock;
-		Stack<Thread*> m_threads;
+		SpinLock     m_lock;
+		Bag<Thread*> m_threads;
 	};
 }
 

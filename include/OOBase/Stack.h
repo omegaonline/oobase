@@ -22,160 +22,55 @@
 #ifndef OOBASE_STACK_H_INCLUDED_
 #define OOBASE_STACK_H_INCLUDED_
 
-#include "Memory.h"
+#include "Bag.h"
 
 namespace OOBase
 {
 	template <typename T, typename Allocator = HeapAllocator>
-	class Stack
+	class Stack : private Bag<T,Allocator>
 	{
 	public:
-		Stack() : m_data(NULL), m_capacity(0), m_top(0)
+		Stack() : Bag<T,Allocator>()
 		{}
-			
-		~Stack()
-		{
-			clear();
-			
-			Allocator::free(m_data);
-		}
 			
 		int reserve(size_t capacity)
 		{
-			return reserve_i(capacity + m_top);
+			return Bag<T,Allocator>::reserve(capacity);
 		}
 		
 		int push(const T& value)
 		{
-			if (m_top+1 > m_capacity)
-			{
-				size_t cap = (m_capacity == 0 ? 4 : m_capacity*2);
-				int err = reserve_i(cap);
-				if (err != 0)
-					return err;
-			}
-			
-			// Placement new with copy constructor
-			::new (&m_data[m_top]) T(value);
-			
-			// This is exception safe as the increment happens here
-			++m_top;
-			return 0;
+			return Bag<T,Allocator>::add(value);
 		}
 		
-		bool remove(const T& value)
-		{
-			// This is just really useful!
-			for (size_t pos = 0;pos < m_top;++pos)
-			{
-				if (m_data[pos] == value)
-				{
-					remove_at(pos);
-					return true;
-				}
-			}
-			
-			return false;
-		}
-
 		void remove_at(size_t pos)
 		{
-			if (m_data && pos < m_top)
-			{
-				for(--m_top;pos < m_top;++pos)
-					m_data[pos] = m_data[pos+1];
-
-				m_data[m_top].~T();
-			}
+			Bag<T,Allocator>::remove_at_sorted(pos);
 		}
 		
 		void clear()
 		{
-			while (m_top > 0)
-				m_data[--m_top].~T();
+			Bag<T,Allocator>::clear();
 		}
 		
 		bool pop(T* value = NULL)
 		{
-			if (m_top == 0)
-				return false;
-			
-			if (value)
-				*value = m_data[m_top-1]; 
-			
-			m_data[--m_top].~T();
-			return true;
+			return Bag<T,Allocator>::pop(value);
 		}
 		
 		bool empty() const
 		{
-			return (m_top == 0);
+			return Bag<T,Allocator>::empty();
 		}			
 		
 		size_t size() const
 		{
-			return m_top;
-		}
-
-		T* at(size_t pos)
-		{
-			return (pos >= m_top ? NULL : &m_data[pos]);
+			return Bag<T,Allocator>::size();
 		}
 
 		const T* at(size_t pos) const
 		{
-			return (pos >= m_top ? NULL : &m_data[pos]);
-		}
-			
-	private:
-		// Do not allow copy constructors or assignment
-		// as memory allocation will occur...
-		// and you probably don't want to be copying these around
-		Stack(const Stack&);
-		Stack& operator = (const Stack&);
-	
-		T*     m_data;
-		size_t m_capacity;
-		size_t m_top;
-	
-		int reserve_i(size_t capacity)
-		{
-			if (m_capacity < capacity)
-			{
-				T* new_data = static_cast<T*>(Allocator::allocate(capacity*sizeof(T)));
-				if (!new_data)
-					return ERROR_OUTOFMEMORY;
-				
-#if defined(OOBASE_HAVE_EXCEPTIONS)
-				size_t i = 0;
-				try
-				{
-					for (i=0;i<m_top;++i)
-						::new (&new_data[i]) T(m_data[i]);
-				}
-				catch (...)
-				{
-					for (;i>0;--i)
-						new_data[i-1].~T();
-
-					Allocator::free(new_data);
-					throw;
-				}
-									
-				for (i=0;i<m_top;++i)
-					m_data[i].~T();
-#else
-				for (size_t i=0;i<m_top;++i)
-				{
-					::new (&new_data[i]) T(m_data[i]);
-					new_data[i-1].~T();
-				}
-#endif
-				Allocator::free(m_data);
-				m_data = new_data;
-				m_capacity = capacity;
-			}
-			return 0;
+			return Bag<T,Allocator>::at(pos);
 		}
 	};
 }

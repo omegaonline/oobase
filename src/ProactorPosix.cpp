@@ -125,7 +125,7 @@ int OOSvrBase::detail::ProactorPosix::update_timers(OOBase::Stack<TimerItem,OOBa
     // Count the number of expired timers...
 	for (size_t pos = m_timers.size();pos != 0; --pos)
 	{
-		TimerItem* item = m_timers.at(pos-1);
+		const TimerItem* item = m_timers.at(pos-1);
 
 		// If the timer has expired, remove from set, add to stack
 		if (item->m_timeout.has_expired())

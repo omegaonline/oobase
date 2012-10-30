@@ -69,6 +69,7 @@ liboobase_la_SOURCES = \
 	include/config-base.h \
 	include/config-msvc.h \
 	include/OOBase/Atomic.h \
+	include/OOBase/Bag.h \
 	include/OOBase/BoundedQueue.h \
 	include/OOBase/Buffer.h \
 	include/OOBase/ByteSwap.h \

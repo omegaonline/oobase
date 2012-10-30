@@ -22,62 +22,41 @@
 #ifndef OOBASE_SET_H_INCLUDED_
 #define OOBASE_SET_H_INCLUDED_
 
-#include "Memory.h"
+#include "Bag.h"
 
 namespace OOBase
 {
-	template <typename V, typename Allocator = HeapAllocator>
-	class Set
+	template <typename T, typename Allocator = HeapAllocator>
+	class Set : private Bag<T,Allocator>
 	{
 	public:
 		static const size_t npos = size_t(-1);
 
-		Set() : m_data(NULL), m_capacity(0), m_size(0), m_sorted(true)
+		Set() : Bag<T,Allocator>(), m_sorted(true)
 		{}
-
-		~Set()
-		{
-			clear();
-
-			Allocator::free(m_data);
-		}
 
 		int reserve(size_t capacity)
 		{
-			return reserve_i(capacity + m_size);
+			return Bag<T,Allocator>::reserve(capacity);
 		}
 
-		int insert(const V& value)
+		int insert(const T& value)
 		{
-			if (m_size+1 > m_capacity)
-			{
-				size_t cap = (m_capacity == 0 ? 4 : m_capacity*2);
-				int err = reserve_i(cap);
-				if (err != 0)
-					return err;
-			}
-
-			// Placement new
-			::new (&m_data[m_size]) V(value);
-
-			// This is exception safe as the increment happens here
-			++m_size;
-			m_sorted = false;
-
-			return 0;
+			int r = Bag<T,Allocator>::add(value);
+			if (r == 0)
+				m_sorted = false;
+			return r;
 		}
 
 		void remove_at(size_t pos)
 		{
-			if (m_data && pos < m_size)
-			{
-				m_data[pos] = m_data[--m_size];
-				m_data[m_size].~V();
-				m_sorted = false;
-			}
+			if (m_sorted)
+				Bag<T,Allocator>::remove_at_sorted(pos);
+			else
+				Bag<T,Allocator>::remove_at(pos);
 		}
 
-		bool remove(const V& value)
+		bool remove(const T& value)
 		{
 			size_t pos = find(value,false);
 			if (pos == npos)
@@ -88,22 +67,14 @@ namespace OOBase
 			return true;
 		}
 
-		bool pop(V* value = NULL)
+		bool pop(T* value = NULL)
 		{
-			if (m_size == 0)
-				return false;
-
-			if (value)
-				*value = m_data[m_size-1];
-
-			m_data[--m_size].~V();
-			return true;
+			return Bag<T,Allocator>::pop(value);
 		}
 
 		void clear()
 		{
-			while (m_size > 0)
-				m_data[--m_size].~V();
+			Bag<T,Allocator>::clear();
 		}
 
 		template <typename V1>
@@ -114,35 +85,34 @@ namespace OOBase
 
 		bool empty() const
 		{
-			return (m_size == 0);
+			return Bag<T,Allocator>::empty();
 		}
 
 		size_t size() const
 		{
-			return m_size;
+			return Bag<T,Allocator>::size();
 		}
 
-		template <typename V1>
-		size_t find(V1 key, bool first = false) const
+		template <typename T1>
+		size_t find(T1 key, bool first = false) const
 		{
-			const V* p = bsearch(key);
+			const T* p = bsearch(key);
 
 			// Scan for the first
-			while (p && first && p > m_data && *(p-1) == *p)
+			while (p && first && p > Bag<T,Allocator>::m_data && *(p-1) == *p)
 				--p;
 
-			return (p ? static_cast<size_t>(p - m_data) : npos);
+			return (p ? static_cast<size_t>(p - Bag<T,Allocator>::m_data) : npos);
 		}
 
-
-		V* at(size_t pos)
+		/*T* at(size_t pos)
 		{
-			return (m_data && pos < m_size ? &m_data[pos] : NULL);
-		}
+			return Bag<T,Allocator>::at(pos);
+		}*/
 
-		const V* at(size_t pos) const
+		const T* at(size_t pos) const
 		{
-			return (m_data && pos < m_size ? &m_data[pos] : NULL);
+			return Bag<T,Allocator>::at(pos);
 		}
 
 		void sort()
@@ -151,7 +121,7 @@ namespace OOBase
 				sort(&default_sort);
 		}
 
-		void sort(bool (*less_than)(const V& v1, const V& v2))
+		void sort(bool (*less_than)(const T& v1, const T& v2))
 		{
 			// This is a Shell-sort because we mostly use sort() in cases where qsort() behaves badly
 			// i.e. insertion at the end and then sort
@@ -160,23 +130,23 @@ namespace OOBase
 			// Generate the split intervals
 			// Knuth is my homeboy :)
 			size_t h = 1;
-			while (h <= m_size / 9)
+			while (h <= Bag<T,Allocator>::m_size / 9)
 				h = 3*h + 1;
 
 			for (;h > 0; h /= 3)
 			{
-				for (size_t i = h; i < m_size; ++i)
+				for (size_t i = h; i < Bag<T,Allocator>::m_size; ++i)
 				{
-					V v = m_data[i];
+					T v = Bag<T,Allocator>::m_data[i];
 					size_t j = i;
 
-					while (j >= h && (*less_than)(v,m_data[j-h]))
+					while (j >= h && (*less_than)(v,Bag<T,Allocator>::m_data[j-h]))
 					{
-						m_data[j] = m_data[j-h];
+						Bag<T,Allocator>::m_data[j] = Bag<T,Allocator>::m_data[j-h];
 						j -= h;
 					}
 
-					m_data[j] = v;
+					Bag<T,Allocator>::m_data[j] = v;
 				}
 			}
 
@@ -184,68 +154,18 @@ namespace OOBase
 		}
 
 	private:
-		// Do not allow copy constructors or assignment
-		// as memory allocation will occur...
-		// and you probably don't want to be copying these around
-		Set(const Set&);
-		Set& operator = (const Set&);
-
-		V*     m_data;
-		size_t m_capacity;
-		size_t m_size;
-
 		mutable bool m_sorted;
 
-		int reserve_i(size_t capacity)
-		{
-			if (m_capacity < capacity)
-			{
-				V* new_data = static_cast<V*>(Allocator::allocate(capacity*sizeof(V)));
-				if (!new_data)
-					return ERROR_OUTOFMEMORY;
-
-#if defined(OOBASE_HAVE_EXCEPTIONS)
-				size_t i = 0;
-				try
-				{
-					for (i=0;i<m_size;++i)
-						::new (&new_data[i]) V(m_data[i]);
-				}
-				catch (...)
-				{
-					for (;i>0;--i)
-						new_data[i-1].~V();
-
-					Allocator::free(new_data);
-					throw;
-				}
-
-				for (i=0;i<m_size;++i)
-					m_data[i].~V();
-#else
-				for (size_t i=0;i<m_size;++i)
-				{
-					::new (&new_data[i]) V(m_data[i]);
-					m_data[i].~V();
-				}
-#endif
-				Allocator::free(m_data);
-				m_data = new_data;
-				m_capacity = capacity;
-			}
-			return 0;
-		}
-
-		template <typename V1>
-		const V* bsearch(V1 key) const
+		template <typename T1>
+		const T* bsearch(T1 key) const
 		{
 			// Always sort first
 			const_cast<Set*>(this)->sort();
 
-			const V* base = m_data;
-			for (size_t span = m_size; span > 0; span /= 2)
+			const T* base = Bag<T,Allocator>::m_data;
+			for (size_t span = Bag<T,Allocator>::m_size; span > 0; span /= 2)
 			{
-				const V* mid_point = base + (span / 2);
+				const T* mid_point = base + (span / 2);
 				if (*mid_point == key)
 					return mid_point;
 
@@ -258,7 +178,7 @@ namespace OOBase
 		    return NULL;
 		}
 
-		static bool default_sort(const V& v1, const V& v2)
+		static bool default_sort(const T& v1, const T& v2)
 		{
 			return (v1 < v2);
 		}

@@ -59,7 +59,7 @@ namespace OOSvrBase
 				unsigned int m_events;
 			};
 
-			OOBase::Stack<pollfd>         m_poll_fds;
+			OOBase::Bag<pollfd>           m_poll_fds;
 			OOBase::HashTable<int,FdItem> m_items;
 
 			int do_bind_fd(int fd, void* param, fd_callback_t callback);

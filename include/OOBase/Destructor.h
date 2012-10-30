@@ -41,14 +41,23 @@ namespace OOBase
 			DLLDestructor& inst = instance();
 			Guard<SpinLock> guard(inst.m_lock);
 			
-			return inst.m_list.push(Node(pfn,p));
+			return inst.m_stack.push(Node(pfn,p));
 		}
 
 		static void remove_destructor(pfn_destructor pfn, void* p)
 		{
 			DLLDestructor& inst = instance();
 			Guard<SpinLock> guard(inst.m_lock);
-			inst.m_list.remove(Node(pfn,p));
+
+			Node f(pfn,p);
+			for (size_t pos = 0;pos < inst.m_stack.size();++pos)
+			{
+				if (*inst.m_stack.at(pos) == f)
+				{
+					inst.m_stack.remove_at(pos);
+					break;
+				}
+			}
 		}
 
 	private:
@@ -71,13 +80,13 @@ namespace OOBase
 		};
 
 		SpinLock                 m_lock;
-		Stack<Node,CrtAllocator> m_list;
+		Stack<Node,CrtAllocator> m_stack;
 
 		~DLLDestructor()
 		{
 			Guard<SpinLock> guard(m_lock);
 
-			for (Node node(NULL,NULL);m_list.pop(&node);)
+			for (Node node(NULL,NULL);m_stack.pop(&node);)
 			{
 				guard.release();
 
