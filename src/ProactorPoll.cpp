@@ -160,7 +160,9 @@ bool OOSvrBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_co
 			FdItem* item = m_items.find(pfd->fd);
 			if (item)
 			{
-				active_fd = { pfd->fd, item, 0 };
+				active_fd.m_fd = pfd->fd;
+				active_fd.m_item = item;
+				active_fd.m_events = 0;
 
 				// If we have errored, favour eTXRecv...
 				if (pfd->revents & (POLLERR | POLLHUP | POLLNVAL))
