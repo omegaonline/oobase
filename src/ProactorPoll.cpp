@@ -139,7 +139,7 @@ int OOSvrBase::detail::ProactorPoll::do_watch_fd(int fd, unsigned int events)
 	return 0;
 }
 
-int OOSvrBase::detail::ProactorPoll::update_fds(OOBase::Stack<FdEvent,OOBase::LocalAllocator>& fd_set, int poll_count)
+bool OOSvrBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count)
 {
 	// Check each pollfd in m_poll_fds
 	for (size_t pos = 0; poll_count > 0 && pos < m_poll_fds.size(); ++pos)
@@ -153,10 +153,6 @@ int OOSvrBase::detail::ProactorPoll::update_fds(OOBase::Stack<FdEvent,OOBase::Lo
 			// Handle the control pipe first
 			if (pfd->fd == m_read_fd)
 			{
-				int err = read_control();
-				if (err)
-					return err;
-
 				continue;
 			}
 
@@ -164,16 +160,16 @@ int OOSvrBase::detail::ProactorPoll::update_fds(OOBase::Stack<FdEvent,OOBase::Lo
 			FdItem* item = m_items.find(pfd->fd);
 			if (item)
 			{
-				FdEvent fd_event = { pfd->fd, item, 0 };
+				active_fd = { pfd->fd, item, 0 };
 
 				// If we have errored, favour eTXRecv...
 				if (pfd->revents & (POLLERR | POLLHUP | POLLNVAL))
 				{
 					if (pfd->events & (POLLIN | POLLRDHUP))
-						fd_event.m_events |= eTXRecv;
+						active_fd.m_events |= eTXRecv;
 
 					if (pfd->events & POLLOUT)
-						fd_event.m_events |= eTXSend;
+						active_fd.m_events |= eTXSend;
 
 					pfd->events = 0;
 				}
@@ -183,61 +179,47 @@ int OOSvrBase::detail::ProactorPoll::update_fds(OOBase::Stack<FdEvent,OOBase::Lo
 					{
 						// We have a viable eTXRecv, clear (POLLIN | POLLRDHUP)
 						pfd->events &= ~(POLLIN | POLLRDHUP);
-						fd_event.m_events |= eTXRecv;
+						active_fd.m_events |= eTXRecv;
 					}
 
 					if ((pfd->events & POLLOUT) && (pfd->revents & POLLOUT))
 					{
 						// We have a viable eTXSend, clear POLLOUT
 						pfd->events &= ~POLLOUT;
-						fd_event.m_events |= eTXSend;
+						active_fd.m_events |= eTXSend;
 					}
 				}
 
-				if (fd_event.m_events)
+				if (active_fd.m_events)
 				{
-					// Add to socket set
-					int err = fd_set.push(fd_event);
-					if (err)
-						return err;
-				}
-
-				if (!pfd->events)
-				{
-					// We are now longer in m_poll_fds
-					item->m_poll_pos = size_t(-1);
-
-					// If we have no pending events, remove from m_poll_fds
-					if (pos == m_poll_fds.size()-1)
-						m_poll_fds.pop();
-					else
+					// We have an event
+					if (!pfd->events)
 					{
-						// Replace current with top of stack
-						m_poll_fds.pop(pfd);
+						// We are now longer in m_poll_fds
+						item->m_poll_pos = size_t(-1);
 
-						// Reassign index
-						item = m_items.find(pfd->fd);
-						if (item)
-							item->m_poll_pos = pos;
+						// If we have no pending events, remove from m_poll_fds
+						if (pos == m_poll_fds.size()-1)
+							m_poll_fds.pop();
+						else
+						{
+							// Replace current with top of stack
+							m_poll_fds.pop(pfd);
 
-						// And do this item again
-						--pos;
+							// Reassign index
+							item = m_items.find(pfd->fd);
+							if (item)
+								item->m_poll_pos = pos;
+						}
 					}
+
+					return true;
 				}
 			}
 		}
 	}
 
-    return 0;
-}
-
-int OOSvrBase::detail::ProactorPoll::process_socketset(OOBase::Stack<FdEvent,OOBase::LocalAllocator>& fd_set)
-{
-	FdEvent item;
-	while (fd_set.pop(&item))
-		(*item.m_item->m_callback)(item.m_fd,item.m_item->m_param,item.m_events);
-
-	return 0;
+    return false;
 }
 
 int OOSvrBase::detail::ProactorPoll::run(int& err, const OOBase::Timeout& timeout)
@@ -249,18 +231,16 @@ int OOSvrBase::detail::ProactorPoll::run(int& err, const OOBase::Timeout& timeou
 	if (!guard.acquire(timeout))
 		return 0;
 
-	OOBase::Stack<TimerItem,OOBase::LocalAllocator> timer_set;
-	OOBase::Stack<FdEvent,OOBase::LocalAllocator> fd_set;
-
 	while (!m_stopped && !timeout.has_expired())
 	{
+		TimerItem active_timer;
+		FdEvent active_fd;
+		bool fd_event = false;
+
 		// Check timers and update timeout
 		OOBase::Timeout local_timeout(timeout);
-		err = update_timers(timer_set,local_timeout);
-		if (err)
-			break;
-
-		if (timer_set.empty())
+		bool timer_event = check_timers(active_timer,local_timeout);
+		if (!timer_event)
 		{
 			// If no timers have expired, poll for I/O
 			int count = poll(m_poll_fds.at(0),m_poll_fds.size(),local_timeout.millisecs());
@@ -288,35 +268,39 @@ int OOSvrBase::detail::ProactorPoll::run(int& err, const OOBase::Timeout& timeou
 			if (count == 0)
 			{
 				// Poll timed out
-				err = update_timers(timer_set,local_timeout);
-				if (err)
-					break;
+				timer_event = check_timers(active_timer,local_timeout);
 			}
 			else
 			{
 				// Socket I/O occurred
-				err = update_fds(fd_set,count);
-				if (err)
-					break;
+				fd_event = update_fds(active_fd,count);
 			}
 		}
 
 		// Process any timers or I/O
-		if (!timer_set.empty() || !fd_set.empty())
+		if (timer_event || fd_event)
 		{
 			guard.release();
 
-			err = process_timerset(timer_set);
-			if (err)
-				return -1;
-
-			err = process_socketset(fd_set);
-			if (err)
-				return -1;
+			if (timer_event)
+			{
+				err = process_timer(active_timer);
+				if (err)
+					return -1;
+			}
+			else
+			{
+				(*active_fd.m_item->m_callback)(active_fd.m_fd,active_fd.m_item->m_param,active_fd.m_events);
+			}
 
 			if (!guard.acquire(timeout))
 				return 0;
 		}
+
+		// Always check the control pipe
+		err = read_control();
+		if (err)
+			return -1;
 	}
 
     if (err)

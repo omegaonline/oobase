@@ -117,53 +117,44 @@ int OOSvrBase::detail::ProactorPosix::init()
 	return err;
 }
 
-int OOSvrBase::detail::ProactorPosix::update_timers(OOBase::Stack<TimerItem,OOBase::LocalAllocator>& timer_set, OOBase::Timeout& timeout)
+bool OOSvrBase::detail::ProactorPosix::check_timers(TimerItem& active_timer, OOBase::Timeout& timeout)
 {
-	// Sort the timer set, so soonest is last
-	m_timers.sort();
-
-    // Count the number of expired timers...
-	for (size_t pos = m_timers.size();pos != 0; --pos)
+	if (!m_timers.empty())
 	{
-		const TimerItem* item = m_timers.at(pos-1);
+		// Sort the timer set, so soonest is last
+		m_timers.sort();
 
-		// If the timer has expired, remove from set, add to stack
+		// Count the number of expired timers...
+		size_t pos = m_timers.size() - 1;
+
+		// Check last entry
+		const TimerItem* item = m_timers.at(pos);
+
+		// If the timer has expired, remove from set
 		if (item->m_timeout.has_expired())
 		{
-			int err = timer_set.push(*item);
-			if (!err)
-				m_timers.remove_at(pos);
-
-			if (err)
-				return err;
+			active_timer = *item;
+			m_timers.remove_at(pos);
+			return true;
 		}
-		else
-		{
-			// Set current timeout to the next value, as the set is sorted
-			if (item->m_timeout < timeout)
-				timeout = item->m_timeout;
 
-			break;
-		}
+		// Set current timeout to the next value, as the set is sorted
+		if (item->m_timeout < timeout)
+			timeout = item->m_timeout;
 	}
 
-	return 0;
+	return false;
 }
 
-int OOSvrBase::detail::ProactorPosix::process_timerset(OOBase::Stack<TimerItem,OOBase::LocalAllocator>& timer_set)
+int OOSvrBase::detail::ProactorPosix::process_timer(const TimerItem& active_timer)
 {
-	TimerItem item;
-	while (timer_set.pop(&item))
-	{
-		OOBase::Timeout new_timeout = (*item.m_callback)(item.m_param);
-		if (!new_timeout.is_infinite())
-		{
-			int err = start_timer(item.m_param,item.m_callback,new_timeout);
-			if (err)
-				return err;
-		}
-	}
-	return 0;
+	OOBase::Timeout new_timeout = (*active_timer.m_callback)(active_timer.m_param);
+
+	int err = 0;
+	if (!new_timeout.is_infinite())
+		err = start_timer(active_timer.m_param,active_timer.m_callback,new_timeout);
+
+	return err;
 }
 
 int OOSvrBase::detail::ProactorPosix::start_timer(void* param, timer_callback_t callback, const OOBase::Timeout& timeout)

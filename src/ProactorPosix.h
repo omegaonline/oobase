@@ -90,8 +90,8 @@ namespace OOSvrBase
 
 			int read_control();
 
-			int update_timers(OOBase::Stack<TimerItem,OOBase::LocalAllocator>& timer_set, OOBase::Timeout& timeout);
-			int process_timerset(OOBase::Stack<TimerItem,OOBase::LocalAllocator>& timer_set);
+			bool check_timers(TimerItem& active_timer, OOBase::Timeout& timeout);
+			int process_timer(const TimerItem& active_timer);
 
 			virtual int do_bind_fd(int fd, void* param, fd_callback_t callback) = 0;
 			virtual int do_watch_fd(int fd, unsigned int events) = 0;

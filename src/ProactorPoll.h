@@ -66,8 +66,7 @@ namespace OOSvrBase
 			int do_unbind_fd(int fd);
 			int do_watch_fd(int fd, unsigned int events);
 
-			int update_fds(OOBase::Stack<FdEvent,OOBase::LocalAllocator>& fd_events, int poll_count);
-			int process_socketset(OOBase::Stack<FdEvent,OOBase::LocalAllocator>& fd_set);
+			bool update_fds(FdEvent& active_fd, int poll_count);
 		};
 	}
 }
