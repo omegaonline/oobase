@@ -366,12 +366,7 @@ size_t Socket::send(const void* buf, size_t len, int& err, const OOBase::Timeout
 	size_t to_send = len;
 	err = 0;
 
-	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,false);
-	if (!guard.acquire(timeout))
-	{
-		err = ETIMEDOUT;
-		return 0;
-	}
+	OOBase::Guard<OOBase::Mutex> guard(m_send_lock);
 
 	do
 	{
@@ -432,9 +427,7 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 		msg.msg_iov[i].iov_base = const_cast<char*>(buffers[i]->rd_ptr());
 	}
 
-	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,false);
-	if (!guard.acquire(timeout))
-		return ETIMEDOUT;
+	OOBase::Guard<OOBase::Mutex> guard(m_send_lock);
 
 	size_t first_buffer = 0;
 	int err = 0;
@@ -492,9 +485,7 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 
 int Socket::send_socket(OOBase::socket_t sock, const OOBase::Timeout& timeout)
 {
-	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,false);
-	if (!guard.acquire(timeout))
-		return ETIMEDOUT;
+	OOBase::Guard<OOBase::Mutex> guard(m_send_lock);
 
 	int err = 0;
 	do
@@ -549,12 +540,7 @@ size_t Socket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Ti
 	size_t to_recv = len;
 	err = 0;
 
-	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,false);
-	if (!guard.acquire(timeout))
-	{
-		err = ETIMEDOUT;
-		return 0;
-	}
+	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock);
 
 	do
 	{
@@ -616,9 +602,7 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 		msg.msg_iov[i].iov_base = buffers[i]->wr_ptr();
 	}
 
-	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,false);
-	if (!guard.acquire(timeout))
-		return ETIMEDOUT;
+	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock);
 
 	size_t first_buffer = 0;
 	int err = 0;
@@ -674,9 +658,7 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 
 int Socket::recv_socket(OOBase::socket_t& sock, const OOBase::Timeout& timeout)
 {
-	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,false);
-	if (!guard.acquire(timeout))
-		return ETIMEDOUT;
+	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock);
 
 	int err = 0;
 	do

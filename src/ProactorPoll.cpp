@@ -229,9 +229,7 @@ int OOSvrBase::detail::ProactorPoll::run(int& err, const OOBase::Timeout& timeou
 	// Reset stopped
 	m_stopped = false;
 
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock,false);
-	if (!guard.acquire(timeout))
-		return 0;
+	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 	while (!m_stopped && !timeout.has_expired())
 	{
@@ -295,8 +293,7 @@ int OOSvrBase::detail::ProactorPoll::run(int& err, const OOBase::Timeout& timeou
 				(*active_fd.m_item->m_callback)(active_fd.m_fd,active_fd.m_item->m_param,active_fd.m_events);
 			}
 
-			if (!guard.acquire(timeout))
-				return 0;
+			guard.acquire();
 		}
 
 		// Always check the control pipe

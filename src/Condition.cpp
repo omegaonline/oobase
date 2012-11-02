@@ -209,9 +209,7 @@ void OOBase::Event::set()
 
 bool OOBase::Event::wait(const Timeout& timeout)
 {
-	Guard<Condition::Mutex> guard(m_lock,false);
-	if (!guard.acquire(timeout))
-		return false;
+	Guard<Condition::Mutex> guard(m_lock);
 
 	while (!m_bSet)
 	{

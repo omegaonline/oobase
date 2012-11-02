@@ -87,17 +87,6 @@ void OOBase::Mutex::acquire()
 		OOBase_CallCriticalFailure(GetLastError());
 }
 
-bool OOBase::Mutex::acquire(const Timeout& timeout)
-{
-	DWORD dwWait = WaitForSingleObject(m_mutex,timeout.millisecs());
-	if (dwWait == WAIT_OBJECT_0)
-		return true;
-	else if (dwWait != WAIT_TIMEOUT)
-		OOBase_CallCriticalFailure(GetLastError());
-
-	return false;
-}
-
 void OOBase::Mutex::release()
 {
 	if (!ReleaseMutex(m_mutex))
@@ -199,34 +188,6 @@ void OOBase::Mutex::acquire()
 	int err = pthread_mutex_lock(&m_mutex);
 	if (err)
 		OOBase_CallCriticalFailure(err);
-}
-
-bool OOBase::Mutex::acquire(const Timeout& timeout)
-{
-	if (try_acquire())
-		return true;
-
-	if (timeout.is_infinite())
-	{
-		acquire();
-		return true;
-	}
-
-	int err = 0;
-	do
-	{
-		::timespec ts = {0};
-		timeout.get_abs_timespec(ts);
-		err = pthread_mutex_timedlock(&m_mutex,&ts);
-		if (err == 0)
-			return true;
-	}
-	while (err == ETIMEDOUT && !timeout.has_expired());
-	
-	if (err != ETIMEDOUT)
-		OOBase_CallCriticalFailure(err);	
-	
-	return false;
 }
 
 void OOBase::Mutex::release()

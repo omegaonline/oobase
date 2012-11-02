@@ -36,7 +36,6 @@ namespace OOBase
 
 		bool try_acquire();
 		void acquire();
-		bool acquire(const Timeout& timeout);
 		void release();
 
 	private:
@@ -153,14 +152,6 @@ namespace OOBase
 			m_mutex.acquire();
 
 			m_acquired = true;
-		}
-
-		bool acquire(const Timeout& timeout)
-		{
-			if (m_mutex.acquire(timeout))
-				m_acquired = true;
-
-			return m_acquired;
 		}
 
 		void release()
