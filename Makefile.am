@@ -77,6 +77,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/CDRStream.h \
 	include/OOBase/CmdArgs.h \
 	include/OOBase/Condition.h \
+	include/OOBase/ConfigFile.h \
 	include/OOBase/Destructor.h \
 	include/OOBase/DLL.h \
 	include/OOBase/Environment.h \
@@ -112,6 +113,7 @@ liboobase_la_SOURCES = \
 	src/Buffer.cpp \
 	src/CmdArgs.cpp \
 	src/Condition.cpp \
+	src/ConfigFile.cpp \
 	src/DLL.cpp \
 	src/Environment.cpp \
 	src/Error.cpp \
