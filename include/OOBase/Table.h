@@ -242,6 +242,9 @@ namespace OOBase
 	
 		struct Node
 		{
+			Node(const Node& n) : m_key(n.m_key), m_value(n.m_value)
+			{}
+
 			Node(const K& k, const V& v) : m_key(k), m_value(v)
 			{}
 				
@@ -268,7 +271,7 @@ namespace OOBase
 				try
 				{
 					for (i=0;i<m_size;++i)
-						::new (&new_data[i]) Node(m_data[i].m_key,m_data[i].m_value);
+						::new (&new_data[i]) Node(m_data[i]);
 				}
 				catch (...)
 				{
