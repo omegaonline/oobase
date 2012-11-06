@@ -31,11 +31,23 @@ namespace OOBase
 	class DeleteDestructor
 	{
 	public:
-		typedef HeapAllocator Allocator;
+		typedef CrtAllocator Allocator;
 
-		static void free(T* ptr)
+		static void destroy(T* ptr)
 		{
 			delete ptr;
+		}
+	};
+
+	template <typename A>
+	class FreeDestructor
+	{
+	public:
+		typedef A Allocator;
+
+		static void destroy(void* ptr)
+		{
+			A::free(ptr);
 		}
 	};
 
@@ -43,9 +55,9 @@ namespace OOBase
 	class ArrayDeleteDestructor
 	{
 	public:
-		typedef HeapAllocator Allocator;
+		typedef CrtAllocator Allocator;
 
-		static void free(T* ptr)
+		static void destroy(T* ptr)
 		{
 			delete [] ptr;
 		}
@@ -82,7 +94,7 @@ namespace OOBase
 			private:
 				~SmartPtrNode()
 				{
-					Destructor::free(m_data);
+					Destructor::destroy(m_data);
 				}
 
 				T* m_data;
@@ -183,7 +195,7 @@ namespace OOBase
 		SmartPtr(T* ptr = NULL) : baseClass(ptr)
 		{}
 
-		SmartPtr(size_t bytes) : baseClass(static_cast<T*>(Destructor::allocate(bytes)))
+		SmartPtr(size_t bytes) : baseClass(static_cast<T*>(Destructor::Allocator::allocate(bytes)))
 		{}
 
 		SmartPtr(const SmartPtr& rhs) : baseClass(rhs)
@@ -205,7 +217,7 @@ namespace OOBase
 
 		bool allocate(size_t size)
 		{
-			T* p = static_cast<T*>(Destructor::allocate(size));
+			T* p = static_cast<T*>(Destructor::Allocator::allocate(size));
 			if (p)
 				baseClass::operator=(p);
 			return (p != NULL);

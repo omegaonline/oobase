@@ -435,7 +435,7 @@ int AsyncSocket::process_send_v(SendItem* item, bool& watch_again)
 	if (first_buffer < item->m_count)
 	{
 		struct iovec static_bufs[4];
-		OOBase::SmartPtr<struct iovec,OOBase::LocalAllocator> ptrBufs;
+		OOBase::SmartPtr<struct iovec,OOBase::FreeDestructor<OOBase::LocalAllocator> > ptrBufs;
 
 		struct msghdr msg = {0};
 		msg.msg_iov = static_bufs;
