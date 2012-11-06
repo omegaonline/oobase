@@ -36,6 +36,8 @@ namespace OOBase
 		int substitute(env_table_t& tabEnv, const env_table_t& tabSrc);
 		SmartPtr<char*,FreeDestructor<LocalAllocator> > get_envp(const env_table_t& tabEnv);
 
+		int getenv(const char* envvar, LocalString& strVal);
+
 #if defined(_WIN32)
 		int get_user(HANDLE hToken, env_table_t& tabEnv);
 		SmartPtr<void,LocalAllocator> get_block(const env_table_t& tabEnv);

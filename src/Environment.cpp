@@ -21,13 +21,16 @@
 
 #include "../include/OOBase/Environment.h"
 
+#include <stdlib.h>
+
 #if defined(_WIN32)
 
 #include <UserEnv.h>
 
 namespace
 {
-	int from_wchar_t(OOBase::String& str, const wchar_t* wsz)
+	template <typename S>
+	int from_wchar_t(S& str, const wchar_t* wsz)
 	{
 		int err = 0;
 		char szBuf[1024] = {0};
@@ -196,6 +199,37 @@ OOBase::SmartPtr<void,OOBase::LocalAllocator> OOBase::Environment::get_block(con
 
 	return ptr;
 }
+
+int OOBase::Environment::getenv(const char* envvar, LocalString& strValue)
+{
+	wchar_t szBuf[256] = {0};
+	wchar_t* new_buf = szBuf;
+
+	DWORD dwLen = GetEnvironmentVariableW(envvar,new_buf,sizeof(szBuf)-1);
+	if (dwLen >= sizeof(szBuf)-1)
+	{
+		new_buf = static_cast<wchar_t*>(LocalAllocator::allocate(dwLen * sizeof(wchar_t)));
+		if (!new_buf)
+			return ERROR_OUTOFMEMORY;
+
+		dwLen = GetEnvironmentVariableW(envvar,new_buf,dwLen);
+	}
+
+	int err = 0;
+	if (dwLen == 0)
+	{
+		err = GetLastError();
+		if (err == ERROR_ENVVAR_NOT_FOUND)
+			err = 0;
+	}
+	else if (dwLen > 1)
+		err = from_wchar_t(strValue,new_buf);
+
+	if (new_buf != szBuf)
+		LocalAllocator::free(new_buf);
+
+	return err;
+}
 		
 #elif defined(HAVE_UNISTD_H)
 
@@ -236,6 +270,11 @@ int OOBase::Environment::get_current(env_table_t& tabEnv)
 	}
 
 	return 0;
+}
+
+int OOBase::Environment::getenv(const char* envvar, LocalString& strValue)
+{
+	return strValue.assign(::getenv(envvar));
 }
 
 #endif
