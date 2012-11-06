@@ -58,7 +58,7 @@ namespace OOBase
 
 		static void* init()
 		{
-			void* p = OOBase::LocalAllocator::allocate(sizeof(T));
+			void* p = OOBase::ThreadLocalAllocator::allocate(sizeof(T));
 			if (!p)
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
@@ -76,7 +76,7 @@ namespace OOBase
 			if (p)
 			{
 				static_cast<T*>(p)->~T();
-				OOBase::LocalAllocator::free(p);
+				OOBase::ThreadLocalAllocator::free(p);
 			}
 		}
 	};
