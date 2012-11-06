@@ -279,7 +279,7 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 		}
 
 		int err = parse_text(buffer,strSection,results,error_pos);
-		if (err != 0)
+		if (err)
 			return err;
 
 		if (r == 0)
@@ -296,8 +296,112 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 }
 
 #if defined(_WIN32)
-int OOBase::ConfigFile::load_registry(const char* key, results_t& results)
+int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key, results_t& results)
 {
-	return 0;
+	// Read from registry
+	HKEY hKey = 0;
+	LONG lRes = RegOpenKeyExA(hRootKey,key,0,KEY_READ,&hKey);
+	if (lRes != ERROR_SUCCESS)
+		return lRes;
+
+	// Loop pulling out registry values
+	for (DWORD dwIndex=0;; ++dwIndex)
+	{
+		char szBuf[1024];
+		DWORD dwNameLen = sizeof(szBuf);
+		DWORD dwType = 0;
+		DWORD dwValLen = 0;
+		lRes = RegEnumValueA(hKey,dwIndex,szBuf,&dwNameLen,NULL,&dwType,NULL,&dwValLen);
+		if (lRes == ERROR_NO_MORE_ITEMS)
+		{
+			lRes = 0;
+			break;
+		}
+		else if (lRes != ERROR_SUCCESS)
+			break;
+
+		// Skip anything starting with #
+		if (dwValLen >= 1 && szBuf[0] == '#')
+			continue;
+
+		OOBase::String value,key;
+		lRes = key.assign(szBuf,dwNameLen);
+		if (lRes)
+			break;
+
+		++dwNameLen;
+
+		if (dwType == REG_DWORD)
+		{
+			DWORD dwVal = 0;
+			DWORD dwLen = sizeof(dwVal);
+			lRes = RegEnumValueA(hKey,dwIndex,szBuf,&dwNameLen,NULL,NULL,(LPBYTE)&dwVal,&dwLen);
+			if (lRes != ERROR_SUCCESS)
+				break;
+
+			lRes = value.printf("%d",static_cast<int>(dwVal));
+			if (lRes)
+				break;
+		}
+		else if (dwType == REG_SZ || dwType == REG_EXPAND_SZ)
+		{
+			++dwValLen;
+			OOBase::SmartPtr<char,OOBase::LocalAllocator> buf(dwValLen+1);
+			if (!buf)
+			{
+				lRes = ERROR_OUTOFMEMORY;
+				break;
+			}
+
+			lRes = RegEnumValueA(hKey,dwIndex,szBuf,&dwNameLen,NULL,NULL,(LPBYTE)(char*)buf,&dwValLen);
+			if (lRes != ERROR_SUCCESS)
+				break;
+
+			if (dwType == REG_EXPAND_SZ)
+			{
+				DWORD dwExpLen = ExpandEnvironmentStringsA(buf,szBuf,sizeof(szBuf));
+				if (dwExpLen == 0)
+					lRes = ::GetLastError();
+				else if (dwExpLen <= sizeof(szBuf))
+					lRes = value.assign(szBuf,dwExpLen-1);
+				else
+				{
+					OOBase::SmartPtr<char,OOBase::LocalAllocator> buf3(dwExpLen+1);
+					if (!buf3)
+						lRes = ERROR_OUTOFMEMORY;
+					else if (!ExpandEnvironmentStringsA(buf,buf3,dwExpLen))
+						lRes = ::GetLastError();
+					else
+						lRes = value.assign(buf3,dwExpLen-1);
+				}
+			}
+			else
+				lRes = value.assign(buf,dwValLen-1);
+
+			if (lRes)
+				break;
+		}
+		else
+		{
+			continue;
+		}
+
+		if (!key.empty())
+		{
+			OOBase::String* v = results.find(key);
+			if (!v)
+			{
+				lRes = results.insert(key,value);
+				if (lRes)
+					break;
+			}
+			else
+				*v = value;
+		}
+	}
+
+	RegCloseKey(hKey);
+
+	return lRes;
 }
 #endif

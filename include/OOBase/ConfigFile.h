@@ -40,7 +40,7 @@ namespace OOBase
 		int load(const char* filename, results_t& results, error_pos_t* error_pos);
 
 #if defined(_WIN32)
-		int load_registry(const char* key, results_t& results);
+		int load_registry(HKEY hRootKey, const char* key, results_t& results);
 #endif
 	};
 }
