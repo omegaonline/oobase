@@ -114,7 +114,7 @@ namespace OOBase
 		size_t       m_clock;
 	};
 
-	template <typename K, typename V, typename Allocator = HeapAllocator>
+	template <typename K, typename V, typename Allocator = CrtAllocator>
 	class TableCache : public Cache<K,V,Allocator,Table<K,V,Allocator> >
 	{
 	public:
@@ -122,7 +122,7 @@ namespace OOBase
 		{}
 	};
 
-	template <typename K, typename V, typename Allocator = HeapAllocator, typename H = OOBase::Hash<K> >
+	template <typename K, typename V, typename Allocator = CrtAllocator, typename H = OOBase::Hash<K> >
 	class HashCache : public Cache<K,V,Allocator,HashTable<K,V,Allocator,H> >
 	{
 	public:

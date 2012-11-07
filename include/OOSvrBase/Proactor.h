@@ -35,7 +35,7 @@ typedef struct
 
 namespace OOSvrBase
 {
-	class AsyncSocket : public OOBase::RefCounted<OOBase::HeapAllocator>
+	class AsyncSocket : public OOBase::RefCounted<OOBase::CrtAllocator>
 	{
 	public:
 		template <typename T>
@@ -84,14 +84,14 @@ namespace OOSvrBase
 
 	private:
 		template <typename T>
-		struct ThunkR : public OOBase::CustomNew<OOBase::HeapAllocator>
+		struct ThunkR
 		{
 			T* m_param;
 			void (T::*m_callback)(OOBase::Buffer* buffer, int err);
 
 			static ThunkR* create(T* param, void (T::*callback)(OOBase::Buffer*,int))
 			{
-				ThunkR* t = static_cast<ThunkR*>(OOBase::HeapAllocator::allocate(sizeof(ThunkR)));
+				ThunkR* t = static_cast<ThunkR*>(OOBase::CrtAllocator::allocate(sizeof(ThunkR)));
 				if (t)
 				{
 					t->m_callback = callback;
@@ -103,21 +103,21 @@ namespace OOSvrBase
 			static void fn(void* param, OOBase::Buffer* buffer, int err)
 			{
 				ThunkR thunk = *static_cast<ThunkR*>(param);
-				OOBase::HeapAllocator::free(param);
+				OOBase::CrtAllocator::free(param);
 				
 				(thunk.m_param->*thunk.m_callback)(buffer,err);
 			}
 		};
 		
 		template <typename T>
-		struct ThunkS : public OOBase::CustomNew<OOBase::HeapAllocator>
+		struct ThunkS
 		{
 			T* m_param;
 			void (T::*m_callback)(int err);
 
 			static ThunkS* create(T* param, void (T::*callback)(int))
 			{
-				ThunkS* t = static_cast<ThunkS*>(OOBase::HeapAllocator::allocate(sizeof(ThunkS)));
+				ThunkS* t = static_cast<ThunkS*>(OOBase::CrtAllocator::allocate(sizeof(ThunkS)));
 				if (t)
 				{
 					t->m_callback = callback;
@@ -129,7 +129,7 @@ namespace OOSvrBase
 			static void fn(void* param, int err)
 			{
 				ThunkS thunk = *static_cast<ThunkS*>(param);
-				OOBase::HeapAllocator::free(param);
+				OOBase::CrtAllocator::free(param);
 				
 				(thunk.m_param->*thunk.m_callback)(err);
 			}
@@ -156,7 +156,7 @@ namespace OOSvrBase
 		virtual ~AsyncLocalSocket() {}
 	};
 	
-	class Acceptor : public OOBase::RefCounted<OOBase::HeapAllocator>
+	class Acceptor : public OOBase::RefCounted<OOBase::CrtAllocator>
 	{
 	public:
 		// No members, just release() to close

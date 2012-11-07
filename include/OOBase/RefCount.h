@@ -34,7 +34,7 @@ namespace OOBase
 		RefCounted() : m_refcount(1)
 		{}
 
-		/// Return a reference counted copy
+		/// Increment the reference
 		void addref()
 		{
 			++m_refcount;

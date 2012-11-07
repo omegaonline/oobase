@@ -193,7 +193,7 @@ int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* b
 	if (count == 0)
 		return 0;
 
-	OOBase::SmartPtr<WSABUF,OOBase::HeapAllocator> wsa_bufs(sizeof(WSABUF) * count);
+	OOBase::SmartPtr<WSABUF,OOBase::FreeDestructor<OOBase::CrtAllocator> > wsa_bufs(sizeof(WSABUF) * count);
 	if (!wsa_bufs)
 		return ERROR_OUTOFMEMORY;
 	
@@ -253,7 +253,7 @@ namespace
 		OOSvrBase::detail::ProactorWin32*                m_pProactor;
 		OOBase::Condition::Mutex                         m_lock;
 		OOBase::Condition                                m_condition;
-		OOBase::SmartPtr<sockaddr,OOBase::HeapAllocator> m_addr;
+		OOBase::SmartPtr<sockaddr,OOBase::FreeDestructor<OOBase::CrtAllocator> > m_addr;
 		socklen_t                                        m_addr_len;
 		SOCKET                                           m_socket;
 		size_t                                           m_backlog;
@@ -486,7 +486,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 							
 		if (!pOv)
 		{
-			buf = OOBase::HeapAllocator::allocate((m_addr_len+16)*2);
+			buf = OOBase::CrtAllocator::allocate((m_addr_len+16)*2);
 			if (!buf)
 			{
 				m_pProactor->unbind((HANDLE)sockNew);
@@ -498,7 +498,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 			if (err != 0)
 			{
 				m_pProactor->unbind((HANDLE)sockNew);
-				OOBase::HeapAllocator::free(buf);
+				OOBase::CrtAllocator::free(buf);
 				break;
 			}
 					
@@ -542,7 +542,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 		OOBase::Net::close_socket(sockNew);
 	
 	if (buf)
-		OOBase::HeapAllocator::free(buf);
+		OOBase::CrtAllocator::free(buf);
 	
 	if (pOv)
 		m_pProactor->delete_overlapped(pOv);
@@ -623,7 +623,7 @@ bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void
 		(*m_callback)(m_param,pSocket,remote_addr,remote_addr_len,dwErr);
 			
 	if (bRemove)
-		OOBase::HeapAllocator::free(addr_buf);
+		OOBase::CrtAllocator::free(addr_buf);
 	
 	guard.acquire();
 	

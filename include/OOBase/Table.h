@@ -26,7 +26,7 @@
 
 namespace OOBase
 {
-	template <typename K, typename V, typename Allocator = HeapAllocator>
+	template <typename K, typename V, typename Allocator = CrtAllocator>
 	class Table
 	{
 	public:

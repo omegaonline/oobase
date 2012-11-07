@@ -73,7 +73,7 @@ namespace OOBase
 		{
 			void* ptr = Allocator::allocate(bytes);
 			if (!ptr)
-				throw std::bad_alloc();
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 			return ptr;
 		}
 
@@ -81,7 +81,7 @@ namespace OOBase
 		{
 			void* ptr = Allocator::allocate(bytes);
 			if (!ptr)
-				throw std::bad_alloc();
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 			return ptr;
 		}
 

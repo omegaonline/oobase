@@ -26,7 +26,7 @@
 
 namespace OOBase
 {
-	template <typename T, typename Allocator = HeapAllocator>
+	template <typename T, typename Allocator = CrtAllocator>
 	class Stack : private Bag<T,Allocator>
 	{
 	public:

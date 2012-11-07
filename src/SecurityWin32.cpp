@@ -29,20 +29,10 @@
 
 namespace
 {
-	class NetApiAllocator
+	class NetApiDestructor
 	{
 	public:
-		// We can use the local allocator here, as we are only ever using stack local pointers
-		typedef OOBase::LocalAllocator Allocator;
-
-		static void* allocate(size_t bytes)
-		{
-			void* ptr = NULL;
-			NetApiBufferAllocate((DWORD)bytes,&ptr);
-			return ptr;
-		}
-
-		static void free(void* ptr)
+		static void destroy(void* ptr)
 		{
 			NetApiBufferFree(ptr);
 		}
@@ -87,7 +77,7 @@ DWORD OOBase::Win32::sec_descript_t::SetEntriesInAcl(ULONG cCountOfExplicitEntri
 DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, OOBase::SmartPtr<wchar_t,OOBase::LocalAllocator>& strUserName, OOBase::SmartPtr<wchar_t,OOBase::LocalAllocator>& strDomainName)
 {
 	// Find out all about the user associated with hToken
-	OOBase::SmartPtr<TOKEN_USER,OOBase::HeapAllocator> ptrUserInfo = static_cast<TOKEN_USER*>(GetTokenInfo(hToken,TokenUser));
+	OOBase::SmartPtr<TOKEN_USER,OOBase::FreeDestructor<OOBase::CrtAllocator> > ptrUserInfo = static_cast<TOKEN_USER*>(GetTokenInfo(hToken,TokenUser));
 	if (!ptrUserInfo)
 		return GetLastError();
 
@@ -126,12 +116,12 @@ DWORD OOBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile)
 	// Lookup a DC for pszDomain
 	LPBYTE v = NULL;
 	NetGetAnyDCName(NULL,strDomainName,&v);
-	OOBase::SmartPtr<wchar_t,NetApiAllocator> ptrDCName = reinterpret_cast<wchar_t*>(v);
+	OOBase::SmartPtr<wchar_t,NetApiDestructor> ptrDCName = reinterpret_cast<wchar_t*>(v);
 
 	// Try to find the user's profile path...
 	v = NULL;
 	NetUserGetInfo(ptrDCName,strUserName,3,&v);
-	OOBase::SmartPtr<USER_INFO_3,NetApiAllocator> pInfo = reinterpret_cast<USER_INFO_3*>(v);
+	OOBase::SmartPtr<USER_INFO_3,NetApiDestructor> pInfo = reinterpret_cast<USER_INFO_3*>(v);
 
 	// Load the Users Profile
 	PROFILEINFOW profile_info = {0};
@@ -155,7 +145,7 @@ DWORD OOBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile)
 DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, OOBase::SmartPtr<void,OOBase::LocalAllocator>& pSIDLogon)
 {
 	// Get the logon SID of the Token
-	OOBase::SmartPtr<TOKEN_GROUPS,OOBase::HeapAllocator> ptrGroups = static_cast<TOKEN_GROUPS*>(GetTokenInfo(hToken,TokenGroups));
+	OOBase::SmartPtr<TOKEN_GROUPS,OOBase::FreeDestructor<OOBase::CrtAllocator> > ptrGroups = static_cast<TOKEN_GROUPS*>(GetTokenInfo(hToken,TokenGroups));
 	if (!ptrGroups)
 		return GetLastError();
 
@@ -186,7 +176,7 @@ DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, OOBase::SmartPtr<void,OOBase::Lo
 DWORD OOBase::Win32::SetTokenDefaultDACL(HANDLE hToken)
 {
 	// Get the current Default DACL
-	OOBase::SmartPtr<TOKEN_DEFAULT_DACL,OOBase::HeapAllocator> ptrDef_dacl = static_cast<TOKEN_DEFAULT_DACL*>(GetTokenInfo(hToken,TokenDefaultDacl));
+	OOBase::SmartPtr<TOKEN_DEFAULT_DACL,OOBase::FreeDestructor<OOBase::CrtAllocator> > ptrDef_dacl = static_cast<TOKEN_DEFAULT_DACL*>(GetTokenInfo(hToken,TokenDefaultDacl));
 	if (!ptrDef_dacl)
 		return ERROR_OUTOFMEMORY;
 
@@ -315,7 +305,7 @@ void* OOBase::Win32::GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls)
 {
 	for (DWORD dwLen = 256;;)
 	{
-		void* pBuffer = OOBase::HeapAllocator::allocate(dwLen);
+		void* pBuffer = OOBase::CrtAllocator::allocate(dwLen);
 		if (!pBuffer)
 		{
 			SetLastError(ERROR_OUTOFMEMORY);
@@ -327,7 +317,7 @@ void* OOBase::Win32::GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls)
 
 		DWORD err = GetLastError();
 
-		OOBase::HeapAllocator::free(pBuffer);
+		OOBase::CrtAllocator::free(pBuffer);
 
 		SetLastError(err);
 			

@@ -64,7 +64,7 @@ namespace OOBase
 		int accept(socket_t accept_sock, socket_t& new_sock, const Timeout& timeout = Timeout());
 	}
 
-	class Socket : public RefCounted<HeapAllocator>
+	class Socket : public RefCounted<CrtAllocator>
 	{
 	public:
 		static Socket* attach(socket_t sock, int& err);

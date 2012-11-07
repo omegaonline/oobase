@@ -194,7 +194,7 @@ int OOBase::String::copy_on_write(size_t inc)
 		size_t our_len = (m_node ? length() : 0);
 
 		// There is an implicit len+1 here as m_data[1] in struct
-		Node* new_node = static_cast<Node*>(OOBase::HeapAllocator::allocate(sizeof(Node) + our_len+inc));
+		Node* new_node = static_cast<Node*>(OOBase::CrtAllocator::allocate(sizeof(Node) + our_len+inc));
 		if (!new_node)
 			return ERROR_OUTOFMEMORY;
 
@@ -219,7 +219,7 @@ int OOBase::String::copy_on_write(size_t inc)
 			size_t our_len = length();
 
 			// It's our buffer to play with... (There is an implicit +1 here)
-			Node* new_node = static_cast<Node*>(OOBase::HeapAllocator::reallocate(m_node,sizeof(Node) + our_len+inc));
+			Node* new_node = static_cast<Node*>(OOBase::CrtAllocator::reallocate(m_node,sizeof(Node) + our_len+inc));
 			if (!new_node)
 				return ERROR_OUTOFMEMORY;
 
@@ -389,5 +389,5 @@ void OOBase::String::node_addref(Node* node)
 void OOBase::String::node_release(Node* node)
 {
 	if (node && --node->m_refcount == 0)
-		OOBase::HeapAllocator::free(node);
+		OOBase::CrtAllocator::free(node);
 }

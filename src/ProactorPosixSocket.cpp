@@ -140,7 +140,7 @@ AsyncSocket::~AsyncSocket()
 					send_item.m_buffers[i]->release();
 			}
 
-			OOBase::HeapAllocator::free(send_item.m_buffers);
+			OOBase::CrtAllocator::free(send_item.m_buffers);
 		}
 	}
 }
@@ -234,7 +234,7 @@ int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* b
 		return send(param,callback,single);
 
 	SendItem item = { param, callback, actual_count };
-	item.m_buffers = static_cast<OOBase::Buffer**>(OOBase::HeapAllocator::allocate(actual_count * sizeof(OOBase::Buffer*)));
+	item.m_buffers = static_cast<OOBase::Buffer**>(OOBase::CrtAllocator::allocate(actual_count * sizeof(OOBase::Buffer*)));
 	if (!item.m_buffers)
 		return ERROR_OUTOFMEMORY;
 
@@ -261,7 +261,7 @@ int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* b
 		for (size_t i=0;i<actual_count;++i)
 			item.m_buffers[i]->release();
 
-		OOBase::HeapAllocator::free(item.m_buffers);
+		OOBase::CrtAllocator::free(item.m_buffers);
 		return err;
 	}
 
@@ -511,7 +511,7 @@ int AsyncSocket::process_send_v(SendItem* item, bool& watch_again)
 				item->m_buffers[i]->release();
 		}
 
-		OOBase::HeapAllocator::free(item->m_buffers);
+		OOBase::CrtAllocator::free(item->m_buffers);
 		item->m_buffers = NULL;
 	}
 

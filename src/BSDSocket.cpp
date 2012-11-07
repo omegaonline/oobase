@@ -411,8 +411,8 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 	if (count == 0)
 		return 0;
 
-	struct iovec static_bufs[4];
-	OOBase::SmartPtr<struct iovec,OOBase::FreeDestructor<OOBase::LocalAllocator> > ptrBufs;
+	struct iovec static_bufs[8];
+	OOBase::SmartPtr<struct iovec,OOBase::FreeDestructor<OOBase::CrtAllocator> > ptrBufs;
 
 	struct msghdr msg = {0};
 	msg.msg_iov = static_bufs;
@@ -595,8 +595,8 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 	if (count == 0)
 		return 0;
 
-	struct iovec static_bufs[4];
-	OOBase::SmartPtr<struct iovec,OOBase::FreeDestructor<OOBase::LocalAllocator> > ptrBufs;
+	struct iovec static_bufs[8];
+	OOBase::SmartPtr<struct iovec,OOBase::FreeDestructor<OOBase::CrtAllocator> > ptrBufs;
 
 	struct msghdr msg = {0};
 	msg.msg_iov = static_bufs;

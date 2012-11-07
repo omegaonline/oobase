@@ -56,7 +56,7 @@ OOSvrBase::detail::ProactorWin32::~ProactorWin32()
 
 int OOSvrBase::detail::ProactorWin32::new_overlapped(Overlapped*& pOv, pfnCompletion_t callback)
 {
-	pOv = static_cast<Overlapped*>(OOBase::HeapAllocator::allocate(sizeof(Overlapped)));
+	pOv = static_cast<Overlapped*>(OOBase::CrtAllocator::allocate(sizeof(Overlapped)));
 	if (!pOv)
 		return ERROR_OUTOFMEMORY;
 	
@@ -73,7 +73,7 @@ int OOSvrBase::detail::ProactorWin32::new_overlapped(Overlapped*& pOv, pfnComple
 void OOSvrBase::detail::ProactorWin32::delete_overlapped(Overlapped* pOv)
 {
 	if (InterlockedDecrement(&pOv->m_refcount) == 0)
-		OOBase::HeapAllocator::free(pOv);
+		OOBase::CrtAllocator::free(pOv);
 }
 
 int OOSvrBase::detail::ProactorWin32::bind(HANDLE hFile)

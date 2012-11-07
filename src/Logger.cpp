@@ -192,7 +192,7 @@ namespace
 
 			const char* arrBufs[2] = { msg, NULL };
 
-			OOBase::SmartPtr<TOKEN_USER,OOBase::CrtAllocator> ptrSIDProcess;
+			OOBase::SmartPtr<TOKEN_USER,OOBase::FreeDestructor<OOBase::CrtAllocator> > ptrSIDProcess;
 			PSID psid = NULL;
 			OOBase::Win32::SmartHandle hProcessToken;
 
