@@ -257,16 +257,16 @@ char* OOBase::detail::get_error_buffer(size_t& len)
 	return inst->m_error_buffer;
 }
 
-void* OOBase::ThreadLocalAllocator::allocate(size_t bytes)
+void* OOBase::ThreadLocalAllocator::allocate(size_t bytes, size_t align)
 {
 	void* TODO; // Actually do something here!
 
-	return CrtAllocator::allocate(bytes);
+	return CrtAllocator::allocate(bytes,align);
 }
 
-void* OOBase::ThreadLocalAllocator::reallocate(void* ptr, size_t bytes)
+void* OOBase::ThreadLocalAllocator::reallocate(void* ptr, size_t bytes, size_t align)
 {
-	return CrtAllocator::reallocate(ptr,bytes);
+	return CrtAllocator::reallocate(ptr,bytes,align);
 }
 
 void OOBase::ThreadLocalAllocator::free(void* ptr)

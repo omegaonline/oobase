@@ -30,7 +30,7 @@ namespace OOBase
 {
 	namespace Environment
 	{
-		typedef Table<String,String,LocalAllocator> env_table_t;
+		typedef Table<String,String,AllocatorInstance> env_table_t;
 
 		int get_current(env_table_t& tabEnv);
 		int substitute(env_table_t& tabEnv, const env_table_t& tabSrc);

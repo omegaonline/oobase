@@ -32,12 +32,10 @@ namespace OOBase
 	public:
 		Stack() : Bag<T,Allocator>()
 		{}
+
+		Stack(Allocator& allocator) : Bag<T,Allocator>(allocator)
+		{}
 			
-		int reserve(size_t capacity)
-		{
-			return Bag<T,Allocator>::reserve(capacity);
-		}
-		
 		int push(const T& value)
 		{
 			return Bag<T,Allocator>::add(value);

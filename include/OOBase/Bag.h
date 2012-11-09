@@ -24,53 +24,356 @@
 
 #include "Memory.h"
 
+#if defined(_MSC_VER)
+#define HAVE__IS_POD 1
+#elif defined(__clang__)
+#if __has_extension(is_pod)
+#define HAVE__IS_POD 1
+#endif
+#elif defined(__GNUG__) && ((__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
+#define HAVE__IS_POD 1
+#endif
+
+#if !defined(HAVE__IS_POD)
+#include <limits>
+#endif
+
 namespace OOBase
 {
-	template <typename T, typename Allocator = HeapAllocator>
-	class Bag
+	namespace detail
 	{
+		template <typename T>
+		struct is_pod
+		{
+#if defined(HAVE__IS_POD)
+			static const bool value = __is_pod(T);
+#else
+			static const bool value = std::numeric_limits<T>::is_integer || std::numeric_limits<T>::is_signed;
+#endif
+		};
+
+#if !defined(HAVE__IS_POD)
+		template <>
+		struct is_pod<void>
+		{
+			static const bool value = true;
+		};
+
+		template <typename T>
+		struct is_pod<T&>
+		{
+			static const bool value = false;
+		};
+
+		template <typename T>
+		struct is_pod<T*>
+		{
+			static const bool value = is_pod<T>::value;
+		};
+
+		template <typename T>
+		struct is_pod<T const>
+		{
+			static const bool value = is_pod<T>::value;
+		};
+
+		template <typename T>
+		struct is_pod<T volatile>
+		{
+			static const bool value = is_pod<T>::value;
+		};
+#endif
+
+		template <typename T, bool POD = false>
+		class PODBag
+		{
+		public:
+			PODBag() : m_data(NULL), m_size(0), m_capacity(0)
+			{
+			}
+
+			virtual ~PODBag()
+			{
+			}
+
+		protected:
+			T*     m_data;
+			size_t m_size;
+			size_t m_capacity;
+
+			virtual void* allocate_i(size_t bytes, size_t align) = 0;
+			virtual void free_i(void* ptr) = 0;
+
+			int reserve_i(size_t capacity)
+			{
+				if (m_capacity < capacity)
+				{
+					T* new_data = static_cast<T*>(allocate_i(capacity*sizeof(T),detail::alignof<T>::value));
+					if (!new_data)
+						return ERROR_OUTOFMEMORY;
+
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+					size_t i = 0;
+					try
+					{
+						for (i=0;i<m_size;++i)
+							::new (&new_data[i]) T(m_data[i]);
+					}
+					catch (...)
+					{
+						for (;i>0;--i)
+							new_data[i-1].~T();
+
+						free_i(new_data);
+						throw;
+					}
+
+					for (i=0;i<m_size;++i)
+						m_data[i].~T();
+
+#else
+					for (size_t i=0;i<m_size;++i)
+					{
+						::new (&new_data[i]) T(m_data[i]);
+						m_data[i].~T();
+					}
+#endif
+
+					free_i(m_data);
+					m_data = new_data;
+					m_capacity = capacity;
+				}
+				return 0;
+			}
+
+		private:
+			// Do not allow copy constructors or assignment
+			// as memory allocation will occur...
+			// and you probably don't want to be copying these around
+			PODBag(const PODBag&);
+			PODBag& operator = (const PODBag&);
+		};
+
+		template <typename T>
+		class PODBag<T,true>
+		{
+		public:
+			PODBag() : m_data(NULL), m_size(0), m_capacity(0)
+			{}
+
+			virtual ~PODBag()
+			{}
+
+		protected:
+			T*     m_data;
+			size_t m_size;
+			size_t m_capacity;
+
+			virtual void* reallocate_i(void* ptr, size_t bytes, size_t align) = 0;
+			virtual void free_i(void* ptr) = 0;
+
+			int reserve_i(size_t capacity)
+			{
+				if (m_capacity < capacity)
+				{
+					T* new_data = static_cast<T*>(reallocate_i(m_data,capacity*sizeof(T),detail::alignof<T>::value));
+					if (!new_data)
+						return ERROR_OUTOFMEMORY;
+
+					m_data = new_data;
+					m_capacity = capacity;
+				}
+				return 0;
+			}
+
+		private:
+			// Do not allow copy constructors or assignment
+			// as memory allocation will occur...
+			// and you probably don't want to be copying these around
+			PODBag(const PODBag&);
+			PODBag& operator = (const PODBag&);
+		};
+
+		template <typename T>
+		class BagImpl : public PODBag<T,is_pod<T>::value>
+		{
+			typedef PODBag<T,is_pod<T>::value> baseClass;
+
+		public:
+			BagImpl() : baseClass()
+			{}
+
+			void clear()
+			{
+				while (this->m_size > 0)
+					this->m_data[--this->m_size].~T();
+			}
+
+			bool empty() const
+			{
+				return (this->m_size == 0);
+			}
+
+			size_t size() const
+			{
+				return this->m_size;
+			}
+
+		protected:
+			int add(const T& value)
+			{
+				if (this->m_size+1 > this->m_capacity)
+				{
+					size_t cap = (this->m_capacity == 0 ? 4 : this->m_capacity*2);
+					int err = baseClass::reserve_i(cap);
+					if (err != 0)
+						return err;
+				}
+
+				// Placement new with copy constructor
+				::new (&this->m_data[this->m_size]) T(value);
+
+				// This is exception safe as the increment happens here
+				++this->m_size;
+				return 0;
+			}
+
+			bool pop(T* value = NULL)
+			{
+				if (this->m_size == 0)
+					return false;
+
+				if (value)
+					*value = this->m_data[this->m_size-1];
+
+				this->m_data[--this->m_size].~T();
+				return true;
+			}
+
+			void remove_at(size_t pos)
+			{
+				if (this->m_data && pos < this->m_size)
+				{
+					this->m_data[pos] = this->m_data[--this->m_size];
+					this->m_data[this->m_size].~T();
+				}
+			}
+
+			T* at(size_t pos)
+			{
+				return (pos >= this->m_size ? NULL : &this->m_data[pos]);
+			}
+
+			const T* at(size_t pos) const
+			{
+				return (pos >= this->m_size ? NULL : &this->m_data[pos]);
+			}
+
+			void destroy()
+			{
+				clear();
+				this->free_i(this->m_data);
+			}
+
+			void remove_at_sorted(size_t pos)
+			{
+				if (this->m_data && pos < this->m_size)
+				{
+					for(--this->m_size;pos < this->m_size;++pos)
+						this->m_data[pos] = this->m_data[pos+1];
+
+					this->m_data[this->m_size].~T();
+				}
+			}
+		};
+
+		template <typename BaseClass, typename Allocator = CrtAllocator>
+		class AllocImpl : public BaseClass
+		{
+		public:
+			AllocImpl() : BaseClass()
+			{}
+
+			virtual ~AllocImpl()
+			{}
+
+		private:
+			void* allocate_i(size_t bytes, size_t align)
+			{
+				return Allocator::allocate(bytes,align);
+			}
+
+			void* reallocate_i(void* ptr, size_t bytes, size_t align)
+			{
+				return Allocator::reallocate(ptr,bytes,align);
+			}
+
+			void free_i(void* ptr)
+			{
+				Allocator::free(ptr);
+			}
+		};
+
+		template <typename BaseClass>
+		class AllocImpl<BaseClass,AllocatorInstance> : public BaseClass
+		{
+		public:
+			AllocImpl(AllocatorInstance& allocator) : BaseClass(), m_allocator(allocator)
+			{}
+
+			virtual ~AllocImpl()
+			{}
+
+		private:
+			AllocatorInstance& m_allocator;
+
+			void* allocate_i(size_t bytes, size_t align)
+			{
+				return m_allocator.allocate(bytes,align);
+			}
+
+			void* reallocate_i(void* ptr, size_t bytes, size_t align)
+			{
+				return m_allocator.reallocate(ptr,bytes,align);
+			}
+
+			void free_i(void* ptr)
+			{
+				m_allocator.free(ptr);
+			}
+		};
+	}
+
+	template <typename T, typename Allocator = CrtAllocator>
+	class Bag : public detail::AllocImpl<detail::BagImpl<T>,Allocator >
+	{
+		typedef detail::AllocImpl<detail::BagImpl<T>,Allocator > baseClass;
+
 	public:
-		Bag() : m_data(NULL), m_size(0), m_capacity(0)
+		Bag() : baseClass()
 		{}
 
-		~Bag()
-		{
-			clear();
+		Bag(Allocator& allocator) : baseClass(allocator)
+		{}
 
-			Allocator::free(m_data);
-		}
-
-		int reserve(size_t capacity)
+		virtual ~Bag()
 		{
-			return reserve_i(capacity + m_size);
+			baseClass::destroy();
 		}
 
 		int add(const T& value)
 		{
-			if (m_size+1 > m_capacity)
-			{
-				size_t cap = (m_capacity == 0 ? 4 : m_capacity*2);
-				int err = reserve_i(cap);
-				if (err != 0)
-					return err;
-			}
-
-			// Placement new with copy constructor
-			::new (&m_data[m_size]) T(value);
-
-			// This is exception safe as the increment happens here
-			++m_size;
-			return 0;
+			return baseClass::add(value);
 		}
 
 		bool remove(const T& value)
 		{
 			// This is just really useful!
-			for (size_t pos = 0;pos < m_size;++pos)
+			for (size_t pos = 0;pos < this->m_size;++pos)
 			{
-				if (m_data[pos] == value)
+				if (this->m_data[pos] == value)
 				{
-					remove_at(pos);
+					baseClass::remove_at(pos);
 					return true;
 				}
 			}
@@ -80,113 +383,22 @@ namespace OOBase
 
 		bool pop(T* value = NULL)
 		{
-			if (m_size == 0)
-				return false;
-
-			if (value)
-				*value = m_data[m_size-1];
-
-			m_data[--m_size].~T();
-			return true;
+			return baseClass::pop(value);
 		}
 
 		void remove_at(size_t pos)
 		{
-			if (m_data && pos < m_size)
-			{
-				m_data[pos] = m_data[--m_size];
-				m_data[m_size].~T();
-			}
-		}
-
-		void clear()
-		{
-			while (m_size > 0)
-				m_data[--m_size].~T();
-		}
-
-		bool empty() const
-		{
-			return (m_size == 0);
-		}
-
-		size_t size() const
-		{
-			return m_size;
+			baseClass::remove_at(pos);
 		}
 
 		T* at(size_t pos)
 		{
-			return (pos >= m_size ? NULL : &m_data[pos]);
+			return baseClass::at(pos);
 		}
 
 		const T* at(size_t pos) const
 		{
-			return (pos >= m_size ? NULL : &m_data[pos]);
-		}
-
-	protected:
-		T*     m_data;
-		size_t m_size;
-
-		void remove_at_sorted(size_t pos)
-		{
-			if (m_data && pos < m_size)
-			{
-				for(--m_size;pos < m_size;++pos)
-					m_data[pos] = m_data[pos+1];
-
-				m_data[m_size].~T();
-			}
-		}
-
-	private:
-		// Do not allow copy constructors or assignment
-		// as memory allocation will occur...
-		// and you probably don't want to be copying these around
-		Bag(const Bag&);
-		Bag& operator = (const Bag&);
-
-		size_t m_capacity;
-
-		int reserve_i(size_t capacity)
-		{
-			if (m_capacity < capacity)
-			{
-				T* new_data = static_cast<T*>(Allocator::allocate(capacity*sizeof(T)));
-				if (!new_data)
-					return ERROR_OUTOFMEMORY;
-
-#if defined(OOBASE_HAVE_EXCEPTIONS)
-				size_t i = 0;
-				try
-				{
-					for (i=0;i<m_size;++i)
-						::new (&new_data[i]) T(m_data[i]);
-				}
-				catch (...)
-				{
-					for (;i>0;--i)
-						new_data[i-1].~T();
-
-					Allocator::free(new_data);
-					throw;
-				}
-
-				for (i=0;i<m_size;++i)
-					m_data[i].~T();
-#else
-				for (size_t i=0;i<m_size;++i)
-				{
-					::new (&new_data[i]) T(m_data[i]);
-					new_data[i-1].~T();
-				}
-#endif
-				Allocator::free(m_data);
-				m_data = new_data;
-				m_capacity = capacity;
-			}
-			return 0;
+			return baseClass::at(pos);
 		}
 	};
 }

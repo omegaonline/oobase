@@ -24,29 +24,14 @@
 
 const OOBase::critical_t OOBase::critical = {0};
 
-void* OOBase::HeapAllocator::allocate(size_t bytes)
+void* OOBase::LocalAllocator::allocate(size_t bytes, size_t align)
 {
-	return CrtAllocator::allocate(bytes);
+	return CrtAllocator::allocate(bytes,align);
 }
 
-void* OOBase::HeapAllocator::reallocate(void* ptr, size_t bytes)
+void* OOBase::LocalAllocator::reallocate(void* ptr, size_t bytes, size_t align)
 {
-	return CrtAllocator::reallocate(ptr,bytes);
-}
-
-void OOBase::HeapAllocator::free(void* ptr)
-{
-	CrtAllocator::free(ptr);
-}
-
-void* OOBase::LocalAllocator::allocate(size_t bytes)
-{
-	return CrtAllocator::allocate(bytes);
-}
-
-void* OOBase::LocalAllocator::reallocate(void* ptr, size_t bytes)
-{
-	return CrtAllocator::reallocate(ptr,bytes);
+	return CrtAllocator::reallocate(ptr,bytes,align);
 }
 
 void OOBase::LocalAllocator::free(void* ptr)
@@ -56,12 +41,12 @@ void OOBase::LocalAllocator::free(void* ptr)
 
 #if !defined(_WIN32)
 
-void* OOBase::CrtAllocator::allocate(size_t bytes)
+void* OOBase::CrtAllocator::allocate(size_t bytes, size_t /*align*/)
 {
 	return ::malloc(bytes);
 }
 
-void* OOBase::CrtAllocator::reallocate(void* ptr, size_t bytes)
+void* OOBase::CrtAllocator::reallocate(void* ptr, size_t bytes, size_t /*align*/)
 {
 	return ::realloc(ptr,bytes);
 }
