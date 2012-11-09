@@ -65,9 +65,11 @@ namespace OOBase
 
 	namespace detail
 	{
-		template <typename T, typename Destructor, typename Allocator>
+		template <typename T, typename Destructor>
 		class SmartPtrImpl
 		{
+			typedef typename Destructor::Allocator Allocator;
+
 			class SmartPtrNode : public RefCounted<Allocator>
 			{
 			public:
@@ -193,9 +195,9 @@ namespace OOBase
 	}
 
 	template <typename T, typename Destructor = DeleteDestructor<T> >
-	class SmartPtr : public detail::SmartPtrImpl<T,Destructor,typename Destructor::Allocator>
+	class SmartPtr : public detail::SmartPtrImpl<T,Destructor>
 	{
-		typedef detail::SmartPtrImpl<T,Destructor,typename Destructor::Allocator> baseClass;
+		typedef detail::SmartPtrImpl<T,Destructor> baseClass;
 
 	public:
 		SmartPtr(T* ptr = NULL) : baseClass(ptr)
@@ -237,9 +239,9 @@ namespace OOBase
 	};
 
 	template <typename Destructor>
-	class SmartPtr<void,Destructor> : public detail::SmartPtrImpl<void,Destructor,typename Destructor::Allocator>
+	class SmartPtr<void,Destructor> : public detail::SmartPtrImpl<void,Destructor>
 	{
-		typedef detail::SmartPtrImpl<void,Destructor,typename Destructor::Allocator> baseClass;
+		typedef detail::SmartPtrImpl<void,Destructor> baseClass;
 
 	public:
 		SmartPtr(void* ptr = NULL) : baseClass(ptr)
