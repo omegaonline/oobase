@@ -107,6 +107,12 @@ namespace OOBase
 					m_node = new (critical) SmartPtrNode(ptr);
 			}
 
+			SmartPtrImpl(Allocator& allocator, T* ptr = NULL) : m_node(NULL)
+			{
+				if (ptr)
+					m_node = new (critical) SmartPtrNode(ptr);
+			}
+
 			SmartPtrImpl(const SmartPtrImpl& rhs) : m_node(rhs.m_node)
 			{
 				if (m_node)
@@ -195,7 +201,7 @@ namespace OOBase
 		SmartPtr(T* ptr = NULL) : baseClass(ptr)
 		{}
 
-		SmartPtr(size_t bytes) : baseClass(static_cast<T*>(Destructor::Allocator::allocate(bytes)))
+		SmartPtr(typename Destructor::Allocator& allocator, T* ptr = NULL) : baseClass(allocator,ptr)
 		{}
 
 		SmartPtr(const SmartPtr& rhs) : baseClass(rhs)
@@ -213,14 +219,6 @@ namespace OOBase
 				baseClass::operator=(rhs);
 
 			return *this;
-		}
-
-		bool allocate(size_t size)
-		{
-			T* p = static_cast<T*>(Destructor::Allocator::allocate(size));
-			if (p)
-				baseClass::operator=(p);
-			return (p != NULL);
 		}
 
 		T* operator ->()
@@ -247,7 +245,7 @@ namespace OOBase
 		SmartPtr(void* ptr = NULL) : baseClass(ptr)
 		{}
 
-		SmartPtr(size_t bytes) : baseClass(Destructor::allocate(bytes))
+		SmartPtr(typename Destructor::Allocator& allocator, void* ptr = NULL) : baseClass(allocator,ptr)
 		{}
 
 		SmartPtr(const SmartPtr& rhs) : baseClass(rhs)

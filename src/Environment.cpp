@@ -350,7 +350,7 @@ OOBase::SmartPtr<char*,OOBase::FreeDestructor<OOBase::LocalAllocator> > OOBase::
 	for (size_t idx = 0; idx < tabEnv.size(); ++idx)
 		len += tabEnv.key_at(idx)->length() + tabEnv.at(idx)->length() + 2; // = and NUL
 
-	SmartPtr<char*,FreeDestructor<LocalAllocator> > ptr(len);
+	SmartPtr<char*,FreeDestructor<LocalAllocator> > ptr = static_cast<char**>(LocalAllocator::allocate(len));
 	if (ptr)
 	{
 		char** envp = ptr;

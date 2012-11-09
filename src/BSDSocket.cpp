@@ -420,7 +420,8 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 
 	if (count > sizeof(static_bufs)/sizeof(static_bufs[0]))
 	{
-		if (!ptrBufs.allocate(count * sizeof(struct iovec)))
+		ptrBufs = static_cast<struct iovec*>(OOBase::CrtAllocator::allocate(count * sizeof(struct iovec)));
+		if (!ptrBufs)
 			return ENOMEM;
 
 		msg.msg_iov = ptrBufs;
@@ -604,7 +605,8 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 
 	if (count > sizeof(static_bufs)/sizeof(static_bufs[0]))
 	{
-		if (!ptrBufs.allocate(count * sizeof(struct iovec)))
+		ptrBufs = static_cast<struct iovec*>(OOBase::CrtAllocator::allocate(count * sizeof(struct iovec)));
+		if (!ptrBufs)
 			return ENOMEM;
 
 		msg.msg_iov = ptrBufs;

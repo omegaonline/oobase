@@ -434,8 +434,8 @@ int AsyncSocket::process_send_v(SendItem* item, bool& watch_again)
 	int err = 0;
 	if (first_buffer < item->m_count)
 	{
-		struct iovec static_bufs[4];
-		OOBase::SmartPtr<struct iovec,OOBase::FreeDestructor<OOBase::LocalAllocator> > ptrBufs;
+		struct iovec static_bufs[8];
+		OOBase::SmartPtr<struct iovec,OOBase::FreeDestructor<OOBase::CrtAllocator> > ptrBufs;
 
 		struct msghdr msg = {0};
 		msg.msg_iov = static_bufs;
@@ -443,7 +443,8 @@ int AsyncSocket::process_send_v(SendItem* item, bool& watch_again)
 
 		if (msg.msg_iovlen > sizeof(static_bufs)/sizeof(static_bufs[0]))
 		{
-			if (!ptrBufs.allocate(msg.msg_iovlen * sizeof(struct iovec)))
+			ptrBufs = static_cast<struct iovec*>(OOBase::CrtAllocator::allocate(msg.msg_iovlen * sizeof(struct iovec)));
+			if (!ptrBufs)
 				err = ERROR_OUTOFMEMORY;
 			else
 				msg.msg_iov = ptrBufs;

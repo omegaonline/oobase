@@ -38,7 +38,8 @@ OOBase::POSIX::pw_info::pw_info(uid_t uid) :
 	if (m_buf_len <= 0)
 		m_buf_len = 1024;
 
-	if (!m_buffer.allocate(m_buf_len))
+	m_buffer = static_cast<char*>(OOBase::CrtAllocator::allocate(m_buf_len));
+	if (!m_buffer)
 		OOBase_CallCriticalFailure(ENOMEM);
 
 	if (::getpwuid_r(uid,&m_pwd2,m_buffer,m_buf_len,&m_pwd) != 0)
@@ -58,7 +59,8 @@ OOBase::POSIX::pw_info::pw_info(const char* uname) :
 	if (m_buf_len <= 0)
 		m_buf_len = 1024;
 
-	if (!m_buffer.allocate(m_buf_len))
+	m_buffer = static_cast<char*>(OOBase::CrtAllocator::allocate(m_buf_len));
+	if (!m_buffer)
 		OOBase_CallCriticalFailure(ENOMEM);
 
 	if (::getpwnam_r(uname,&m_pwd2,m_buffer,m_buf_len,&m_pwd) != 0)
