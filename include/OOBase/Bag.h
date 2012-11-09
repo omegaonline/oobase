@@ -84,29 +84,52 @@ namespace OOBase
 		};
 #endif
 
-		template <typename T, bool POD = false>
-		class PODBag
+		template <typename T>
+		class PODBagBase
 		{
 		public:
-			PODBag() : m_data(NULL), m_size(0), m_capacity(0)
-			{
-			}
-
-			virtual ~PODBag()
-			{
-			}
+			PODBagBase() : m_data(NULL), m_size(0), m_capacity(0)
+			{}
 
 		protected:
 			T*     m_data;
 			size_t m_size;
 			size_t m_capacity;
 
+		private:
+			// Do not allow copy constructors or assignment
+			// as memory allocation will occur...
+			// and you probably don't want to be copying these around
+			PODBagBase(const PODBagBase&);
+			PODBagBase& operator = (const PODBagBase&);
+		};
+
+		template <typename T, bool POD = false>
+		class PODBag : public PODBagBase<T>
+		{
+		public:
+			void clear()
+			{
+				while (this->m_size > 0)
+					this->m_data[--this->m_size].~T();
+			}
+
+		protected:
+			virtual ~PODBag()
+			{}
+
+			void copy_to(T* p, const T& v)
+			{
+				// Placement new with copy constructor
+				::new (p) T(v);
+			}
+
 			virtual void* allocate_i(size_t bytes, size_t align) = 0;
 			virtual void free_i(void* ptr) = 0;
 
 			int reserve_i(size_t capacity)
 			{
-				if (m_capacity < capacity)
+				if (this->m_capacity < capacity)
 				{
 					T* new_data = static_cast<T*>(allocate_i(capacity*sizeof(T),detail::alignof<T>::value));
 					if (!new_data)
@@ -116,8 +139,8 @@ namespace OOBase
 					size_t i = 0;
 					try
 					{
-						for (i=0;i<m_size;++i)
-							::new (&new_data[i]) T(m_data[i]);
+						for (i=0;i<this->m_size;++i)
+							::new (&new_data[i]) T(this->m_data[i]);
 					}
 					catch (...)
 					{
@@ -128,70 +151,59 @@ namespace OOBase
 						throw;
 					}
 
-					for (i=0;i<m_size;++i)
-						m_data[i].~T();
+					for (i=0;i<this->m_size;++i)
+						this->m_data[i].~T();
 
 #else
-					for (size_t i=0;i<m_size;++i)
+					for (size_t i=0;i<this->m_size;++i)
 					{
-						::new (&new_data[i]) T(m_data[i]);
-						m_data[i].~T();
+						::new (&new_data[i]) T(this->m_data[i]);
+						this->m_data[i].~T();
 					}
 #endif
 
-					free_i(m_data);
-					m_data = new_data;
-					m_capacity = capacity;
+					free_i(this->m_data);
+					this->m_data = new_data;
+					this->m_capacity = capacity;
 				}
 				return 0;
 			}
-
-		private:
-			// Do not allow copy constructors or assignment
-			// as memory allocation will occur...
-			// and you probably don't want to be copying these around
-			PODBag(const PODBag&);
-			PODBag& operator = (const PODBag&);
 		};
 
 		template <typename T>
-		class PODBag<T,true>
+		class PODBag<T,true> : public PODBagBase<T>
 		{
 		public:
-			PODBag() : m_data(NULL), m_size(0), m_capacity(0)
-			{}
+			void clear()
+			{
+				this->m_size = 0;
+			}
 
+		protected:
 			virtual ~PODBag()
 			{}
 
-		protected:
-			T*     m_data;
-			size_t m_size;
-			size_t m_capacity;
+			void copy_to(T* p, const T& v)
+			{
+				*p = v;
+			}
 
 			virtual void* reallocate_i(void* ptr, size_t bytes, size_t align) = 0;
 			virtual void free_i(void* ptr) = 0;
 
 			int reserve_i(size_t capacity)
 			{
-				if (m_capacity < capacity)
+				if (this->m_capacity < capacity)
 				{
-					T* new_data = static_cast<T*>(reallocate_i(m_data,capacity*sizeof(T),detail::alignof<T>::value));
+					T* new_data = static_cast<T*>(reallocate_i(this->m_data,capacity*sizeof(T),detail::alignof<T>::value));
 					if (!new_data)
 						return ERROR_OUTOFMEMORY;
 
-					m_data = new_data;
-					m_capacity = capacity;
+					this->m_data = new_data;
+					this->m_capacity = capacity;
 				}
 				return 0;
 			}
-
-		private:
-			// Do not allow copy constructors or assignment
-			// as memory allocation will occur...
-			// and you probably don't want to be copying these around
-			PODBag(const PODBag&);
-			PODBag& operator = (const PODBag&);
 		};
 
 		template <typename T>
@@ -202,12 +214,6 @@ namespace OOBase
 		public:
 			BagImpl() : baseClass()
 			{}
-
-			void clear()
-			{
-				while (this->m_size > 0)
-					this->m_data[--this->m_size].~T();
-			}
 
 			bool empty() const
 			{
@@ -230,8 +236,7 @@ namespace OOBase
 						return err;
 				}
 
-				// Placement new with copy constructor
-				::new (&this->m_data[this->m_size]) T(value);
+				baseClass::copy_to(&this->m_data[this->m_size],value);
 
 				// This is exception safe as the increment happens here
 				++this->m_size;
@@ -271,7 +276,7 @@ namespace OOBase
 
 			void destroy()
 			{
-				clear();
+				baseClass::clear();
 				this->free_i(this->m_data);
 			}
 
