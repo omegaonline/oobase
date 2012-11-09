@@ -118,7 +118,7 @@ namespace OOBase
 			virtual ~PODBag()
 			{}
 
-			void copy_to(T* p, const T& v)
+			static void copy_to(T* p, const T& v)
 			{
 				// Placement new with copy constructor
 				::new (p) T(v);
@@ -183,7 +183,7 @@ namespace OOBase
 			virtual ~PODBag()
 			{}
 
-			void copy_to(T* p, const T& v)
+			static void copy_to(T* p, const T& v)
 			{
 				*p = v;
 			}
