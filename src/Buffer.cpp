@@ -43,7 +43,7 @@ OOBase::Buffer::Buffer(size_t cbSize, size_t align) :
 	if (cbSize < align)
 		cbSize += align;
 
-	m_buffer = static_cast<char*>(OOBase::HeapAllocator::allocate(cbSize));
+	m_buffer = static_cast<char*>(OOBase::CrtAllocator::allocate(cbSize));
 	if (m_buffer)
 	{
 		m_capacity = cbSize;
@@ -53,7 +53,7 @@ OOBase::Buffer::Buffer(size_t cbSize, size_t align) :
 
 OOBase::Buffer::~Buffer()
 {
-	OOBase::HeapAllocator::free(m_buffer);
+	OOBase::CrtAllocator::free(m_buffer);
 }
 
 const char* OOBase::Buffer::rd_ptr() const
@@ -180,7 +180,7 @@ int OOBase::Buffer::space(size_t cbSpace)
 		size_t rd_pos = (m_rd_ptr - m_buffer);
 		size_t wr_pos = (m_wr_ptr - m_buffer);
 
-		char* new_ptr = static_cast<char*>(OOBase::HeapAllocator::reallocate(m_buffer,cbAbsCapacity));
+		char* new_ptr = static_cast<char*>(OOBase::CrtAllocator::reallocate(m_buffer,cbAbsCapacity));
 		if (!new_ptr)
 			return ERROR_OUTOFMEMORY;
 

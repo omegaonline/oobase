@@ -26,18 +26,16 @@
 
 namespace OOBase
 {
-	template <typename T, typename Allocator = HeapAllocator>
+	template <typename T, typename Allocator = CrtAllocator>
 	class Stack : private Bag<T,Allocator>
 	{
 	public:
 		Stack() : Bag<T,Allocator>()
 		{}
+
+		Stack(Allocator& allocator) : Bag<T,Allocator>(allocator)
+		{}
 			
-		int reserve(size_t capacity)
-		{
-			return Bag<T,Allocator>::reserve(capacity);
-		}
-		
 		int push(const T& value)
 		{
 			return Bag<T,Allocator>::add(value);

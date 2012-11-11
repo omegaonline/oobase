@@ -22,316 +22,254 @@
 #ifndef OOBASE_TABLE_H_INCLUDED_
 #define OOBASE_TABLE_H_INCLUDED_
 
-#include "Memory.h"
+#include "Bag.h"
 
 namespace OOBase
 {
-	template <typename K, typename V, typename Allocator = HeapAllocator>
-	class Table
+	namespace detail
 	{
-	public:
-		static const size_t npos = size_t(-1);
-
-		Table() : m_data(NULL), m_capacity(0), m_size(0), m_sorted(true)
-		{}
-			
-		~Table()
+		template <typename K, typename V>
+		struct TableNode
 		{
-			clear();
-			
-			Allocator::free(m_data);
-		}
-		
-		int reserve(size_t capacity)
-		{
-			return reserve_i(capacity + m_size);
-		}
-		
-		int insert(const K& key, const V& value)
-		{
-			if (m_size+1 > m_capacity)
-			{
-				size_t cap = (m_capacity == 0 ? 4 : m_capacity*2);
-				int err = reserve_i(cap);
-				if (err != 0)
-					return err;
-			}
-			
-			// Placement new
-			::new (&m_data[m_size]) Node(key,value);
-			
-			// This is exception safe as the increment happens here
-			++m_size;
-			m_sorted = false;
-			
-			return 0;
-		}
-		
-		void remove_at(size_t pos)
-		{
-			if (m_data && pos < m_size)
-			{
-				if (m_sorted)
-				{
-					for(--m_size;pos < m_size;++pos)
-						m_data[pos] = m_data[pos+1];
-
-					m_data[m_size].~Node();
-				}
-				else
-				{
-					m_data[pos] = m_data[--m_size];
-					m_data[m_size].~Node();
-				}
-			}
-		}
-		
-		bool remove(const K& key, V* value = NULL)
-		{
-			size_t pos = find_i(key,false);
-			if (pos == npos)
-				return false;
-			
-			if (value)
-				*value = m_data[pos].m_value;
-			
-			remove_at(pos);
-			
-			return true;
-		}
-		
-		bool pop(K* key = NULL, V* value = NULL)
-		{
-			if (m_size == 0)
-				return false;
-			
-			if (key)
-				*key = m_data[m_size-1].m_key; 
-			
-			if (value)
-				*value = m_data[m_size-1].m_value; 
-				
-			m_data[--m_size].~Node();
-			return true;
-		}
-		
-		void clear()
-		{
-			while (m_size > 0)
-				m_data[--m_size].~Node();
-		}
-
-		template <typename K1>
-		bool exists(K1 key) const
-		{
-			return (find_i(key,false) != npos);
-		}
-
-		template <typename K1>
-		V* find(K1 key)
-		{
-			size_t pos = find_i(key,false);
-			if (pos == npos)
-				return NULL;
-			
-			return &m_data[pos].m_value;
-		}
-
-		template <typename K1>
-		const V* find(K1 key) const
-		{
-			size_t pos = find_i(key,false);
-			if (pos == npos)
-				return NULL;
-
-			return &m_data[pos].m_value;
-		}
-
-		template <typename K1>
-		bool find(K1 key, V& value, bool first = false) const
-		{
-			size_t pos = find_i(key,first);
-			if (pos == npos)
-				return false;
-			
-			value = m_data[pos].m_value;
-			return true;
-		}
-
-		template <typename K1>
-		size_t find_first(K1 key) const
-		{
-			return find_i(key,true);
-		}
-
-		template <typename K1>
-		size_t find_at(K1 key) const
-		{
-			return find_i(key,false);
-		}
-
-		bool empty() const
-		{
-			return (m_size == 0);
-		}
-		
-		size_t size() const
-		{
-			return m_size;
-		}
-		
-		V* at(size_t pos)
-		{
-			return (m_data && pos < m_size ? &m_data[pos].m_value : NULL);
-		}
-		
-		const V* at(size_t pos) const
-		{
-			return (m_data && pos < m_size ? &m_data[pos].m_value : NULL);
-		}
-		
-		const K* key_at(size_t pos) const
-		{
-			return (m_data && pos < m_size ? &m_data[pos].m_key : NULL);
-		}
-		
-		void sort()
-		{
-			if (!m_sorted)
-				sort(&default_sort);
-		}
-
-		void sort(bool (*less_than)(const K& k1, const K& k2))
-		{
-			// This is a Shell-sort because we mostly use sort() in cases where qsort() behaves badly
-			// i.e. insertion at the end and then sort
-			// see http://warp.povusers.org/SortComparison
-
-			// Generate the split intervals
-			// Knuth is my homeboy :)
-			size_t h = 1;
-			while (h <= m_size / 9)
-				h = 3*h + 1;
-			
-			for (;h > 0; h /= 3)
-			{
-				for (size_t i = h; i < m_size; ++i)
-				{
-					Node v = m_data[i];
-					size_t j = i;
-					
-					while (j >= h && (*less_than)(v.m_key,m_data[j-h].m_key))
-					{
-						m_data[j] = m_data[j-h];
-						j -= h;
-					}
-					
-					m_data[j] = v;
-				}
-			}
-
-			m_sorted = (less_than == &default_sort);
-		}
-		
-	private:
-		// Do not allow copy constructors or assignment
-		// as memory allocation will occur... 
-		// and you probably don't want to be copying these around
-		Table(const Table&);
-		Table& operator = (const Table&);
-	
-		struct Node
-		{
-			Node(const K& k, const V& v) : m_key(k), m_value(v)
+			TableNode(const TableNode& n) : m_key(n.m_key), m_value(n.m_value)
 			{}
-				
+
+			TableNode(const K& k, const V& v) : m_key(k), m_value(v)
+			{}
+
 			K m_key;
 			V m_value;
 		};
-		
-		Node*  m_data;
-		size_t m_capacity;
-		size_t m_size;
 
-		mutable bool m_sorted;
-	
-		int reserve_i(size_t capacity)
+		template <typename K, typename V>
+		class TableImpl : public BagImpl<TableNode<K,V> >
 		{
-			if (m_capacity < capacity)
+			typedef TableNode<K,V> Node;
+			typedef BagImpl<TableNode<K,V> > baseClass;
+
+		public:
+			static const size_t npos = size_t(-1);
+
+			TableImpl() : baseClass(), m_sorted(true)
+			{}
+
+			virtual ~TableImpl()
+			{}
+
+			int insert(const K& key, const V& value)
 			{
-				Node* new_data = static_cast<Node*>(Allocator::allocate(capacity*sizeof(Node)));
-				if (!new_data)
-					return ERROR_OUTOFMEMORY;
-				
-#if defined(OOBASE_HAVE_EXCEPTIONS)
-				size_t i = 0;
-				try
-				{
-					for (i=0;i<m_size;++i)
-						::new (&new_data[i]) Node(m_data[i].m_key,m_data[i].m_value);
-				}
-				catch (...)
-				{
-					for (;i>0;--i)
-						new_data[i-1].~Node();
-
-					Allocator::free(new_data);
-					throw;
-				}
-				
-				for (i=0;i<m_size;++i)
-					m_data[i].~Node();
-#else
-				for (size_t i=0;i<m_size;++i)
-				{
-					::new (&new_data[i]) Node(m_data[i].m_key,m_data[i].m_value);
-					m_data[i].~Node();
-				}
-#endif
-				Allocator::free(m_data);
-				m_data = new_data;
-				m_capacity = capacity;
+				int err = baseClass::add(Node(key,value));
+				if (!err)
+					m_sorted = false;
+				return err;
 			}
-			return 0;
-		}
 
-		template <typename K1>
-		size_t find_i(K1 key, bool first) const
-		{
-			const Node* p = bsearch(key);
+			void remove_at(size_t pos)
+			{
+				if (m_sorted)
+					baseClass::remove_at_sorted(pos);
+				else
+					baseClass::remove_at(pos);
+			}
+			
+			bool remove(const K& key, V* value = NULL)
+			{
+				size_t pos = find_i(key,false);
+				if (pos == npos)
+					return false;
 
-			// Scan for the first
-			while (p && first && p > m_data && (p-1)->m_key == p->m_key)
-				--p;
+				if (value)
+					*value = *at(pos);
 
-			return (p ? static_cast<size_t>(p - m_data) : npos);
-		}
+				remove_at(pos);
+
+				return true;
+			}
+
+			bool pop(K* key = NULL, V* value = NULL)
+			{
+				if (key || value)
+				{
+					Node n;
+					bool ret = baseClass::pop(&n);
+					if (ret)
+					{
+						if (key)
+							*key = n->m_key;
+
+						if (value)
+							*value = n->m_value;
+					}
+					return ret;
+				}
+
+				return baseClass::pop();
+			}
+
+			template <typename K1>
+			bool exists(K1 key) const
+			{
+				return (find_i(key,false) != npos);
+			}
+
+			template <typename K1>
+			V* find(K1 key)
+			{
+				size_t pos = find_i(key,false);
+				if (pos == npos)
+					return NULL;
+
+				return at(pos);
+			}
+
+			template <typename K1>
+			const V* find(K1 key) const
+			{
+				size_t pos = find_i(key,false);
+				if (pos == npos)
+					return NULL;
+
+				return at(pos);
+			}
+
+			template <typename K1>
+			bool find(K1 key, V& value, bool first = false) const
+			{
+				size_t pos = find_i(key,first);
+				if (pos == npos)
+					return false;
+
+				value = *at(pos);
+				return true;
+			}
+
+			template <typename K1>
+			size_t find_first(K1 key) const
+			{
+				return find_i(key,true);
+			}
+
+			template <typename K1>
+			size_t find_at(K1 key) const
+			{
+				return find_i(key,false);
+			}
+			
+			V* at(size_t pos)
+			{
+				Node* n = baseClass::at(pos);
+				return (n ? &n->m_value : NULL);
+			}
+			
+			const V* at(size_t pos) const
+			{
+				const Node* n = baseClass::at(pos);
+				return (n ? &n->m_value : NULL);
+			}
+			
+			const K* key_at(size_t pos) const
+			{
+				const Node* n = baseClass::at(pos);
+				return (n ? &n->m_key : NULL);
+			}
+			
+			void sort()
+			{
+				if (!m_sorted)
+					sort(&default_sort);
+			}
+
+			void sort(bool (*less_than)(const K& k1, const K& k2))
+			{
+				// This is a Shell-sort because we mostly use sort() in cases where qsort() behaves badly
+				// i.e. insertion at the end and then sort
+				// see http://warp.povusers.org/SortComparison
+
+				// Generate the split intervals
+				// Knuth is my homeboy :)
+				size_t h = 1;
+				while (h <= this->m_size / 9)
+					h = 3*h + 1;
+				
+				for (;h > 0; h /= 3)
+				{
+					for (size_t i = h; i < this->m_size; ++i)
+					{
+						Node v = this->m_data[i];
+						size_t j = i;
+
+						while (j >= h && (*less_than)(v.m_key,this->m_data[j-h].m_key))
+						{
+							this->m_data[j] = this->m_data[j-h];
+							j -= h;
+						}
+
+						this->m_data[j] = v;
+					}
+				}
+
+				m_sorted = (less_than == &default_sort);
+			}
+
+		private:
+			mutable bool m_sorted;
+			
+			template <typename K1>
+			size_t find_i(K1 key, bool first) const
+			{
+				const Node* p = bsearch(key);
+
+				// Scan for the first
+				while (p && first && p > this->m_data && (p-1)->m_key == p->m_key)
+					--p;
+
+				return (p ? static_cast<size_t>(p - this->m_data) : npos);
+			}
+
+			template <typename K1>
+			const Node* bsearch(K1 key) const
+			{
+				// Always sort first
+				const_cast<TableImpl*>(this)->sort();
+
+				const Node* base = this->m_data;
+				for (size_t span = this->m_size; span > 0; span /= 2)
+				{
+					const Node* mid_point = base + (span / 2);
+					if (mid_point->m_key == key)
+						return mid_point;
 					
-		template <typename K1>
-		const Node* bsearch(K1 key) const
-		{
-			// Always sort first
-			const_cast<Table*>(this)->sort();
-
-			const Node* base = m_data;
-			for (size_t span = m_size; span > 0; span /= 2) 
-			{
-				const Node* mid_point = base + (span / 2);
-				if (mid_point->m_key == key)
-					return mid_point;
-				
-				if (mid_point->m_key < key) 
-				{
-					base = mid_point + 1;
-					--span;
+					if (mid_point->m_key < key)
+					{
+						base = mid_point + 1;
+						--span;
+					}
 				}
+				return NULL;
 			}
-		    return NULL;
-		}
 
-		static bool default_sort(const K& k1, const K& k2)
+			static bool default_sort(const K& k1, const K& k2)
+			{
+				return (k1 < k2);
+			}
+		};
+	}
+
+	template <typename K, typename V, typename Allocator = CrtAllocator>
+	class Table : public detail::AllocImpl<detail::TableImpl<K,V>,Allocator>
+	{
+		typedef detail::AllocImpl<detail::TableImpl<K,V>,Allocator> baseClass;
+
+	public:
+		Table() : baseClass()
+		{}
+
+		Table(Allocator& allocator) : baseClass(allocator)
+		{}
+
+		virtual ~Table()
 		{
-			return (k1 < k2);
+			baseClass::destroy();
 		}
 	};
 }

@@ -31,11 +31,23 @@ namespace OOBase
 	class DeleteDestructor
 	{
 	public:
-		typedef HeapAllocator Allocator;
+		typedef CrtAllocator Allocator;
 
-		static void free(T* ptr)
+		static void destroy(T* ptr)
 		{
 			delete ptr;
+		}
+	};
+
+	template <typename A>
+	class FreeDestructor
+	{
+	public:
+		typedef A Allocator;
+
+		static void destroy(void* ptr)
+		{
+			A::free(ptr);
 		}
 	};
 
@@ -43,9 +55,9 @@ namespace OOBase
 	class ArrayDeleteDestructor
 	{
 	public:
-		typedef HeapAllocator Allocator;
+		typedef CrtAllocator Allocator;
 
-		static void free(T* ptr)
+		static void destroy(T* ptr)
 		{
 			delete [] ptr;
 		}
@@ -53,9 +65,11 @@ namespace OOBase
 
 	namespace detail
 	{
-		template <typename T, typename Destructor, typename Allocator>
+		template <typename T, typename Destructor>
 		class SmartPtrImpl
 		{
+			typedef typename Destructor::Allocator Allocator;
+
 			class SmartPtrNode : public RefCounted<Allocator>
 			{
 			public:
@@ -82,7 +96,7 @@ namespace OOBase
 			private:
 				~SmartPtrNode()
 				{
-					Destructor::free(m_data);
+					Destructor::destroy(m_data);
 				}
 
 				T* m_data;
@@ -90,6 +104,12 @@ namespace OOBase
 
 		public:
 			SmartPtrImpl(T* ptr = NULL) : m_node(NULL)
+			{
+				if (ptr)
+					m_node = new (critical) SmartPtrNode(ptr);
+			}
+
+			SmartPtrImpl(Allocator& allocator, T* ptr = NULL) : m_node(NULL)
 			{
 				if (ptr)
 					m_node = new (critical) SmartPtrNode(ptr);
@@ -175,15 +195,15 @@ namespace OOBase
 	}
 
 	template <typename T, typename Destructor = DeleteDestructor<T> >
-	class SmartPtr : public detail::SmartPtrImpl<T,Destructor,typename Destructor::Allocator>
+	class SmartPtr : public detail::SmartPtrImpl<T,Destructor>
 	{
-		typedef detail::SmartPtrImpl<T,Destructor,typename Destructor::Allocator> baseClass;
+		typedef detail::SmartPtrImpl<T,Destructor> baseClass;
 
 	public:
 		SmartPtr(T* ptr = NULL) : baseClass(ptr)
 		{}
 
-		SmartPtr(size_t bytes) : baseClass(static_cast<T*>(Destructor::allocate(bytes)))
+		SmartPtr(typename Destructor::Allocator& allocator, T* ptr = NULL) : baseClass(allocator,ptr)
 		{}
 
 		SmartPtr(const SmartPtr& rhs) : baseClass(rhs)
@@ -203,14 +223,6 @@ namespace OOBase
 			return *this;
 		}
 
-		bool allocate(size_t size)
-		{
-			T* p = static_cast<T*>(Destructor::allocate(size));
-			if (p)
-				baseClass::operator=(p);
-			return (p != NULL);
-		}
-
 		T* operator ->()
 		{
 			assert(baseClass::value() != NULL);
@@ -227,15 +239,15 @@ namespace OOBase
 	};
 
 	template <typename Destructor>
-	class SmartPtr<void,Destructor> : public detail::SmartPtrImpl<void,Destructor,typename Destructor::Allocator>
+	class SmartPtr<void,Destructor> : public detail::SmartPtrImpl<void,Destructor>
 	{
-		typedef detail::SmartPtrImpl<void,Destructor,typename Destructor::Allocator> baseClass;
+		typedef detail::SmartPtrImpl<void,Destructor> baseClass;
 
 	public:
 		SmartPtr(void* ptr = NULL) : baseClass(ptr)
 		{}
 
-		SmartPtr(size_t bytes) : baseClass(Destructor::allocate(bytes))
+		SmartPtr(typename Destructor::Allocator& allocator, void* ptr = NULL) : baseClass(allocator,ptr)
 		{}
 
 		SmartPtr(const SmartPtr& rhs) : baseClass(rhs)

@@ -184,9 +184,25 @@ namespace OOBase
 			return val.read(*this);
 		}
 
-		/** A specialization of read() for type \p LocalString.
+		/** A specialization of read() for type \p bool.
 		 */
-		bool read(LocalString& val)
+		bool read(bool& val)
+		{
+			if (m_last_error != 0 || !m_buffer)
+				return false;
+
+			if (m_buffer->length() < 1)
+				return error_eof();
+
+			val = (*m_buffer->rd_ptr() == 0 ? false : true);
+			m_buffer->rd_ptr(1);
+			return true;
+		}
+
+		/** Read a string.
+		 */
+		template <typename S>
+		bool read_string(S& val)
 		{
 			if (m_last_error != 0 || !m_buffer)
 				return false;
@@ -211,21 +227,6 @@ namespace OOBase
 			return (m_last_error == 0);
 		}
 
-		/** A specialization of read() for type \p bool.
-		 */
-		bool read(bool& val)
-		{
-			if (m_last_error != 0 || !m_buffer)
-				return false;
-
-			if (m_buffer->length() < 1)
-				return error_eof();
-
-			val = (*m_buffer->rd_ptr() == 0 ? false : true);
-			m_buffer->rd_ptr(1);
-			return true;
-		}
-
 		size_t read_bytes(unsigned char* buffer, size_t count)
 		{
 			if (m_last_error != 0 || !m_buffer)
@@ -241,8 +242,8 @@ namespace OOBase
 
 		/** Templatized socket recv function.
 		 */
-		template <typename S>
-		bool recv_string(S& pSocket, LocalString& str)
+		template <typename S, typename STR>
+		bool recv_string(S& pSocket, STR& str)
 		{
 			size_t mark = m_buffer->mark_rd_ptr();
 
@@ -264,7 +265,7 @@ namespace OOBase
 			// Now reset rd_ptr and read the string
 			m_buffer->mark_rd_ptr(mark);
 
-			return read(str);
+			return read_string(str);
 		}
 
 		/** Templatized variable write function.

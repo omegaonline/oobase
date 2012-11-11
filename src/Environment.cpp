@@ -21,13 +21,16 @@
 
 #include "../include/OOBase/Environment.h"
 
+#include <stdlib.h>
+
 #if defined(_WIN32)
 
 #include <UserEnv.h>
 
 namespace
 {
-	int from_wchar_t(OOBase::String& str, const wchar_t* wsz)
+	template <typename S>
+	int from_wchar_t(S& str, const wchar_t* wsz)
 	{
 		int err = 0;
 		char szBuf[1024] = {0};
@@ -51,7 +54,7 @@ namespace
 		return err;
 	}
 
-	int process_block(const wchar_t* env, OOBase::Table<OOBase::String,OOBase::String,OOBase::LocalAllocator>& tabEnv)
+	int process_block(const wchar_t* env, OOBase::Environment::env_table_t& tabEnv)
 	{
 		int err = 0;
 		for (const wchar_t* e=env;!err && e != NULL && *e != L'\0';e += wcslen(e)+1)
@@ -103,7 +106,7 @@ namespace
 	}
 }
 
-int OOBase::Environment::get_current(Table<String,String,LocalAllocator>& tabEnv)
+int OOBase::Environment::get_current(env_table_t& tabEnv)
 {
 	wchar_t* env = GetEnvironmentStringsW();
 	if (!env)
@@ -116,7 +119,7 @@ int OOBase::Environment::get_current(Table<String,String,LocalAllocator>& tabEnv
 	return err;
 }
 
-int OOBase::Environment::get_user(HANDLE hToken, OOBase::Table<OOBase::String,OOBase::String,OOBase::LocalAllocator>& tabEnv)
+int OOBase::Environment::get_user(HANDLE hToken, env_table_t& tabEnv)
 {
 	LPVOID lpEnv = NULL;
 	if (!CreateEnvironmentBlock(&lpEnv,hToken,FALSE))
@@ -130,7 +133,7 @@ int OOBase::Environment::get_user(HANDLE hToken, OOBase::Table<OOBase::String,OO
 	return err;
 }
 
-OOBase::SmartPtr<void,OOBase::LocalAllocator> OOBase::Environment::get_block(const Table<String,String,LocalAllocator>& tabEnv)
+OOBase::SmartPtr<void,OOBase::LocalAllocator> OOBase::Environment::get_block(const env_table_t& tabEnv)
 {
 	SmartPtr<void,OOBase::LocalAllocator> ptr;
 
@@ -196,10 +199,41 @@ OOBase::SmartPtr<void,OOBase::LocalAllocator> OOBase::Environment::get_block(con
 
 	return ptr;
 }
+
+int OOBase::Environment::getenv(const char* envvar, LocalString& strValue)
+{
+	wchar_t szBuf[256] = {0};
+	wchar_t* new_buf = szBuf;
+
+	DWORD dwLen = GetEnvironmentVariableW(envvar,new_buf,sizeof(szBuf)-1);
+	if (dwLen >= sizeof(szBuf)-1)
+	{
+		new_buf = static_cast<wchar_t*>(LocalAllocator::allocate(dwLen * sizeof(wchar_t)));
+		if (!new_buf)
+			return ERROR_OUTOFMEMORY;
+
+		dwLen = GetEnvironmentVariableW(envvar,new_buf,dwLen);
+	}
+
+	int err = 0;
+	if (dwLen == 0)
+	{
+		err = GetLastError();
+		if (err == ERROR_ENVVAR_NOT_FOUND)
+			err = 0;
+	}
+	else if (dwLen > 1)
+		err = from_wchar_t(strValue,new_buf);
+
+	if (new_buf != szBuf)
+		LocalAllocator::free(new_buf);
+
+	return err;
+}
 		
 #elif defined(HAVE_UNISTD_H)
 
-int OOBase::Environment::get_current(Table<String,String,LocalAllocator>& tabEnv)
+int OOBase::Environment::get_current(env_table_t& tabEnv)
 {
 	for (const char** env = (const char**)environ;*env != NULL;++env)
 	{
@@ -238,9 +272,14 @@ int OOBase::Environment::get_current(Table<String,String,LocalAllocator>& tabEnv
 	return 0;
 }
 
+int OOBase::Environment::getenv(const char* envvar, LocalString& strValue)
+{
+	return strValue.assign(::getenv(envvar));
+}
+
 #endif
 
-int OOBase::Environment::substitute(Table<String,String,LocalAllocator>& tabEnv, const Table<String,String,LocalAllocator>& tabSrc)
+int OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tabSrc)
 {
 	// This might be full of bugs!!
 
@@ -302,7 +341,7 @@ int OOBase::Environment::substitute(Table<String,String,LocalAllocator>& tabEnv,
 	return 0;
 }
 
-OOBase::SmartPtr<char*,OOBase::LocalAllocator> OOBase::Environment::get_envp(const Table<String,String,LocalAllocator>& tabEnv)
+OOBase::SmartPtr<char*,OOBase::FreeDestructor<OOBase::LocalAllocator> > OOBase::Environment::get_envp(const env_table_t& tabEnv)
 {
 	// We cheat here and allocate the strings and the array in one block.
 
@@ -311,7 +350,7 @@ OOBase::SmartPtr<char*,OOBase::LocalAllocator> OOBase::Environment::get_envp(con
 	for (size_t idx = 0; idx < tabEnv.size(); ++idx)
 		len += tabEnv.key_at(idx)->length() + tabEnv.at(idx)->length() + 2; // = and NUL
 
-	SmartPtr<char*,LocalAllocator> ptr(len);
+	SmartPtr<char*,FreeDestructor<LocalAllocator> > ptr = static_cast<char**>(LocalAllocator::allocate(len));
 	if (ptr)
 	{
 		char** envp = ptr;

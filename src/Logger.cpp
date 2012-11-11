@@ -25,6 +25,7 @@
 #include "../include/OOBase/SecurityWin32.h"
 #include "../include/OOBase/String.h"
 #include "../include/OOBase/Logger.h"
+#include "../include/OOBase/Environment.h"
 
 #include "tr24731.h"
 
@@ -191,7 +192,7 @@ namespace
 
 			const char* arrBufs[2] = { msg, NULL };
 
-			OOBase::SmartPtr<TOKEN_USER,OOBase::CrtAllocator> ptrSIDProcess;
+			OOBase::SmartPtr<TOKEN_USER,OOBase::FreeDestructor<OOBase::CrtAllocator> > ptrSIDProcess;
 			PSID psid = NULL;
 			OOBase::Win32::SmartHandle hProcessToken;
 
@@ -275,7 +276,7 @@ namespace
 		s_instance.m_pszSrcFile = "";
 
 		OOBase::LocalString term;
-		term.getenv("TERM");
+		OOBase::Environment::getenv("TERM",term);
 		s_instance.m_use_term = !term.empty();
 	}
 

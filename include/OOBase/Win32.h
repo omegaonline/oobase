@@ -33,8 +33,6 @@ namespace OOBase
 		class LocalAllocDestructor
 		{
 		public:
-			typedef LocalAllocDestructor Allocator;
-
 			static void* allocate(size_t bytes)
 			{
 				return ::LocalAlloc(LMEM_FIXED,bytes);

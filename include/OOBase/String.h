@@ -52,7 +52,6 @@ namespace OOBase
 #endif
 
 		int vprintf(const char* format, va_list args);
-		int getenv(const char* envvar);
 
 		int concat(const char* sz1, const char* sz2)
 		{

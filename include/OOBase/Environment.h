@@ -30,13 +30,17 @@ namespace OOBase
 {
 	namespace Environment
 	{
-		int get_current(Table<String,String,LocalAllocator>& tabEnv);
-		int substitute(Table<String,String,LocalAllocator>& tabEnv, const Table<String,String,LocalAllocator>& tabSrc);
-		SmartPtr<char*,LocalAllocator> get_envp(const Table<String,String,LocalAllocator>& tabEnv);
+		typedef Table<String,String,AllocatorInstance> env_table_t;
+
+		int get_current(env_table_t& tabEnv);
+		int substitute(env_table_t& tabEnv, const env_table_t& tabSrc);
+		SmartPtr<char*,FreeDestructor<LocalAllocator> > get_envp(const env_table_t& tabEnv);
+
+		int getenv(const char* envvar, LocalString& strVal);
 
 #if defined(_WIN32)
-		int get_user(HANDLE hToken, Table<String,String,LocalAllocator>& tabEnv);
-		SmartPtr<void,LocalAllocator> get_block(const Table<String,String,LocalAllocator>& tabEnv);
+		int get_user(HANDLE hToken, env_table_t& tabEnv);
+		SmartPtr<void,LocalAllocator> get_block(const env_table_t& tabEnv);
 #endif
 	}
 }

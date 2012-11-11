@@ -53,7 +53,7 @@ namespace
 			void (*m_destructor)(void*);
 		};
 
-		OOBase::HashTable<const void*,tls_val,OOBase::LocalAllocator> m_mapVals;
+		OOBase::HashTable<const void*,tls_val,OOBase::ThreadLocalAllocator> m_mapVals;
 
 		// Special internal thread-local variables
 		char m_error_buffer[512];
@@ -255,4 +255,21 @@ char* OOBase::detail::get_error_buffer(size_t& len)
 	TLSMap* inst = TLSMap::instance();
 	len = sizeof(inst->m_error_buffer);
 	return inst->m_error_buffer;
+}
+
+void* OOBase::ThreadLocalAllocator::allocate(size_t bytes, size_t align)
+{
+	void* TODO; // Actually do something here!
+
+	return CrtAllocator::allocate(bytes,align);
+}
+
+void* OOBase::ThreadLocalAllocator::reallocate(void* ptr, size_t bytes, size_t align)
+{
+	return CrtAllocator::reallocate(ptr,bytes,align);
+}
+
+void OOBase::ThreadLocalAllocator::free(void* ptr)
+{
+	CrtAllocator::free(ptr);
 }

@@ -34,7 +34,7 @@ namespace OOBase
 		RefCounted() : m_refcount(1)
 		{}
 
-		/// Return a reference counted copy
+		/// Increment the reference
 		void addref()
 		{
 			++m_refcount;
@@ -76,7 +76,7 @@ namespace OOBase
 		{
 			if (m_data)
 				m_data->release();
-			
+
 			m_data = ptr;
 			return *this;
 		}
@@ -87,7 +87,7 @@ namespace OOBase
 			{
 				if (m_data)
 					m_data->release();
-				
+
 				m_data = rhs.m_data;
 
 				if (m_data)
@@ -106,7 +106,7 @@ namespace OOBase
 		{
 			if (m_data)
 				m_data->addref();
-		
+
 			return m_data;
 		}
 

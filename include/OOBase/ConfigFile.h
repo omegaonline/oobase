@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2011 Rick Taylor
+// Copyright (C) 2012 Rick Taylor
 //
 // This file is part of OOBase, the Omega Online Base library.
 //
@@ -19,41 +19,30 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Memory.h"
-#include "../include/OOBase/Destructor.h"
+#ifndef OOBASE_CONFIGFILE_H_INCLUDED_
+#define OOBASE_CONFIGFILE_H_INCLUDED_
 
-const OOBase::critical_t OOBase::critical = {0};
+#include "String.h"
+#include "Table.h"
 
-void* OOBase::LocalAllocator::allocate(size_t bytes, size_t align)
+namespace OOBase
 {
-	return CrtAllocator::allocate(bytes,align);
-}
+	namespace ConfigFile
+	{
+		typedef Table<String,String> results_t;
 
-void* OOBase::LocalAllocator::reallocate(void* ptr, size_t bytes, size_t align)
-{
-	return CrtAllocator::reallocate(ptr,bytes,align);
-}
+		struct error_pos_t
+		{
+			size_t line;
+			size_t col;
+		};
 
-void OOBase::LocalAllocator::free(void* ptr)
-{
-	CrtAllocator::free(ptr);
-}
+		int load(const char* filename, results_t& results, error_pos_t* error_pos);
 
-#if !defined(_WIN32)
-
-void* OOBase::CrtAllocator::allocate(size_t bytes, size_t /*align*/)
-{
-	return ::malloc(bytes);
-}
-
-void* OOBase::CrtAllocator::reallocate(void* ptr, size_t bytes, size_t /*align*/)
-{
-	return ::realloc(ptr,bytes);
-}
-
-void OOBase::CrtAllocator::free(void* ptr)
-{
-	::free(ptr);
-}
-
+#if defined(_WIN32)
+		int load_registry(HKEY hRootKey, const char* key, results_t& results);
 #endif
+	};
+}
+
+#endif // OOBASE_CONFIGFILE_H_INCLUDED_

@@ -23,8 +23,6 @@
 
 #include "tr24731.h"
 
-#include <stdlib.h>
-
 #if !defined(va_copy)
 #define va_copy(a,b) ((a) = (b))
 #endif
@@ -161,41 +159,6 @@ int OOBase::LocalString::printf(const char* format, ...)
 	return err;
 }
 
-int OOBase::LocalString::getenv(const char* envvar)
-{
-#if defined(_WIN32)
-	char szBuf[256];
-	char* new_buf = szBuf;
-
-	DWORD dwLen = GetEnvironmentVariable(envvar,new_buf,sizeof(szBuf));
-	if (dwLen >= sizeof(szBuf))
-	{
-		new_buf = static_cast<char*>(OOBase::LocalAllocator::allocate(dwLen+1));
-		if (!new_buf)
-			return ERROR_OUTOFMEMORY;
-
-		dwLen = GetEnvironmentVariable(envvar,new_buf,dwLen+1);
-	}
-
-	int err = 0;
-	if (dwLen == 0)
-	{
-		err = GetLastError();
-		if (err == ERROR_ENVVAR_NOT_FOUND)
-			err = 0;
-	}
-	else if (dwLen > 1)
-		err = assign(new_buf,dwLen);
-
-	if (new_buf != szBuf)
-		OOBase::LocalAllocator::free(new_buf);
-	
-	return err;
-#else
-	return assign(::getenv(envvar));
-#endif
-}
-
 size_t OOBase::LocalString::find(char c, size_t start) const
 {
 	if (start >= length())
@@ -231,7 +194,7 @@ int OOBase::String::copy_on_write(size_t inc)
 		size_t our_len = (m_node ? length() : 0);
 
 		// There is an implicit len+1 here as m_data[1] in struct
-		Node* new_node = static_cast<Node*>(OOBase::HeapAllocator::allocate(sizeof(Node) + our_len+inc));
+		Node* new_node = static_cast<Node*>(OOBase::CrtAllocator::allocate(sizeof(Node) + our_len+inc));
 		if (!new_node)
 			return ERROR_OUTOFMEMORY;
 
@@ -256,7 +219,7 @@ int OOBase::String::copy_on_write(size_t inc)
 			size_t our_len = length();
 
 			// It's our buffer to play with... (There is an implicit +1 here)
-			Node* new_node = static_cast<Node*>(OOBase::HeapAllocator::reallocate(m_node,sizeof(Node) + our_len+inc));
+			Node* new_node = static_cast<Node*>(OOBase::CrtAllocator::reallocate(m_node,sizeof(Node) + our_len+inc));
 			if (!new_node)
 				return ERROR_OUTOFMEMORY;
 
@@ -426,5 +389,5 @@ void OOBase::String::node_addref(Node* node)
 void OOBase::String::node_release(Node* node)
 {
 	if (node && --node->m_refcount == 0)
-		OOBase::HeapAllocator::free(node);
+		OOBase::CrtAllocator::free(node);
 }

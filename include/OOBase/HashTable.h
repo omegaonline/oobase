@@ -120,7 +120,7 @@ namespace OOBase
 	};
 #endif
 
-	template <typename K, typename V, typename Allocator = HeapAllocator, typename H = OOBase::Hash<K> >
+	template <typename K, typename V, typename Allocator = CrtAllocator, typename H = OOBase::Hash<K> >
 	class HashTable
 	{
 	public:
