@@ -104,10 +104,8 @@ void OOSvrBase::detail::ProactorWin32::unbind(HANDLE /*hFile*/)
 
 int OOSvrBase::detail::ProactorWin32::run(int& err, const OOBase::Timeout& timeout)
 {
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock,false);
-	if (!guard.acquire(timeout))
-		return 0;
-
+	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+	
 	if (!m_hPort)
 	{
 		m_hPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE,NULL,0,0);

@@ -939,7 +939,7 @@ void OOBase::CrtAllocator::free(void* ptr)
 
 #else
 
-void* OOBase::CrtAllocator::allocate(size_t len)
+void* OOBase::CrtAllocator::allocate(size_t len, size_t /*align*/)
 {
 	if (!len)
 		return NULL;
@@ -947,7 +947,7 @@ void* OOBase::CrtAllocator::allocate(size_t len)
 		return ::HeapAlloc(Win32Thunk::instance().m_hHeap,0,len);
 }
 
-void* OOBase::CrtAllocator::reallocate(void* ptr, size_t len)
+void* OOBase::CrtAllocator::reallocate(void* ptr, size_t len, size_t /*align*/)
 {
 	if (!len)
 		return NULL;

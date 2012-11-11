@@ -40,7 +40,7 @@ namespace OOBase
 
 #if defined(_WIN32)
 		int get_user(HANDLE hToken, env_table_t& tabEnv);
-		SmartPtr<void,LocalAllocator> get_block(const env_table_t& tabEnv);
+		SmartPtr<void,FreeDestructor<LocalAllocator> > get_block(const env_table_t& tabEnv);
 #endif
 	}
 }

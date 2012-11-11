@@ -32,6 +32,8 @@ namespace
 	class NetApiDestructor
 	{
 	public:
+		typedef OOBase::CrtAllocator Allocator;
+
 		static void destroy(void* ptr)
 		{
 			NetApiBufferFree(ptr);
@@ -74,10 +76,10 @@ DWORD OOBase::Win32::sec_descript_t::SetEntriesInAcl(ULONG cCountOfExplicitEntri
 	return ERROR_SUCCESS;
 }
 
-DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, OOBase::SmartPtr<wchar_t,OOBase::LocalAllocator>& strUserName, OOBase::SmartPtr<wchar_t,OOBase::LocalAllocator>& strDomainName)
+DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, SmartPtr<wchar_t,FreeDestructor<OOBase::LocalAllocator> >& strUserName, SmartPtr<wchar_t,FreeDestructor<OOBase::LocalAllocator> >& strDomainName)
 {
 	// Find out all about the user associated with hToken
-	OOBase::SmartPtr<TOKEN_USER,OOBase::FreeDestructor<OOBase::CrtAllocator> > ptrUserInfo = static_cast<TOKEN_USER*>(GetTokenInfo(hToken,TokenUser));
+	SmartPtr<TOKEN_USER,FreeDestructor<CrtAllocator> > ptrUserInfo = static_cast<TOKEN_USER*>(GetTokenInfo(hToken,TokenUser));
 	if (!ptrUserInfo)
 		return GetLastError();
 
@@ -88,12 +90,14 @@ DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, OOBase::SmartPtr<wchar_t,OO
 	if (dwUNameSize == 0)
 		return GetLastError();
 
-	if (!strUserName.allocate(dwUNameSize*sizeof(wchar_t)))
+	strUserName = static_cast<wchar_t*>(OOBase::LocalAllocator::allocate(dwUNameSize*sizeof(wchar_t)));
+	if (!strUserName)
 		return ERROR_OUTOFMEMORY;
 
 	if (dwDNameSize)
 	{
-		if (!strDomainName.allocate(dwDNameSize*sizeof(wchar_t)))
+		strDomainName = static_cast<wchar_t*>(OOBase::LocalAllocator::allocate(dwDNameSize*sizeof(wchar_t)));
+		if (!strDomainName)
 			return ERROR_OUTOFMEMORY;
 	}
 
@@ -106,8 +110,8 @@ DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, OOBase::SmartPtr<wchar_t,OO
 DWORD OOBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile)
 {
 	// Get the names associated with the user SID
-	OOBase::SmartPtr<wchar_t,OOBase::LocalAllocator> strUserName;
-	OOBase::SmartPtr<wchar_t,OOBase::LocalAllocator> strDomainName;
+	SmartPtr<wchar_t,FreeDestructor<OOBase::LocalAllocator> > strUserName;
+	SmartPtr<wchar_t,FreeDestructor<OOBase::LocalAllocator> > strDomainName;
 
 	DWORD err = GetNameFromToken(hToken,strUserName,strDomainName);
 	if (err != ERROR_SUCCESS)
@@ -116,12 +120,12 @@ DWORD OOBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile)
 	// Lookup a DC for pszDomain
 	LPBYTE v = NULL;
 	NetGetAnyDCName(NULL,strDomainName,&v);
-	OOBase::SmartPtr<wchar_t,NetApiDestructor> ptrDCName = reinterpret_cast<wchar_t*>(v);
+	SmartPtr<wchar_t,NetApiDestructor> ptrDCName = reinterpret_cast<wchar_t*>(v);
 
 	// Try to find the user's profile path...
 	v = NULL;
 	NetUserGetInfo(ptrDCName,strUserName,3,&v);
-	OOBase::SmartPtr<USER_INFO_3,NetApiDestructor> pInfo = reinterpret_cast<USER_INFO_3*>(v);
+	SmartPtr<USER_INFO_3,NetApiDestructor> pInfo = reinterpret_cast<USER_INFO_3*>(v);
 
 	// Load the Users Profile
 	PROFILEINFOW profile_info = {0};
@@ -142,10 +146,10 @@ DWORD OOBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile)
 	return ERROR_SUCCESS;
 }
 
-DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, OOBase::SmartPtr<void,OOBase::LocalAllocator>& pSIDLogon)
+DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, SmartPtr<void,FreeDestructor<OOBase::LocalAllocator> >& pSIDLogon)
 {
 	// Get the logon SID of the Token
-	OOBase::SmartPtr<TOKEN_GROUPS,OOBase::FreeDestructor<OOBase::CrtAllocator> > ptrGroups = static_cast<TOKEN_GROUPS*>(GetTokenInfo(hToken,TokenGroups));
+	SmartPtr<TOKEN_GROUPS,FreeDestructor<CrtAllocator> > ptrGroups = static_cast<TOKEN_GROUPS*>(GetTokenInfo(hToken,TokenGroups));
 	if (!ptrGroups)
 		return GetLastError();
 
@@ -176,12 +180,12 @@ DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, OOBase::SmartPtr<void,OOBase::Lo
 DWORD OOBase::Win32::SetTokenDefaultDACL(HANDLE hToken)
 {
 	// Get the current Default DACL
-	OOBase::SmartPtr<TOKEN_DEFAULT_DACL,OOBase::FreeDestructor<OOBase::CrtAllocator> > ptrDef_dacl = static_cast<TOKEN_DEFAULT_DACL*>(GetTokenInfo(hToken,TokenDefaultDacl));
+	SmartPtr<TOKEN_DEFAULT_DACL,FreeDestructor<CrtAllocator> > ptrDef_dacl = static_cast<TOKEN_DEFAULT_DACL*>(GetTokenInfo(hToken,TokenDefaultDacl));
 	if (!ptrDef_dacl)
 		return ERROR_OUTOFMEMORY;
 
 	// Get the logon SID of the Token
-	OOBase::SmartPtr<void,OOBase::LocalAllocator> ptrSIDLogon;
+	SmartPtr<void,FreeDestructor<OOBase::LocalAllocator> > ptrSIDLogon;
 	DWORD dwRes = GetLogonSID(hToken,ptrSIDLogon);
 	if (dwRes != ERROR_SUCCESS)
 		return dwRes;
@@ -222,7 +226,7 @@ DWORD OOBase::Win32::EnableUserAccessToDir(const wchar_t* pszPath, const TOKEN_U
 	if (dwRes != ERROR_SUCCESS)
 		return dwRes;
 
-	OOBase::SmartPtr<void,OOBase::Win32::LocalAllocDestructor> ptrSD = pSD;
+	SmartPtr<void,Win32::LocalAllocDestructor> ptrSD = pSD;
 
 	EXPLICIT_ACCESSW ea = {0};
 
@@ -239,7 +243,7 @@ DWORD OOBase::Win32::EnableUserAccessToDir(const wchar_t* pszPath, const TOKEN_U
 	if (dwRes != ERROR_SUCCESS)
 		return dwRes;
 
-	OOBase::SmartPtr<ACL,OOBase::Win32::LocalAllocDestructor> ptrACLNew = pACLNew;
+	SmartPtr<ACL,Win32::LocalAllocDestructor> ptrACLNew = pACLNew;
 
 	return SetNamedSecurityInfoW(szPath,SE_FILE_OBJECT,DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,NULL,NULL,pACLNew,NULL);
 }
@@ -305,7 +309,7 @@ void* OOBase::Win32::GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls)
 {
 	for (DWORD dwLen = 256;;)
 	{
-		void* pBuffer = OOBase::CrtAllocator::allocate(dwLen);
+		void* pBuffer = CrtAllocator::allocate(dwLen);
 		if (!pBuffer)
 		{
 			SetLastError(ERROR_OUTOFMEMORY);
@@ -317,7 +321,7 @@ void* OOBase::Win32::GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls)
 
 		DWORD err = GetLastError();
 
-		OOBase::CrtAllocator::free(pBuffer);
+		CrtAllocator::free(pBuffer);
 
 		SetLastError(err);
 			

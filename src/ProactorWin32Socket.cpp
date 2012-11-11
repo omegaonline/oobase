@@ -193,7 +193,7 @@ int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* b
 	if (count == 0)
 		return 0;
 
-	OOBase::SmartPtr<WSABUF,OOBase::FreeDestructor<OOBase::CrtAllocator> > wsa_bufs(sizeof(WSABUF) * count);
+	OOBase::SmartPtr<WSABUF,OOBase::FreeDestructor<OOBase::LocalAllocator> > wsa_bufs = static_cast<WSABUF*>(OOBase::LocalAllocator::allocate(sizeof(WSABUF) * count));
 	if (!wsa_bufs)
 		return ERROR_OUTOFMEMORY;
 	
@@ -344,7 +344,7 @@ InternalAcceptor::InternalAcceptor(OOSvrBase::detail::ProactorWin32* pProactor, 
 
 int InternalAcceptor::bind(const sockaddr* addr, socklen_t addr_len)
 {
-	m_addr.allocate(addr_len);
+	m_addr = static_cast<sockaddr*>(OOBase::CrtAllocator::allocate(addr_len));
 	if (!m_addr)
 		return ERROR_OUTOFMEMORY;
 	

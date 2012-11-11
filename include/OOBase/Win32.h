@@ -30,7 +30,7 @@ namespace OOBase
 {
 	namespace Win32
 	{
-		class LocalAllocDestructor
+		class LocalAllocator
 		{
 		public:
 			static void* allocate(size_t bytes)
@@ -39,6 +39,18 @@ namespace OOBase
 			}
 
 			static void free(void* ptr)
+			{
+				if (::LocalFree((HLOCAL)ptr) != NULL)
+					OOBase_CallCriticalFailure(::GetLastError());
+			}
+		};
+
+		class LocalAllocDestructor
+		{
+		public:
+			typedef LocalAllocator Allocator;
+			
+			static void destroy(void* ptr)
 			{
 				::LocalFree(ptr);
 			}

@@ -128,10 +128,7 @@ namespace
 
 	bool Win32Thread::join(const OOBase::Timeout& timeout)
 	{
-		OOBase::Guard<OOBase::SpinLock> guard(m_lock,false);
-
-		if (!guard.acquire(timeout))
-			return false;
+		OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 		if (!m_hThread.is_valid())
 			return true;

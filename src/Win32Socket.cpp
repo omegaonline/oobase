@@ -393,7 +393,7 @@ int WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 
 	WSABUF static_bufs[4];
 	WSABUF* bufs = static_bufs;
-	OOBase::SmartPtr<WSABUF,OOBase::LocalAllocator> ptrBufs;
+	OOBase::SmartPtr<WSABUF,OOBase::FreeDestructor<OOBase::LocalAllocator> > ptrBufs;
 
 	size_t total_len = 0;
 	DWORD actual_count = 0;
@@ -416,7 +416,8 @@ int WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 
 	if (actual_count > sizeof(static_bufs)/sizeof(static_bufs[0]))
 	{
-		if (!ptrBufs.allocate(actual_count * sizeof(WSABUF)))
+		ptrBufs = static_cast<WSABUF*>(OOBase::LocalAllocator::allocate(actual_count * sizeof(WSABUF)));
+		if (!ptrBufs)
 			return ERROR_OUTOFMEMORY;
 
 		bufs = ptrBufs;
@@ -553,7 +554,7 @@ int WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 
 	WSABUF static_bufs[4];
 	WSABUF* bufs = static_bufs;
-	OOBase::SmartPtr<WSABUF,OOBase::LocalAllocator> ptrBufs;
+	OOBase::SmartPtr<WSABUF,OOBase::FreeDestructor<OOBase::LocalAllocator> > ptrBufs;
 
 	size_t total_len = 0;
 	DWORD actual_count = 0;
@@ -576,7 +577,8 @@ int WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 
 	if (actual_count > sizeof(static_bufs)/sizeof(static_bufs[0]))
 	{
-		if (!ptrBufs.allocate(actual_count * sizeof(WSABUF)))
+		ptrBufs = static_cast<WSABUF*>(OOBase::LocalAllocator::allocate(actual_count * sizeof(WSABUF)));
+		if (!ptrBufs)
 			return ERROR_OUTOFMEMORY;
 
 		bufs = ptrBufs;

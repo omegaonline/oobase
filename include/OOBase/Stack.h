@@ -45,6 +45,20 @@ namespace OOBase
 		{
 			Bag<T,Allocator>::remove_at_sorted(pos);
 		}
+
+		bool remove(const T& value)
+		{
+			// This is just really useful!
+			for (size_t pos = 0;pos < this->m_size;++pos)
+			{
+				if (this->m_data[pos] == value)
+				{
+					remove_at(pos);
+					return true;
+				}
+			}
+			return false;
+		}
 		
 		void clear()
 		{

@@ -38,6 +38,10 @@ namespace OOBase
 		void acquire();
 		void release();
 
+#if defined(_WIN32)
+		bool acquire(const Timeout& timeout);
+#endif
+
 	private:
 		// No copying
 		Mutex(const Mutex&);
@@ -152,6 +156,11 @@ namespace OOBase
 			m_mutex.acquire();
 
 			m_acquired = true;
+		}
+
+		bool acquire(const Timeout& timeout)
+		{
+			return (m_acquired = m_mutex.acquire(timeout));
 		}
 
 		void release()

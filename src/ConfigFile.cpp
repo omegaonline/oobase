@@ -238,11 +238,11 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 	}
 
 #if defined(HAVE_UNISTD_H)
-	OOBase::POSIX::SmartFD f(OOBase::POSIX::open(filename,O_RDONLY));
+	POSIX::SmartFD f(POSIX::open(filename,O_RDONLY));
 	if (!f.is_valid())
 		return errno;
 #elif defined(_WIN32)
-	OOBase::Win32::SmartHandle f(::CreateFileA(filename),GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL));
+	Win32::SmartHandle f(::CreateFileA(filename,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL));
 	if (!f.is_valid())
 		return ::GetLastError();
 #else
@@ -251,18 +251,18 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 
 	static const size_t s_read_block_size = 4096;
 
-	OOBase::RefPtr<OOBase::Buffer> buffer = new (std::nothrow) OOBase::Buffer(s_read_block_size);
+	RefPtr<Buffer> buffer = new (std::nothrow) Buffer(s_read_block_size);
 	if (!buffer)
 		return ERROR_OUTOFMEMORY;
 
-	OOBase::String strSection;
+	String strSection;
 	for (;;)
 	{
 #if defined(HAVE_UNISTD_H)
-		ssize_t r = OOBase::POSIX::read(f,buffer->wr_ptr(),buffer->space());
+		ssize_t r = POSIX::read(f,buffer->wr_ptr(),buffer->space());
 #elif defined(_WIN32)
 		DWORD r = 0;
-		if (!::ReadFile(f,buffer->wr_ptr(),static_cast<DWORD>(buffer->space()),&r,NULL);
+		if (!::ReadFile(f,buffer->wr_ptr(),static_cast<DWORD>(buffer->space()),&r,NULL))
 			return GetLastError();
 #endif
 
@@ -296,11 +296,11 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 }
 
 #if defined(_WIN32)
-int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key, results_t& results)
+int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, results_t& results)
 {
 	// Read from registry
 	HKEY hKey = 0;
-	LONG lRes = RegOpenKeyExA(hRootKey,key,0,KEY_READ,&hKey);
+	LONG lRes = RegOpenKeyExA(hRootKey,key_name,0,KEY_READ,&hKey);
 	if (lRes != ERROR_SUCCESS)
 		return lRes;
 
@@ -324,7 +324,7 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key, results_t&
 		if (dwValLen >= 1 && szBuf[0] == '#')
 			continue;
 
-		OOBase::String value,key;
+		String value,key;
 		lRes = key.assign(szBuf,dwNameLen);
 		if (lRes)
 			break;
@@ -346,7 +346,7 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key, results_t&
 		else if (dwType == REG_SZ || dwType == REG_EXPAND_SZ)
 		{
 			++dwValLen;
-			OOBase::SmartPtr<char,OOBase::LocalAllocator> buf(dwValLen+1);
+			SmartPtr<char,FreeDestructor<LocalAllocator> > buf = static_cast<char*>(LocalAllocator::allocate(dwValLen+1));
 			if (!buf)
 			{
 				lRes = ERROR_OUTOFMEMORY;
@@ -366,7 +366,7 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key, results_t&
 					lRes = value.assign(szBuf,dwExpLen-1);
 				else
 				{
-					OOBase::SmartPtr<char,OOBase::LocalAllocator> buf3(dwExpLen+1);
+					SmartPtr<char,FreeDestructor<LocalAllocator> > buf3 = static_cast<char*>(LocalAllocator::allocate(dwExpLen+1));
 					if (!buf3)
 						lRes = ERROR_OUTOFMEMORY;
 					else if (!ExpandEnvironmentStringsA(buf,buf3,dwExpLen))
@@ -388,7 +388,7 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key, results_t&
 
 		if (!key.empty())
 		{
-			OOBase::String* v = results.find(key);
+			String* v = results.find(key);
 			if (!v)
 			{
 				lRes = results.insert(key,value);

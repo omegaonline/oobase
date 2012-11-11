@@ -87,6 +87,18 @@ void OOBase::Mutex::acquire()
 		OOBase_CallCriticalFailure(GetLastError());
 }
 
+bool OOBase::Mutex::acquire(const Timeout& timeout)
+{
+	DWORD dwWait = WaitForSingleObject(m_mutex,timeout.millisecs());
+	if (dwWait == WAIT_TIMEOUT)
+		return false;
+
+	if (dwWait != WAIT_OBJECT_0)
+		OOBase_CallCriticalFailure(GetLastError());
+
+	return true;
+}
+
 void OOBase::Mutex::release()
 {
 	if (!ReleaseMutex(m_mutex))
