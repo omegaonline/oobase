@@ -80,23 +80,24 @@ namespace
 		return err;
 	}
 
-	OOBase::SmartPtr<wchar_t,OOBase::FreeDestructor<OOBase::LocalAllocator> > to_wchar_t(const OOBase::String& str)
+	int to_wchar_t(const OOBase::String& str, OOBase::SmartPtr<wchar_t,OOBase::FreeDestructor<OOBase::LocalAllocator> >& wsz)
 	{
-		OOBase::SmartPtr<wchar_t,OOBase::FreeDestructor<OOBase::LocalAllocator> > wsz;
 		int len = MultiByteToWideChar(CP_UTF8,0,str.c_str(),-1,NULL,0);
 		if (len <= 0)
 		{
 			DWORD dwErr = GetLastError();
 			if (dwErr != ERROR_INSUFFICIENT_BUFFER)
-				return wsz;
+				return dwErr;
 		}
 
 		wsz = static_cast<wchar_t*>(OOBase::LocalAllocator::allocate((len+1) * sizeof(wchar_t)));
-		if (wsz)
-		{
-			MultiByteToWideChar(CP_UTF8,0,str.c_str(),-1,wsz,len);
-			wsz[len] = L'\0';
-		}
+		if (!wsz)
+			return ERROR_OUTOFMEMORY;
+
+		if (MultiByteToWideChar(CP_UTF8,0,str.c_str(),-1,wsz,len) <= 0)
+			return GetLastError();
+
+		wsz[len] = L'\0';
 		return wsz;
 	}
 
@@ -133,29 +134,22 @@ int OOBase::Environment::get_user(HANDLE hToken, env_table_t& tabEnv)
 	return err;
 }
 
-OOBase::SmartPtr<void,OOBase::FreeDestructor<OOBase::LocalAllocator> > OOBase::Environment::get_block(const env_table_t& tabEnv)
+int OOBase::Environment::get_block(const env_table_t& tabEnv, StackPtr<void,1024>& ptr)
 {
-	SmartPtr<void,FreeDestructor<LocalAllocator> > ptr;
-
 	// Copy and widen to UNICODE
 	size_t total_size = 0;
 	Table<SmartPtr<wchar_t,FreeDestructor<LocalAllocator> >,SmartPtr<wchar_t,FreeDestructor<LocalAllocator> >,LocalAllocator> wenv;
 	for (size_t i=0;i<tabEnv.size();++i)
 	{
-		SmartPtr<wchar_t,FreeDestructor<LocalAllocator> > key = to_wchar_t(*tabEnv.key_at(i));
-		if (!key)
-			return ptr;
+		SmartPtr<wchar_t,FreeDestructor<LocalAllocator> > key,val;
+		int err = to_wchar_t(*tabEnv.key_at(i),key);
+		if (!err)
+			err = to_wchar_t(*tabEnv.at(i),val);
+		if (!err)
+			err = wenv.insert(key,val);
 
-		SmartPtr<wchar_t,FreeDestructor<LocalAllocator> > val = to_wchar_t(*tabEnv.at(i));
-		if (!val)
-			return ptr;
-
-		int err = wenv.insert(key,val);
 		if (err)
-		{
-			SetLastError(err);
-			return ptr;
-		}
+			return err;
 
 		// Include \0 and optionally '=' length
 		total_size += wcslen(key) + 1;
@@ -169,35 +163,34 @@ OOBase::SmartPtr<void,OOBase::FreeDestructor<OOBase::LocalAllocator> > OOBase::E
 	wenv.sort(&env_sort);
 
 	// And now copy into one giant block
-	ptr = OOBase::LocalAllocator::allocate((total_size + 2) * sizeof(wchar_t));
-	if (ptr)
+	if (!ptr.allocate((total_size + 2) * sizeof(wchar_t));
+		return ERROR_OUTOFMEMORY;
+
+	wchar_t* pout = static_cast<wchar_t*>(static_cast<void*>(ptr));
+	for (size_t i=0;i<wenv.size();++i)
 	{
-		wchar_t* pout = static_cast<wchar_t*>(static_cast<void*>(ptr));
-		for (size_t i=0;i<wenv.size();++i)
+		const wchar_t* p = *wenv.key_at(i);
+
+		while (*p != L'\0')
+			*pout++ = *p++;
+
+		p = *wenv.at(i);
+		if (*p != L'\0')
 		{
-			const wchar_t* p = *wenv.key_at(i);
+			*pout++ = L'=';
 
 			while (*p != L'\0')
 				*pout++ = *p++;
-
-			p = *wenv.at(i);
-			if (*p != L'\0')
-			{
-				*pout++ = L'=';
-				
-				while (*p != L'\0')
-					*pout++ = *p++;
-			}
-
-			*pout++ = L'\0';
 		}
 
-		// Terminate with \0
 		*pout++ = L'\0';
-		*pout++ = L'\0';
-	}	
+	}
 
-	return ptr;
+	// Terminate with \0
+	*pout++ = L'\0';
+	*pout++ = L'\0';
+
+	return 0;
 }
 
 int OOBase::Environment::getenv(const char* envvar, LocalString& strValue)
@@ -341,7 +334,7 @@ int OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tabS
 	return 0;
 }
 
-OOBase::SmartPtr<char*,OOBase::FreeDestructor<OOBase::LocalAllocator> > OOBase::Environment::get_envp(const env_table_t& tabEnv)
+int OOBase::Environment::get_envp(const env_table_t& tabEnv, StackPtr<char*,1024>& ptr)
 {
 	// We cheat here and allocate the strings and the array in one block.
 
@@ -350,29 +343,28 @@ OOBase::SmartPtr<char*,OOBase::FreeDestructor<OOBase::LocalAllocator> > OOBase::
 	for (size_t idx = 0; idx < tabEnv.size(); ++idx)
 		len += tabEnv.key_at(idx)->length() + tabEnv.at(idx)->length() + 2; // = and NUL
 
-	SmartPtr<char*,FreeDestructor<LocalAllocator> > ptr = static_cast<char**>(LocalAllocator::allocate(len));
-	if (ptr)
+	if (!ptr.allocate(len))
+		return ERROR_OUTOFMEMORY;
+
+	char** envp = ptr;
+	char* char_data = reinterpret_cast<char*>(envp) + ((tabEnv.size()+1) * sizeof(char*));
+
+	for (size_t idx = 0; idx < tabEnv.size(); ++idx)
 	{
-		char** envp = ptr;
-		char* char_data = reinterpret_cast<char*>(envp) + ((tabEnv.size()+1) * sizeof(char*));
+		*envp++ = char_data;
 
-		for (size_t idx = 0; idx < tabEnv.size(); ++idx)
-		{
-			*envp++ = char_data;
-
-			const String* key = tabEnv.key_at(idx);
-			const String* val = tabEnv.at(idx);
-			memcpy(char_data,key->c_str(),key->length());
-			char_data += key->length();
-			*char_data++ = '=';
-			memcpy(char_data,val->c_str(),val->length());
-			char_data += val->length();
-			*char_data++ = '\0';
-		}
-
-		// Add terminating NULL
-		*envp = NULL;
+		const String* key = tabEnv.key_at(idx);
+		const String* val = tabEnv.at(idx);
+		memcpy(char_data,key->c_str(),key->length());
+		char_data += key->length();
+		*char_data++ = '=';
+		memcpy(char_data,val->c_str(),val->length());
+		char_data += val->length();
+		*char_data++ = '\0';
 	}
 
-	return ptr;
+	// Add terminating NULL
+	*envp = NULL;
+
+	return 0;
 }

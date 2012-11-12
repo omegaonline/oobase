@@ -23,6 +23,7 @@
 
 #if defined(HAVE_UNISTD_H)
 
+#include "../include/OOBase/StackPtr.h"
 #include "../include/OOBase/Socket.h"
 #include "../include/OOBase/Posix.h"
 
@@ -406,21 +407,13 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 	if (count == 0)
 		return 0;
 
-	struct iovec static_bufs[8];
-	OOBase::SmartPtr<struct iovec,OOBase::FreeDestructor<OOBase::CrtAllocator> > ptrBufs;
+	OOBase::StackArrayPtr<struct iovec,8> iovecs(count);
+	if (!iovecs)
+		return ERROR_OUTOFMEMORY;
 
 	struct msghdr msg = {0};
-	msg.msg_iov = static_bufs;
+	msg.msg_iov = iovecs;
 	msg.msg_iovlen = count;
-
-	if (count > sizeof(static_bufs)/sizeof(static_bufs[0]))
-	{
-		ptrBufs = static_cast<struct iovec*>(OOBase::CrtAllocator::allocate(count * sizeof(struct iovec)));
-		if (!ptrBufs)
-			return ENOMEM;
-
-		msg.msg_iov = ptrBufs;
-	}
 
 	for (size_t i=0;i<count;++i)
 	{
@@ -582,21 +575,13 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 	if (count == 0)
 		return 0;
 
-	struct iovec static_bufs[8];
-	OOBase::SmartPtr<struct iovec,OOBase::FreeDestructor<OOBase::CrtAllocator> > ptrBufs;
+	OOBase::StackArrayPtr<struct iovec,8> iovecs(count);
+	if (!iovecs)
+		return ERROR_OUTOFMEMORY;
 
 	struct msghdr msg = {0};
-	msg.msg_iov = static_bufs;
+	msg.msg_iov = iovecs;
 	msg.msg_iovlen = count;
-
-	if (count > sizeof(static_bufs)/sizeof(static_bufs[0]))
-	{
-		ptrBufs = static_cast<struct iovec*>(OOBase::CrtAllocator::allocate(count * sizeof(struct iovec)));
-		if (!ptrBufs)
-			return ENOMEM;
-
-		msg.msg_iov = ptrBufs;
-	}
 
 	for (size_t i=0;i<count;++i)
 	{

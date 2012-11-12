@@ -22,7 +22,7 @@
 #ifndef OOBASE_POSIX_H_INCLUDED_
 #define OOBASE_POSIX_H_INCLUDED_
 
-#include "SmartPtr.h"
+#include "StackPtr.h"
 
 #if defined(HAVE_UNISTD_H) || defined(DOXYGEN)
 
@@ -127,13 +127,12 @@ namespace OOBase
 			pw_info(const pw_info&);
 			pw_info& operator = (const pw_info&);
 
-			char* alloc(size_t& len);
+			static const size_t get_size();
 
 			struct passwd* m_pwd;
 			struct passwd  m_pwd2;
 
-			char  m_static[1024];
-			OOBase::SmartPtr<char,OOBase::FreeDestructor<OOBase::CrtAllocator> > m_dynamic;
+			StackPtr<char,1024> m_data;
 		};
 	}
 }

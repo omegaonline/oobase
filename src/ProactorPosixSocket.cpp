@@ -434,24 +434,15 @@ int AsyncSocket::process_send_v(SendItem* item, bool& watch_again)
 	int err = 0;
 	if (first_buffer < item->m_count)
 	{
-		struct iovec static_bufs[8];
-		OOBase::SmartPtr<struct iovec,OOBase::FreeDestructor<OOBase::CrtAllocator> > ptrBufs;
-
-		struct msghdr msg = {0};
-		msg.msg_iov = static_bufs;
-		msg.msg_iovlen = item->m_count - first_buffer;
-
-		if (msg.msg_iovlen > sizeof(static_bufs)/sizeof(static_bufs[0]))
+		OOBase::StackArrayPtr<struct iovec,8> iovecs(item->m_count - first_buffer);
+		if (!iovecs)
+			err = ERROR_OUTOFMEMORY;
+		else
 		{
-			ptrBufs = static_cast<struct iovec*>(OOBase::CrtAllocator::allocate(msg.msg_iovlen * sizeof(struct iovec)));
-			if (!ptrBufs)
-				err = ERROR_OUTOFMEMORY;
-			else
-				msg.msg_iov = ptrBufs;
-		}
+			struct msghdr msg = {0};
+			msg.msg_iov = iovecs;
+			msg.msg_iovlen = item->m_count - first_buffer;
 
-		if (!err)
-		{
 			for (size_t i=0;i<msg.msg_iovlen;++i)
 			{
 				msg.msg_iov[i].iov_len = item->m_buffers[i+first_buffer]->length();
