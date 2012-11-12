@@ -189,6 +189,44 @@ namespace OOBase
 				HANDLE           m_mutex;
 			} u;
 		};
+
+		template <typename S>
+		int wchar_t_to_utf8(const wchar_t* wsz, S& str)
+		{
+			int len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,NULL,0,NULL,NULL);
+			DWORD dwErr = GetLastError();
+			if (dwErr != ERROR_INSUFFICIENT_BUFFER)
+				return dwErr;
+
+			OOBase::StackPtr<char,256> ptrBuf(len);
+			if (!ptrBuf)
+				return ERROR_OUTOFMEMORY;
+
+			len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,ptrBuf,ptrBuf.size(),NULL,NULL);
+			if (len <= 0)
+				return GetLastError();
+
+			return str.assign(sz,len);
+		}
+
+		template <size_t S>
+		int utf8_to_wchar_t(const char* sz, StackPtr<wchar_t,S>& wsz)
+		{
+			int len = MultiByteToWideChar(CP_UTF8,0,sz,-1,NULL,0);
+			DWORD dwErr = GetLastError();
+			if (dwErr != ERROR_INSUFFICIENT_BUFFER)
+				return dwErr;
+
+			if (!wsz.allocate((len + 1) * sizeof(wchar_t))
+				return ERROR_OUTOFMEMORY;
+
+			len = MultiByteToWideChar(CP_UTF8,0,sz,-1,wsz,wsz.size());
+			if (len <= 0)
+				return GetLastError();
+
+			wsz[len] = L'\0';
+			return wsz;
+		}
 	}
 }
 #endif // !defined(DOXYGEN)

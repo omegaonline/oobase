@@ -298,20 +298,25 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 #if defined(_WIN32)
 int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, results_t& results)
 {
+	OOBase::StackPtr<wchar_t,64> wszKey;
+	LONG lRes = Win32::utf8_to_wchar_t(key_name,wszKey);
+	if (lRes != ERROR_SUCCESS)
+		return LRes;
+
 	// Read from registry
 	HKEY hKey = 0;
-	LONG lRes = RegOpenKeyExA(hRootKey,key_name,0,KEY_READ,&hKey);
+	lRes = RegOpenKeyExW(hRootKey,wszKey,0,KEY_READ,&hKey);
 	if (lRes != ERROR_SUCCESS)
 		return lRes;
 
 	// Loop pulling out registry values
 	for (DWORD dwIndex=0;; ++dwIndex)
 	{
-		char szBuf[1024];
-		DWORD dwNameLen = sizeof(szBuf);
+		wchar_t szName[256] = {0};
+		DWORD dwNameLen = sizeof(szName)/sizeof(szName[0]);
 		DWORD dwType = 0;
 		DWORD dwValLen = 0;
-		lRes = RegEnumValueA(hKey,dwIndex,szBuf,&dwNameLen,NULL,&dwType,NULL,&dwValLen);
+		lRes = RegEnumValueW(hKey,dwIndex,szName,&dwNameLen,NULL,&dwType,NULL,&dwValLen);
 		if (lRes == ERROR_NO_MORE_ITEMS)
 		{
 			lRes = 0;
@@ -321,21 +326,22 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 			break;
 
 		// Skip anything starting with #
-		if (dwValLen >= 1 && szBuf[0] == '#')
+		if (dwNameLen >= 1 && szName[0] == L'#')
 			continue;
 
 		String value,key;
-		lRes = key.assign(szBuf,dwNameLen);
+
+		szName[dwNameLen-1] = L'\0';
+		lRes = Win32::wchar_t_to_utf8(szName,key);
 		if (lRes)
 			break;
-
-		++dwNameLen;
 
 		if (dwType == REG_DWORD)
 		{
 			DWORD dwVal = 0;
 			DWORD dwLen = sizeof(dwVal);
-			lRes = RegEnumValueA(hKey,dwIndex,szBuf,&dwNameLen,NULL,NULL,(LPBYTE)&dwVal,&dwLen);
+			dwNameLen = sizeof(szName)/sizeof(szName[0]);
+			lRes = RegEnumValueW(hKey,dwIndex,szName,&dwNameLen,NULL,NULL,(LPBYTE)&dwVal,&dwLen);
 			if (lRes != ERROR_SUCCESS)
 				break;
 
@@ -345,38 +351,38 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 		}
 		else if (dwType == REG_SZ || dwType == REG_EXPAND_SZ)
 		{
-			++dwValLen;
-			SmartPtr<char,FreeDestructor<LocalAllocator> > buf = static_cast<char*>(LocalAllocator::allocate(dwValLen+1));
-			if (!buf)
+			OOBase::StackArrayPtr<wchar_t,256> ptrBuf;
+			if (!ptrBuf.allocate(dwValLen+1))
 			{
 				lRes = ERROR_OUTOFMEMORY;
 				break;
 			}
-
-			lRes = RegEnumValueA(hKey,dwIndex,szBuf,&dwNameLen,NULL,NULL,(LPBYTE)(char*)buf,&dwValLen);
+			dwValLen = ptrBuf.count();
+			dwNameLen = sizeof(szName)/sizeof(szName[0]);
+			lRes = RegEnumValueW(hKey,dwIndex,szName,&dwNameLen,NULL,NULL,(LPBYTE)(wchar_t*)ptrBuf,&dwValLen);
 			if (lRes != ERROR_SUCCESS)
 				break;
 
 			if (dwType == REG_EXPAND_SZ)
 			{
-				DWORD dwExpLen = ExpandEnvironmentStringsA(buf,szBuf,sizeof(szBuf));
+				OOBase::StackArrayPtr<wchar_t,512> ptrEnv;
+				DWORD dwExpLen = ExpandEnvironmentStringsW(ptrBuf,ptrEnv,ptrEnv.count());
 				if (dwExpLen == 0)
 					lRes = ::GetLastError();
-				else if (dwExpLen <= sizeof(szBuf))
-					lRes = value.assign(szBuf,dwExpLen-1);
-				else
+				else if (dwExpLen > ptrEnv.count())
 				{
-					SmartPtr<char,FreeDestructor<LocalAllocator> > buf3 = static_cast<char*>(LocalAllocator::allocate(dwExpLen+1));
-					if (!buf3)
+					if (!ptrEnv.allocate(dwExpLen + 1))
 						lRes = ERROR_OUTOFMEMORY;
-					else if (!ExpandEnvironmentStringsA(buf,buf3,dwExpLen))
+					else if (!ExpandEnvironmentStringsW(ptrBuf,ptrEnv,ptrEnv.count()))
 						lRes = ::GetLastError();
 					else
-						lRes = value.assign(buf3,dwExpLen-1);
+						lRes = Win32::wchar_t_to_utf8(ptrEnv,value);
 				}
+				else
+					lRes = Win32::wchar_t_to_utf8(ptrEnv,value);
 			}
 			else
-				lRes = value.assign(buf,dwValLen-1);
+				lRes = Win32::wchar_t_to_utf8(ptrBuf,value);
 
 			if (lRes)
 				break;

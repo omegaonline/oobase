@@ -391,10 +391,6 @@ int WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 	if (count == 0)
 		return 0;
 
-	WSABUF static_bufs[4];
-	WSABUF* bufs = static_bufs;
-	OOBase::SmartPtr<WSABUF,OOBase::FreeDestructor<OOBase::LocalAllocator> > ptrBufs;
-
 	size_t total_len = 0;
 	DWORD actual_count = 0;
 	for (size_t i=0;i<count;++i)
@@ -414,14 +410,9 @@ int WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 		}
 	}
 
-	if (actual_count > sizeof(static_bufs)/sizeof(static_bufs[0]))
-	{
-		ptrBufs = static_cast<WSABUF*>(OOBase::LocalAllocator::allocate(actual_count * sizeof(WSABUF)));
-		if (!ptrBufs)
-			return ERROR_OUTOFMEMORY;
-
-		bufs = ptrBufs;
-	}
+	OOBase::StackArrayPtr<WSABUF,8> wsa_bufs(actual_count);
+	if (!wsa_bufs)
+		return ERROR_OUTOFMEMORY;
 
 	DWORD j = 0;
 	for (size_t i=0;i<count;++i)
@@ -429,32 +420,32 @@ int WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 		size_t len = buffers[i]->length();
 		if (len > 0)
 		{
-			bufs[j].len = static_cast<ULONG>(len);
-			bufs[j].buf = const_cast<char*>(static_cast<const char*>(buffers[i]->rd_ptr()));
+			wsa_bufs[j].len = static_cast<ULONG>(len);
+			wsa_bufs[j].buf = const_cast<char*>(static_cast<const char*>(buffers[i]->rd_ptr()));
 			++j;
 		}
 	}
 
 	int err = 0;
-	DWORD dwWritten = send_i(bufs,actual_count,err,timeout);
+	DWORD dwWritten = send_i(wsa_bufs,actual_count,err,timeout);
 
 	// Update buffers...
 	for (size_t first_buffer = 0;dwWritten;)
 	{
-		if (dwWritten >= bufs->len)
+		if (dwWritten >= wsa_bufs->len)
 		{
-			buffers[first_buffer]->rd_ptr(bufs->len);
+			buffers[first_buffer]->rd_ptr(wsa_bufs->len);
 			++first_buffer;
-			dwWritten -= bufs->len;
-			++bufs;
+			dwWritten -= wsa_bufs->len;
+			++wsa_bufs;
 			if (--actual_count == 0)
 				break;
 		}
 		else
 		{
 			buffers[first_buffer]->rd_ptr(dwWritten);
-			bufs->len -= dwWritten;
-			bufs->buf += dwWritten;
+			wsa_bufs->len -= dwWritten;
+			wsa_bufs->buf += dwWritten;
 			dwWritten = 0;
 		}
 	}
@@ -552,10 +543,6 @@ int WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 	if (count == 0)
 		return 0;
 
-	WSABUF static_bufs[4];
-	WSABUF* bufs = static_bufs;
-	OOBase::SmartPtr<WSABUF,OOBase::FreeDestructor<OOBase::LocalAllocator> > ptrBufs;
-
 	size_t total_len = 0;
 	DWORD actual_count = 0;
 	for (size_t i=0;i<count;++i)
@@ -575,14 +562,9 @@ int WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 		}
 	}
 
-	if (actual_count > sizeof(static_bufs)/sizeof(static_bufs[0]))
-	{
-		ptrBufs = static_cast<WSABUF*>(OOBase::LocalAllocator::allocate(actual_count * sizeof(WSABUF)));
-		if (!ptrBufs)
-			return ERROR_OUTOFMEMORY;
-
-		bufs = ptrBufs;
-	}
+	OOBase::StackArrayPtr<WSABUF,8> wsa_bufs(actual_count);
+	if (!wsa_bufs)
+		return ERROR_OUTOFMEMORY;
 
 	DWORD j = 0;
 	for (size_t i=0;i<count;++i)
@@ -590,32 +572,32 @@ int WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 		size_t len = buffers[i]->space();
 		if (len > 0)
 		{
-			bufs[j].len = static_cast<ULONG>(len);
-			bufs[j].buf = const_cast<char*>(buffers[i]->wr_ptr());
+			wsa_bufs[j].len = static_cast<ULONG>(len);
+			wsa_bufs[j].buf = const_cast<char*>(buffers[i]->wr_ptr());
 			++j;
 		}
 	}
 
 	int err = 0;
-	DWORD dwRead = recv_i(bufs,actual_count,true,err,timeout);
+	DWORD dwRead = recv_i(wsa_bufs,actual_count,true,err,timeout);
 
 	// Update buffers...
 	for (size_t first_buffer = 0;dwRead;)
 	{
-		if (dwRead >= bufs->len)
+		if (dwRead >= wsa_bufs->len)
 		{
-			buffers[first_buffer]->wr_ptr(bufs->len);
+			buffers[first_buffer]->wr_ptr(wsa_bufs->len);
 			++first_buffer;
-			dwRead -= bufs->len;
-			++bufs;
+			dwRead -= wsa_bufs->len;
+			++wsa_bufs;
 			if (--actual_count == 0)
 				break;
 		}
 		else
 		{
 			buffers[first_buffer]->wr_ptr(dwRead);
-			bufs->len -= dwRead;
-			bufs->buf += dwRead;
+			wsa_bufs->len -= dwRead;
+			wsa_bufs->buf += dwRead;
 			dwRead = 0;
 		}
 	}

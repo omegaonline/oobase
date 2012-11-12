@@ -193,32 +193,13 @@ namespace
 
 			const char* arrBufs[2] = { msg, NULL };
 
-			OOBase::SmartPtr<TOKEN_USER,OOBase::FreeDestructor<OOBase::CrtAllocator> > ptrSIDProcess;
+			OOBase::StackPtr<TOKEN_USER,64> ptrSIDProcess;
 			PSID psid = NULL;
 			OOBase::Win32::SmartHandle hProcessToken;
 
 			if (OpenProcessToken(GetCurrentProcess(),TOKEN_QUERY,&hProcessToken))
 			{
-				for (DWORD dwLen = 256;;)
-				{
-					ptrSIDProcess.allocate(dwLen);
-					if (!ptrSIDProcess)
-						break;
-
-					if (GetTokenInformation(hProcessToken,TokenUser,ptrSIDProcess,dwLen,&dwLen))
-						break;
-
-					DWORD err = GetLastError();
-
-					ptrSIDProcess = NULL;
-
-					SetLastError(err);
-
-					if (err != ERROR_INSUFFICIENT_BUFFER)
-						break;
-				}
-
-				if (ptrSIDProcess)
+				if (OOBase::Win32::GetTokenInfo(hProcessToken,TokenUser,ptrSIDProcess) == 0)
 					psid = ptrSIDProcess->User.Sid;
 			}
 

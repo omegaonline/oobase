@@ -29,38 +29,13 @@
 
 namespace
 {
-	template <typename S>
-	int from_wchar_t(S& str, const wchar_t* wsz)
-	{
-		int err = 0;
-		char szBuf[1024] = {0};
-		int len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,szBuf,sizeof(szBuf)-1,NULL,NULL);
-		if (len > 0)
-			err = str.assign(szBuf,len);
-		else
-		{
-			err = GetLastError();
-			if (err == ERROR_INSUFFICIENT_BUFFER)
-			{
-				len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,NULL,0,NULL,NULL);
-				OOBase::SmartPtr<char,OOBase::FreeDestructor<OOBase::LocalAllocator> > sz = static_cast<char*>(OOBase::LocalAllocator::allocate(len + 1));
-				if (!sz)
-					return ERROR_OUTOFMEMORY;
-
-				len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,sz,len,NULL,NULL);
-				err = str.assign(sz,len);
-			}
-		}
-		return err;
-	}
-
 	int process_block(const wchar_t* env, OOBase::Environment::env_table_t& tabEnv)
 	{
 		int err = 0;
 		for (const wchar_t* e=env;!err && e != NULL && *e != L'\0';e += wcslen(e)+1)
 		{
 			OOBase::String str;
-			err = from_wchar_t(str,e);
+			err = Win32::wchar_t_to_utf8(e,str);
 			if (!err)
 			{
 				size_t eq = str.find('=');
@@ -83,18 +58,16 @@ namespace
 	int to_wchar_t(const OOBase::String& str, OOBase::SmartPtr<wchar_t,OOBase::FreeDestructor<OOBase::LocalAllocator> >& wsz)
 	{
 		int len = MultiByteToWideChar(CP_UTF8,0,str.c_str(),-1,NULL,0);
-		if (len <= 0)
-		{
-			DWORD dwErr = GetLastError();
-			if (dwErr != ERROR_INSUFFICIENT_BUFFER)
-				return dwErr;
-		}
+		DWORD err = GetLastError();
+		if (err != ERROR_INSUFFICIENT_BUFFER)
+			return err;
 
 		wsz = static_cast<wchar_t*>(OOBase::LocalAllocator::allocate((len+1) * sizeof(wchar_t)));
 		if (!wsz)
 			return ERROR_OUTOFMEMORY;
 
-		if (MultiByteToWideChar(CP_UTF8,0,str.c_str(),-1,wsz,len) <= 0)
+		len = MultiByteToWideChar(CP_UTF8,0,str.c_str(),-1,wsz,len);
+		if (len <= 0)
 			return GetLastError();
 
 		wsz[len] = L'\0';
@@ -195,17 +168,15 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, StackPtr<void,1024
 
 int OOBase::Environment::getenv(const char* envvar, LocalString& strValue)
 {
-	char szBuf[256] = {0};
-	char* new_buf = szBuf;
+	StackPtr<wchar_t,256> wenv;
 
-	DWORD dwLen = GetEnvironmentVariableA(envvar,new_buf,sizeof(szBuf)-1);
-	if (dwLen >= sizeof(szBuf)-1)
+	DWORD dwLen = GetEnvironmentVariableW(envvar,wenv,wenv.size());
+	if (dwLen >= wenv.size())
 	{
-		new_buf = static_cast<char*>(LocalAllocator::allocate(dwLen));
-		if (!new_buf)
+		if (!wenv.allocate(dwLen))
 			return ERROR_OUTOFMEMORY;
 
-		dwLen = GetEnvironmentVariableA(envvar,new_buf,dwLen);
+		dwLen = GetEnvironmentVariableA(envvar,wenv,wenv.size());
 	}
 
 	int err = 0;
@@ -216,10 +187,7 @@ int OOBase::Environment::getenv(const char* envvar, LocalString& strValue)
 			err = 0;
 	}
 	else if (dwLen > 1)
-		err = strValue.assign(new_buf,dwLen);
-
-	if (new_buf != szBuf)
-		LocalAllocator::free(new_buf);
+		err = Win32::wchar_t_to_utf8(strValue,wenv);
 
 	return err;
 }

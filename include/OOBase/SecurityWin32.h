@@ -114,12 +114,34 @@ namespace OOBase
 		DWORD RestrictToken(HANDLE& hToken);
 		DWORD SetTokenDefaultDACL(HANDLE hToken);
 		DWORD LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile);
-		void* GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls);
-		DWORD GetNameFromToken(HANDLE hToken, OOBase::SmartPtr<wchar_t,OOBase::FreeDestructor<OOBase::LocalAllocator> >& strUserName, OOBase::SmartPtr<wchar_t,OOBase::FreeDestructor<OOBase::LocalAllocator> >& strDomainName);
-		DWORD GetLogonSID(HANDLE hToken, OOBase::SmartPtr<void,OOBase::FreeDestructor<OOBase::LocalAllocator> >& pSIDLogon);
+		DWORD GetNameFromToken(HANDLE hToken, OOBase::StackPtr<wchar_t,64>& strUserName, OOBase::StackPtr<wchar_t,64>& strDomainName);
+		DWORD GetLogonSID(HANDLE hToken, OOBase::StackPtr<void,64>& pSIDLogon);
 		DWORD EnableUserAccessToDir(const wchar_t* pszPath, const TOKEN_USER* pUser);
 		bool MatchSids(ULONG count, PSID_AND_ATTRIBUTES pSids1, PSID_AND_ATTRIBUTES pSids2);
 		bool MatchPrivileges(ULONG count, PLUID_AND_ATTRIBUTES Privs1, PLUID_AND_ATTRIBUTES Privs2);
+
+		template <typename T, size_t S>
+		DWORD GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls, OOBase::StackPtr<T,S>& info)
+		{
+			DWORD dwLen = info.size();
+			if (GetTokenInformation(hToken,cls,info,dwLen,&dwLen))
+				return ERROR_SUCCESS;
+
+			DWORD dwErr = GetLastError();
+			if (dwErr != ERROR_INSUFFICIENT_BUFFER)
+				return dwErr;
+
+			::OutputDebugStringW(L"Token buffer too small\n");
+
+			if (!info.allocate(dwLen))
+				return ERROR_OUTOFMEMORY;
+
+			dwLen = info.size();
+			if (GetTokenInformation(hToken,cls,info,dwLen,&dwLen))
+				return ERROR_SUCCESS;
+
+			return GetLastError();
+		}
 	}
 }
 
