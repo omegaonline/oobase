@@ -44,6 +44,7 @@
 #undef LOG_WARNING
 #undef LOG_DEBUG
 #include <syslog.h>
+#include <stdlib.h>
 #endif // HAVE_ASL_H/HAVE_SYSLOG_H
 
 namespace
@@ -274,10 +275,7 @@ namespace
 	void SysLogLogger::init()
 	{
 		s_instance.m_pszSrcFile = "";
-
-		OOBase::LocalString term;
-		OOBase::Environment::getenv("TERM",term);
-		s_instance.m_use_term = !term.empty();
+		s_instance.m_use_term = (::getenv("TERM") != NULL);
 	}
 
 	void SysLogLogger::open(const char* name, const char* pszSrcFile)
