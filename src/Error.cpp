@@ -49,7 +49,7 @@ namespace
 
 	bool format_msg(char* err_buf, size_t err_len, DWORD dwErr, HMODULE hModule)
 	{
-		DWORD dwFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK;
+		DWORD dwFlags = FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK;
 		if (hModule)
 			dwFlags |= FORMAT_MESSAGE_FROM_HMODULE;
 		else
@@ -61,18 +61,15 @@ namespace
 					hModule,
 					dwErr,
 					0,
-					(LPSTR)&lpBuf,
-					0,  NULL))
+					err_buf,
+					err_len-1,  NULL))
 		{
-			OOBase::SmartPtr<char,OOBase::Win32::LocalAllocDestructor> buf = static_cast<char*>(lpBuf);
-			size_t len = strlen(buf);
-			while (len > 0 && (buf[len-1]=='\r' || buf[len-1]=='\n'))
+			err_buf[err_len-1] = '\0';
+
+			size_t len = strlen(err_buf);
+			while (len > 0 && (err_buf[len-1]=='\r' || err_buf[len-1]=='\n'))
 				--len;
 
-			if (len >= err_len)
-				len = err_len - 1;
-
-			memcpy(err_buf,buf,len);
 			err_buf[len] = '\0';
 
 			return true;
