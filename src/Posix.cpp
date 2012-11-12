@@ -222,4 +222,46 @@ int OOBase::POSIX::random_chars(char* buffer, size_t len)
 	return 0;
 }
 
+OOBase::POSIX::pw_info::pw_info(uid_t uid) : m_pwd(NULL)
+{
+	size_t buf_len = 0;
+	char* buffer = alloc(buf_len);
+
+	::getpwuid_r(uid,&m_pwd2,buffer,buf_len,&m_pwd);
+}
+
+OOBase::POSIX::pw_info::pw_info(const char* uname) : m_pwd(NULL)
+{
+	size_t buf_len = 0;
+	char* buffer = alloc(buf_len);
+
+	::getpwnam_r(uname,&m_pwd2,buffer,buf_len,&m_pwd);
+}
+
+char* OOBase::POSIX::pw_info::alloc(size_t& len)
+{
+#if defined(_SC_GETPW_R_SIZE_MAX)
+	long buf_len = sysconf(_SC_GETPW_R_SIZE_MAX);
+#else
+	long buf_len = 0;
+#endif
+
+	// _SC_GETPW_R_SIZE_MAX is defined on Mac OS X. However,
+	// sysconf(_SC_GETPW_R_SIZE_MAX) returns an error. Therefore, the
+	// constant is used as below when error was returned.
+	if (buf_len <= 0)
+		len = sizeof(m_static);
+	else
+		len = buf_len;
+
+	if (len <= sizeof(m_static))
+		return m_static;
+
+	m_dynamic = static_cast<char*>(OOBase::CrtAllocator::allocate(len));
+	if (!m_dynamic)
+		OOBase_CallCriticalFailure(ENOMEM);
+
+	return m_dynamic;
+}
+
 #endif

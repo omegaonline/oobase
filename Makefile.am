@@ -122,7 +122,6 @@ liboobase_la_SOURCES = \
 	src/Mutex.cpp \
 	src/Once.cpp \
 	src/Posix.cpp \
-	src/pw_info.cpp \
 	src/SecurityWin32.cpp \
 	src/Server.cpp \
 	src/String.cpp \

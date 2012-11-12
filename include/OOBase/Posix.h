@@ -124,13 +124,16 @@ namespace OOBase
 			}
 
 		private:
-			pw_info();
+			pw_info(const pw_info&);
+			pw_info& operator = (const pw_info&);
+
+			char* alloc(size_t& len);
 
 			struct passwd* m_pwd;
 			struct passwd  m_pwd2;
-			size_t         m_buf_len;
 
-			OOBase::SmartPtr<char,OOBase::FreeDestructor<OOBase::CrtAllocator> > m_buffer;
+			char  m_static[1024];
+			OOBase::SmartPtr<char,OOBase::FreeDestructor<OOBase::CrtAllocator> > m_dynamic;
 		};
 	}
 }
