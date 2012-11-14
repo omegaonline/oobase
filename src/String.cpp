@@ -123,7 +123,7 @@ int OOBase::LocalString::vprintf(const char* format, va_list args)
 	{
 		for (;;)
 		{
-			new_buf = static_cast<char*>(OOBase::LocalAllocator::allocate(r+1));
+			new_buf = static_cast<char*>(OOBase::ThreadLocalAllocator::allocate(r+1));
 			if (!new_buf)
 				return ERROR_OUTOFMEMORY;
 
@@ -142,7 +142,7 @@ int OOBase::LocalString::vprintf(const char* format, va_list args)
 	int err = assign(new_buf,r);
 
 	if (new_buf != szBuf)
-		OOBase::LocalAllocator::free(new_buf);
+		OOBase::ThreadLocalAllocator::free(new_buf);
 
 	return err;
 }
@@ -326,7 +326,7 @@ int OOBase::String::printf(const char* format, ...)
 	{
 		for (;;)
 		{
-			new_buf = static_cast<char*>(OOBase::LocalAllocator::allocate(r+1));
+			new_buf = static_cast<char*>(OOBase::ThreadLocalAllocator::allocate(r+1));
 			if (!new_buf)
 				return ERROR_OUTOFMEMORY;
 
@@ -349,7 +349,7 @@ int OOBase::String::printf(const char* format, ...)
 	int err = assign(new_buf,r);
 
 	if (new_buf != szBuf)
-		OOBase::LocalAllocator::free(new_buf);
+		OOBase::ThreadLocalAllocator::free(new_buf);
 
 	return err;
 }
