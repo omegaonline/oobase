@@ -69,10 +69,7 @@ namespace OOBase
 
 			// If we have no space, use the Allocator
 			if (!free_start)
-			{
-				printf("StackAllocator out of space\n");
 				return Allocator::allocate(bytes,align);
-			}
 
 			if (alloc_end <= free_end - sizeof(free_block_t))
 				split_block(free_start,alloc_end);
