@@ -329,6 +329,11 @@ namespace OOBase
 			virtual ~AllocImpl()
 			{}
 
+			AllocatorInstance& get_allocator()
+			{
+				return m_allocator;
+			}
+
 		private:
 			AllocatorInstance& m_allocator;
 

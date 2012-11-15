@@ -70,7 +70,6 @@ liboobase_la_SOURCES = \
 	include/config-msvc.h \
 	include/OOBase/Atomic.h \
 	include/OOBase/Bag.h \
-	include/OOBase/BasicAllocator.h \
 	include/OOBase/BoundedQueue.h \
 	include/OOBase/Buffer.h \
 	include/OOBase/ByteSwap.h \
@@ -99,6 +98,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/Set.h \
 	include/OOBase/Socket.h \
 	include/OOBase/Stack.h \
+	include/OOBase/StackAllocator.h \
 	include/OOBase/StackPtr.h \
 	include/OOBase/String.h \
 	include/OOBase/Table.h \

@@ -27,10 +27,10 @@
 namespace OOBase
 {
 	template <size_t SIZE, typename Allocator = ThreadLocalAllocator>
-	class TempAllocator : public AllocatorInstance
+	class StackAllocator : public AllocatorInstance
 	{
 	public:
-		TempAllocator() : m_free(align_up(m_start,detail::alignof<index_t>::value))
+		StackAllocator() : m_free(align_up(m_start,detail::alignof<index_t>::value))
 		{
 			static_assert(sizeof(m_start) < s_hibit_mask,"SIZE too big");
 
@@ -69,7 +69,10 @@ namespace OOBase
 
 			// If we have no space, use the Allocator
 			if (!free_start)
+			{
+				printf("StackAllocator out of space\n");
 				return Allocator::allocate(bytes,align);
+			}
 
 			if (alloc_end <= free_end - sizeof(free_block_t))
 				split_block(free_start,alloc_end);
@@ -280,6 +283,8 @@ namespace OOBase
 
 					if (m_free == p)
 						m_free = next;
+
+					p = next;  // DEBUG
 				}
 			}
 		}
