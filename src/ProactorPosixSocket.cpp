@@ -26,6 +26,7 @@
 
 #include "../include/OOBase/Posix.h"
 #include "../include/OOBase/Queue.h"
+#include "../include/OOBase/StackAllocator.h"
 #include "./BSDSocket.h"
 
 #include <sys/stat.h>
@@ -97,9 +98,9 @@ namespace
 		OOBase::Queue<SendItem>           m_send_queue;
 
 		static void fd_callback(int fd, void* param, unsigned int events);
-		void process_recv(OOBase::Queue<RecvNotify,OOBase::LocalAllocator>& notify_queue);
+		void process_recv(OOBase::Queue<RecvNotify,OOBase::AllocatorInstance>& notify_queue);
 		int process_recv_i(RecvItem* item, bool& watch_again);
-		void process_send(OOBase::Queue<SendNotify,OOBase::LocalAllocator>& notify_queue);
+		void process_send(OOBase::Queue<SendNotify,OOBase::AllocatorInstance>& notify_queue);
 		int process_send_i(SendItem* item, bool& watch_again);
 		int process_send_v(SendItem* item, bool& watch_again);
 	};
@@ -273,8 +274,9 @@ void AsyncSocket::fd_callback(int fd, void* param, unsigned int events)
 	AsyncSocket* pThis = static_cast<AsyncSocket*>(param);
 	if (pThis->m_fd == fd)
 	{
-		OOBase::Queue<RecvNotify,OOBase::LocalAllocator> recv_notify_queue;
-		OOBase::Queue<SendNotify,OOBase::LocalAllocator> send_notify_queue;
+		OOBase::StackAllocator<256> allocator;
+		OOBase::Queue<RecvNotify,OOBase::AllocatorInstance> recv_notify_queue(allocator);
+		OOBase::Queue<SendNotify,OOBase::AllocatorInstance> send_notify_queue(allocator);
 
 		OOBase::Guard<OOBase::SpinLock> guard(pThis->m_lock);
 
@@ -339,7 +341,7 @@ int AsyncSocket::process_recv_i(RecvItem* item, bool& watch_again)
 	return err;
 }
 
-void AsyncSocket::process_recv(OOBase::Queue<RecvNotify,OOBase::LocalAllocator>& notify_queue)
+void AsyncSocket::process_recv(OOBase::Queue<RecvNotify,OOBase::AllocatorInstance>& notify_queue)
 {
 	int err = 0;
 	while (!m_recv_queue.empty())
@@ -510,7 +512,7 @@ int AsyncSocket::process_send_v(SendItem* item, bool& watch_again)
 	return err;
 }
 
-void AsyncSocket::process_send(OOBase::Queue<SendNotify,OOBase::LocalAllocator>& notify_queue)
+void AsyncSocket::process_send(OOBase::Queue<SendNotify,OOBase::AllocatorInstance>& notify_queue)
 {
 	int err = 0;
 	while (!m_send_queue.empty())
