@@ -29,11 +29,24 @@
 #include <new>
 
 #if defined(_MSC_VER)
+#define HAVE__IS_POD 1
 #define HAVE__ALIGNOF 1
 #define ALIGNOF(X) __alignof(X)
 #elif defined(__GNUC__) && (__GNUC__ >= 3)
 #define HAVE__ALIGNOF 1
 #define ALIGNOF(X) __alignof__(X)
+#endif
+
+#if defined(__clang__)
+#if __has_extension(is_pod)
+#define HAVE__IS_POD 1
+#endif
+#elif defined(__GNUG__) && ((__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
+#define HAVE__IS_POD 1
+#endif
+
+#if !defined(HAVE__IS_POD)
+#include <limits>
 #endif
 
 namespace OOBase
@@ -52,6 +65,48 @@ namespace OOBase
 			static const size_t value = sizeof(T) > 16 ? 16 : sizeof(T);
 #endif
 		};
+
+		template <typename T>
+		struct is_pod
+		{
+#if defined(HAVE__IS_POD)
+			static const bool value = __is_pod(T);
+#else
+			static const bool value = std::numeric_limits<T>::is_integer || std::numeric_limits<T>::is_signed;
+#endif
+		};
+
+#if !defined(HAVE__IS_POD)
+		template <>
+		struct is_pod<void>
+		{
+			static const bool value = true;
+		};
+
+		template <typename T>
+		struct is_pod<T&>
+		{
+			static const bool value = false;
+		};
+
+		template <typename T>
+		struct is_pod<T*>
+		{
+			static const bool value = is_pod<T>::value;
+		};
+
+		template <typename T>
+		struct is_pod<T const>
+		{
+			static const bool value = is_pod<T>::value;
+		};
+
+		template <typename T>
+		struct is_pod<T volatile>
+		{
+			static const bool value = is_pod<T>::value;
+		};
+#endif
 	}
 
 	// Allocator types
@@ -89,6 +144,70 @@ namespace OOBase
 		virtual void free(void* ptr) = 0;
 
 	};
+
+	namespace detail
+	{
+		template <typename BaseClass, typename Allocator = CrtAllocator>
+		class AllocImpl : public BaseClass
+		{
+		public:
+			AllocImpl() : BaseClass()
+			{}
+
+			virtual ~AllocImpl()
+			{}
+
+		private:
+			void* allocate_i(size_t bytes, size_t align)
+			{
+				return Allocator::allocate(bytes,align);
+			}
+
+			void* reallocate_i(void* ptr, size_t bytes, size_t align)
+			{
+				return Allocator::reallocate(ptr,bytes,align);
+			}
+
+			void free_i(void* ptr)
+			{
+				Allocator::free(ptr);
+			}
+		};
+
+		template <typename BaseClass>
+		class AllocImpl<BaseClass,AllocatorInstance> : public BaseClass
+		{
+		public:
+			AllocImpl(AllocatorInstance& allocator) : BaseClass(), m_allocator(allocator)
+			{}
+
+			virtual ~AllocImpl()
+			{}
+
+			AllocatorInstance& get_allocator()
+			{
+				return m_allocator;
+			}
+
+		private:
+			AllocatorInstance& m_allocator;
+
+			void* allocate_i(size_t bytes, size_t align)
+			{
+				return m_allocator.allocate(bytes,align);
+			}
+
+			void* reallocate_i(void* ptr, size_t bytes, size_t align)
+			{
+				return m_allocator.reallocate(ptr,bytes,align);
+			}
+
+			void free_i(void* ptr)
+			{
+				m_allocator.free(ptr);
+			}
+		};
+	}
 
 	template <typename Allocator>
 	class CustomNew

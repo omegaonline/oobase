@@ -24,66 +24,10 @@
 
 #include "Memory.h"
 
-#if defined(_MSC_VER)
-#define HAVE__IS_POD 1
-#elif defined(__clang__)
-#if __has_extension(is_pod)
-#define HAVE__IS_POD 1
-#endif
-#elif defined(__GNUG__) && ((__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
-#define HAVE__IS_POD 1
-#endif
-
-#if !defined(HAVE__IS_POD)
-#include <limits>
-#endif
-
 namespace OOBase
 {
 	namespace detail
 	{
-		template <typename T>
-		struct is_pod
-		{
-#if defined(HAVE__IS_POD)
-			static const bool value = __is_pod(T);
-#else
-			static const bool value = std::numeric_limits<T>::is_integer || std::numeric_limits<T>::is_signed;
-#endif
-		};
-
-#if !defined(HAVE__IS_POD)
-		template <>
-		struct is_pod<void>
-		{
-			static const bool value = true;
-		};
-
-		template <typename T>
-		struct is_pod<T&>
-		{
-			static const bool value = false;
-		};
-
-		template <typename T>
-		struct is_pod<T*>
-		{
-			static const bool value = is_pod<T>::value;
-		};
-
-		template <typename T>
-		struct is_pod<T const>
-		{
-			static const bool value = is_pod<T>::value;
-		};
-
-		template <typename T>
-		struct is_pod<T volatile>
-		{
-			static const bool value = is_pod<T>::value;
-		};
-#endif
-
 		template <typename T>
 		class PODBagBase
 		{
@@ -140,7 +84,7 @@ namespace OOBase
 					try
 					{
 						for (i=0;i<this->m_size;++i)
-							::new (&new_data[i]) T(this->m_data[i]);
+							copy_to(&new_data[i],this->m_data[i]);
 					}
 					catch (...)
 					{
@@ -157,7 +101,7 @@ namespace OOBase
 #else
 					for (size_t i=0;i<this->m_size;++i)
 					{
-						::new (&new_data[i]) T(this->m_data[i]);
+						copy_to(&new_data[i],this->m_data[i]);
 						this->m_data[i].~T();
 					}
 #endif
@@ -289,67 +233,6 @@ namespace OOBase
 
 					this->m_data[this->m_size].~T();
 				}
-			}
-		};
-
-		template <typename BaseClass, typename Allocator = CrtAllocator>
-		class AllocImpl : public BaseClass
-		{
-		public:
-			AllocImpl() : BaseClass()
-			{}
-
-			virtual ~AllocImpl()
-			{}
-
-		private:
-			void* allocate_i(size_t bytes, size_t align)
-			{
-				return Allocator::allocate(bytes,align);
-			}
-
-			void* reallocate_i(void* ptr, size_t bytes, size_t align)
-			{
-				return Allocator::reallocate(ptr,bytes,align);
-			}
-
-			void free_i(void* ptr)
-			{
-				Allocator::free(ptr);
-			}
-		};
-
-		template <typename BaseClass>
-		class AllocImpl<BaseClass,AllocatorInstance> : public BaseClass
-		{
-		public:
-			AllocImpl(AllocatorInstance& allocator) : BaseClass(), m_allocator(allocator)
-			{}
-
-			virtual ~AllocImpl()
-			{}
-
-			AllocatorInstance& get_allocator()
-			{
-				return m_allocator;
-			}
-
-		private:
-			AllocatorInstance& m_allocator;
-
-			void* allocate_i(size_t bytes, size_t align)
-			{
-				return m_allocator.allocate(bytes,align);
-			}
-
-			void* reallocate_i(void* ptr, size_t bytes, size_t align)
-			{
-				return m_allocator.reallocate(ptr,bytes,align);
-			}
-
-			void free_i(void* ptr)
-			{
-				m_allocator.free(ptr);
 			}
 		};
 	}
