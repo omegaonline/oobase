@@ -90,12 +90,30 @@ namespace OOBase
 				return Allocator::reallocate(ptr,bytes);
 
 			char* tag = get_tag(ptr);
+			if (get_size(tag) >= bytes)
+			{
+				// We don't shrink blocks
+				return ptr;
+			}
 
 			// Check the adjacent block
 			char* adjacent = get_adjacent(tag);
 			if (adjacent && is_free(adjacent))
 			{
-				// Might be able to grow...
+				char* alloc_end = align_up(tag + min_alloc(bytes),detail::alignof<index_t>::value);
+				char* free_end = adjacent + get_size(adjacent);
+
+				if (alloc_end <= free_end)
+				{
+					// Merge with adjacent
+					if (alloc_end <= free_end - sizeof(free_block_t))
+						split_block(adjacent,alloc_end);
+
+					reinterpret_cast<free_block_t*>(tag)->m_size += get_size(adjacent);
+					alloc_tag(adjacent);
+
+					return ptr;
+				}
 			}
 
 			// Just do an allocate, copy and free
