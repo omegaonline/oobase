@@ -20,12 +20,13 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/GlobalNew.h"
-
-#if defined(_WIN32)
-
+#include "../include/OOBase/Mutex.h"
 #include "../include/OOBase/String.h"
 #include "../include/OOBase/Socket.h"
 #include "../include/OOBase/Win32.h"
+
+#if defined(_WIN32)
+
 #include "Win32Socket.h"
 
 namespace

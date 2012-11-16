@@ -22,8 +22,8 @@
 #ifndef OOBASE_SMARTPTR_H_INCLUDED_
 #define OOBASE_SMARTPTR_H_INCLUDED_
 
-#include "RefCount.h"
 #include "Memory.h"
+#include "Atomic.h"
 
 namespace OOBase
 {
@@ -85,7 +85,7 @@ namespace OOBase
 
 			static void release_node(SmartPtrNode*& n)
 			{
-				if (n && Atomic<size_t>::Decrement(n->m_refcount) == 0)
+				if (n && OOBase::Atomic<size_t>::Decrement(n->m_refcount) == 0)
 				{
 					Destructor::destroy(n->m_data);
 					Destructor::Allocator::free(n);
@@ -172,7 +172,7 @@ namespace OOBase
 			}
 
 		public:
-			AllocatorInstance& get_allocator()
+			AllocatorInstance& get_allocator() const
 			{
 				return *m_node->m_alloc;
 			}

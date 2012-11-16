@@ -21,6 +21,7 @@
 
 #include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Once.h"
+#include "../include/OOBase/Mutex.h"
 #include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/SecurityWin32.h"
 #include "../include/OOBase/String.h"

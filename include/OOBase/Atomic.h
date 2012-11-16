@@ -22,7 +22,7 @@
 #ifndef OOBASE_ATOMIC_H_INCLUDED_
 #define OOBASE_ATOMIC_H_INCLUDED_
 
-#include "Mutex.h"
+#include "Memory.h"
 
 #if defined(_MSC_VER)
 

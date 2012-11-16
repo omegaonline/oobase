@@ -26,7 +26,10 @@
 
 #if !defined(DOXYGEN)
 #define __STDC_WANT_LIB_EXT1__ 1
+
+#if !defined(__STDC_WANT_SECURE_LIB__)
 #define __STDC_WANT_SECURE_LIB__ 1
+#endif
 #endif
 
 #include <stdio.h>

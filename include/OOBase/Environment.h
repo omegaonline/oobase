@@ -40,7 +40,7 @@ namespace OOBase
 
 #if defined(_WIN32)
 		int get_user(HANDLE hToken, env_table_t& tabEnv);
-		int get_block(const env_table_t& tabEnv, StackPtr<void,1024>& env_block);
+		int get_block(const env_table_t& tabEnv, TempPtr<wchar_t>& env_block);
 #endif
 	}
 }

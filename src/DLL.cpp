@@ -47,9 +47,14 @@ OOBase::DLL::~DLL()
 
 int OOBase::DLL::load(const char* full_path)
 {
-	void* TODO;  // Use LoadLibraryW
+	StackAllocator<256> allocator;
+	TempPtr<wchar_t> wide_path(allocator);
 
-	m_module = LoadLibraryA(full_path);
+	int err = Win32::utf8_to_wchar_t(full_path,wide_path);
+	if (err)
+		return err;
+
+	m_module = LoadLibraryW(wide_path);
 	if (!m_module)
 		return GetLastError();
 

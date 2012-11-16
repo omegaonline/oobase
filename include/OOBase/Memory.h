@@ -176,7 +176,7 @@ namespace OOBase
 			virtual ~AllocImpl()
 			{}
 
-			AllocatorInstance& get_allocator()
+			AllocatorInstance& get_allocator() const
 			{
 				return m_allocator;
 			}

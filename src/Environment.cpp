@@ -20,12 +20,13 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/Environment.h"
+#include "../include/OOBase/Win32.h"
 
 #include <stdlib.h>
 
 #if defined(_WIN32)
 
-#include <UserEnv.h>
+#include <userenv.h>
 
 namespace
 {
@@ -35,7 +36,7 @@ namespace
 		for (const wchar_t* e=env;!err && e != NULL && *e != L'\0';e += wcslen(e)+1)
 		{
 			OOBase::String str;
-			err = Win32::wchar_t_to_utf8(e,str);
+			err = OOBase::Win32::wchar_t_to_utf8(e,str);
 			if (!err)
 			{
 				size_t eq = str.find('=');
@@ -55,15 +56,14 @@ namespace
 		return err;
 	}
 
-	int to_wchar_t(const OOBase::String& str, OOBase::SmartPtr<wchar_t,OOBase::FreeDestructor<OOBase::LocalAllocator> >& wsz)
+	int to_wchar_t(const OOBase::String& str, OOBase::TempPtr<wchar_t>& wsz)
 	{
 		int len = MultiByteToWideChar(CP_UTF8,0,str.c_str(),-1,NULL,0);
 		DWORD err = GetLastError();
 		if (err != ERROR_INSUFFICIENT_BUFFER)
 			return err;
 
-		wsz = static_cast<wchar_t*>(OOBase::LocalAllocator::allocate((len+1) * sizeof(wchar_t)));
-		if (!wsz)
+		if (!wsz.reallocate(len+1))
 			return ERROR_OUTOFMEMORY;
 
 		len = MultiByteToWideChar(CP_UTF8,0,str.c_str(),-1,wsz,len);
@@ -71,10 +71,10 @@ namespace
 			return GetLastError();
 
 		wsz[len] = L'\0';
-		return wsz;
+		return ERROR_SUCCESS;
 	}
 
-	bool env_sort(const OOBase::SmartPtr<wchar_t,OOBase::FreeDestructor<OOBase::LocalAllocator> >& s1, const OOBase::SmartPtr<wchar_t,OOBase::FreeDestructor<OOBase::LocalAllocator> >& s2)
+	bool env_sort(const OOBase::TempPtr<wchar_t>& s1, const OOBase::TempPtr<wchar_t>& s2)
 	{
 		return (_wcsicmp(s1,s2) < 0);
 	}
@@ -107,14 +107,16 @@ int OOBase::Environment::get_user(HANDLE hToken, env_table_t& tabEnv)
 	return err;
 }
 
-int OOBase::Environment::get_block(const env_table_t& tabEnv, StackPtr<void,1024>& ptr)
+int OOBase::Environment::get_block(const env_table_t& tabEnv, TempPtr<wchar_t>& ptr)
 {
 	// Copy and widen to UNICODE
 	size_t total_size = 0;
-	Table<SmartPtr<wchar_t,FreeDestructor<LocalAllocator> >,SmartPtr<wchar_t,FreeDestructor<LocalAllocator> >,LocalAllocator> wenv;
+	Table<TempPtr<wchar_t>,TempPtr<wchar_t>,AllocatorInstance> wenv(tabEnv.get_allocator());
 	for (size_t i=0;i<tabEnv.size();++i)
 	{
-		SmartPtr<wchar_t,FreeDestructor<LocalAllocator> > key,val;
+		TempPtr<wchar_t> key(tabEnv.get_allocator());
+		TempPtr<wchar_t> val(tabEnv.get_allocator());
+
 		int err = to_wchar_t(*tabEnv.key_at(i),key);
 		if (!err)
 			err = to_wchar_t(*tabEnv.at(i),val);
@@ -136,7 +138,7 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, StackPtr<void,1024
 	wenv.sort(&env_sort);
 
 	// And now copy into one giant block
-	if (!ptr.allocate((total_size + 2) * sizeof(wchar_t));
+	if (!ptr.reallocate(total_size + 2))
 		return ERROR_OUTOFMEMORY;
 
 	wchar_t* pout = static_cast<wchar_t*>(static_cast<void*>(ptr));
@@ -168,18 +170,27 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, StackPtr<void,1024
 
 int OOBase::Environment::getenv(const char* envvar, LocalString& strValue)
 {
-	StackPtr<wchar_t,256> wenv;
+	StackAllocator<512> allocator;
+	TempPtr<wchar_t> wenvvar(allocator);
+	TempPtr<wchar_t> wenv(allocator);
 
-	DWORD dwLen = GetEnvironmentVariableW(envvar,wenv,wenv.size());
-	if (dwLen >= wenv.size())
+	int err = Win32::utf8_to_wchar_t(envvar,wenvvar);
+	if (err)
+		return err;
+
+	DWORD dwLen = 128;
+	for (;;)
 	{
-		if (!wenv.allocate(dwLen))
+		if (!wenv.reallocate(dwLen))
 			return ERROR_OUTOFMEMORY;
 
-		dwLen = GetEnvironmentVariableA(envvar,wenv,wenv.size());
+		DWORD dwRealLen = GetEnvironmentVariableW(wenvvar,wenv,dwLen);
+		if (dwRealLen < dwLen)
+			break;
+
+		dwLen = dwRealLen;
 	}
 
-	int err = 0;
 	if (dwLen == 0)
 	{
 		err = GetLastError();
@@ -187,7 +198,7 @@ int OOBase::Environment::getenv(const char* envvar, LocalString& strValue)
 			err = 0;
 	}
 	else if (dwLen > 1)
-		err = Win32::wchar_t_to_utf8(strValue,wenv);
+		err = Win32::wchar_t_to_utf8(wenv,strValue);
 
 	return err;
 }

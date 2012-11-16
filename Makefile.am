@@ -99,7 +99,6 @@ liboobase_la_SOURCES = \
 	include/OOBase/Socket.h \
 	include/OOBase/Stack.h \
 	include/OOBase/StackAllocator.h \
-	include/OOBase/StackPtr.h \
 	include/OOBase/String.h \
 	include/OOBase/Table.h \
 	include/OOBase/Thread.h \

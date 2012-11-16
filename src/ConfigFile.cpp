@@ -298,10 +298,11 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 #if defined(_WIN32)
 int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, results_t& results)
 {
-	OOBase::StackPtr<wchar_t,64> wszKey;
+	OOBase::StackAllocator<1024> allocator;
+	OOBase::TempPtr<wchar_t> wszKey(allocator);
 	LONG lRes = Win32::utf8_to_wchar_t(key_name,wszKey);
 	if (lRes != ERROR_SUCCESS)
-		return LRes;
+		return lRes;
 
 	// Read from registry
 	HKEY hKey = 0;
@@ -351,13 +352,13 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 		}
 		else if (dwType == REG_SZ || dwType == REG_EXPAND_SZ)
 		{
-			OOBase::StackArrayPtr<wchar_t,256> ptrBuf;
-			if (!ptrBuf.allocate(dwValLen+1))
+			OOBase::TempPtr<wchar_t> ptrBuf(allocator);
+			if (!ptrBuf.reallocate(dwValLen/sizeof(wchar_t)))
 			{
 				lRes = ERROR_OUTOFMEMORY;
 				break;
 			}
-			dwValLen = ptrBuf.count();
+
 			dwNameLen = sizeof(szName)/sizeof(szName[0]);
 			lRes = RegEnumValueW(hKey,dwIndex,szName,&dwNameLen,NULL,NULL,(LPBYTE)(wchar_t*)ptrBuf,&dwValLen);
 			if (lRes != ERROR_SUCCESS)
@@ -365,20 +366,26 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 
 			if (dwType == REG_EXPAND_SZ)
 			{
-				OOBase::StackArrayPtr<wchar_t,512> ptrEnv;
-				DWORD dwExpLen = ExpandEnvironmentStringsW(ptrBuf,ptrEnv,ptrEnv.count());
-				if (dwExpLen == 0)
-					lRes = ::GetLastError();
-				else if (dwExpLen > ptrEnv.count())
+				OOBase::TempPtr<wchar_t> ptrEnv(allocator);
+				for (DWORD dwExpLen = 128;;)
 				{
-					if (!ptrEnv.allocate(dwExpLen + 1))
+					if (!ptrEnv.reallocate(dwExpLen))
+					{
 						lRes = ERROR_OUTOFMEMORY;
-					else if (!ExpandEnvironmentStringsW(ptrBuf,ptrEnv,ptrEnv.count()))
+						break;
+					}
+
+					DWORD dwNewLen = ExpandEnvironmentStringsW(ptrBuf,ptrEnv,dwExpLen);
+					if (!dwNewLen)
 						lRes = ::GetLastError();
-					else
-						lRes = Win32::wchar_t_to_utf8(ptrEnv,value);
+
+					if (dwNewLen < dwExpLen)
+						break;
+
+					dwExpLen = dwNewLen + 1;
 				}
-				else
+
+				if (lRes == ERROR_SUCCESS)
 					lRes = Win32::wchar_t_to_utf8(ptrEnv,value);
 			}
 			else

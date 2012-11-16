@@ -291,6 +291,69 @@ namespace OOBase
 		char  m_start[((SIZE / sizeof(index_t))+(SIZE % sizeof(index_t) ? 1 : 0)) * sizeof(index_t)];
 		char* m_free;
 	};
+
+	template <typename T, size_t COUNT = 256/sizeof(T), typename Allocator = ThreadLocalAllocator>
+	class StackArrayPtr
+	{
+	public:
+		StackArrayPtr() : m_data(m_static), m_count(COUNT)
+		{}
+
+		StackArrayPtr(size_t count) : m_data(m_static), m_count(COUNT)
+		{
+			reallocate(count);
+		}
+
+		~StackArrayPtr()
+		{}
+
+		bool reallocate(size_t count)
+		{
+			if (count > COUNT)
+			{
+				m_data = m_dynamic = static_cast<T*>(Allocator::allocate(count * sizeof(T)));
+				if (!m_data)
+				{
+					m_count = 0;
+					return false;
+				}
+
+				m_count = count;
+			}
+			return true;
+		}
+
+		operator T* ()
+		{
+			return m_data;
+		}
+
+		operator const T* () const
+		{
+			return m_data;
+		}
+
+		size_t size() const
+		{
+			return m_count * sizeof(T);
+		}
+
+		size_t count() const
+		{
+			return m_count;
+		}
+
+	private:
+		// No copying or assignment - these are stack allocated
+		StackArrayPtr(const StackArrayPtr&);
+		StackArrayPtr& operator = (const StackArrayPtr&);
+
+		T           m_static[COUNT];
+		T*          m_data;
+		size_t      m_count;
+
+		SmartPtr<T,FreeDestructor<Allocator> > m_dynamic;
+	};
 }
 
 #endif // OOBASE_BASIC_ALLOCATOR_H_INCLUDED_

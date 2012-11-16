@@ -22,7 +22,8 @@
 #ifndef OOBASE_WIN32_H_INCLUDED_
 #define OOBASE_WIN32_H_INCLUDED_
 
-#include "Memory.h"
+#include "SmartPtr.h"
+#include "StackAllocator.h"
 
 #if defined(_WIN32) || defined(DOXYGEN)
 
@@ -33,7 +34,7 @@ namespace OOBase
 		class LocalAllocator
 		{
 		public:
-			static void* allocate(size_t bytes)
+			static void* allocate(size_t bytes, size_t)
 			{
 				return ::LocalAlloc(LMEM_FIXED,bytes);
 			}
@@ -198,34 +199,34 @@ namespace OOBase
 			if (dwErr != ERROR_INSUFFICIENT_BUFFER)
 				return dwErr;
 
-			OOBase::StackPtr<char,256> ptrBuf(len);
-			if (!ptrBuf)
+			OOBase::StackAllocator<256> allocator;
+			OOBase::TempPtr<char> ptrBuf(allocator);
+			if (!ptrBuf.reallocate(len))
 				return ERROR_OUTOFMEMORY;
 
-			len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,ptrBuf,ptrBuf.size(),NULL,NULL);
+			len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,ptrBuf,len,NULL,NULL);
 			if (len <= 0)
 				return GetLastError();
 
-			return str.assign(sz,len);
+			return str.assign(ptrBuf,len);
 		}
 
-		template <size_t S>
-		int utf8_to_wchar_t(const char* sz, StackPtr<wchar_t,S>& wsz)
+		int utf8_to_wchar_t(const char* sz, OOBase::TempPtr<wchar_t>& wsz)
 		{
 			int len = MultiByteToWideChar(CP_UTF8,0,sz,-1,NULL,0);
 			DWORD dwErr = GetLastError();
 			if (dwErr != ERROR_INSUFFICIENT_BUFFER)
 				return dwErr;
 
-			if (!wsz.allocate((len + 1) * sizeof(wchar_t))
+			if (!wsz.reallocate(len + 1))
 				return ERROR_OUTOFMEMORY;
 
-			len = MultiByteToWideChar(CP_UTF8,0,sz,-1,wsz,wsz.size());
+			len = MultiByteToWideChar(CP_UTF8,0,sz,-1,wsz,len + 1);
 			if (len <= 0)
 				return GetLastError();
 
 			wsz[len] = L'\0';
-			return wsz;
+			return ERROR_SUCCESS;
 		}
 	}
 }

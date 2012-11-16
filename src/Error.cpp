@@ -55,7 +55,6 @@ namespace
 		else
 			dwFlags |= FORMAT_MESSAGE_FROM_SYSTEM;
 
-		LPVOID lpBuf;
 		if (::FormatMessageA(
 					dwFlags,
 					hModule,

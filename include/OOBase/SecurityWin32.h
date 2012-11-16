@@ -25,6 +25,7 @@
 #if defined(_WIN32)
 
 #include "SmartPtr.h"
+#include "Win32.h"
 
 #include <userenv.h>
 #include <lm.h>
@@ -32,6 +33,7 @@
 
 #if defined(__MINGW32__)
 
+#if (__GNUC__ <= 3)
 typedef struct _TOKEN_GROUPS_AND_PRIVILEGES
 {
 	DWORD SidCount;
@@ -68,6 +70,8 @@ CreateRestrictedToken(
 
 #ifndef SANDBOX_INERT
 #define SANDBOX_INERT           0x2
+#endif
+
 #endif
 
 #else
@@ -114,29 +118,26 @@ namespace OOBase
 		DWORD RestrictToken(HANDLE& hToken);
 		DWORD SetTokenDefaultDACL(HANDLE hToken);
 		DWORD LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile);
-		DWORD GetNameFromToken(HANDLE hToken, OOBase::StackPtr<wchar_t,64>& strUserName, OOBase::StackPtr<wchar_t,64>& strDomainName);
-		DWORD GetLogonSID(HANDLE hToken, OOBase::StackPtr<void,64>& pSIDLogon);
+		DWORD GetNameFromToken(HANDLE hToken, OOBase::TempPtr<wchar_t>& strUserName, OOBase::TempPtr<wchar_t>& strDomainName);
+		DWORD GetLogonSID(HANDLE hToken, OOBase::TempPtr<void>& pSIDLogon);
 		DWORD EnableUserAccessToDir(const wchar_t* pszPath, const TOKEN_USER* pUser);
 		bool MatchSids(ULONG count, PSID_AND_ATTRIBUTES pSids1, PSID_AND_ATTRIBUTES pSids2);
 		bool MatchPrivileges(ULONG count, PLUID_AND_ATTRIBUTES Privs1, PLUID_AND_ATTRIBUTES Privs2);
 
-		template <typename T, size_t S>
-		DWORD GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls, OOBase::StackPtr<T,S>& info)
+		template <typename T>
+		DWORD GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls, OOBase::TempPtr<T>& info)
 		{
-			DWORD dwLen = info.size();
-			if (GetTokenInformation(hToken,cls,info,dwLen,&dwLen))
+			DWORD dwLen = 0;
+			if (GetTokenInformation(hToken,cls,NULL,0,&dwLen))
 				return ERROR_SUCCESS;
 
 			DWORD dwErr = GetLastError();
 			if (dwErr != ERROR_INSUFFICIENT_BUFFER)
 				return dwErr;
 
-			::OutputDebugStringW(L"Token buffer too small\n");
-
-			if (!info.allocate(dwLen))
+			if (!info.reallocate(dwLen))
 				return ERROR_OUTOFMEMORY;
 
-			dwLen = info.size();
 			if (GetTokenInformation(hToken,cls,info,dwLen,&dwLen))
 				return ERROR_SUCCESS;
 

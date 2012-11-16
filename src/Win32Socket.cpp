@@ -430,22 +430,19 @@ int WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 	DWORD dwWritten = send_i(wsa_bufs,actual_count,err,timeout);
 
 	// Update buffers...
-	for (size_t first_buffer = 0;dwWritten;)
+	for (size_t idx = 0;dwWritten;++idx)
 	{
-		if (dwWritten >= wsa_bufs->len)
+		if (dwWritten >= wsa_bufs[idx].len)
 		{
-			buffers[first_buffer]->rd_ptr(wsa_bufs->len);
-			++first_buffer;
-			dwWritten -= wsa_bufs->len;
-			++wsa_bufs;
+			buffers[idx]->rd_ptr(wsa_bufs[idx].len);
+			dwWritten -= wsa_bufs[idx].len;
+
 			if (--actual_count == 0)
 				break;
 		}
 		else
 		{
-			buffers[first_buffer]->rd_ptr(dwWritten);
-			wsa_bufs->len -= dwWritten;
-			wsa_bufs->buf += dwWritten;
+			buffers[idx]->rd_ptr(dwWritten);
 			dwWritten = 0;
 		}
 	}
@@ -582,22 +579,19 @@ int WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 	DWORD dwRead = recv_i(wsa_bufs,actual_count,true,err,timeout);
 
 	// Update buffers...
-	for (size_t first_buffer = 0;dwRead;)
+	for (size_t idx = 0;dwRead;++idx)
 	{
-		if (dwRead >= wsa_bufs->len)
+		if (dwRead >= wsa_bufs[idx].len)
 		{
-			buffers[first_buffer]->wr_ptr(wsa_bufs->len);
-			++first_buffer;
-			dwRead -= wsa_bufs->len;
-			++wsa_bufs;
+			buffers[idx]->wr_ptr(wsa_bufs[idx].len);
+			dwRead -= wsa_bufs[idx].len;
+
 			if (--actual_count == 0)
 				break;
 		}
 		else
 		{
-			buffers[first_buffer]->wr_ptr(dwRead);
-			wsa_bufs->len -= dwRead;
-			wsa_bufs->buf += dwRead;
+			buffers[idx]->wr_ptr(dwRead);
 			dwRead = 0;
 		}
 	}

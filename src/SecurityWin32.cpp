@@ -76,15 +76,13 @@ DWORD OOBase::Win32::sec_descript_t::SetEntriesInAcl(ULONG cCountOfExplicitEntri
 	return ERROR_SUCCESS;
 }
 
-DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, StackPtr<wchar_t,64>& strUserName, StackPtr<wchar_t,64>& strDomainName)
+DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, TempPtr<wchar_t>& strUserName, TempPtr<wchar_t>& strDomainName)
 {
 	// Find out all about the user associated with hToken
-	StackPtr<TOKEN_USER,64> ptrUserInfo;
+	TempPtr<TOKEN_USER> ptrUserInfo(strUserName.get_allocator());
 	DWORD dwErr = GetTokenInfo(hToken,TokenUser,ptrUserInfo);
 	if (dwErr)
 		return dwErr;
-
-	void* TODO; // See if we can do this lookup in one go...
 
 	SID_NAME_USE name_use;
 	DWORD dwUNameSize = 0;
@@ -93,12 +91,12 @@ DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, StackPtr<wchar_t,64>& strUs
 	if (dwUNameSize == 0)
 		return GetLastError();
 
-	if (!strUserName.allocate(dwUNameSize*sizeof(wchar_t)))
+	if (!strUserName.reallocate(dwUNameSize))
 		return ERROR_OUTOFMEMORY;
 
 	if (dwDNameSize)
 	{
-		if (!strDomainName.allocate(dwDNameSize*sizeof(wchar_t)))
+		if (!strDomainName.reallocate(dwDNameSize))
 			return ERROR_OUTOFMEMORY;
 	}
 
@@ -111,7 +109,8 @@ DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, StackPtr<wchar_t,64>& strUs
 DWORD OOBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile)
 {
 	// Get the names associated with the user SID
-	StackPtr<wchar_t,64> strUserName,strDomainName;
+	StackAllocator<256> allocator;
+	TempPtr<wchar_t> strUserName(allocator),strDomainName(allocator);
 	DWORD dwErr = GetNameFromToken(hToken,strUserName,strDomainName);
 	if (dwErr)
 		return dwErr;
@@ -145,10 +144,11 @@ DWORD OOBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile)
 	return ERROR_SUCCESS;
 }
 
-DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, StackPtr<void,64>& pSIDLogon)
+DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, TempPtr<void>& pSIDLogon)
 {
 	// Get the logon SID of the Token
-	StackPtr<TOKEN_GROUPS,256> ptrGroups;
+	StackAllocator<512> allocator;
+	TempPtr<TOKEN_GROUPS> ptrGroups(allocator);
 	DWORD dwErr = GetTokenInfo(hToken,TokenGroups,ptrGroups);
 	if (dwErr)
 		return dwErr;
@@ -162,7 +162,9 @@ DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, StackPtr<void,64>& pSIDLogon)
 			if (IsValidSid(ptrGroups->Groups[dwIndex].Sid))
 			{
 				DWORD dwLen = GetLengthSid(ptrGroups->Groups[dwIndex].Sid);
-				if (!pSIDLogon.allocate(dwLen))
+
+				pSIDLogon = pSIDLogon.get_allocator().allocate(dwLen,16);
+				if (!pSIDLogon)
 					return ERROR_OUTOFMEMORY;
 
 				if (!CopySid(dwLen,pSIDLogon,ptrGroups->Groups[dwIndex].Sid))
@@ -179,13 +181,14 @@ DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, StackPtr<void,64>& pSIDLogon)
 DWORD OOBase::Win32::SetTokenDefaultDACL(HANDLE hToken)
 {
 	// Get the current Default DACL
-	StackPtr<TOKEN_DEFAULT_DACL,64> ptrDef_dacl;
+	StackAllocator<256> allocator;
+	TempPtr<TOKEN_DEFAULT_DACL> ptrDef_dacl(allocator);
 	DWORD dwErr = GetTokenInfo(hToken,TokenDefaultDacl,ptrDef_dacl);
 	if (dwErr)
 		return dwErr;
 
 	// Get the logon SID of the Token
-	StackPtr<void,64> ptrSIDLogon;
+	TempPtr<void> ptrSIDLogon(allocator);
 	dwErr = GetLogonSID(hToken,ptrSIDLogon);
 	if (dwErr)
 		return dwErr;

@@ -24,8 +24,13 @@
 
 #include "Buffer.h"
 #include "SmartPtr.h"
+#include "Timeout.h"
 
 #if defined(_WIN32)
+
+#if defined(__MINGW32__) && defined(_WINSOCKAPI_)
+#undef _WINSOCKAPI_
+#endif
 #include <winsock2.h>
 
 #if defined(_MSC_VER)
@@ -33,7 +38,7 @@
 #pragma warning(disable : 6386)
 #endif
 
-#include <Ws2tcpip.h>
+#include <ws2tcpip.h>
 
 #if defined(_MSC_VER)
 #pragma warning(pop)
