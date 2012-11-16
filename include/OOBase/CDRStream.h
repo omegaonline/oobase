@@ -25,6 +25,7 @@
 #include "Buffer.h"
 #include "ByteSwap.h"
 #include "String.h"
+#include "Timeout.h"
 
 namespace OOBase
 {
