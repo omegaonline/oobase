@@ -23,7 +23,8 @@
 
 #if defined(HAVE_UNISTD_H)
 
-#include "../include/OOBase/StackPtr.h"
+#include "../include/OOBase/Mutex.h"
+#include "../include/OOBase/StackAllocator.h"
 #include "../include/OOBase/Socket.h"
 #include "../include/OOBase/Posix.h"
 

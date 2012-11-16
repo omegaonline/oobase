@@ -20,15 +20,14 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/GlobalNew.h"
-#include "ProactorPosix.h"
-
-#if defined(HAVE_UNISTD_H) && !defined(_WIN32)
-
 #include "../include/OOBase/Posix.h"
 #include "../include/OOBase/Queue.h"
 #include "../include/OOBase/StackAllocator.h"
-#include "../include/OOBase/StackPtr.h"
-#include "./BSDSocket.h"
+
+#if defined(HAVE_UNISTD_H) && !defined(_WIN32)
+
+#include "ProactorPosix.h"
+#include "BSDSocket.h"
 
 #include <sys/stat.h>
 #include <string.h>
