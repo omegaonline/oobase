@@ -222,16 +222,18 @@ int OOBase::POSIX::random_chars(char* buffer, size_t len)
 	return 0;
 }
 
-OOBase::POSIX::pw_info::pw_info(uid_t uid) : m_pwd(NULL), m_data(get_size())
+OOBase::POSIX::pw_info::pw_info(AllocatorInstance& allocator, uid_t uid) : m_pwd(NULL), m_data(allocator)
 {
-	if (m_data)
-		::getpwuid_r(uid,&m_pwd2,m_data,m_data.size(),&m_pwd);
+	size_t size = get_size();
+	if (m_data.reallocate(size))
+		::getpwuid_r(uid,&m_pwd2,m_data,size,&m_pwd);
 }
 
-OOBase::POSIX::pw_info::pw_info(const char* uname) : m_pwd(NULL), m_data(get_size())
+OOBase::POSIX::pw_info::pw_info(AllocatorInstance& allocator, const char* uname) : m_pwd(NULL), m_data(allocator)
 {
-	if (m_data)
-		::getpwnam_r(uname,&m_pwd2,m_data,m_data.size(),&m_pwd);
+	size_t size = get_size();
+	if (m_data.reallocate(size))
+		::getpwnam_r(uname,&m_pwd2,m_data,size,&m_pwd);
 }
 
 const size_t OOBase::POSIX::pw_info::get_size()

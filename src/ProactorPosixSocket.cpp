@@ -27,6 +27,7 @@
 #include "../include/OOBase/Posix.h"
 #include "../include/OOBase/Queue.h"
 #include "../include/OOBase/StackAllocator.h"
+#include "../include/OOBase/StackPtr.h"
 #include "./BSDSocket.h"
 
 #include <sys/stat.h>

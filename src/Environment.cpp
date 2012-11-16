@@ -302,7 +302,7 @@ int OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tabS
 	return 0;
 }
 
-int OOBase::Environment::get_envp(const env_table_t& tabEnv, StackPtr<char*,1024>& ptr)
+int OOBase::Environment::get_envp(const env_table_t& tabEnv, TempPtr<char*>& ptr)
 {
 	// We cheat here and allocate the strings and the array in one block.
 
@@ -311,7 +311,7 @@ int OOBase::Environment::get_envp(const env_table_t& tabEnv, StackPtr<char*,1024
 	for (size_t idx = 0; idx < tabEnv.size(); ++idx)
 		len += tabEnv.key_at(idx)->length() + tabEnv.at(idx)->length() + 2; // = and NUL
 
-	if (!ptr.allocate(len))
+	if (!ptr.reallocate(len))
 		return ERROR_OUTOFMEMORY;
 
 	char** envp = ptr;

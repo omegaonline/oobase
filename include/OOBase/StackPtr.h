@@ -26,64 +26,6 @@
 
 namespace OOBase
 {
-	template <typename T, size_t SIZE = 256, typename Allocator = ThreadLocalAllocator>
-	class StackPtr
-	{
-	public:
-		StackPtr() : m_data(reinterpret_cast<T*>(m_static)), m_size(SIZE)
-		{}
-
-		StackPtr(size_t size) : m_data(reinterpret_cast<T*>(m_static)), m_size(SIZE)
-		{
-			allocate(size);
-		}
-
-		~StackPtr()
-		{}
-
-		bool allocate(size_t size)
-		{
-			if (size > SIZE)
-			{
-				m_data = m_dynamic = static_cast<T*>(Allocator::allocate(size));
-				if (!m_data)
-				{
-					m_size = 0;
-					return false;
-				}
-
-				m_size = size;
-			}
-			return true;
-		}
-
-		operator T* ()
-		{
-			return m_data;
-		}
-
-		operator const T* () const
-		{
-			return m_data;
-		}
-
-		size_t size() const
-		{
-			return m_size;
-		}
-
-	private:
-		// No copying or assignment - these are stack allocated
-		StackPtr(const StackPtr&);
-		StackPtr& operator = (const StackPtr&);
-
-		char        m_static[SIZE];
-		T*          m_data;
-		size_t      m_size;
-
-		SmartPtr<T,FreeDestructor<Allocator> > m_dynamic;
-	};
-
 	template <typename T, size_t COUNT = 256/sizeof(T), typename Allocator = ThreadLocalAllocator>
 	class StackArrayPtr
 	{
@@ -93,13 +35,13 @@ namespace OOBase
 
 		StackArrayPtr(size_t count) : m_data(m_static), m_count(COUNT)
 		{
-			allocate(count);
+			reallocate(count);
 		}
 
 		~StackArrayPtr()
 		{}
 
-		bool allocate(size_t count)
+		bool reallocate(size_t count)
 		{
 			if (count > COUNT)
 			{

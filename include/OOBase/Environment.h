@@ -24,7 +24,7 @@
 
 #include "String.h"
 #include "Table.h"
-#include "StackPtr.h"
+#include "SmartPtr.h"
 
 namespace OOBase
 {
@@ -34,7 +34,7 @@ namespace OOBase
 
 		int get_current(env_table_t& tabEnv);
 		int substitute(env_table_t& tabEnv, const env_table_t& tabSrc);
-		int get_envp(const env_table_t& tabEnv, StackPtr<char*,1024>& envp);
+		int get_envp(const env_table_t& tabEnv, TempPtr<char*>& envp);
 
 		int getenv(const char* envvar, LocalString& strVal);
 

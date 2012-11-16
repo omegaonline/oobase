@@ -39,18 +39,6 @@ namespace OOBase
 		}
 	};
 
-	template <typename A>
-	class FreeDestructor
-	{
-	public:
-		typedef A Allocator;
-
-		static void destroy(void* ptr)
-		{
-			A::free(ptr);
-		}
-	};
-
 	template <typename T>
 	class ArrayDeleteDestructor
 	{
@@ -63,75 +51,159 @@ namespace OOBase
 		}
 	};
 
+	template <typename A>
+	class FreeDestructor
+	{
+	public:
+		typedef A Allocator;
+
+		static void destroy(void* ptr)
+		{
+			A::free(ptr);
+		}
+	};
+
 	namespace detail
 	{
 		template <typename T, typename Destructor>
-		class SmartPtrImpl
+		class SmartPtrBase
 		{
-			typedef typename Destructor::Allocator Allocator;
-
-			class SmartPtrNode : public RefCounted<Allocator>
+		protected:
+			struct SmartPtrNode
 			{
-			public:
-				SmartPtrNode(T* data = NULL) : m_data(data)
-				{}
-
-				T* value()
-				{
-					return m_data;
-				}
-
-				const T* value() const
-				{
-					return m_data;
-				}
-
-				T* detach()
-				{
-					T* d = m_data;
-					m_data = NULL;
-					return d;
-				}
-
-			private:
-				~SmartPtrNode()
-				{
-					Destructor::destroy(m_data);
-				}
-
-				T* m_data;
+				T*    m_data;
+				size_t m_refcount; ///< The reference count.
 			};
 
+			SmartPtrNode* m_node;
+
+			SmartPtrBase(T* ptr) : m_node(new_node(ptr))
+			{}
+
+			SmartPtrBase(SmartPtrNode* node) : m_node(node)
+			{}
+
+			static void release_node(SmartPtrNode*& n)
+			{
+				if (n && Atomic<size_t>::Decrement(n->m_refcount) == 0)
+				{
+					Destructor::destroy(n->m_data);
+					Destructor::Allocator::free(n);
+					n = NULL;
+				}
+			}
+
+			static void update_node(SmartPtrNode*& n, T* ptr)
+			{
+				if (n)
+					release_node(n);
+
+				n = new_node(ptr);
+			}
+
+		private:
+			static SmartPtrNode* new_node(T* ptr)
+			{
+				SmartPtrNode* n = NULL;
+				if (ptr)
+				{
+					n = static_cast<SmartPtrNode*>(Destructor::Allocator::allocate(sizeof(SmartPtrNode),alignof<SmartPtrNode>::value));
+
+					if (!n)
+						OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+
+					n->m_refcount = 1;
+					n->m_data = ptr;
+				}
+				return n;
+			}
+		};
+
+		template <typename T>
+		class SmartPtrBase<T,FreeDestructor<AllocatorInstance> >
+		{
+		protected:
+			struct SmartPtrNode
+			{
+				T*                 m_data;
+				size_t             m_refcount; ///< The reference count.
+				AllocatorInstance* m_alloc;
+			};
+
+			SmartPtrNode* m_node;
+
+			SmartPtrBase(AllocatorInstance& allocator, T* ptr) : m_node(new_node(allocator,ptr))
+			{}
+
+			SmartPtrBase(SmartPtrNode* node) : m_node(node)
+			{}
+
+			static void release_node(SmartPtrNode*& n)
+			{
+				if (n && Atomic<size_t>::Decrement(n->m_refcount) == 0)
+				{
+					n->m_alloc->free(n->m_data);
+					n->m_alloc->free(n);
+					n = NULL;
+				}
+			}
+
+			static void update_node(SmartPtrNode*& n, T* ptr)
+			{
+				if (n->m_data != ptr)
+				{
+					AllocatorInstance* a = n->m_alloc;
+					release_node(n);
+					n = new_node(*a,ptr);
+				}
+			}
+
+		private:
+			static SmartPtrNode* new_node(AllocatorInstance& allocator, T* ptr)
+			{
+				SmartPtrNode* n = static_cast<SmartPtrNode*>(allocator.allocate(sizeof(SmartPtrNode),alignof<SmartPtrNode>::value));
+				if (!n)
+					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+
+				n->m_refcount = 1;
+				n->m_data = ptr;
+				n->m_alloc = &allocator;
+				return n;
+			}
+
 		public:
-			SmartPtrImpl(T* ptr = NULL) : m_node(NULL)
+			AllocatorInstance& get_allocator()
 			{
-				if (ptr)
-					m_node = new (critical) SmartPtrNode(ptr);
+				return *m_node->m_alloc;
 			}
 
-			SmartPtrImpl(Allocator& allocator, T* ptr = NULL) : m_node(NULL)
+			bool reallocate(size_t count)
 			{
-				if (ptr)
-					m_node = new (critical) SmartPtrNode(ptr);
+				T* p = static_cast<T*>(get_allocator().reallocate(m_node->m_data,sizeof(T)*count,alignof<T>::value));
+				if (p)
+					update_node(m_node,p);
+				return (p ? true : false);
 			}
+		};
 
-			SmartPtrImpl(const SmartPtrImpl& rhs) : m_node(rhs.m_node)
-			{
-				if (m_node)
-					m_node->addref();
-			}
+		template <typename T, typename Destructor>
+		class SmartPtrImpl : public SmartPtrBase<T,Destructor>
+		{
+			typedef SmartPtrBase<T,Destructor> baseClass;
+
+		public:
+			SmartPtrImpl(T* ptr = NULL) : baseClass(ptr)
+			{}
+
+			SmartPtrImpl(AllocatorInstance& allocator, T* ptr = NULL) : baseClass(allocator,ptr)
+			{}
+
+			SmartPtrImpl(const SmartPtrImpl& rhs) : baseClass(addref_node(rhs.m_node))
+			{}
 
 			SmartPtrImpl& operator = (T* ptr)
 			{
-				if (m_node)
-				{
-					m_node->release();
-					m_node = NULL;
-				}
-
-				if (ptr)
-					m_node = new (critical) SmartPtrNode(ptr);
-				
+				baseClass::update_node(this->m_node,ptr);
 				return *this;
 			}
 
@@ -139,31 +211,24 @@ namespace OOBase
 			{
 				if (this != &rhs)
 				{
-					if (m_node)
-						m_node->release();
-					
-					m_node = rhs.m_node;
-
-					if (m_node)
-						m_node->addref();
+					baseClass::release_node(this->m_node);
+					this->m_node = addref_node(rhs.m_node);
 				}
 				return *this;
 			}
 
 			~SmartPtrImpl()
 			{
-				if (m_node)
-					m_node->release();
+				baseClass::release_node(this->m_node);
 			}
 
 			T* detach()
 			{
 				T* v = NULL;
-				if (m_node)
+				if (this->m_node)
 				{
-					v = m_node->detach();
-					m_node->release();
-					m_node = NULL;
+					v = this->m_node->m_data;
+					this->m_node->m_data = NULL;
 				}
 				return v;
 			}
@@ -181,16 +246,20 @@ namespace OOBase
 		protected:
 			T* value()
 			{
-				return (m_node ? m_node->value() : NULL);
+				return (this->m_node ? this->m_node->m_data : NULL);
 			}
 
 			const T* value() const
 			{
-				return (m_node ? m_node->value() : NULL);
+				return (this->m_node ? this->m_node->m_data : NULL);
 			}
 
-		private:
-			SmartPtrNode* m_node;
+			static typename baseClass::SmartPtrNode* addref_node(typename baseClass::SmartPtrNode* n)
+			{
+				if (n)
+					Atomic<size_t>::Increment(n->m_refcount);
+				return n;
+			}
 		};
 	}
 
@@ -277,6 +346,33 @@ namespace OOBase
 		operator const T2*() const
 		{
 			return static_cast<T2*>(baseClass::value());
+		}
+	};
+
+	template <typename T>
+	class TempPtr : public SmartPtr<T,FreeDestructor<AllocatorInstance> >
+	{
+		typedef SmartPtr<T,FreeDestructor<AllocatorInstance> > baseClass;
+
+	public:
+		TempPtr(AllocatorInstance& allocator, T* ptr = NULL) : baseClass(allocator,ptr)
+		{}
+
+		TempPtr(const TempPtr& rhs) : baseClass(rhs)
+		{}
+
+		TempPtr& operator = (T* ptr)
+		{
+			baseClass::operator=(ptr);
+			return *this;
+		}
+
+		TempPtr& operator = (const TempPtr& rhs)
+		{
+			if (this != &rhs)
+				baseClass::operator=(rhs);
+
+			return *this;
 		}
 	};
 }

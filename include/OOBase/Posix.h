@@ -22,7 +22,7 @@
 #ifndef OOBASE_POSIX_H_INCLUDED_
 #define OOBASE_POSIX_H_INCLUDED_
 
-#include "StackPtr.h"
+#include "SmartPtr.h"
 
 #if defined(HAVE_UNISTD_H) || defined(DOXYGEN)
 
@@ -110,8 +110,8 @@ namespace OOBase
 		class pw_info
 		{
 		public:
-			pw_info(uid_t uid);
-			pw_info(const char* uname);
+			pw_info(AllocatorInstance& allocator, uid_t uid);
+			pw_info(AllocatorInstance& allocator, const char* uname);
 
 			inline struct passwd* operator ->()
 			{
@@ -129,10 +129,9 @@ namespace OOBase
 
 			static const size_t get_size();
 
-			struct passwd* m_pwd;
-			struct passwd  m_pwd2;
-
-			StackPtr<char,1024> m_data;
+			struct passwd*    m_pwd;
+			struct passwd     m_pwd2;
+			TempPtr<char>     m_data;
 		};
 	}
 }
