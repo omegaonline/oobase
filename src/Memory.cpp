@@ -24,21 +24,6 @@
 
 const OOBase::critical_t OOBase::critical = {0};
 
-void* OOBase::LocalAllocator::allocate(size_t bytes, size_t align)
-{
-	return CrtAllocator::allocate(bytes,align);
-}
-
-void* OOBase::LocalAllocator::reallocate(void* ptr, size_t bytes, size_t align)
-{
-	return CrtAllocator::reallocate(ptr,bytes,align);
-}
-
-void OOBase::LocalAllocator::free(void* ptr)
-{
-	CrtAllocator::free(ptr);
-}
-
 #if !defined(_WIN32)
 
 void* OOBase::CrtAllocator::allocate(size_t bytes, size_t /*align*/)

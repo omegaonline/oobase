@@ -27,6 +27,28 @@
 #define va_copy(a,b) ((a) = (b))
 #endif
 
+namespace OOBase
+{
+	class LocalAllocator
+	{
+	public:
+		static void* allocate(size_t bytes, size_t align = 16)
+		{
+			return CrtAllocator::allocate(bytes,align);
+		}
+
+		static void* reallocate(void* ptr, size_t bytes, size_t align = 16)
+		{
+			return CrtAllocator::reallocate(ptr,bytes,align);
+		}
+
+		static void free(void* ptr)
+		{
+			CrtAllocator::free(ptr);
+		}
+	};
+}
+
 OOBase::LocalString::~LocalString()
 {
 	OOBase::LocalAllocator::free(m_data);
