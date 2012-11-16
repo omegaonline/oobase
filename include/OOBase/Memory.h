@@ -113,24 +113,24 @@ namespace OOBase
 	class CrtAllocator
 	{
 	public:
-		static void* allocate(size_t bytes, size_t align = 1);
-		static void* reallocate(void* ptr, size_t bytes, size_t align = 1);
+		static void* allocate(size_t bytes, size_t align = 16);
+		static void* reallocate(void* ptr, size_t bytes, size_t align = 16);
 		static void free(void* ptr);
 	};
 
 	class LocalAllocator
 	{
 	public:
-		static void* allocate(size_t bytes, size_t align = 1);
-		static void* reallocate(void* ptr, size_t bytes, size_t align = 1);
+		static void* allocate(size_t bytes, size_t align = 16);
+		static void* reallocate(void* ptr, size_t bytes, size_t align = 16);
 		static void free(void* ptr);
 	};
 
 	class ThreadLocalAllocator
 	{
 	public:
-		static void* allocate(size_t bytes, size_t align = 1);
-		static void* reallocate(void* ptr, size_t bytes, size_t align = 1);
+		static void* allocate(size_t bytes, size_t align = 16);
+		static void* reallocate(void* ptr, size_t bytes, size_t align = 16);
 		static void free(void* ptr);
 	};
 
