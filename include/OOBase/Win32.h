@@ -191,42 +191,19 @@ namespace OOBase
 			} u;
 		};
 
-		template <typename S>
-		int wchar_t_to_utf8(const wchar_t* wsz, S& str)
-		{
-			int len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,NULL,0,NULL,NULL);
-			DWORD dwErr = GetLastError();
-			if (dwErr != ERROR_INSUFFICIENT_BUFFER)
-				return dwErr;
+		int wchar_t_to_utf8(const wchar_t* wsz, OOBase::TempPtr<char>& ptrBuf);
+		int utf8_to_wchar_t(const char* sz, OOBase::TempPtr<wchar_t>& wsz);
 
+		template <typename S>
+		inline int wchar_t_to_utf8(const wchar_t* wsz, S& str)
+		{
 			OOBase::StackAllocator<256> allocator;
 			OOBase::TempPtr<char> ptrBuf(allocator);
-			if (!ptrBuf.reallocate(len))
-				return ERROR_OUTOFMEMORY;
 
-			len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,ptrBuf,len,NULL,NULL);
-			if (len <= 0)
-				return GetLastError();
-
-			return str.assign(ptrBuf,len);
-		}
-
-		int utf8_to_wchar_t(const char* sz, OOBase::TempPtr<wchar_t>& wsz)
-		{
-			int len = MultiByteToWideChar(CP_UTF8,0,sz,-1,NULL,0);
-			DWORD dwErr = GetLastError();
-			if (dwErr != ERROR_INSUFFICIENT_BUFFER)
-				return dwErr;
-
-			if (!wsz.reallocate(len + 1))
-				return ERROR_OUTOFMEMORY;
-
-			len = MultiByteToWideChar(CP_UTF8,0,sz,-1,wsz,len + 1);
-			if (len <= 0)
-				return GetLastError();
-
-			wsz[len] = L'\0';
-			return ERROR_SUCCESS;
+			int err = wchar_t_to_utf8(wsz,ptrBuf);
+			if (!err)
+				err = str.assign(ptrBuf);
+			return err;
 		}
 	}
 }

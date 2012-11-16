@@ -761,6 +761,41 @@ void OOBase::Win32::condition_variable_t::broadcast()
 		LeaveCriticalSection(&m_waiters_lock);
 }
 
+int OOBase::Win32::wchar_t_to_utf8(const wchar_t* wsz, OOBase::TempPtr<char>& ptrBuf)
+{
+	int len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,NULL,0,NULL,NULL);
+	DWORD dwErr = GetLastError();
+	if (dwErr != ERROR_INSUFFICIENT_BUFFER)
+		return dwErr;
+
+	if (!ptrBuf.reallocate(len))
+		return ERROR_OUTOFMEMORY;
+
+	len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,ptrBuf,len,NULL,NULL);
+	if (len <= 0)
+		return GetLastError();
+
+	return ERROR_SUCCESS;
+}
+
+int OOBase::Win32::utf8_to_wchar_t(const char* sz, OOBase::TempPtr<wchar_t>& wsz)
+{
+	int len = MultiByteToWideChar(CP_UTF8,0,sz,-1,NULL,0);
+	DWORD dwErr = GetLastError();
+	if (dwErr != ERROR_INSUFFICIENT_BUFFER)
+		return dwErr;
+
+	if (!wsz.reallocate(len + 1))
+		return ERROR_OUTOFMEMORY;
+
+	len = MultiByteToWideChar(CP_UTF8,0,sz,-1,wsz,len + 1);
+	if (len <= 0)
+		return GetLastError();
+
+	wsz[len] = L'\0';
+	return ERROR_SUCCESS;
+}
+
 #if 0
 
 namespace
