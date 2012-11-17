@@ -56,24 +56,6 @@ namespace
 		return err;
 	}
 
-	int to_wchar_t(const OOBase::String& str, OOBase::TempPtr<wchar_t>& wsz)
-	{
-		int len = MultiByteToWideChar(CP_UTF8,0,str.c_str(),-1,NULL,0);
-		DWORD err = GetLastError();
-		if (err != ERROR_INSUFFICIENT_BUFFER)
-			return err;
-
-		if (!wsz.reallocate(len+1))
-			return ERROR_OUTOFMEMORY;
-
-		len = MultiByteToWideChar(CP_UTF8,0,str.c_str(),-1,wsz,len);
-		if (len <= 0)
-			return GetLastError();
-
-		wsz[len] = L'\0';
-		return ERROR_SUCCESS;
-	}
-
 	bool env_sort(const OOBase::TempPtr<wchar_t>& s1, const OOBase::TempPtr<wchar_t>& s2)
 	{
 		return (_wcsicmp(s1,s2) < 0);
@@ -117,9 +99,9 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, TempPtr<wchar_t>& 
 		TempPtr<wchar_t> key(tabEnv.get_allocator());
 		TempPtr<wchar_t> val(tabEnv.get_allocator());
 
-		int err = to_wchar_t(*tabEnv.key_at(i),key);
+		int err = Win32::utf8_to_wchar_t(tabEnv.key_at(i)->c_str(),key);
 		if (!err)
-			err = to_wchar_t(*tabEnv.at(i),val);
+			err = Win32::utf8_to_wchar_t(tabEnv.at(i)->c_str(),val);
 		if (!err)
 			err = wenv.insert(key,val);
 
@@ -141,7 +123,7 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, TempPtr<wchar_t>& 
 	if (!ptr.reallocate(total_size + 2))
 		return ERROR_OUTOFMEMORY;
 
-	wchar_t* pout = static_cast<wchar_t*>(static_cast<void*>(ptr));
+	wchar_t* pout = ptr;
 	for (size_t i=0;i<wenv.size();++i)
 	{
 		const wchar_t* p = *wenv.key_at(i);

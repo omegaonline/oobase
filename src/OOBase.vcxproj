@@ -159,7 +159,6 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="BSDSocket.cpp" />
     <ClCompile Include="Buffer.cpp" />
     <ClCompile Include="CmdArgs.cpp" />
     <ClCompile Include="Condition.cpp" />
@@ -167,12 +166,15 @@
     <ClCompile Include="DLL.cpp" />
     <ClCompile Include="Environment.cpp" />
     <ClCompile Include="Error.cpp" />
+    <ClCompile Include="GetPeerUid.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Memory.cpp" />
     <ClCompile Include="Mutex.cpp" />
     <ClCompile Include="Once.cpp" />
-    <ClCompile Include="Posix.cpp" />
-    <ClCompile Include="pw_info.cpp" />
+    <ClCompile Include="Proactor.cpp" />
+    <ClCompile Include="ProactorWin32.cpp" />
+    <ClCompile Include="ProactorWin32Pipe.cpp" />
+    <ClCompile Include="ProactorWin32Socket.cpp" />
     <ClCompile Include="SecurityWin32.cpp" />
     <ClCompile Include="Server.cpp" />
     <ClCompile Include="String.cpp" />
@@ -187,6 +189,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\OOBase\Atomic.h" />
+    <ClInclude Include="..\include\OOBase\Bag.h" />
     <ClInclude Include="..\include\OOBase\BoundedQueue.h" />
     <ClInclude Include="..\include\OOBase\Cache.h" />
     <ClInclude Include="..\include\OOBase\CmdArgs.h" />
@@ -198,6 +201,7 @@
     <ClInclude Include="..\include\OOBase\SecurityWin32.h" />
     <ClInclude Include="..\include\OOBase\Server.h" />
     <ClInclude Include="..\include\OOBase\Set.h" />
+    <ClInclude Include="..\include\OOBase\StackAllocator.h" />
     <ClInclude Include="BSDSocket.h" />
     <ClInclude Include="..\include\OOBase\Buffer.h" />
     <ClInclude Include="..\include\OOBase\ByteSwap.h" />
@@ -225,6 +229,9 @@
     <ClInclude Include="..\include\OOBase\TLSSingleton.h" />
     <ClInclude Include="..\include\OOBase\utf8.h" />
     <ClInclude Include="..\include\OOBase\Win32.h" />
+    <ClInclude Include="ProactorPoll.h" />
+    <ClInclude Include="ProactorPosix.h" />
+    <ClInclude Include="ProactorWin32.h" />
     <ClInclude Include="tr24731.h" />
     <ClInclude Include="Win32Impl.h" />
     <ClInclude Include="Win32Socket.h" />

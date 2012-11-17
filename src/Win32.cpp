@@ -764,9 +764,8 @@ void OOBase::Win32::condition_variable_t::broadcast()
 int OOBase::Win32::wchar_t_to_utf8(const wchar_t* wsz, OOBase::TempPtr<char>& ptrBuf)
 {
 	int len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,NULL,0,NULL,NULL);
-	DWORD dwErr = GetLastError();
-	if (dwErr != ERROR_INSUFFICIENT_BUFFER)
-		return dwErr;
+	if (len <= 0)
+		return GetLastError();
 
 	if (!ptrBuf.reallocate(len))
 		return ERROR_OUTOFMEMORY;
@@ -781,10 +780,9 @@ int OOBase::Win32::wchar_t_to_utf8(const wchar_t* wsz, OOBase::TempPtr<char>& pt
 int OOBase::Win32::utf8_to_wchar_t(const char* sz, OOBase::TempPtr<wchar_t>& wsz)
 {
 	int len = MultiByteToWideChar(CP_UTF8,0,sz,-1,NULL,0);
-	DWORD dwErr = GetLastError();
-	if (dwErr != ERROR_INSUFFICIENT_BUFFER)
-		return dwErr;
-
+	if (len <= 0)
+		return GetLastError();
+	
 	if (!wsz.reallocate(len + 1))
 		return ERROR_OUTOFMEMORY;
 
