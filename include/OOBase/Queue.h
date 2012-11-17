@@ -170,7 +170,7 @@ namespace OOBase
 						return err;
 				}
 
-				copy_to(&this->m_data[this->m_back],val);
+				baseClass::copy_to(&this->m_data[this->m_back],val);
 
 				this->m_back = (this->m_back + 1) % this->m_capacity;
 				return 0;
