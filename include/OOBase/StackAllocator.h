@@ -186,15 +186,15 @@ namespace OOBase
 			free_block_t* orig_block = reinterpret_cast<free_block_t*>(p);
 			free_block_t* new_block = reinterpret_cast<free_block_t*>(split);
 
-			new_block->m_size = orig_block->m_size - (split - p);
-			new_block->m_next = p - m_start;
+			new_block->m_size = orig_block->m_size - static_cast<index_t>(split - p);
+			new_block->m_next = static_cast<index_t>(p - m_start);
 			new_block->m_prev = orig_block->m_prev;
 
 			if (orig_block->m_prev != s_hibit_mask)
-				reinterpret_cast<free_block_t*>(m_start + orig_block->m_prev)->m_next = split - m_start;
+				reinterpret_cast<free_block_t*>(m_start + orig_block->m_prev)->m_next = static_cast<index_t>(split - m_start);
 
-			orig_block->m_size = split - p;
-			orig_block->m_prev = split - m_start;
+			orig_block->m_size = static_cast<index_t>(split - p);
+			orig_block->m_prev = static_cast<index_t>(split - m_start);
 
 			if (m_free == p)
 				m_free = split;
@@ -250,10 +250,10 @@ namespace OOBase
 				block->m_prev = adjacent_block->m_prev;
 
 				if (block->m_prev != s_hibit_mask)
-					reinterpret_cast<free_block_t*>(m_start + block->m_prev)->m_next = p - m_start;
+					reinterpret_cast<free_block_t*>(m_start + block->m_prev)->m_next = static_cast<index_t>(p - m_start);
 
 				if (block->m_next != s_hibit_mask)
-					reinterpret_cast<free_block_t*>(m_start + block->m_next)->m_prev = p - m_start;
+					reinterpret_cast<free_block_t*>(m_start + block->m_next)->m_prev = static_cast<index_t>(p - m_start);
 
 				if (m_free == adjacent)
 					m_free = p;
@@ -261,7 +261,7 @@ namespace OOBase
 			else
 			{
 				// Add to head of free list
-				block->m_next = (m_free ? m_free - m_start : s_hibit_mask);
+				block->m_next = (m_free ? static_cast<index_t>(m_free - m_start) : s_hibit_mask);
 				block->m_prev = s_hibit_mask;
 				m_free = p;
 			}
@@ -276,7 +276,7 @@ namespace OOBase
 					next_block->m_prev = block->m_prev;
 
 					if (next_block->m_prev != s_hibit_mask)
-						reinterpret_cast<free_block_t*>(m_start + next_block->m_prev)->m_next = next - m_start;
+						reinterpret_cast<free_block_t*>(m_start + next_block->m_prev)->m_next = static_cast<index_t>(next - m_start);
 
 					if (m_free == p)
 						m_free = next;
