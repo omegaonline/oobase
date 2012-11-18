@@ -195,9 +195,8 @@ namespace OOBase
 		int utf8_to_wchar_t(const char* sz, OOBase::TempPtr<wchar_t>& wsz);
 
 		template <typename S>
-		inline int wchar_t_to_utf8(const wchar_t* wsz, S& str)
+		inline int wchar_t_to_utf8(const wchar_t* wsz, S& str, AllocatorInstance& allocator)
 		{
-			OOBase::StackAllocator<256> allocator;
 			OOBase::TempPtr<char> ptrBuf(allocator);
 
 			int err = wchar_t_to_utf8(wsz,ptrBuf);

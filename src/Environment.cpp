@@ -36,7 +36,7 @@ namespace
 		for (const wchar_t* e=env;!err && e != NULL && *e != L'\0';e += wcslen(e)+1)
 		{
 			OOBase::String str;
-			err = OOBase::Win32::wchar_t_to_utf8(e,str);
+			err = OOBase::Win32::wchar_t_to_utf8(e,str,tabEnv.get_allocator());
 			if (!err)
 			{
 				size_t eq = str.find('=');
@@ -157,31 +157,29 @@ int OOBase::Environment::getenv(const char* envvar, LocalString& strValue)
 	TempPtr<wchar_t> wenv(allocator);
 
 	int err = Win32::utf8_to_wchar_t(envvar,wenvvar);
-	if (err)
-		return err;
-
-	DWORD dwLen = 128;
-	for (;;)
+	for (DWORD dwLen = 128;!err;)
 	{
 		if (!wenv.reallocate(dwLen))
 			return ERROR_OUTOFMEMORY;
 
-		DWORD dwRealLen = GetEnvironmentVariableW(wenvvar,wenv,dwLen);
-		if (dwRealLen < dwLen)
+		DWORD dwActualLen = GetEnvironmentVariableW(wenvvar,wenv,dwLen);
+		if (dwActualLen < dwLen)
+		{
+			if (dwActualLen == 0)
+			{
+				err = GetLastError();
+				if (err == ERROR_ENVVAR_NOT_FOUND)
+					err = 0;
+			}
+			else if (dwActualLen > 1)
+				err = Win32::wchar_t_to_utf8(wenv,strValue,allocator);
+			
 			break;
+		}
 
-		dwLen = dwRealLen;
+		dwLen = dwActualLen;
 	}
-
-	if (dwLen == 0)
-	{
-		err = GetLastError();
-		if (err == ERROR_ENVVAR_NOT_FOUND)
-			err = 0;
-	}
-	else if (dwLen > 1)
-		err = Win32::wchar_t_to_utf8(wenv,strValue);
-
+	
 	return err;
 }
 		
