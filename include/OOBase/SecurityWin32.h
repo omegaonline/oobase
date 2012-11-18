@@ -135,7 +135,8 @@ namespace OOBase
 			if (dwErr != ERROR_INSUFFICIENT_BUFFER)
 				return dwErr;
 
-			if (!info.reallocate(dwLen))
+			info = static_cast<T*>(info.get_allocator().allocate(dwLen,16));
+			if (!info)
 				return ERROR_OUTOFMEMORY;
 
 			if (GetTokenInformation(hToken,cls,info,dwLen,&dwLen))
