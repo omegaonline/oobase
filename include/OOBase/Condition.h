@@ -132,6 +132,10 @@ namespace OOBase
 				if (!m_condition.wait(m_lock,timeout))
 					return false;
 			}
+
+			if (bReset)
+				m_complete = false;
+
 			v = m_value;
 			return true;
 		}
