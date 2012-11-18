@@ -172,9 +172,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Proactor.cpp" />
-    <ClCompile Include="ProactorPoll.cpp" />
-    <ClCompile Include="ProactorPosix.cpp" />
-    <ClCompile Include="ProactorPosixSocket.cpp" />
     <ClCompile Include="ProactorWin32.cpp" />
     <ClCompile Include="ProactorWin32Pipe.cpp" />
     <ClCompile Include="ProactorWin32Socket.cpp" />
