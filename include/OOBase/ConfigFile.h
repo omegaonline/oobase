@@ -33,8 +33,8 @@ namespace OOBase
 
 		struct error_pos_t
 		{
-			size_t line;
-			size_t col;
+			unsigned int line;
+			unsigned int col;
 		};
 
 		int load(const char* filename, results_t& results, error_pos_t* error_pos);
