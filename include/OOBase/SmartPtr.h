@@ -23,7 +23,6 @@
 #define OOBASE_SMARTPTR_H_INCLUDED_
 
 #include "Memory.h"
-#include "Atomic.h"
 
 namespace OOBase
 {
@@ -85,7 +84,7 @@ namespace OOBase
 
 			static void release_node(SmartPtrNode*& n)
 			{
-				if (n && OOBase::Atomic<size_t>::Decrement(n->m_refcount) == 0)
+				if (n && --n->m_refcount == 0)
 				{
 					Destructor::destroy(n->m_data);
 					Destructor::Allocator::free(n);
@@ -140,7 +139,7 @@ namespace OOBase
 
 			static void release_node(SmartPtrNode*& n)
 			{
-				if (n && Atomic<size_t>::Decrement(n->m_refcount) == 0)
+				if (n && --n->m_refcount == 0)
 				{
 					n->m_alloc->free(n->m_data);
 					n->m_alloc->free(n);
@@ -150,7 +149,7 @@ namespace OOBase
 
 			static void update_node(SmartPtrNode*& n, T* ptr)
 			{
-				if (n->m_data != ptr)
+				if (n && n->m_data != ptr)
 				{
 					AllocatorInstance* a = n->m_alloc;
 					release_node(n);
@@ -162,26 +161,32 @@ namespace OOBase
 			static SmartPtrNode* new_node(AllocatorInstance& allocator, T* ptr)
 			{
 				SmartPtrNode* n = static_cast<SmartPtrNode*>(allocator.allocate(sizeof(SmartPtrNode),alignof<SmartPtrNode>::value));
-				if (!n)
-					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-
-				n->m_refcount = 1;
-				n->m_data = ptr;
-				n->m_alloc = &allocator;
+				if (n)
+				{
+					n->m_refcount = 1;
+					n->m_data = ptr;
+					n->m_alloc = &allocator;
+				}
 				return n;
 			}
 
 		public:
 			AllocatorInstance& get_allocator() const
 			{
+				if (!m_node)
+					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 				return *m_node->m_alloc;
 			}
 
 			bool reallocate(size_t count)
 			{
-				T* p = static_cast<T*>(get_allocator().reallocate(m_node->m_data,sizeof(T)*count,alignof<T>::value));
-				if (p)
-					update_node(m_node,p);
+				T* p = NULL;
+				if (m_node)
+				{
+					p = static_cast<T*>(get_allocator().reallocate(m_node->m_data,sizeof(T)*count,alignof<T>::value));
+					if (p)
+						update_node(m_node,p);
+				}
 				return (p ? true : false);
 			}
 		};
@@ -257,7 +262,7 @@ namespace OOBase
 			static typename baseClass::SmartPtrNode* addref_node(typename baseClass::SmartPtrNode* n)
 			{
 				if (n)
-					Atomic<size_t>::Increment(n->m_refcount);
+					++n->m_refcount;
 				return n;
 			}
 		};
