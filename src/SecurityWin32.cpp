@@ -147,8 +147,7 @@ DWORD OOBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile)
 DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, TempPtr<void>& pSIDLogon)
 {
 	// Get the logon SID of the Token
-	StackAllocator<512> allocator;
-	TempPtr<TOKEN_GROUPS> ptrGroups(allocator);
+	TempPtr<TOKEN_GROUPS> ptrGroups(pSIDLogon.get_allocator());
 	DWORD dwErr = GetTokenInfo(hToken,TokenGroups,ptrGroups);
 	if (dwErr)
 		return dwErr;
