@@ -340,6 +340,12 @@ namespace OOBase
 			return true;
 		}
 
+		template <typename STR>
+		bool write_string(const STR& str)
+		{
+			return write(str.c_str(),str.length());
+		}
+
 		bool write_bytes(const unsigned char* buffer, size_t count)
 		{
 			if (m_last_error != 0 || !m_buffer)
