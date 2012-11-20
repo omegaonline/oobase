@@ -169,7 +169,7 @@ namespace OOBase
 			if (m_last_error != 0 || !m_buffer)
 				return false;
 
-			m_buffer->align_rd_ptr(sizeof(T));
+			m_buffer->align_rd_ptr(detail::alignof<T>::value);
 			if (m_buffer->length() < sizeof(T))
 				return error_eof();
 
@@ -280,7 +280,7 @@ namespace OOBase
 			if (m_last_error != 0 || !m_buffer)
 				return false;
 
-			m_last_error = m_buffer->align_wr_ptr(sizeof(T));
+			m_last_error = m_buffer->align_wr_ptr(detail::alignof<T>::value);
 			if (m_last_error != 0)
 				return false;
 
