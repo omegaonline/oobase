@@ -28,24 +28,65 @@ namespace OOBase
 {
 	namespace detail
 	{
-		template <typename K, typename V>
+		namespace Table
+		{
+			template <typename K, typename V>
+			struct PODCheck
+			{
+				K k;
+				V v;
+			};
+		}
+
+		template <typename K, typename V, bool POD = false>
 		struct TableNode
 		{
 			TableNode(const TableNode& n) : m_key(n.m_key), m_value(n.m_value)
 			{}
 
-			TableNode(const K& k, const V& v) : m_key(k), m_value(v)
+			template <typename K1, typename V1>
+			TableNode(const K1& k, const V1& v) : m_key(k), m_value(v)
 			{}
+
+			TableNode& operator = (const TableNode& rhs)
+			{
+				if (this != &rhs)
+				{
+					m_key = rhs.m_key;
+					m_value = rhs.m_value;
+				}
+				return *this;
+			}
+
+			template <typename K1, typename V1>
+			static TableNode build(const K1& k, const V1& v)
+			{
+				return TableNode(k,v);
+			}
 
 			K m_key;
 			V m_value;
 		};
 
 		template <typename K, typename V>
-		class TableImpl : public BagImpl<TableNode<K,V> >
+		struct TableNode<K,V,true>
 		{
-			typedef TableNode<K,V> Node;
-			typedef BagImpl<TableNode<K,V> > baseClass;
+			template <typename K1, typename V1>
+			static TableNode build(const K1& k, const V1& v)
+			{
+				TableNode n = { k, v };
+				return n;
+			}
+
+			K m_key;
+			V m_value;
+		};
+
+		template <typename K, typename V>
+		class TableImpl : public BagImpl<TableNode<K,V,is_pod<Table::PODCheck<K,V> >::value> >
+		{
+			typedef TableNode<K,V,is_pod<Table::PODCheck<K,V> >::value> Node;
+			typedef BagImpl<TableNode<K,V,is_pod<Table::PODCheck<K,V> >::value> > baseClass;
 
 		public:
 			static const size_t npos = size_t(-1);
@@ -56,9 +97,10 @@ namespace OOBase
 			virtual ~TableImpl()
 			{}
 
-			int insert(const K& key, const V& value)
+			template <typename K1, typename V1>
+			int insert(const K1& key, const V1& value)
 			{
-				int err = baseClass::add(Node(key,value));
+				int err = baseClass::add(Node::build(key,value));
 				if (!err)
 					m_sorted = false;
 				return err;
@@ -72,7 +114,8 @@ namespace OOBase
 					baseClass::remove_at(pos);
 			}
 			
-			bool remove(const K& key, V* value = NULL)
+			template <typename K1>
+			bool remove(const K1& key, V* value = NULL)
 			{
 				size_t pos = find_i(key,false);
 				if (pos == npos)
