@@ -22,7 +22,8 @@
 #ifndef OOBASE_SERVICE_H_INCLUDED_
 #define OOBASE_SERVICE_H_INCLUDED_
 
-#include "../OOBase/Condition.h"
+#include "Condition.h"
+#include "String.h"
 
 #if defined(HAVE_UNISTD_H)
 #include <signal.h>
