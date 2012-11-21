@@ -41,7 +41,9 @@
 
 	// Reduce the amount of windows we include
 	#define WIN32_LEAN_AND_MEAN
+	#if !defined(STRICT)
 	#define STRICT
+	#endif
 
 	// We support Vista API's
 	#if !defined(_WIN32_WINNT)
