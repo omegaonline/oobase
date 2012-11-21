@@ -63,12 +63,12 @@ inline void* operator new[](size_t size) OOBASE_THROW_BAD_ALLOC_DECL
 
 inline void operator delete(void* p) throw()
 {
-	return OOBase::CrtAllocator::free(p);
+	OOBase::CrtAllocator::free(p);
 }
 
 inline void operator delete[](void* p) throw()
 {
-	return OOBase::CrtAllocator::free(p);
+	OOBase::CrtAllocator::free(p);
 }
 
 // Returns NULL, doesn't throw
@@ -84,12 +84,12 @@ inline void* operator new[](size_t size, const std::nothrow_t&) throw()
 
 inline void operator delete(void* p, const std::nothrow_t&) throw()
 {
-	return OOBase::CrtAllocator::free(p);
+	OOBase::CrtAllocator::free(p);
 }
 
 inline void operator delete[](void* p, const std::nothrow_t&) throw()
 {
-	return OOBase::CrtAllocator::free(p);
+	OOBase::CrtAllocator::free(p);
 }
 
 #endif // OOBASE_CUSTOM_NEW_H_INCLUDED_
