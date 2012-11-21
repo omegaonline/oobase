@@ -101,6 +101,10 @@ namespace OOBase
 			if (adjacent && is_free(adjacent))
 			{
 				char* alloc_end = align_up(tag + min_alloc(bytes),detail::alignof<index_t>::value);
+
+				if (static_cast<size_t>(alloc_end - adjacent) < sizeof(free_block_t))
+					alloc_end = align_up(alloc_end + (sizeof(free_block_t) - static_cast<size_t>(alloc_end - adjacent)),detail::alignof<index_t>::value);
+
 				char* free_end = adjacent + get_size(adjacent);
 
 				if (alloc_end <= free_end)
@@ -190,10 +194,11 @@ namespace OOBase
 			new_block->m_next = static_cast<index_t>(p - m_start);
 			new_block->m_prev = orig_block->m_prev;
 
+			orig_block->m_size = static_cast<index_t>(split - p);
+
 			if (orig_block->m_prev != s_hibit_mask)
 				reinterpret_cast<free_block_t*>(m_start + orig_block->m_prev)->m_next = static_cast<index_t>(split - m_start);
 
-			orig_block->m_size = static_cast<index_t>(split - p);
 			orig_block->m_prev = static_cast<index_t>(split - m_start);
 
 			if (m_free == p)
@@ -281,7 +286,6 @@ namespace OOBase
 					if (m_free == p)
 						m_free = next;
 
-					p = next;  // DEBUG
 				}
 			}
 		}
