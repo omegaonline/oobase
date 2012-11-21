@@ -68,6 +68,7 @@ endif
 liboobase_la_SOURCES = \
 	include/config-base.h \
 	include/config-msvc.h \
+	include/OOBase/ArenaAllocator.h \
 	include/OOBase/Atomic.h \
 	include/OOBase/Bag.h \
 	include/OOBase/BoundedQueue.h \
@@ -109,6 +110,7 @@ liboobase_la_SOURCES = \
 	src/BSDSocket.h \
 	src/Win32Impl.h \
 	src/Win32Socket.h \
+	src/ArenaAllocator.cpp \
 	src/BSDSocket.cpp \
 	src/GetPeerUid.cpp \
 	src/Buffer.cpp \
