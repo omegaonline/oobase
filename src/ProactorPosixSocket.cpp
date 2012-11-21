@@ -274,7 +274,7 @@ void AsyncSocket::fd_callback(int fd, void* param, unsigned int events)
 	AsyncSocket* pThis = static_cast<AsyncSocket*>(param);
 	if (pThis->m_fd == fd)
 	{
-		OOBase::StackAllocator<256> allocator;
+		OOBase::StackAllocator<512> allocator;
 		OOBase::Queue<RecvNotify,OOBase::AllocatorInstance> recv_notify_queue(allocator);
 		OOBase::Queue<SendNotify,OOBase::AllocatorInstance> send_notify_queue(allocator);
 

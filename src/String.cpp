@@ -27,389 +27,121 @@
 #define va_copy(a,b) ((a) = (b))
 #endif
 
-namespace OOBase
+int OOBase::detail::strings::grow(size_t inc, StringNode*& node, void* (*pfnAllocate)(size_t,size_t), void* (*pfnRellocate)(void*,size_t,size_t), void (*pfnFree)(void*))
 {
-	class LocalAllocator
+	if (node && node->m_refcount == 1)
 	{
-	public:
-		static void* allocate(size_t bytes, size_t align = 16)
+		if (inc > 0)
 		{
-			return CrtAllocator::allocate(bytes,align);
-		}
-
-		static void* reallocate(void* ptr, size_t bytes, size_t align = 16)
-		{
-			return CrtAllocator::reallocate(ptr,bytes,align);
-		}
-
-		static void free(void* ptr)
-		{
-			CrtAllocator::free(ptr);
-		}
-	};
-}
-
-OOBase::LocalString::~LocalString()
-{
-	OOBase::LocalAllocator::free(m_data);
-}
-
-int OOBase::LocalString::assign(const LocalString& str)
-{
-	int err = 0;
-	if (this != &str)
-		err = assign(str.c_str(),str.length());
-	return err;
-}
-
-int OOBase::LocalString::assign(const char* sz, size_t len)
-{
-	char* new_sz = NULL;
-	if (sz && len)
-	{
-		if (len == npos)
-			len = strlen(sz);
-
-		if (len == length())
-		{
-			memcpy(m_data,sz,len);
-			return 0;
-		}
-
-		new_sz = static_cast<char*>(OOBase::LocalAllocator::allocate(len+1));
-		if (!new_sz)
-			return ERROR_OUTOFMEMORY;
-
-		memcpy(new_sz,sz,len);
-		new_sz[len] = '\0';
-	}
-
-	OOBase::LocalAllocator::free(m_data);
-	m_data = new_sz;
-
-	return 0;
-}
-
-int OOBase::LocalString::append(const char* sz, size_t len)
-{
-	if (sz && len)
-	{
-		size_t our_len = length();
-		if (len == npos)
-			len = strlen(sz);
-
-		char* new_sz = static_cast<char*>(OOBase::LocalAllocator::reallocate(m_data,our_len + len + 1));
-		if (!new_sz)
-			return ERROR_OUTOFMEMORY;
-
-		memcpy(new_sz+our_len,sz,len);
-		new_sz[our_len+len] = '\0';
-		m_data = new_sz;
-	}
-
-	return 0;
-}
-
-int OOBase::LocalString::replace_all(char from, char to)
-{
-	size_t i = length();
-	while (i > 0)
-	{
-		--i;
-		if (m_data[i] == from)
-			m_data[i] = to;
-	}
-	return 0;
-}
-
-int OOBase::LocalString::truncate(size_t len)
-{
-	if (len < length())
-		m_data[len] = '\0';
-	return 0;
-}
-
-int OOBase::LocalString::vprintf(const char* format, va_list args)
-{
-	char szBuf[256];
-	char* new_buf = szBuf;
-
-	va_list args_copy;
-	va_copy(args_copy,args);
-
-	int r = vsnprintf_s(new_buf,sizeof(szBuf),format,args_copy);
-	if (r == -1)
-		return errno;
-
-	if (static_cast<size_t>(r) >= sizeof(szBuf))
-	{
-		for (;;)
-		{
-			new_buf = static_cast<char*>(OOBase::ThreadLocalAllocator::allocate(r+1));
-			if (!new_buf)
+			// It's our buffer to play with... (There is an implicit +1 here)
+			StringNode* new_node = static_cast<StringNode*>((*pfnRellocate)(node,sizeof(StringNode) + node->m_length + inc,alignof<StringNode>::value));
+			if (!new_node)
 				return ERROR_OUTOFMEMORY;
 
-			va_copy(args_copy,args);
-			int r1 = vsnprintf_s(new_buf,r+1,format,args_copy);
-			if (r1 == -1)
-				return errno;
+			new_node->m_length = node->m_length + inc;
+			new_node->m_data[new_node->m_length] = '\0';
 
-			if (r1 > r+1)
-				r = r1;
-			else
-				break;
+			node = new_node;
 		}
 	}
-
-	int err = assign(new_buf,r);
-
-	if (new_buf != szBuf)
-		OOBase::ThreadLocalAllocator::free(new_buf);
-
-	return err;
-}
-
-int OOBase::LocalString::printf(const char* format, ...)
-{
-	va_list args;
-	va_start(args,format);
-
-	int err = vprintf(format,args);
-
-	va_end(args);
-
-	return err;
-}
-
-size_t OOBase::LocalString::find(char c, size_t start) const
-{
-	if (start >= length())
-		return npos;
-
-	const char* p = strchr(m_data + start,c);
-	if (!p)
-		return npos;
-
-	// Returns *absolute* position
-	return static_cast<size_t>(p - m_data);
-}
-
-size_t OOBase::LocalString::find(const char* sz, size_t start) const
-{
-	if (start >= length())
-		return npos;
-
-	const char* p = strstr(m_data + start,sz);
-	if (!p)
-		return npos;
-
-	// Returns *absolute* position
-	return static_cast<size_t>(p - m_data);
-}
-
-int OOBase::String::copy_on_write(size_t inc)
-{
-	node_addref(m_node);
-
-	if (!m_node || m_node->m_refcount > 2)
+	else
 	{
-		size_t our_len = (m_node ? length() : 0);
+		size_t our_len = (node ? node->m_length : 0);
 
 		// There is an implicit len+1 here as m_data[1] in struct
-		Node* new_node = static_cast<Node*>(OOBase::CrtAllocator::allocate(sizeof(Node) + our_len+inc));
+		StringNode* new_node = static_cast<StringNode*>((*pfnAllocate)(sizeof(StringNode) + our_len + inc,alignof<StringNode>::value));
 		if (!new_node)
 			return ERROR_OUTOFMEMORY;
 
 		if (our_len)
-			memcpy(new_node->m_data,m_node->m_data,our_len);
+			memcpy(new_node->m_data,node->m_data,our_len);
 
 		new_node->m_refcount = 1;
-		new_node->m_data[our_len] = '\0';
+		new_node->m_length = our_len + inc;
+		new_node->m_data[new_node->m_length] = '\0';
 
-		if (m_node)
-		{
-			node_release(m_node);
-			node_release(m_node);
-		}
+		if (node && --node->m_refcount == 0)
+			(*pfnFree)(node);
 
-		m_node = new_node;
+		node = new_node;
 	}
-	else
+
+	return 0;
+}
+
+int OOBase::detail::strings::grow(size_t inc, StringNodeAllocator*& node)
+{
+	if (node && node->m_refcount == 1)
 	{
 		if (inc > 0)
 		{
-			size_t our_len = length();
-
 			// It's our buffer to play with... (There is an implicit +1 here)
-			Node* new_node = static_cast<Node*>(OOBase::CrtAllocator::reallocate(m_node,sizeof(Node) + our_len+inc));
+			StringNodeAllocator* new_node = static_cast<StringNodeAllocator*>(node->m_allocator->reallocate(node,sizeof(StringNodeAllocator) + node->m_length + inc,alignof<StringNodeAllocator>::value));
 			if (!new_node)
 				return ERROR_OUTOFMEMORY;
 
-			m_node = new_node;
-		}
+			new_node->m_length += inc;
+			new_node->m_data[new_node->m_length] = '\0';
 
-		node_release(m_node);
-	}
-
-	return 0;
-}
-
-int OOBase::String::assign(const char* sz, size_t len)
-{
-	int err = 0;
-
-	if (len == npos && sz)
-		len = strlen(sz);
-
-	if (sz && len)
-	{
-		if ((err = copy_on_write(len)) == 0)
-		{
-			memcpy(m_node->m_data,sz,len);
-			m_node->m_data[len] = '\0';
+			node = new_node;
 		}
 	}
 	else
 	{
-		node_release(m_node);
-		m_node = NULL;
+		size_t our_len = (node ? node->m_length : 0);
+
+		// There is an implicit len+1 here as m_data[1] in struct
+		StringNodeAllocator* new_node = static_cast<StringNodeAllocator*>(node->m_allocator->allocate(sizeof(StringNodeAllocator) + our_len + inc,alignof<StringNodeAllocator>::value));
+		if (!new_node)
+			return ERROR_OUTOFMEMORY;
+
+		if (our_len)
+			memcpy(new_node->m_data,node->m_data,our_len);
+
+		new_node->m_refcount = 1;
+		new_node->m_length = our_len + inc;
+		new_node->m_data[new_node->m_length] = '\0';
+		new_node->m_allocator = node->m_allocator;
+
+		if (node && --node->m_refcount == 0)
+			node->m_allocator->free(node);
+
+		node = new_node;
 	}
-	return err;
-}
 
-int OOBase::String::append(const char* sz, size_t len)
-{
-	int err = 0;
-	if (len == npos && sz)
-		len = strlen(sz);
-
-	if (sz && len)
-	{
-		if ((err = copy_on_write(len)) == 0)
-		{
-			size_t our_len = length();
-			memcpy(m_node->m_data+our_len,sz,len);
-			m_node->m_data[our_len+len] = '\0';
-		}
-	}
-
-	return err;
-}
-
-int OOBase::String::replace_all(char from, char to)
-{
-	bool copied = false;
-	size_t i = length();
-	while (i > 0)
-	{
-		--i;
-		if (m_node->m_data[i] == from)
-		{
-			if (!copied)
-			{
-				int err = copy_on_write(0);
-				if (err != 0)
-					return err;
-
-				copied = true;
-			}
-			m_node->m_data[i] = to;
-		}
-	}
 	return 0;
 }
 
-int OOBase::String::truncate(size_t len)
-{
-	int err = 0;
-	if (len < length() && (err = copy_on_write(0)) == 0)
-		m_node->m_data[len] = '\0';
-
-	return err;
-}
-
-int OOBase::String::printf(const char* format, ...)
+int OOBase::printf(TempPtr<char>& ptr, const char* format, ...)
 {
 	va_list args;
 	va_start(args,format);
 
-	char* new_buf = NULL;
-	char szBuf[256];
-	int r = vsnprintf_s(szBuf,sizeof(szBuf),format,args);
+	int err = OOBase::vprintf(ptr,format,args);
 
 	va_end(args);
-
-	if (r == -1)
-		return errno;
-
-	if (static_cast<size_t>(r) < sizeof(szBuf))
-		new_buf = szBuf;
-	else
-	{
-		for (;;)
-		{
-			new_buf = static_cast<char*>(OOBase::ThreadLocalAllocator::allocate(r+1));
-			if (!new_buf)
-				return ERROR_OUTOFMEMORY;
-
-			va_start(args,format);
-
-			int r1 = vsnprintf_s(new_buf,r+1,format,args);
-
-			va_end(args);
-
-			if (r1 == -1)
-				return errno;
-
-			if (r1 > r+1)
-				r = r1;
-			else
-				break;
-		}
-	}
-
-	int err = assign(new_buf,r);
-
-	if (new_buf != szBuf)
-		OOBase::ThreadLocalAllocator::free(new_buf);
 
 	return err;
 }
 
-size_t OOBase::String::find(char c, size_t start) const
+int OOBase::vprintf(TempPtr<char>& ptr, const char* format, va_list args)
 {
-	if (start >= length())
-		return npos;
+	for (int r = 63;;)
+	{
+		size_t len = static_cast<size_t>(r) + 2;
+		if (!ptr.reallocate(len))
+			return ERROR_OUTOFMEMORY;
 
-	const char* p = strchr(m_node->m_data + start,c);
-	if (!p)
-		return npos;
+		va_list args_copy;
+		va_copy(args_copy,args);
 
-	// Returns *absolute* position
-	return static_cast<size_t>(p - m_node->m_data);
-}
+		r = vsnprintf_s(ptr,len,format,args_copy);
 
-size_t OOBase::String::find(const char* sz, size_t start) const
-{
-	if (start >= length())
-		return npos;
+		va_end(args_copy);
 
-	const char* p = strstr(m_node->m_data + start,sz);
-	if (!p)
-		return npos;
-
-	// Returns *absolute* position
-	return static_cast<size_t>(p - m_node->m_data);
-}
-
-void OOBase::String::node_addref(Node* node)
-{
-	if (node)
-		++node->m_refcount;
-}
-
-void OOBase::String::node_release(Node* node)
-{
-	if (node && --node->m_refcount == 0)
-		OOBase::CrtAllocator::free(node);
+		if (r == -1)
+			return errno;
+		else if (static_cast<size_t>(r) < len)
+			return 0;
+	}
 }

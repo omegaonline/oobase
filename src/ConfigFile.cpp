@@ -298,7 +298,7 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 #if defined(_WIN32)
 int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, results_t& results)
 {
-	OOBase::StackAllocator<1024> allocator;
+	OOBase::StackAllocator<512> allocator;
 	OOBase::TempPtr<wchar_t> wszKey(allocator);
 	LONG lRes = Win32::utf8_to_wchar_t(key_name,wszKey);
 	if (lRes != ERROR_SUCCESS)

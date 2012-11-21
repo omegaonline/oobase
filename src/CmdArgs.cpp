@@ -24,7 +24,7 @@
 
 int OOBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, const char* long_opt)
 {
-	String strId,strLongOpt;
+	LocalString strId(m_map_opts.get_allocator()),strLongOpt(m_map_opts.get_allocator());
 	int err = strId.assign(id);
 	if (err == 0)
 		err = strLongOpt.assign(long_opt);
@@ -34,7 +34,7 @@ int OOBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, 
 
 	assert(!strId.empty());
 	
-	Option opt;
+	Option opt(m_map_opts.get_allocator());
 	opt.m_short_opt = short_opt;
 	if (long_opt)
 		opt.m_long_opt = strLongOpt;
@@ -91,7 +91,7 @@ int OOBase::CmdArgs::parse(int argc, const char* argv[], results_t& results, int
 
 int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, int& arg, int argc) const
 {
-	String strVal;
+	LocalString strKey(results.get_allocator()),strVal(results.get_allocator());
 	for (size_t i=0; i < m_map_opts.size(); ++i)
 	{
 		const Option& opt = *m_map_opts.at(i);
@@ -105,7 +105,7 @@ int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, in
 				{
 					results.clear();
 
-					String strErr;
+					LocalString strErr(results.get_allocator());
 					int err = strErr.assign("missing");
 					if (err == 0)
 						err = strVal.assign(argv[arg]);
@@ -124,7 +124,11 @@ int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, in
 			if (err != 0)
 				return err;
 
-			return results.insert(*m_map_opts.key_at(i),strVal);
+			err = strKey.assign(*m_map_opts.key_at(i));
+			if (err)
+				return err;
+
+			return results.insert(strKey,strVal);
 		}
 
 		if (strncmp(opt.m_long_opt.c_str(),argv[arg]+2,opt.m_long_opt.length())==0 && argv[arg][opt.m_long_opt.length()+2]=='=')
@@ -136,18 +140,21 @@ int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, in
 			if (err != 0)
 				return err;
 
-			return results.insert(*m_map_opts.key_at(i),strVal);
+			err = strKey.assign(*m_map_opts.key_at(i));
+			if (err)
+				return err;
+
+			return results.insert(strKey,strVal);
 		}
 	}
 	
 	results.clear();
 	
-	String strErr;
-	int err = strErr.assign("unknown");
+	int err = strKey.assign("unknown");
 	if (err == 0)
 		err = strVal.assign(argv[arg]);
 	if (err == 0)
-		err = results.insert(strErr,strVal);
+		err = results.insert(strKey,strVal);
 	if (err == 0)
 		err = ENOENT;
 	
@@ -156,7 +163,7 @@ int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, in
 
 int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, int& arg, int argc) const
 {
-	String strVal;
+	LocalString strKey(results.get_allocator()),strVal(results.get_allocator());
 	for (const char* c = argv[arg]+1; *c!='\0'; ++c)
 	{
 		size_t i;
@@ -175,12 +182,11 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 						{
 							results.clear();
 							
-							String strErr;
-							int err = strErr.assign("missing");
+							int err = strKey.assign("missing");
 							if (err == 0)
 								err = strVal.printf("-%c",*c);
 							if (err == 0)
-								err = results.insert(strErr,strVal);
+								err = results.insert(strKey,strVal);
 							if (err == 0)
 								err = EINVAL;
 							
@@ -197,14 +203,23 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 					if (err != 0)
 						return err;
 
-					return results.insert(*m_map_opts.key_at(i),strVal);
+					err = strKey.assign(*m_map_opts.key_at(i));
+					if (err)
+						return err;
+
+					return results.insert(strKey,strVal);
 				}
 				else
 				{
 					int err = strVal.assign("true");
-					if (err == 0)
-						err = results.insert(*m_map_opts.key_at(i),strVal);
+					if (err != 0)
+						return err;
 
+					err = strKey.assign(*m_map_opts.key_at(i));
+					if (err)
+						return err;
+
+					err = results.insert(strKey,strVal);
 					if (err != 0)
 						return err;
 
@@ -217,12 +232,11 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 		{
 			results.clear();
 
-			String strErr;
-			int err = strErr.assign("unknown");
+			int err = strKey.assign("unknown");
 			if (err == 0)
 				err = strVal.printf("-%c",*c);
 			if (err == 0)
-				err = results.insert(strErr,strVal);
+				err = results.insert(strKey,strVal);
 			if (err == 0)
 				err = ENOENT;
 			
@@ -235,12 +249,12 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 
 int OOBase::CmdArgs::parse_arg(results_t& results, const char* arg, unsigned int position) const
 {
-	String strArg;
+	LocalString strArg(results.get_allocator());
 	int err = strArg.assign(arg);
 	if (err != 0)
 		return err;
 
-	String strResult;
+	LocalString strResult(results.get_allocator());
 	if ((err = strResult.printf("@%u",position)) != 0)
 		return err;
 

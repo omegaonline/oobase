@@ -23,244 +23,521 @@
 #define OOBASE_STRING_H_INCLUDED_
 
 #include "Memory.h"
-#include "Atomic.h"
+#include "SmartPtr.h"
+#include "StackAllocator.h"
 
 #include <string.h>
 
 namespace OOBase
 {
-	class LocalString
+#if defined(__GNUC__)
+	int printf(TempPtr<char>& ptr, const char* format, ...) __attribute__((format(printf,2,3)));
+#else
+	int printf(TempPtr<char>& ptr, const char* format, ...);
+#endif
+	int vprintf(TempPtr<char>& ptr, const char* format, va_list args);
+
+	namespace detail
 	{
-	public:
-		static const size_t npos = size_t(-1);
+		namespace strings
+		{
+			static const size_t npos = size_t(-1);
 
-		LocalString() : m_data(NULL)
-		{}
+			struct StringNode
+			{
+				size_t m_refcount;
+				size_t m_length;
+				char   m_data[1];
+			};
 
-		~LocalString();
+			struct StringNodeAllocator
+			{
+				size_t             m_refcount;
+				size_t             m_length;
+				AllocatorInstance* m_allocator;
+				char               m_data[1];
+			};
 
-		int assign(const LocalString& str);
-		int assign(const char* sz, size_t len = npos);
-		int append(const char* sz, size_t len = npos);
-		int replace_all(char from, char to);
-		int truncate(size_t len);
+			int grow(size_t inc, StringNode*& node, void* (*pfnAllocate)(size_t,size_t), void* (*pfnRellocate)(void*,size_t,size_t), void (*pfnFree)(void*));
+			int grow(size_t inc, StringNodeAllocator*& node);
+		}
+
+		template <typename Allocator>
+		class StringBase
+		{
+		public:
+			int assign(const char* sz, size_t len = strings::npos)
+			{
+				int err = 0;
+				len = plen(sz,len);
+				if (len)
+				{
+					if ((err = clone(len)) == 0)
+						memcpy(this->m_node->m_data,sz,len);
+				}
+				else
+					node_release(this->m_node);
+
+				return err;
+			}
 
 #if defined(__GNUC__)
-		int printf(const char* format, ...) __attribute__((format(printf,2,3)));
+			int printf(const char* format, ...) __attribute__((format(printf,2,3)))
 #else
-		int printf(const char* format, ...);
+			int printf(const char* format, ...)
 #endif
+			{
+				va_list args;
+				va_start(args,format);
 
-		int vprintf(const char* format, va_list args);
+				StackAllocator<128> allocator;
+				TempPtr<char> ptr(allocator);
+				int err = OOBase::vprintf(ptr,format,args);
 
-		int concat(const char* sz1, const char* sz2)
+				va_end(args);
+
+				if (!err)
+					assign(ptr);
+
+				return err;
+			}
+
+		protected:
+			StringBase() : m_node(NULL)
+			{}
+
+			StringBase(const StringBase& rhs) : m_node(rhs.m_node)
+			{
+				if (m_node)
+					++m_node->m_refcount;
+			}
+
+			strings::StringNode* m_node;
+
+			static void node_replace(strings::StringNode*& node, strings::StringNode* repl)
+			{
+				node_release(node);
+				node = repl;
+				if (node)
+					++node->m_refcount;
+			}
+
+			static void node_release(strings::StringNode*& node)
+			{
+				if (node && --node->m_refcount == 0)
+				{
+					Allocator::free(node);
+					node = NULL;
+				}
+			}
+
+			int grow(size_t inc)
+			{
+				return strings::grow(inc,m_node,&Allocator::allocate,&Allocator::reallocate,&Allocator::free);
+			}
+
+			int clone(size_t len)
+			{
+				size_t our_len = m_node ? m_node->m_length : 0;
+				if (len > our_len)
+					return grow(len - our_len);
+
+				int err = grow(0);
+				if (!err)
+				{
+					m_node->m_data[len] = '\0';
+					m_node->m_length = len;
+				}
+				return err;
+			}
+
+			static const size_t plen(const char* sz, size_t len)
+			{
+				if (!sz)
+					len = 0;
+				else if (len == strings::npos)
+					len = strlen(sz);
+				return len;
+			}
+		};
+
+		template <>
+		class StringBase<AllocatorInstance>
 		{
-			int err = assign(sz1);
-			if (err == 0)
-				err = append(sz2);
+		public:
+			int assign(const char* sz, size_t len = strings::npos)
+			{
+				len = plen(sz,len);
 
-			return err;
-		}
+				int err = clone(len);
+				if (!err && len)
+					memcpy(this->m_node->m_data,sz,len);
 
-		int compare(const char* rhs) const
+				return err;
+			}
+
+			AllocatorInstance& get_allocator() const
+			{
+				if (!m_node)
+					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+				return *m_node->m_allocator;
+			}
+
+#if defined(__GNUC__)
+			int printf(const char* format, ...) __attribute__((format(printf,2,3)))
+#else
+			int printf(const char* format, ...)
+#endif
+			{
+				if (!m_node)
+					return ERROR_OUTOFMEMORY;
+
+				va_list args;
+				va_start(args,format);
+
+				TempPtr<char> ptr(*m_node->m_allocator);
+				int err = OOBase::vprintf(ptr,format,args);
+
+				va_end(args);
+
+				if (!err)
+					assign(ptr);
+				return err;
+			}
+
+		protected:
+			StringBase(AllocatorInstance& allocator) : m_node(NULL)
+			{
+				m_node = static_cast<strings::StringNodeAllocator*>(allocator.allocate(sizeof(strings::StringNodeAllocator),alignof<strings::StringNodeAllocator>::value));
+				if (m_node)
+				{
+					m_node->m_refcount = 1;
+					m_node->m_allocator = &allocator;
+					m_node->m_length = 0;
+					m_node->m_data[0] = '\0';
+				}
+			}
+
+			StringBase(const StringBase& rhs) : m_node(rhs.m_node)
+			{
+				if (m_node)
+					++m_node->m_refcount;
+			}
+
+			strings::StringNodeAllocator* m_node;
+
+			static void node_replace(strings::StringNodeAllocator*& node, strings::StringNodeAllocator* repl)
+			{
+				node_release(node);
+				node = repl;
+				if (node)
+					++node->m_refcount;
+			}
+
+			static void node_release(strings::StringNodeAllocator*& node)
+			{
+				if (node && --node->m_refcount == 0)
+				{
+					node->m_allocator->free(node);
+					node = NULL;
+				}
+			}
+
+			int grow(size_t inc)
+			{
+				return strings::grow(inc,m_node);
+			}
+
+			int clone(size_t len)
+			{
+				size_t our_len = m_node ? m_node->m_length : 0;
+				if (len > our_len)
+					return grow(len - our_len);
+
+				int err = grow(0);
+				if (!err)
+				{
+					m_node->m_data[len] = '\0';
+					m_node->m_length = len;
+				}
+				return err;
+			}
+
+			static const size_t plen(const char* sz, size_t len)
+			{
+				if (!sz)
+					len = 0;
+				else if (len == strings::npos)
+					len = strlen(sz);
+				return len;
+			}
+		};
+
+		template <typename Allocator>
+		class StringImpl : public StringBase<Allocator>
 		{
-			if (m_data == NULL)
-				return (rhs == NULL ? 0 : -1);
-			else if (rhs == NULL)
-				return 1;
+			typedef StringBase<Allocator> baseClass;
 
-			return strcmp(m_data,rhs);
-		}
+		public:
+			static const size_t npos = size_t(-1);
 
-		int compare(const LocalString& rhs) const
-		{
-			return compare(rhs.m_data);
-		}
+			StringImpl() : baseClass()
+			{}
 
-		template <typename T> bool operator == (T rhs) const { return (compare(rhs) == 0); }
-		template <typename T> bool operator < (T rhs) const { return (compare(rhs) < 0); }
-		template <typename T> bool operator <= (T rhs) const { return (compare(rhs) <= 0); }
-		template <typename T> bool operator > (T rhs) const { return (compare(rhs) > 0); }
-		template <typename T> bool operator >= (T rhs) const { return (compare(rhs) >= 0); }
-		template <typename T> bool operator != (T rhs) const { return (compare(rhs) != 0); }
+			StringImpl(Allocator& allocator) : baseClass(allocator)
+			{}
 
-		void clear()
-		{
-			assign(NULL,0);
-		}
+			StringImpl(const StringImpl& rhs) : baseClass(rhs)
+			{}
 
-		size_t length() const
-		{
-			return (m_data ? strlen(m_data) : 0);
-		}
+			~StringImpl()
+			{
+				baseClass::node_release(this->m_node);
+			}
 
-		bool empty() const
-		{
-			return (m_data ? m_data[0] == '\0' : true);
-		}
+			int assign(const char* sz, size_t len = npos)
+			{
+				return baseClass::assign(sz,len);
+			}
 
-		const char* c_str() const
-		{
-			return (m_data ? m_data : "\0");
-		}
+			int assign(const StringImpl& rhs)
+			{
+				baseClass::node_replace(this->m_node,rhs.m_node);
+				return 0;
+			}
 
-		char operator [] (size_t idx) const
-		{
-			if (idx >= length())
-				return '\0';
+			template <typename A>
+			int assign(const StringImpl<A>& str)
+			{
+				return baseClass::assign(str.c_str(),str.length());
+			}
 
-			return m_data[idx];
-		}
+			int append(const char* sz, size_t len = npos)
+			{
+				int err = 0;
+				len = baseClass::plen(sz,len);
+				if (len)
+				{
+					size_t our_len = length();
+					if ((err = baseClass::grow(len)) == 0)
+						memcpy(this->m_node->m_data+our_len,sz,len);
+				}
 
-		bool replace_at(size_t idx, char c)
-		{
-			if (idx >= length())
-				return false;
+				return err;
+			}
 
-			m_data[idx] = c;
-			return true;
-		}
+			template <typename A>
+			int append(const StringImpl<A>& str)
+			{
+				return append(str.c_str(),str.length());
+			}
 
-		size_t find(char c, size_t start = 0) const;
-		size_t find(const char* sz, size_t start = 0) const;
+			int replace_all(char from, char to)
+			{
+				bool copied = false;
+				size_t i = length();
+				while (i > 0)
+				{
+					--i;
+					if (this->m_node->m_data[i] == from)
+					{
+						if (!copied)
+						{
+							int err = baseClass::grow(0);
+							if (err != 0)
+								return err;
 
-	private:
-		// Do not allow copy constructors or assignment
-		// as memory allocation will occur...
-		LocalString(const LocalString&);
-		LocalString& operator = (const LocalString&);
+							copied = true;
+						}
+						this->m_node->m_data[i] = to;
+					}
+				}
+				return 0;
+			}
 
-		char*  m_data;
-	};
+			int truncate(size_t len)
+			{
+				int err = 0;
+				if (len < length())
+					err = baseClass::clone(0);
 
-	class String
+				return err;
+			}
+
+			int concat(const char* sz1, const char* sz2)
+			{
+				int err = baseClass::assign(sz1);
+				if (err == 0)
+					err = append(sz2);
+
+				return err;
+			}
+
+			int compare(const char* rhs) const
+			{
+				if (this->m_node == NULL)
+					return (rhs == NULL ? 0 : -1);
+				else if (rhs == NULL)
+					return 1;
+
+				return strcmp(this->m_node->m_data,rhs);
+			}
+
+			int compare(const StringImpl& rhs) const
+			{
+				if (this == &rhs)
+					return true;
+				else
+					return this->compare_i(rhs.c_str(),rhs.length());
+			}
+
+			template <typename A>
+			int compare(const StringImpl<A>& rhs) const
+			{
+				return this->compare_i(rhs.c_str(),rhs.length());
+			}
+
+			template <typename T> bool operator == (T rhs) const { return (this->compare(rhs) == 0); }
+			template <typename T> bool operator < (T rhs) const { return (this->compare(rhs) < 0); }
+			template <typename T> bool operator <= (T rhs) const { return (this->compare(rhs) <= 0); }
+			template <typename T> bool operator > (T rhs) const { return (this->compare(rhs) > 0); }
+			template <typename T> bool operator >= (T rhs) const { return (this->compare(rhs) >= 0); }
+			template <typename T> bool operator != (T rhs) const { return (this->compare(rhs) != 0); }
+
+			void clear()
+			{
+				baseClass::assign(NULL,0);
+			}
+
+			size_t length() const
+			{
+				return (this->m_node ? this->m_node->m_length : 0);
+			}
+
+			bool empty() const
+			{
+				return length() == 0;
+			}
+
+			const char* c_str() const
+			{
+				return (length() ? this->m_node->m_data : "\0");
+			}
+
+			char operator [] (size_t idx) const
+			{
+				return (idx < length() ? this->m_node->m_data[idx] : '\0');
+			}
+
+			bool replace_at(size_t idx, char c)
+			{
+				if (idx >= length())
+					return false;
+
+				this->m_node->m_data[idx] = c;
+				return true;
+			}
+
+			size_t find(char c, size_t start = 0) const
+			{
+				if (start >= length())
+					return npos;
+
+				const char* p = static_cast<const char*>(memchr(this->m_node->m_data + start,c,this->m_node->m_length - start));
+				if (!p)
+					return npos;
+
+				// Returns *absolute* position
+				return static_cast<size_t>(p - this->m_node->m_data);
+			}
+
+			size_t find(const char* sz, size_t start = 0) const
+			{
+				if (!sz)
+					return 0;
+
+				size_t len = strlen(sz);
+				if (!len)
+					return 0;
+
+				size_t pos = find(sz[0]);
+				while (pos != npos)
+				{
+					if (this->m_node->m_length - pos < len)
+						return npos;
+
+					if (memcmp(this->m_node->m_data + pos,sz,len) == 0)
+						break;
+
+					pos = find(sz[0],pos+1);
+				}
+
+				return pos;
+			}
+
+		private:
+			int compare_i(const char* sz, size_t len) const
+			{
+				len = baseClass::plen(sz,len);
+				if (this->m_node == NULL)
+					return (len == 0 ? 0 : -1);
+				else if (!len)
+					return 1;
+
+				size_t min = (len > this->m_node->m_length ? this->m_node->m_length : len);
+				int r = memcmp(this->m_node->m_data,sz,min);
+				if (r != 0)
+					return r;
+
+				if (len > this->m_node->m_length)
+					return -1;
+
+				if (len < this->m_node->m_length)
+					return 1;
+
+				return 0;
+			}
+		};
+	}
+
+	class String : public detail::StringImpl<CrtAllocator>
 	{
-	public:
-		static const size_t npos = size_t(-1);
+		typedef detail::StringImpl<CrtAllocator> baseClass;
 
-		String() : m_node(NULL)
+	public:
+		String() : baseClass()
 		{}
 
-		String(const String& rhs) : m_node(rhs.m_node)
-		{
-			node_addref(m_node);
-		}
+		String(const String& rhs) : baseClass(rhs)
+		{}
 
 		String& operator = (const String& rhs)
 		{
-			if (&rhs != this && m_node != rhs.m_node)
-			{
-				node_release(m_node);
-				m_node = rhs.m_node;
-				node_addref(m_node);
-			}
+			if (this != &rhs)
+				baseClass::node_replace(this->m_node,rhs.m_node);
+
 			return *this;
 		}
+	};
 
-		~String()
+	class LocalString : public detail::StringImpl<AllocatorInstance>
+	{
+		typedef detail::StringImpl<AllocatorInstance> baseClass;
+
+	public:
+		LocalString(AllocatorInstance& allocator) : baseClass(allocator)
+		{}
+
+		LocalString(const LocalString& rhs) : baseClass(rhs)
+		{}
+
+		LocalString& operator = (const LocalString& rhs)
 		{
-			node_release(m_node);
+			if (this != &rhs)
+				baseClass::node_replace(this->m_node,rhs.m_node);
+
+			return *this;
 		}
-
-		int assign(const String& str)
-		{
-			*this = str;
-			return 0;
-		}
-
-		int assign(const char* sz, size_t len = npos);
-		int append(const char* sz, size_t len = npos);
-		int replace_all(char from, char to);
-		int truncate(size_t len);
-
-#if defined(__GNUC__)
-		int printf(const char* format, ...) __attribute__((format(printf,2,3)));
-#else
-		int printf(const char* format, ...);
-#endif
-
-		int concat(const char* sz1, const char* sz2)
-		{
-			int err = assign(sz1);
-			if (err == 0)
-				err = append(sz2);
-
-			return err;
-		}
-
-		int compare(const char* rhs) const
-		{
-			if (m_node == NULL)
-				return (rhs == NULL ? 0 : -1);
-			else if (rhs == NULL)
-				return 1;
-
-			return strcmp(m_node->m_data,rhs);
-		}
-
-		int compare(const String& rhs) const
-		{
-			return compare(rhs.m_node ? rhs.m_node->m_data : NULL);
-		}
-
-		template <typename T> bool operator == (T rhs) const { return (compare(rhs) == 0); }
-		template <typename T> bool operator < (T rhs) const { return (compare(rhs) < 0); }
-		template <typename T> bool operator <= (T rhs) const { return (compare(rhs) <= 0); }
-		template <typename T> bool operator > (T rhs) const { return (compare(rhs) > 0); }
-		template <typename T> bool operator >= (T rhs) const { return (compare(rhs) >= 0); }
-		template <typename T> bool operator != (T rhs) const { return (compare(rhs) != 0); }
-
-		void clear()
-		{
-			assign(NULL,0);
-		}
-
-		size_t length() const
-		{
-			return (m_node ? strlen(m_node->m_data) : 0);
-		}
-
-		bool empty() const
-		{
-			return (m_node ? m_node->m_data[0] == '\0' : true);
-		}
-
-		const char* c_str() const
-		{
-			return (m_node ? m_node->m_data : "\0");
-		}
-
-		char operator [] (size_t idx) const
-		{
-			if (idx >= length())
-				return '\0';
-
-			return m_node->m_data[idx];
-		}
-
-		bool replace_at(size_t idx, char c)
-		{
-			if (idx >= length())
-				return false;
-
-			m_node->m_data[idx] = c;
-			return true;
-		}
-
-		size_t find(char c, size_t start = 0) const;
-		size_t find(const char* sz, size_t start = 0) const;
-
-	private:
-		struct Node
-		{
-			Atomic<size_t> m_refcount;
-			char           m_data[1];
-		};
-		Node* m_node;
-
-		static void node_addref(Node* node);
-		static void node_release(Node* node);
-		int copy_on_write(size_t inc);
 	};
 }
 

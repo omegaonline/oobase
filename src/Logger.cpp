@@ -142,7 +142,8 @@ namespace
 			return;
 
 		// Create the relevant registry keys if they don't already exist
-		OOBase::LocalString strName;
+		OOBase::StackAllocator<256> allocator;
+		OOBase::LocalString strName(allocator);
 		int err = strName.assign("SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\");
 		if (err == 0)
 			err = strName.append(name);
@@ -351,13 +352,14 @@ void OOBase::Logger::log(Priority priority, const char* fmt, ...)
 	va_list args;
 	va_start(args,fmt);
 
-	LocalString msg;
-	int err = msg.vprintf(fmt,args);
+	StackAllocator<512> allocator;
+	TempPtr<char> ptr(allocator);
+	int err = OOBase::vprintf(ptr,fmt,args);
 
 	va_end(args);
 
 	if (err == 0)
-		LoggerInstance().log(priority,msg.c_str());
+		LoggerInstance().log(priority,ptr);
 }
 
 OOBase::Logger::filenum_t::filenum_t(Priority priority, const char* pszFilename, unsigned int nLine) :
@@ -372,8 +374,9 @@ void OOBase::Logger::filenum_t::log(const char* fmt, ...)
 	va_list args;
 	va_start(args,fmt);
 
-	LocalString msg;
-	int err = msg.vprintf(fmt,args);
+	StackAllocator<512> allocator;
+	TempPtr<char> msg(allocator);
+	int err = OOBase::vprintf(msg,fmt,args);
 
 	va_end(args);
 
@@ -397,8 +400,8 @@ void OOBase::Logger::filenum_t::log(const char* fmt, ...)
 			m_pszFilename += s;
 		}
 
-		LocalString header;
-		if (header.printf("%s(%u): %s",m_pszFilename,m_nLine,msg.c_str()) == 0)
-			LoggerInstance().log(m_priority,header.c_str());
+		TempPtr<char> header(allocator);
+		if (OOBase::printf(header,"%s(%u): %s",m_pszFilename,m_nLine,static_cast<const char*>(msg)) == 0)
+			LoggerInstance().log(m_priority,header);
 	}
 }

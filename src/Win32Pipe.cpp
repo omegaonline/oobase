@@ -374,7 +374,8 @@ OOBase::Socket* OOBase::Socket::attach_local(socket_t sock, int& err)
 
 OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const Timeout& timeout)
 {
-	OOBase::LocalString pipe_name;
+	OOBase::StackAllocator<256> allocator;
+	OOBase::LocalString pipe_name(allocator);
 	err = pipe_name.assign("\\\\.\\pipe\\");
 	if (err == 0)
 		err = pipe_name.append(path);

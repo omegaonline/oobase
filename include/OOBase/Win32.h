@@ -23,7 +23,7 @@
 #define OOBASE_WIN32_H_INCLUDED_
 
 #include "SmartPtr.h"
-#include "StackAllocator.h"
+#include "String.h"
 
 #if defined(_WIN32) || defined(DOXYGEN)
 
@@ -198,6 +198,16 @@ namespace OOBase
 		inline int wchar_t_to_utf8(const wchar_t* wsz, S& str, AllocatorInstance& allocator)
 		{
 			OOBase::TempPtr<char> ptrBuf(allocator);
+
+			int err = wchar_t_to_utf8(wsz,ptrBuf);
+			if (!err)
+				err = str.assign(ptrBuf);
+			return err;
+		}
+
+		inline int wchar_t_to_utf8(const wchar_t* wsz, OOBase::LocalString& str)
+		{
+			OOBase::TempPtr<char> ptrBuf(str.get_allocator());
 
 			int err = wchar_t_to_utf8(wsz,ptrBuf);
 			if (!err)

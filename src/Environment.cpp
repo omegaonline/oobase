@@ -35,16 +35,16 @@ namespace
 		int err = 0;
 		for (const wchar_t* e=env;!err && e != NULL && *e != L'\0';e += wcslen(e)+1)
 		{
-			OOBase::String str;
-			err = OOBase::Win32::wchar_t_to_utf8(e,str,tabEnv.get_allocator());
+			OOBase::LocalString str(tabEnv.get_allocator());
+			err = OOBase::Win32::wchar_t_to_utf8(e,str);
 			if (!err)
 			{
 				size_t eq = str.find('=');
-				if (eq == OOBase::String::npos)
-					err = tabEnv.insert(str,OOBase::String());
+				if (eq == OOBase::LocalString::npos)
+					err = tabEnv.insert(str,OOBase::LocalString(tabEnv.get_allocator()));
 				else
 				{
-					OOBase::String strLeft,strRight;
+					OOBase::LocalString strLeft(tabEnv.get_allocator()),strRight(tabEnv.get_allocator());
 					err = strLeft.assign(str.c_str(),eq);
 					if (!err)
 						err = strRight.assign(str.c_str()+eq+1);
@@ -152,9 +152,8 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, TempPtr<wchar_t>& 
 
 int OOBase::Environment::getenv(const char* envvar, LocalString& strValue)
 {
-	StackAllocator<512> allocator;
-	TempPtr<wchar_t> wenvvar(allocator);
-	TempPtr<wchar_t> wenv(allocator);
+	TempPtr<wchar_t> wenvvar(strValue.get_allocator());
+	TempPtr<wchar_t> wenv(strValue.get_allocator());
 
 	int err = Win32::utf8_to_wchar_t(envvar,wenvvar);
 	for (DWORD dwLen = 128;!err;)
@@ -172,7 +171,7 @@ int OOBase::Environment::getenv(const char* envvar, LocalString& strValue)
 					err = 0;
 			}
 			else if (dwActualLen > 1)
-				err = Win32::wchar_t_to_utf8(wenv,strValue,allocator);
+				err = Win32::wchar_t_to_utf8(wenv,strValue,strValue.get_allocator());
 			
 			break;
 		}
@@ -189,7 +188,7 @@ int OOBase::Environment::get_current(env_table_t& tabEnv)
 {
 	for (const char** env = (const char**)environ;*env != NULL;++env)
 	{
-		String str;
+		LocalString str(tabEnv.get_allocator());
 		int err = str.assign(*env);
 		if (err)
 			return err;
@@ -200,11 +199,11 @@ int OOBase::Environment::get_current(env_table_t& tabEnv)
 			if (tabEnv.exists(str))
 				continue;
 
-			err = tabEnv.insert(String(),str);
+			err = tabEnv.insert(LocalString(tabEnv.get_allocator()),str);
 		}
 		else
 		{
-			String strK,strV;
+			LocalString strK(tabEnv.get_allocator()),strV(tabEnv.get_allocator());
 			err = strK.assign(str.c_str(),eq);
 			if (err)
 				return err;
@@ -238,20 +237,20 @@ int OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tabS
 	// Substitute any ${VAR} in tabEnv with values from tabSrc
 	for (size_t idx = 0; idx < tabEnv.size(); ++idx)
 	{
-		String* pVal = tabEnv.at(idx);
+		LocalString* pVal = tabEnv.at(idx);
 
 		// Loop finding ${VAR}
 		for (size_t offset = 0;;)
 		{
 			size_t start = pVal->find("${",offset);
-			if (start == String::npos)
+			if (start == LocalString::npos)
 				break;
 
 			size_t end = pVal->find('}',start+2);
-			if (end == String::npos)
+			if (end == LocalString::npos)
 				break;
 
-			String strPrefix, strSuffix, strParam;
+			LocalString strPrefix(tabEnv.get_allocator()), strSuffix(tabEnv.get_allocator()), strParam(tabEnv.get_allocator());
 			int err = strPrefix.assign(pVal->c_str(),start);
 			if (!err)
 				err = strSuffix.assign(pVal->c_str()+end+1);
@@ -262,17 +261,17 @@ int OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tabS
 
 			*pVal = strPrefix;
 
-			const String* pRepl = tabSrc.find(strParam);
+			const LocalString* pRepl = tabSrc.find(strParam);
 			if (pRepl)
 			{
-				err = pVal->append(pRepl->c_str(),pRepl->length());
+				err = pVal->append(*pRepl);
 				if (err)
 					return err;
 			}
 
 			offset = pVal->length();
 
-			err = pVal->append(strSuffix.c_str(),strSuffix.length());
+			err = pVal->append(strSuffix);
 			if (err)
 				return err;
 		}
@@ -281,7 +280,7 @@ int OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tabS
 	// Now add any values in tabSrc not in tabEnv
 	for (size_t idx = 0; idx < tabSrc.size(); ++idx)
 	{
-		const String* key = tabSrc.key_at(idx);
+		const LocalString* key = tabSrc.key_at(idx);
 		if (!tabEnv.exists(*key))
 		{
 			int err = tabEnv.insert(*key,*tabSrc.at(idx));
@@ -312,8 +311,8 @@ int OOBase::Environment::get_envp(const env_table_t& tabEnv, TempPtr<char*>& ptr
 	{
 		*envp++ = char_data;
 
-		const String* key = tabEnv.key_at(idx);
-		const String* val = tabEnv.at(idx);
+		const LocalString* key = tabEnv.key_at(idx);
+		const LocalString* val = tabEnv.at(idx);
 		memcpy(char_data,key->c_str(),key->length());
 		char_data += key->length();
 		*char_data++ = '=';

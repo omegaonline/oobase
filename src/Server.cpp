@@ -184,19 +184,19 @@ int OOBase::Server::wait_for_quit()
 	return QUIT::instance().wait(false);
 }
 
-int OOBase::Server::create_pid_file(const char* pszPidFile, bool& already)
+int OOBase::Server::create_pid_file(const OOBase::LocalString& strPidFile, bool& already)
 {
 	// Create a global event named pszPidFile
 	// If it exists, then we are already running
 
-	OOBase::LocalString strPidFile;
-	int err = strPidFile.concat("Global\\",pszPidFile);
+	OOBase::LocalString strFullPidFile(strPidFile.get_allocator());
+	int err = strFullPidFile.concat("Global\\",strPidFile.c_str());
 	if (err)
 		return err;
 
-	strPidFile.replace_all('/','_');
+	strFullPidFile.replace_all('/','_');
 
-	OOBase::Win32::SmartHandle e(CreateEvent(NULL,TRUE,FALSE,strPidFile.c_str()));
+	OOBase::Win32::SmartHandle e(CreateEvent(NULL,TRUE,FALSE,strFullPidFile.c_str()));
 	if (!e.is_valid())
 	{
 		err = GetLastError();
@@ -215,9 +215,9 @@ int OOBase::Server::create_pid_file(const char* pszPidFile, bool& already)
 	return 0;
 }
 
-int OOBase::Server::daemonize(const char* pszPidFile, bool& already)
+int OOBase::Server::daemonize(const OOBase::LocalString& strPidFile, bool& already)
 {
-	int err = create_pid_file(pszPidFile,already);
+	int err = create_pid_file(strPidFile,already);
 	if (!err)
 		s_daemonized = true;
 	return err;
@@ -231,7 +231,7 @@ namespace
 	{
 		~QuitData();
 
-		void set_pid_file(const OOBase::String& strPidFile, int fd);
+		int set_pid_file(const OOBase::LocalString& strPidFile, int fd);
 
 	private:
 		OOBase::POSIX::SmartFD m_fd;
@@ -245,13 +245,13 @@ namespace
 			::unlink(m_strPidFile.c_str());
 	}
 
-	void QuitData::set_pid_file(const OOBase::String& strPidFile, int fd)
+	int QuitData::set_pid_file(const OOBase::LocalString& strPidFile, int fd)
 	{
 		m_fd = fd;
-		m_strPidFile = strPidFile;
+		return m_strPidFile.assign(strPidFile);
 	}
 
-	int concat_pidname(OOBase::String& strPidFile, const char* pszPidFile)
+	int concat_pidname(OOBase::LocalString& strPidFile, const char* pszPidFile)
 	{
 		if (!pszPidFile)
 			return EINVAL;
@@ -280,7 +280,7 @@ namespace
 		return err;
 	}
 
-	int lock_pidfile(const OOBase::String& strPidFile, int& fd, bool& already)
+	int lock_pidfile(const OOBase::LocalString& strPidFile, int& fd, bool& already)
 	{
 		fd = OOBase::POSIX::open(strPidFile.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP);
 		if (fd == -1)
@@ -303,17 +303,19 @@ namespace
 			already = false;
 
 			// Make sure the file gets unlinked at the end
-			QUIT::instance().set_pid_file(strPidFile,fd);
-
-			// Write our pid to the file
-			OOBase::LocalString str;
-			err = str.printf("%d",getpid());
+			err = QUIT::instance().set_pid_file(strPidFile,fd);
 			if (!err)
 			{
-				ftruncate(fd,0);
+				// Write our pid to the file
+				OOBase::LocalString str(strPidFile.get_allocator());
+				err = str.printf("%d",getpid());
+				if (!err)
+				{
+					ftruncate(fd,0);
 
-				if (OOBase::POSIX::write(fd,str.c_str(),str.length()) == -1)
-					err = errno;
+					if (OOBase::POSIX::write(fd,str.c_str(),str.length()) == -1)
+						err = errno;
+				}
 			}
 		}
 
@@ -356,21 +358,21 @@ void OOBase::Server::quit()
 	signal(SIGQUIT);
 }
 
-int OOBase::Server::create_pid_file(const char* pszPidFile, bool& already)
+int OOBase::Server::create_pid_file(const OOBase::LocalString& strPidFile, bool& already)
 {
-	OOBase::String strPidFile;
-	int err = concat_pidname(strPidFile,pszPidFile);
+	OOBase::LocalString strFullPidFile(strPidFile.get_allocator());
+	int err = concat_pidname(strFullPidFile,strPidFile.c_str());
 	if (err)
 		return err;
 
 	int fd;
-	return lock_pidfile(strPidFile,fd,already);
+	return lock_pidfile(strFullPidFile,fd,already);
 }
 
-int OOBase::Server::daemonize(const char* pszPidFile, bool& already)
+int OOBase::Server::daemonize(const OOBase::LocalString& strPidFile, bool& already)
 {
-	OOBase::String strPidFile;
-	int err = concat_pidname(strPidFile,pszPidFile);
+	OOBase::LocalString strFullPidFile(strPidFile.get_allocator());
+	int err = concat_pidname(strFullPidFile,strPidFile.c_str());
 	if (err)
 		return err;
 
@@ -427,7 +429,7 @@ int OOBase::Server::daemonize(const char* pszPidFile, bool& already)
 
 	// Open the pid file
 	int fd;
-	err = lock_pidfile(strPidFile,fd,already);
+	err = lock_pidfile(strFullPidFile,fd,already);
 	if (err)
 		return err;
 
