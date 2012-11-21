@@ -56,14 +56,18 @@ namespace
 
 		OOBase::ArenaAllocator m_allocator;
 
-		typedef OOBase::HashTable<const void*,tls_val,OOBase::ThreadLocalAllocator> mapVals_t;
-		mapVals_t* m_mapVals;
+		//OOBase::HashTable<const void*,tls_val,OOBase::AllocatorInstance> m_mapVals;
+		OOBase::HashTable<const void*,tls_val,OOBase::CrtAllocator> m_mapVals;
 
 		// Special internal thread-local variables
 		char m_error_buffer[512];
 
 	private:
-		TLSMap() {}
+		TLSMap() // : m_mapVals(m_allocator)
+		{
+			void* TODO; // Make an AllocatorInstance version of HashTable for use here!
+		}
+
 		~TLSMap() {}
 
 		TLSMap(const TLSMap&);
@@ -184,11 +188,6 @@ namespace
 		if (!inst && create)
 		{
 			inst = new (OOBase::critical) TLSMap();
-			inst->m_mapVals = static_cast<mapVals_t*>(inst->m_allocator.allocate(sizeof(mapVals_t),OOBase::detail::alignof<mapVals_t>::value));
-			if (!inst->m_mapVals)
-				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-
-			::new (inst->m_mapVals) mapVals_t();
 
 			int err = OOBase::DLLDestructor<OOBase::Module>::add_destructor(destroy,inst);
 			if (err != 0)
@@ -208,13 +207,12 @@ namespace
 		if (inst)
 		{
 			tls_val val = {0};
-			while (inst->m_mapVals->pop(NULL,&val))
+			while (inst->m_mapVals.pop(NULL,&val))
 			{
 				if (val.m_destructor)
 					(*val.m_destructor)(val.m_val);
 			}
 
-			delete inst->m_mapVals;
 			delete inst;
 		}
 
@@ -228,7 +226,7 @@ bool OOBase::TLS::Get(const void* key, void** val)
 	TLSMap* inst = TLSMap::instance();
 
 	TLSMap::tls_val v = {0};
-	if (!inst->m_mapVals->find(key,v))
+	if (!inst->m_mapVals.find(key,v))
 		return false;
 
 	*val = v.m_val;
@@ -243,9 +241,9 @@ int OOBase::TLS::Set(const void* key, void* val, void (*destructor)(void*))
 	v.m_val = val;
 	v.m_destructor = destructor;
 
-	TLSMap::tls_val* pv = inst->m_mapVals->find(key);
+	TLSMap::tls_val* pv = inst->m_mapVals.find(key);
 	if (!pv)
-		return inst->m_mapVals->insert(key,v);
+		return inst->m_mapVals.insert(key,v);
 
 	*pv = v;
 	return true;

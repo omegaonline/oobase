@@ -19,13 +19,16 @@
  *
  **********************************************************************************/
 
-
+#include "../include/config-base.h"
 
 #define DLMALLOC_EXPORT
 #define MSPACES 1
 #define ONLY_MSPACES 1
 #define NO_MALLINFO 1
 #define NO_MALLOC_STATS 1
+
+#define CORRUPTION_ERROR_ACTION(m)  OOBase_CallCriticalFailure("ArenaAllocator corrupted")
+#define USAGE_ERROR_ACTION(m, p)  OOBase_CallCriticalFailure("Invalid pointer passed to ArenaAllocator")
 
 #include "./dl_malloc.c"
 
