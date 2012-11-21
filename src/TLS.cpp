@@ -23,6 +23,7 @@
 #include "../include/OOBase/TLSSingleton.h"
 #include "../include/OOBase/Singleton.h"
 #include "../include/OOBase/HashTable.h"
+#include "../include/OOBase/ArenaAllocator.h"
 
 namespace OOBase
 {
@@ -53,7 +54,10 @@ namespace
 			void (*m_destructor)(void*);
 		};
 
-		OOBase::HashTable<const void*,tls_val,OOBase::ThreadLocalAllocator> m_mapVals;
+		OOBase::ArenaAllocator m_allocator;
+
+		typedef OOBase::HashTable<const void*,tls_val,OOBase::ThreadLocalAllocator> mapVals_t;
+		mapVals_t* m_mapVals;
 
 		// Special internal thread-local variables
 		char m_error_buffer[512];
@@ -180,10 +184,16 @@ namespace
 		if (!inst && create)
 		{
 			inst = new (OOBase::critical) TLSMap();
+			inst->m_mapVals = static_cast<mapVals_t*>(inst->m_allocator.allocate(sizeof(mapVals_t),OOBase::detail::alignof<mapVals_t>::value));
+			if (!inst->m_mapVals)
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+
+			::new (inst->m_mapVals) mapVals_t();
+
 			int err = OOBase::DLLDestructor<OOBase::Module>::add_destructor(destroy,inst);
 			if (err != 0)
 			{
-				delete inst;
+				destroy(inst);
 				OOBase_CallCriticalFailure(err);
 			}
 
@@ -198,12 +208,13 @@ namespace
 		if (inst)
 		{
 			tls_val val = {0};
-			while (inst->m_mapVals.pop(NULL,&val))
+			while (inst->m_mapVals->pop(NULL,&val))
 			{
 				if (val.m_destructor)
 					(*val.m_destructor)(val.m_val);
 			}
 
+			delete inst->m_mapVals;
 			delete inst;
 		}
 
@@ -217,7 +228,7 @@ bool OOBase::TLS::Get(const void* key, void** val)
 	TLSMap* inst = TLSMap::instance();
 
 	TLSMap::tls_val v = {0};
-	if (!inst->m_mapVals.find(key,v))
+	if (!inst->m_mapVals->find(key,v))
 		return false;
 
 	*val = v.m_val;
@@ -232,9 +243,9 @@ int OOBase::TLS::Set(const void* key, void* val, void (*destructor)(void*))
 	v.m_val = val;
 	v.m_destructor = destructor;
 
-	TLSMap::tls_val* pv = inst->m_mapVals.find(key);
+	TLSMap::tls_val* pv = inst->m_mapVals->find(key);
 	if (!pv)
-		return inst->m_mapVals.insert(key,v);
+		return inst->m_mapVals->insert(key,v);
 
 	*pv = v;
 	return true;
@@ -259,17 +270,15 @@ char* OOBase::detail::get_error_buffer(size_t& len)
 
 void* OOBase::ThreadLocalAllocator::allocate(size_t bytes, size_t align)
 {
-	void* TODO; // Actually do something here!
-
-	return CrtAllocator::allocate(bytes,align);
+	return TLSMap::instance()->m_allocator.allocate(bytes,align);
 }
 
 void* OOBase::ThreadLocalAllocator::reallocate(void* ptr, size_t bytes, size_t align)
 {
-	return CrtAllocator::reallocate(ptr,bytes,align);
+	return TLSMap::instance()->m_allocator.reallocate(ptr,bytes,align);
 }
 
 void OOBase::ThreadLocalAllocator::free(void* ptr)
 {
-	CrtAllocator::free(ptr);
+	TLSMap::instance()->m_allocator.free(ptr);
 }
