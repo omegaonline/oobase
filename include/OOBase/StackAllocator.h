@@ -19,8 +19,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#ifndef OOBASE_BASIC_ALLOCATOR_H_INCLUDED_
-#define OOBASE_BASIC_ALLOCATOR_H_INCLUDED_
+#ifndef OOBASE_STACK_ALLOCATOR_H_INCLUDED_
+#define OOBASE_STACK_ALLOCATOR_H_INCLUDED_
 
 #include "Memory.h"
 
@@ -360,4 +360,4 @@ namespace OOBase
 	};
 }
 
-#endif // OOBASE_BASIC_ALLOCATOR_H_INCLUDED_
+#endif // OOBASE_STACK_ALLOCATOR_H_INCLUDED_
