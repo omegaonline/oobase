@@ -159,6 +159,7 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ArenaAllocator.cpp" />
     <ClCompile Include="Buffer.cpp" />
     <ClCompile Include="CmdArgs.cpp" />
     <ClCompile Include="Condition.cpp" />
@@ -188,6 +189,7 @@
     <ClCompile Include="Win32Socket.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\OOBase\ArenaAllocator.h" />
     <ClInclude Include="..\include\OOBase\Atomic.h" />
     <ClInclude Include="..\include\OOBase\Bag.h" />
     <ClInclude Include="..\include\OOBase\BoundedQueue.h" />

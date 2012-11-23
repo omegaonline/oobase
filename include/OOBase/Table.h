@@ -30,12 +30,19 @@ namespace OOBase
 	{
 		namespace Table
 		{
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 4610 4510)
+#endif
 			template <typename K, typename V>
 			struct PODCheck
 			{
 				K k;
 				V v;
 			};
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 		}
 
 		template <typename K, typename V, bool POD = false>

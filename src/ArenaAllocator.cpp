@@ -30,7 +30,22 @@
 #define CORRUPTION_ERROR_ACTION(m)  OOBase_CallCriticalFailure("ArenaAllocator corrupted")
 #define USAGE_ERROR_ACTION(m, p)  OOBase_CallCriticalFailure("Invalid pointer passed to ArenaAllocator")
 
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 4127 4702)
+
+#if (_MSC_VER >= 1600) && defined(CODE_ANALYSIS)
+#include <codeanalysis\warnings.h>
+#pragma warning ( disable : ALL_CODE_ANALYSIS_WARNINGS )
+#endif
+
+#endif
+
 #include "./dl_malloc.c"
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 #include "../include/OOBase/ArenaAllocator.h"
 
