@@ -460,7 +460,7 @@ namespace OOBase
 				if (!len)
 					return 0;
 
-				size_t pos = find(sz[0]);
+				size_t pos = find(sz[0],start);
 				while (pos != npos)
 				{
 					if (this->m_node->m_length - pos < len)
