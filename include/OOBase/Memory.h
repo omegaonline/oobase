@@ -54,18 +54,18 @@ namespace OOBase
 	struct critical_t { int unused; };
 	extern const critical_t critical;
 
+	template <typename T>
+	struct alignof
+	{
+#if defined(HAVE__ALIGNOF)
+		static const size_t value = ALIGNOF(T);
+#else
+		static const size_t value = sizeof(T) > 16 ? 16 : sizeof(T);
+#endif
+	};
+
 	namespace detail
 	{
-		template <typename T>
-		struct alignof
-		{
-#if defined(HAVE__ALIGNOF)
-			static const size_t value = ALIGNOF(T);
-#else
-			static const size_t value = sizeof(T) > 16 ? 16 : sizeof(T);
-#endif
-		};
-
 		template <typename T>
 		struct is_pod
 		{

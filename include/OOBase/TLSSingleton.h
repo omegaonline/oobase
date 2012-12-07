@@ -71,11 +71,11 @@ namespace OOBase
 		{
 			AllocatorInstance* alloc = TLS::detail::swap_allocator();
 
-			Instance* i = static_cast<Instance*>(alloc->allocate(sizeof(Instance),detail::alignof<Instance>::value));
+			Instance* i = static_cast<Instance*>(alloc->allocate(sizeof(Instance),alignof<Instance>::value));
 			if (!i)
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
-			void* p = alloc->allocate(sizeof(T),detail::alignof<T>::value);
+			void* p = alloc->allocate(sizeof(T),alignof<T>::value);
 			if (!p)
 			{
 				alloc->free(i);

@@ -30,7 +30,7 @@ namespace OOBase
 	class StackAllocator : public AllocatorInstance
 	{
 	public:
-		StackAllocator() : m_free(align_up(m_start,detail::alignof<index_t>::value))
+		StackAllocator() : m_free(align_up(m_start,alignof<index_t>::value))
 		{
 			static_assert(sizeof(m_start) < s_hibit_mask,"SIZE too big");
 
@@ -58,7 +58,7 @@ namespace OOBase
 				if (alloc_start != free_start && static_cast<size_t>(alloc_start - free_start) < sizeof(free_block_t))
 					alloc_start = align_up(free_start + sizeof(free_block_t) + sizeof(index_t),correct_align(align)) - sizeof(index_t);
 
-				alloc_end = align_up(alloc_start + min_alloc(bytes),detail::alignof<index_t>::value);
+				alloc_end = align_up(alloc_start + min_alloc(bytes),alignof<index_t>::value);
 
 				free_end = free_start + get_size(free_start);
 				if (alloc_end <= free_end)
@@ -100,10 +100,10 @@ namespace OOBase
 			char* adjacent = get_adjacent(tag);
 			if (adjacent && is_free(adjacent))
 			{
-				char* alloc_end = align_up(tag + min_alloc(bytes),detail::alignof<index_t>::value);
+				char* alloc_end = align_up(tag + min_alloc(bytes),alignof<index_t>::value);
 
 				if (static_cast<size_t>(alloc_end - adjacent) < sizeof(free_block_t))
-					alloc_end = align_up(alloc_end + (sizeof(free_block_t) - static_cast<size_t>(alloc_end - adjacent)),detail::alignof<index_t>::value);
+					alloc_end = align_up(alloc_end + (sizeof(free_block_t) - static_cast<size_t>(alloc_end - adjacent)),alignof<index_t>::value);
 
 				char* free_end = adjacent + get_size(adjacent);
 
@@ -161,7 +161,7 @@ namespace OOBase
 
 		static size_t correct_align(size_t align)
 		{
-			return (align < detail::alignof<index_t>::value ? detail::alignof<index_t>::value : align);
+			return (align < alignof<index_t>::value ? alignof<index_t>::value : align);
 		}
 
 		static size_t min_alloc(size_t bytes)
@@ -213,7 +213,7 @@ namespace OOBase
 		static char* get_tag(void* ptr)
 		{
 			// Check alignment...
-			if (reinterpret_cast<ptrdiff_t>(ptr) & (detail::alignof<index_t>::value - 1))
+			if (reinterpret_cast<ptrdiff_t>(ptr) & (alignof<index_t>::value - 1))
 				OOBase_CallCriticalFailure("Invalid pointer to reallocate");
 
 			// Check the tag block

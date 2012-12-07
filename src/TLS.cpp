@@ -195,7 +195,7 @@ namespace
 		{
 			OOBase::AllocatorInstance* alloc = new (OOBase::critical) OOBase::ArenaAllocator();
 
-			void* p = alloc->allocate(sizeof(TLSMap),OOBase::detail::alignof<TLSMap>::value);
+			void* p = alloc->allocate(sizeof(TLSMap),OOBase::alignof<TLSMap>::value);
 			if (!p)
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
