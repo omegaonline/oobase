@@ -32,6 +32,11 @@ namespace OOBase
 		int Set(const void* key, void* val, void (*destructor)(void*) = NULL);
 		
 		void ThreadExit();
+
+		namespace detail
+		{
+			AllocatorInstance* swap_allocator(AllocatorInstance* pNew = NULL);
+		}
 	}
 
 	template <typename T, typename DLL>
@@ -44,7 +49,7 @@ namespace OOBase
 			if (!TLS::Get(&s_sentinal,&inst))
 				inst = init();
 
-			return static_cast<T*>(inst);
+			return static_cast<Instance*>(inst)->m_this;
 		}
 
 	private:
@@ -56,27 +61,75 @@ namespace OOBase
 
 		static size_t s_sentinal;
 
+		struct Instance
+		{
+			T*                 m_this;
+			AllocatorInstance* m_allocator;
+		};
+
 		static void* init()
 		{
-			void* p = OOBase::ThreadLocalAllocator::allocate(sizeof(T));
-			if (!p)
+			AllocatorInstance* alloc = TLS::detail::swap_allocator();
+
+			Instance* i = static_cast<Instance*>(alloc->allocate(sizeof(Instance),detail::alignof<Instance>::value));
+			if (!i)
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
-			T* pThis = ::new (p) T();
+			void* p = alloc->allocate(sizeof(T),detail::alignof<T>::value);
+			if (!p)
+			{
+				alloc->free(i);
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+			}
+
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+			try
+			{
+#endif
+				i->m_this = ::new (p) T();
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+			}
+			catch (...)
+			{
+				alloc->free(p);
+				alloc->free(i);
+				throw;
+			}
+#endif
+			i->m_allocator = alloc;
 									
-			int err = TLS::Set(&s_sentinal,pThis,&destroy);
+			int err = TLS::Set(&s_sentinal,i,&destroy);
 			if (err != 0)
 				OOBase_CallCriticalFailure(err);
 
-			return pThis;
+			return i;
 		}
 
 		static void destroy(void* p)
 		{
-			if (p)
+			Instance* i = static_cast<Instance*>(p);
+			if (i)
 			{
-				static_cast<T*>(p)->~T();
-				OOBase::ThreadLocalAllocator::free(p);
+				AllocatorInstance* curr = i->m_allocator;
+				AllocatorInstance* prev = TLS::detail::swap_allocator(curr);
+
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				try
+				{
+#endif
+					i->m_this->~T();
+					curr->free(i->m_this);
+					curr->free(i);
+
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				}
+				catch (...)
+				{
+					TLS::detail::swap_allocator(prev);
+					throw;
+				}
+#endif
+				TLS::detail::swap_allocator(prev);
 			}
 		}
 	};

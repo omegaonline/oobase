@@ -167,6 +167,8 @@ namespace
 		}
 		return err;
 	}
+
+	char s_err_buf[512];
 }
 
 const char* OOBase::system_error_text(int err)
@@ -185,6 +187,11 @@ const char* OOBase::system_error_text(int err)
 
 	size_t err_len = 0;
 	char* err_buf = OOBase::detail::get_error_buffer(err_len);
+	if (!err_buf)
+	{
+		err_buf = s_err_buf;
+		err_len = sizeof(s_err_buf);
+	}
 
 	int offset = snprintf_s(err_buf,err_len,"(%d) ",err);
 	if (offset == -1)

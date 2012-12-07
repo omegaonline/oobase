@@ -44,6 +44,11 @@ namespace
 	class TLSMap
 	{
 	public:
+		TLSMap(OOBase::AllocatorInstance* allocator) : m_allocator(allocator) //, m_mapVals(*allocator)
+		{
+			void* TODO; // Make an AllocatorInstance version of HashTable for use here!
+		}
+
 		static TLSMap* instance(bool create = true);
 
 		static void destroy(void* pThis);
@@ -54,7 +59,7 @@ namespace
 			void (*m_destructor)(void*);
 		};
 
-		OOBase::ArenaAllocator m_allocator;
+		OOBase::AllocatorInstance* m_allocator;
 
 		//OOBase::HashTable<const void*,tls_val,OOBase::AllocatorInstance> m_mapVals;
 		OOBase::HashTable<const void*,tls_val,OOBase::CrtAllocator> m_mapVals;
@@ -63,13 +68,6 @@ namespace
 		char m_error_buffer[512];
 
 	private:
-		TLSMap() // : m_mapVals(m_allocator)
-		{
-			void* TODO; // Make an AllocatorInstance version of HashTable for use here!
-		}
-
-		~TLSMap() {}
-
 		TLSMap(const TLSMap&);
 		TLSMap& operator = (const TLSMap&);
 	};
@@ -145,11 +143,13 @@ namespace
 
 	private:
 		pthread_key_t m_key;
+
+		static void thread_destruct(void*);
 	};
 
 	PthreadTLSGlobal::PthreadTLSGlobal()
 	{
-		int err = pthread_key_create(&m_key,NULL);
+		int err = pthread_key_create(&m_key,&thread_destruct);
 		if (err != 0)
 			OOBase_CallCriticalFailure(err);
 	}
@@ -173,6 +173,12 @@ namespace
 			OOBase_CallCriticalFailure(err);
 	}
 
+	void PthreadTLSGlobal::thread_destruct(void* inst)
+	{
+		OOBase::DLLDestructor<OOBase::Module>::remove_destructor(TLSMap::destroy,inst);
+		TLSMap::destroy(inst);
+	}
+
 	typedef OOBase::Singleton<PthreadTLSGlobal,OOBase::Module> TLS_GLOBAL;
 }
 
@@ -187,7 +193,30 @@ namespace
 		TLSMap* inst = TLS_GLOBAL::instance().Get();
 		if (!inst && create)
 		{
-			inst = new (OOBase::critical) TLSMap();
+			OOBase::AllocatorInstance* alloc = new (OOBase::critical) OOBase::ArenaAllocator();
+
+			void* p = alloc->allocate(sizeof(TLSMap),OOBase::detail::alignof<TLSMap>::value);
+			if (!p)
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+			try
+			{
+#endif
+				inst = ::new (p) TLSMap(alloc);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+			}
+			catch (...)
+			{
+				alloc->free(p);
+				throw;
+			}
+#endif
+			if (!inst)
+			{
+				delete alloc;
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+			}
 
 			int err = OOBase::DLLDestructor<OOBase::Module>::add_destructor(destroy,inst);
 			if (err != 0)
@@ -213,7 +242,12 @@ namespace
 					(*val.m_destructor)(val.m_val);
 			}
 
-			delete inst;
+			OOBase::AllocatorInstance* alloc = inst->m_allocator;
+
+			inst->~TLSMap();
+			alloc->free(inst);
+
+			delete alloc;
 		}
 
 		// Now set NULL back in place...
@@ -259,24 +293,38 @@ void OOBase::TLS::ThreadExit()
 	}
 }
 
-char* OOBase::detail::get_error_buffer(size_t& len)
+OOBase::AllocatorInstance* OOBase::TLS::detail::swap_allocator(AllocatorInstance* pNew)
 {
 	TLSMap* inst = TLSMap::instance();
+
+	AllocatorInstance* curr = inst->m_allocator;
+	if (pNew)
+		inst->m_allocator = pNew;
+
+	return curr;
+}
+
+char* OOBase::detail::get_error_buffer(size_t& len)
+{
+	TLSMap* inst = TLSMap::instance(false);
+	if (!inst)
+		return NULL;
+
 	len = sizeof(inst->m_error_buffer);
 	return inst->m_error_buffer;
 }
 
 void* OOBase::ThreadLocalAllocator::allocate(size_t bytes, size_t align)
 {
-	return TLSMap::instance()->m_allocator.allocate(bytes,align);
+	return TLS::detail::swap_allocator()->allocate(bytes,align);
 }
 
 void* OOBase::ThreadLocalAllocator::reallocate(void* ptr, size_t bytes, size_t align)
 {
-	return TLSMap::instance()->m_allocator.reallocate(ptr,bytes,align);
+	return TLS::detail::swap_allocator()->reallocate(ptr,bytes,align);
 }
 
 void OOBase::ThreadLocalAllocator::free(void* ptr)
 {
-	TLSMap::instance()->m_allocator.free(ptr);
+	TLS::detail::swap_allocator()->free(ptr);
 }

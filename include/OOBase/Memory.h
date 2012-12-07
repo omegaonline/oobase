@@ -134,7 +134,6 @@ namespace OOBase
 		virtual void* allocate(size_t bytes, size_t align) = 0;
 		virtual void* reallocate(void* ptr, size_t bytes, size_t align) = 0;
 		virtual void free(void* ptr) = 0;
-
 	};
 
 	namespace detail
