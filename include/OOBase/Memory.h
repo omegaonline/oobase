@@ -138,17 +138,14 @@ namespace OOBase
 
 	namespace detail
 	{
-		template <typename BaseClass, typename Allocator = CrtAllocator>
-		class AllocImpl : public BaseClass
+		template <typename Allocator = CrtAllocator>
+		class AllocImpl
 		{
 		public:
-			AllocImpl() : BaseClass()
+			AllocImpl()
 			{}
 
-			virtual ~AllocImpl()
-			{}
-
-		private:
+		protected:
 			void* allocate_i(size_t bytes, size_t align)
 			{
 				return Allocator::allocate(bytes,align);
@@ -165,14 +162,11 @@ namespace OOBase
 			}
 		};
 
-		template <typename BaseClass>
-		class AllocImpl<BaseClass,AllocatorInstance> : public BaseClass
+		template <>
+		class AllocImpl<AllocatorInstance>
 		{
 		public:
-			AllocImpl(AllocatorInstance& allocator) : BaseClass(), m_allocator(allocator)
-			{}
-
-			virtual ~AllocImpl()
+			AllocImpl(AllocatorInstance& allocator) : m_allocator(allocator)
 			{}
 
 			AllocatorInstance& get_allocator() const
@@ -180,9 +174,7 @@ namespace OOBase
 				return m_allocator;
 			}
 
-		private:
-			AllocatorInstance& m_allocator;
-
+		protected:
 			void* allocate_i(size_t bytes, size_t align)
 			{
 				return m_allocator.allocate(bytes,align);
@@ -197,6 +189,9 @@ namespace OOBase
 			{
 				m_allocator.free(ptr);
 			}
+
+		private:
+			AllocatorInstance& m_allocator;
 		};
 	}
 

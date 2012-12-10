@@ -44,10 +44,8 @@ namespace
 	class TLSMap
 	{
 	public:
-		TLSMap(OOBase::AllocatorInstance* allocator) : m_allocator(allocator) //, m_mapVals(*allocator)
-		{
-			void* TODO; // Make an AllocatorInstance version of HashTable for use here!
-		}
+		TLSMap(OOBase::AllocatorInstance* allocator) : m_allocator(allocator), m_mapVals(*allocator)
+		{}
 
 		static TLSMap* instance(bool create = true);
 
@@ -60,9 +58,7 @@ namespace
 		};
 
 		OOBase::AllocatorInstance* m_allocator;
-
-		//OOBase::HashTable<const void*,tls_val,OOBase::AllocatorInstance> m_mapVals;
-		OOBase::HashTable<const void*,tls_val,OOBase::CrtAllocator> m_mapVals;
+		OOBase::HashTable<const void*,tls_val,OOBase::AllocatorInstance> m_mapVals;
 
 		// Special internal thread-local variables
 		char m_error_buffer[512];
