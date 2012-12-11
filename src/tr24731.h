@@ -42,19 +42,18 @@
 
 // These are missing from the earlier draft...
 #if defined(HAVE_TR_24731) && (!defined(__STDC_LIB_EXT1__) || (__STDC_LIB_EXT1__ < 200509L))
-#if defined(_MSC_VER)
+
+#if !defined(_MSC_VER)
+#define rsize_t size_t
+#endif
 
 namespace OOBase
 {
 	int vsnprintf_s_fixed(char* s, rsize_t n, const char* format, va_list arg);
 	int snprintf_s_fixed(char* s, size_t n, const char* format, ...);
 }
-
 #define vsnprintf_s OOBase::vsnprintf_s_fixed
 #define snprintf_s OOBase::snprintf_s_fixed
-#else
-#error Fix for the early safe libc draft
-#endif
 #endif
 
 #if !defined(HAVE_TR_24731)
