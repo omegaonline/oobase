@@ -53,7 +53,7 @@ namespace OOBase
 			
 			static void destroy(void* ptr)
 			{
-				::LocalFree(ptr);
+				::LocalFree((HLOCAL)ptr);
 			}
 		};
 
