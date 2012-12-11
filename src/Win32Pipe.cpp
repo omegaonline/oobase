@@ -382,10 +382,15 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const 
 	if (err != 0)
 		return NULL;
 
+	OOBase::TempPtr<wchar_t> wname(allocator);
+	err = OOBase::Win32::utf8_to_wchar_t(pipe_name.c_str(),wname);
+	if (err)
+		return NULL;
+
 	Win32::SmartHandle hPipe;
 	for (;;)
 	{
-		hPipe = CreateFileA(pipe_name.c_str(),
+		hPipe = CreateFileW(wname,
 							PIPE_ACCESS_DUPLEX,
 							0,
 							NULL,
@@ -411,7 +416,7 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const 
 				dwWait = 1;
 		}
 
-		if (!WaitNamedPipeA(pipe_name.c_str(),dwWait))
+		if (!WaitNamedPipeW(wname,dwWait))
 		{
 			err = GetLastError();
 			if (err == ERROR_SEM_TIMEOUT)

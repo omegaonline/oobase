@@ -29,15 +29,6 @@
 
 namespace
 {
-	int MakePipeName(OOBase::String& str, const char* name)
-	{
-		int err = str.assign("\\\\.\\pipe\\");
-		if (err == 0)
-			err = str.append(name);
-		
-		return err;
-	}
-
 	class AsyncPipe : public OOSvrBase::AsyncLocalSocket
 	{
 	public:
@@ -417,7 +408,12 @@ int InternalAcceptor::stop()
 
 int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, bool bFirst)
 {
-	DWORD dwErr = 0;
+	OOBase::StackAllocator<256> allocator;
+	OOBase::TempPtr<wchar_t> wname(allocator);
+	DWORD dwErr = OOBase::Win32::utf8_to_wchar_t(m_pipe_name.c_str(),wname);
+	if (dwErr)
+		return dwErr;
+
 	OOSvrBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 	
 	while (m_stkPending.size() < m_backlog)
@@ -429,7 +425,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 			bFirst = false;
 		}
 
-		OOBase::Win32::SmartHandle hPipe(CreateNamedPipeA(m_pipe_name.c_str(),dwFlags,
+		OOBase::Win32::SmartHandle hPipe(CreateNamedPipeW(wname,dwFlags,
 												PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
 												PIPE_UNLIMITED_INSTANCES,
 												0,0,0,m_psa));
@@ -598,7 +594,10 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorWin32::accept_local(void* param,
 	else
 	{
 		OOBase::String strPipe;
-		err = MakePipeName(strPipe,path);
+		err = strPipe.assign("\\\\.\\pipe\\");
+		if (err == 0)
+			err = strPipe.append(path);
+
 		if (err == 0)
 			err = pAcceptor->bind(this,strPipe,psa,param,callback);
 
@@ -630,15 +629,23 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorWin32::attach_local_sock
 
 OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorWin32::connect_local_socket(const char* path, int& err, const OOBase::Timeout& timeout)
 {
-	OOBase::String pipe_name;
-	err = MakePipeName(pipe_name,path);
+	OOBase::StackAllocator<256> allocator;
+	OOBase::LocalString strPipe(allocator);
+	err = strPipe.assign("\\\\.\\pipe\\");
+	if (err == 0)
+		err = strPipe.append(path);
 	if (err != 0)
 		return NULL;
 	
+	OOBase::TempPtr<wchar_t> wname(allocator);
+	err = OOBase::Win32::utf8_to_wchar_t(strPipe.c_str(),wname);
+	if (err)
+		return NULL;
+
 	OOBase::Win32::SmartHandle hPipe;
 	for (;;)
 	{
-		hPipe = ::CreateFileA(pipe_name.c_str(),
+		hPipe = ::CreateFileW(wname,
 							PIPE_ACCESS_DUPLEX,
 							0,
 							NULL,
@@ -663,7 +670,7 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorWin32::connect_local_soc
 				dwWait = 1;
 		}
 
-		if (!::WaitNamedPipeA(pipe_name.c_str(),dwWait))
+		if (!::WaitNamedPipeW(wname,dwWait))
 		{
 			err = GetLastError();
 			return NULL;
