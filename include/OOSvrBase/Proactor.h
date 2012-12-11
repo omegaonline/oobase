@@ -176,6 +176,10 @@ namespace OOSvrBase
 		typedef void (*accept_local_callback_t)(void* param, AsyncLocalSocket* pSocket, int err);
 		virtual Acceptor* accept_local(void* param, accept_local_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa = NULL) = 0;
 
+#if defined(_WIN32)
+		virtual AsyncLocalSocket* accept_local_socket(HANDLE hPipe, int& err, const OOBase::Timeout& timeout = OOBase::Timeout()) = 0;
+#endif
+
 		typedef void (*accept_remote_callback_t)(void* param, AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err);
 		virtual Acceptor* accept_remote(void* param, accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err) = 0;
 

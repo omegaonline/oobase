@@ -435,4 +435,75 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const 
 	return pPipe;
 }
 
+OOBase::Socket* OOBase::Socket::accept_local_socket(HANDLE hPipe, int& err, const Timeout& timeout)
+{
+	OVERLAPPED ov = {0};
+	ov.hEvent = CreateEventW(NULL,TRUE,TRUE,NULL);
+	if (!ov.hEvent)
+	{
+		err = GetLastError();
+		return NULL;
+	}
+
+	// Control handle lifetime
+	OOBase::Win32::SmartHandle ev(ov.hEvent);
+
+	DWORD dwErr = 0;
+	if (ConnectNamedPipe(hPipe,&ov))
+		dwErr = ERROR_PIPE_CONNECTED;
+	else
+	{
+		dwErr = GetLastError();
+		if (dwErr == ERROR_IO_PENDING)
+			dwErr = 0;
+	}
+
+	if (dwErr == ERROR_PIPE_CONNECTED)
+	{
+		dwErr = 0;
+		if (!SetEvent(ov.hEvent))
+		{
+			err = GetLastError();
+			return NULL;
+		}
+	}
+
+	if (dwErr != 0)
+	{
+		err = dwErr;
+		return NULL;
+	}
+
+	if (!timeout.is_infinite())
+	{
+		DWORD dwRes = WaitForSingleObject(ov.hEvent,timeout.millisecs());
+		if (dwRes == WAIT_TIMEOUT)
+		{
+			err = ERROR_TIMEOUT;
+			return NULL;
+		}
+		else if (dwRes != WAIT_OBJECT_0)
+		{
+			err = GetLastError();
+			return NULL;
+		}
+	}
+
+	if (dwErr == 0)
+	{
+		DWORD dw = 0;
+		if (!GetOverlappedResult(hPipe,&ov,&dw,TRUE))
+		{
+			err = GetLastError();
+			return NULL;
+		}
+	}
+
+	OOBase::Socket* pPipe = new (std::nothrow) Pipe(hPipe);
+	if (!pPipe)
+		err = ERROR_OUTOFMEMORY;
+
+	return pPipe;
+}
+
 #endif // _WIN32

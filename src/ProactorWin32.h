@@ -45,6 +45,8 @@ namespace OOSvrBase
 			OOSvrBase::AsyncSocket* attach_socket(OOBase::socket_t sock, int& err);
 			OOSvrBase::AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int& err);
 
+			OOSvrBase::AsyncLocalSocket* accept_local_socket(HANDLE hPipe, int& err, const OOBase::Timeout& timeout);
+
 			OOSvrBase::AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::Timeout& timeout);
 			OOSvrBase::AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::Timeout& timeout);
 		
