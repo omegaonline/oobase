@@ -2,20 +2,20 @@
 //
 // Copyright (C) 2012 Rick Taylor
 //
-// This file is part of OOSvrBase, the Omega Online Base library.
+// This file is part of OOBase, the Omega Online Base library.
 //
-// OOSvrBase is free software: you can redistribute it and/or modify
+// OOBase is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// OOSvrBase is distributed in the hope that it will be useful,
+// OOBase is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with OOSvrBase.  If not, see <http://www.gnu.org/licenses/>.
+// along with OOBase.  If not, see <http://www.gnu.org/licenses/>.
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
@@ -34,7 +34,7 @@
 #define POLLRDHUP 0
 #endif
 
-OOSvrBase::Proactor* OOSvrBase::Proactor::create(int& err)
+OOBase::Proactor* OOBase::Proactor::create(int& err)
 {
 	detail::ProactorPoll* proactor = new (std::nothrow) detail::ProactorPoll();
 	if (!proactor)
@@ -51,7 +51,7 @@ OOSvrBase::Proactor* OOSvrBase::Proactor::create(int& err)
 	return proactor;
 }
 
-void OOSvrBase::Proactor::destroy(Proactor* proactor)
+void OOBase::Proactor::destroy(Proactor* proactor)
 {
 	if (proactor)
 	{
@@ -60,15 +60,15 @@ void OOSvrBase::Proactor::destroy(Proactor* proactor)
 	}
 }
 
-OOSvrBase::detail::ProactorPoll::ProactorPoll() : ProactorPosix()
+OOBase::detail::ProactorPoll::ProactorPoll() : ProactorPosix()
 {
 }
 
-OOSvrBase::detail::ProactorPoll::~ProactorPoll()
+OOBase::detail::ProactorPoll::~ProactorPoll()
 {
 }
 
-int OOSvrBase::detail::ProactorPoll::init()
+int OOBase::detail::ProactorPoll::init()
 {
 	int err = ProactorPosix::init();
 	if (err)
@@ -79,13 +79,13 @@ int OOSvrBase::detail::ProactorPoll::init()
 	return m_poll_fds.add(pfd);
 }
 
-int OOSvrBase::detail::ProactorPoll::do_bind_fd(int fd, void* param, fd_callback_t callback)
+int OOBase::detail::ProactorPoll::do_bind_fd(int fd, void* param, fd_callback_t callback)
 {
 	FdItem item = { param, callback, size_t(-1) };
 	return m_items.insert(fd,item);
 }
 
-int OOSvrBase::detail::ProactorPoll::do_unbind_fd(int fd)
+int OOBase::detail::ProactorPoll::do_unbind_fd(int fd)
 {
 	FdItem item;
 	if (!m_items.remove(fd,&item))
@@ -107,7 +107,7 @@ int OOSvrBase::detail::ProactorPoll::do_unbind_fd(int fd)
 	return 0;
 }
 
-int OOSvrBase::detail::ProactorPoll::do_watch_fd(int fd, unsigned int events)
+int OOBase::detail::ProactorPoll::do_watch_fd(int fd, unsigned int events)
 {
 	FdItem* item = m_items.find(fd);
 	if (item)
@@ -139,7 +139,7 @@ int OOSvrBase::detail::ProactorPoll::do_watch_fd(int fd, unsigned int events)
 	return 0;
 }
 
-bool OOSvrBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count)
+bool OOBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count)
 {
 	// Check each pollfd in m_poll_fds
 	for (size_t pos = 0; poll_count > 0 && pos < m_poll_fds.size(); ++pos)
@@ -224,12 +224,12 @@ bool OOSvrBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_co
     return false;
 }
 
-int OOSvrBase::detail::ProactorPoll::run(int& err, const OOBase::Timeout& timeout)
+int OOBase::detail::ProactorPoll::run(int& err, const Timeout& timeout)
 {
 	// Reset stopped
 	m_stopped = false;
 
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+	Guard<SpinLock> guard(m_lock);
 
 	while (!m_stopped && !timeout.has_expired())
 	{
@@ -238,7 +238,7 @@ int OOSvrBase::detail::ProactorPoll::run(int& err, const OOBase::Timeout& timeou
 		bool fd_event = false;
 
 		// Check timers and update timeout
-		OOBase::Timeout local_timeout(timeout);
+		Timeout local_timeout(timeout);
 		bool timer_event = check_timers(active_timer,local_timeout);
 		if (!timer_event)
 		{

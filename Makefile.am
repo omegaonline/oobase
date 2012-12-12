@@ -45,7 +45,7 @@ dist-hook:
 
 ######################################
 
-noinst_LTLIBRARIES = liboobase.la liboosvrbase.la
+noinst_LTLIBRARIES = liboobase.la
 
 AM_CFLAGS = $(PTHREAD_CFLAGS)
 AM_CXXFLAGS = $(PTHREAD_CFLAGS)
@@ -90,6 +90,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/Mutex.h \
 	include/OOBase/Once.h \
 	include/OOBase/Posix.h \
+	include/OOBase/Proactor.h \
 	include/OOBase/Queue.h \
 	include/OOBase/RefCount.h \
 	include/OOBase/Singleton.h \
@@ -136,10 +137,7 @@ liboobase_la_SOURCES = \
 	src/utf8.cpp \
 	src/Win32.cpp \
 	src/Win32Pipe.cpp \
-	src/Win32Socket.cpp	
-	
-liboosvrbase_la_SOURCES = \
-	include/OOSvrBase/Proactor.h \
+	src/Win32Socket.cpp	\
 	src/ProactorPoll.h \
 	src/ProactorPosix.h \
 	src/ProactorWin32.h \

@@ -2,20 +2,20 @@
 //
 // Copyright (C) 2012 Rick Taylor
 //
-// This file is part of OOSvrBase, the Omega Online Base library.
+// This file is part of OOBase, the Omega Online Base library.
 //
-// OOSvrBase is free software: you can redistribute it and/or modify
+// OOBase is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// OOSvrBase is distributed in the hope that it will be useful,
+// OOBase is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with OOSvrBase.  If not, see <http://www.gnu.org/licenses/>.
+// along with OOBase.  If not, see <http://www.gnu.org/licenses/>.
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
@@ -30,7 +30,7 @@
 
 #include <poll.h>
 
-namespace OOSvrBase
+namespace OOBase
 {
 	namespace detail
 	{
@@ -42,7 +42,7 @@ namespace OOSvrBase
 
 			int init();
 
-			int run(int& err, const OOBase::Timeout& timeout = OOBase::Timeout());
+			int run(int& err, const Timeout& timeout = Timeout());
 
 		private:
 			struct FdItem
@@ -59,7 +59,7 @@ namespace OOSvrBase
 				unsigned int m_events;
 			};
 
-			OOBase::Bag<pollfd>           m_poll_fds;
+			Bag<pollfd>                   m_poll_fds;
 			OOBase::HashTable<int,FdItem> m_items;
 
 			int do_bind_fd(int fd, void* param, fd_callback_t callback);

@@ -2,20 +2,20 @@
 //
 // Copyright (C) 2011 Rick Taylor
 //
-// This file is part of OOSvrBase, the Omega Online Base library.
+// This file is part of OOBase, the Omega Online Base library.
 //
-// OOSvrBase is free software: you can redistribute it and/or modify
+// OOBase is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// OOSvrBase is distributed in the hope that it will be useful,
+// OOBase is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with OOSvrBase.  If not, see <http://www.gnu.org/licenses/>.
+// along with OOBase.  If not, see <http://www.gnu.org/licenses/>.
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
@@ -29,10 +29,10 @@
 
 namespace
 {
-	class AsyncPipe : public OOSvrBase::AsyncLocalSocket
+	class AsyncPipe : public OOBase::AsyncLocalSocket
 	{
 	public:
-		AsyncPipe(OOSvrBase::detail::ProactorWin32* pProactor, HANDLE hPipe);
+		AsyncPipe(OOBase::detail::ProactorWin32* pProactor, HANDLE hPipe);
 		
 		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes);
 		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
@@ -43,18 +43,18 @@ namespace
 	private:
 		virtual ~AsyncPipe();
 
-		OOSvrBase::detail::ProactorWin32* m_pProactor;
-		OOBase::Win32::SmartHandle        m_hPipe;
+		OOBase::detail::ProactorWin32* m_pProactor;
+		OOBase::Win32::SmartHandle     m_hPipe;
 					
-		static void on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv);
-		static void on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv);
+		static void on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
+		static void on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
 		
 		static void translate_error(int& dwErr);
 		static void translate_error(DWORD& dwErr);
 	};
 }
 
-AsyncPipe::AsyncPipe(OOSvrBase::detail::ProactorWin32* pProactor, HANDLE hPipe) :
+AsyncPipe::AsyncPipe(OOBase::detail::ProactorWin32* pProactor, HANDLE hPipe) :
 		m_pProactor(pProactor),
 		m_hPipe(hPipe)
 { }
@@ -93,7 +93,7 @@ void AsyncPipe::translate_error(DWORD& dwErr)
 	}
 }
 
-int AsyncPipe::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
+int AsyncPipe::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
 {
 	// Must have a callback function
 	assert(callback);
@@ -103,7 +103,7 @@ int AsyncPipe::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callbac
 	if (err != 0)
 		return err;
 		
-	OOSvrBase::detail::ProactorWin32::Overlapped* pOv = NULL;
+	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 	err = m_pProactor->new_overlapped(pOv,&on_recv);
 	if (err != 0)
 		return err;
@@ -127,7 +127,7 @@ int AsyncPipe::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callbac
 	return 0;
 }
 
-void AsyncPipe::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv)
+void AsyncPipe::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
 	OOBase::Buffer* buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
 	
@@ -178,7 +178,7 @@ int AsyncPipe::send(void* param, send_callback_t callback, OOBase::Buffer* buffe
 	if (bytes == 0)
 		return 0;
 	
-	OOSvrBase::detail::ProactorWin32::Overlapped* pOv = NULL;
+	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 	int dwErr = m_pProactor->new_overlapped(pOv,&on_send);
 	if (dwErr != 0)
 		return dwErr;
@@ -199,7 +199,7 @@ int AsyncPipe::send(void* param, send_callback_t callback, OOBase::Buffer* buffe
 	return 0;
 }
 
-void AsyncPipe::on_send(HANDLE /*handle*/, DWORD /*dwBytes*/, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv)
+void AsyncPipe::on_send(HANDLE /*handle*/, DWORD /*dwBytes*/, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	send_callback_t callback = reinterpret_cast<send_callback_t>(pOv->m_extras[1]);
@@ -248,7 +248,7 @@ int AsyncPipe::send_v(void* param, send_callback_t callback, OOBase::Buffer* buf
 		buffer->wr_ptr(len);
 	}
 			
-	OOSvrBase::detail::ProactorWin32::Overlapped* pOv = NULL;
+	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 	int dwErr = m_pProactor->new_overlapped(pOv,&on_send);
 	if (dwErr != 0)
 		return dwErr;
@@ -269,7 +269,7 @@ int AsyncPipe::send_v(void* param, send_callback_t callback, OOBase::Buffer* buf
 	return 0;
 }
 
-int AsyncPipe::get_uid(OOSvrBase::AsyncLocalSocket::uid_t& uid)
+int AsyncPipe::get_uid(OOBase::AsyncLocalSocket::uid_t& uid)
 {
 	if (!ImpersonateNamedPipeClient(m_hPipe))
 		return GetLastError();
@@ -296,36 +296,36 @@ namespace
 	class InternalAcceptor
 	{
 	public:
-		InternalAcceptor(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOSvrBase::Proactor::accept_local_callback_t callback);
+		InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_local_callback_t callback);
 		
 		int start();
 		int stop();
 				
 	private:
-		OOSvrBase::detail::ProactorWin32*            m_pProactor;
-		OOBase::Condition::Mutex                     m_lock;
-		OOBase::Condition                            m_condition;
-		OOBase::String                               m_pipe_name;
-		SECURITY_ATTRIBUTES*                         m_psa;
-		size_t                                       m_backlog;
-		size_t                                       m_refcount;
-		OOBase::Stack<HANDLE>                        m_stkPending;
-		void*                                        m_param;
-		OOSvrBase::Proactor::accept_local_callback_t m_callback;
+		OOBase::detail::ProactorWin32*            m_pProactor;
+		OOBase::Condition::Mutex                  m_lock;
+		OOBase::Condition                         m_condition;
+		OOBase::String                            m_pipe_name;
+		SECURITY_ATTRIBUTES*                      m_psa;
+		size_t                                    m_backlog;
+		size_t                                    m_refcount;
+		OOBase::Stack<HANDLE>                     m_stkPending;
+		void*                                     m_param;
+		OOBase::Proactor::accept_local_callback_t m_callback;
 	
 		~InternalAcceptor();
 		
-		static void on_completion(HANDLE hPipe, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv);
+		static void on_completion(HANDLE hPipe, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
 		bool on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
 		int do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, bool bFirst);
 	};
 
-	class PipeAcceptor : public OOSvrBase::Acceptor
+	class PipeAcceptor : public OOBase::Acceptor
 	{
 	public:
 		PipeAcceptor();
 		
-		int bind(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOSvrBase::Proactor::accept_local_callback_t callback);
+		int bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_local_callback_t callback);
 		
 	private:
 		virtual ~PipeAcceptor();
@@ -344,7 +344,7 @@ PipeAcceptor::~PipeAcceptor()
 		m_pAcceptor->stop();
 }
 
-int PipeAcceptor::bind(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOSvrBase::Proactor::accept_local_callback_t callback)
+int PipeAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_local_callback_t callback)
 {
 	m_pAcceptor = new (std::nothrow) InternalAcceptor(pProactor,pipe_name,psa,param,callback);
 	if (!m_pAcceptor)
@@ -360,7 +360,7 @@ int PipeAcceptor::bind(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase
 	return err;
 }
 
-InternalAcceptor::InternalAcceptor(OOSvrBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOSvrBase::Proactor::accept_local_callback_t callback) :
+InternalAcceptor::InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_local_callback_t callback) :
 		m_pProactor(pProactor),
 		m_pipe_name(pipe_name),
 		m_psa(psa),
@@ -414,7 +414,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 	if (dwErr)
 		return dwErr;
 
-	OOSvrBase::detail::ProactorWin32::Overlapped* pOv = NULL;
+	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 	
 	while (m_stkPending.size() < m_backlog)
 	{
@@ -495,7 +495,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 	return dwErr;
 }
 
-void InternalAcceptor::on_completion(HANDLE hPipe, DWORD /*dwBytes*/, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv)
+void InternalAcceptor::on_completion(HANDLE hPipe, DWORD /*dwBytes*/, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {	
 	InternalAcceptor* pThis = reinterpret_cast<InternalAcceptor*>(pOv->m_extras[0]);
 
@@ -579,7 +579,7 @@ bool InternalAcceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase
 	return false;
 }
 
-OOSvrBase::Acceptor* OOSvrBase::detail::ProactorWin32::accept_local(void* param, accept_local_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa)
+OOBase::Acceptor* OOBase::detail::ProactorWin32::accept_local(void* param, accept_local_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa)
 {
 	// Make sure we have valid inputs
 	if (!callback || !path)
@@ -593,7 +593,7 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorWin32::accept_local(void* param,
 		err = ERROR_OUTOFMEMORY;
 	else
 	{
-		OOBase::String strPipe;
+		String strPipe;
 		err = strPipe.assign("\\\\.\\pipe\\");
 		if (err == 0)
 			err = strPipe.append(path);
@@ -611,7 +611,7 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorWin32::accept_local(void* param,
 	return pAcceptor;
 }
 
-OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorWin32::attach_local_socket(OOBase::socket_t sock, int& err)
+OOBase::AsyncLocalSocket* OOBase::detail::ProactorWin32::attach_local_socket(socket_t sock, int& err)
 {
 	err = bind((HANDLE)sock);
 	if (err != 0)
@@ -627,22 +627,22 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorWin32::attach_local_sock
 	return pPipe;
 }
 
-OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorWin32::connect_local_socket(const char* path, int& err, const OOBase::Timeout& timeout)
+OOBase::AsyncLocalSocket* OOBase::detail::ProactorWin32::connect_local_socket(const char* path, int& err, const Timeout& timeout)
 {
-	OOBase::StackAllocator<256> allocator;
-	OOBase::LocalString strPipe(allocator);
+	StackAllocator<256> allocator;
+	LocalString strPipe(allocator);
 	err = strPipe.assign("\\\\.\\pipe\\");
 	if (err == 0)
 		err = strPipe.append(path);
 	if (err != 0)
 		return NULL;
 	
-	OOBase::TempPtr<wchar_t> wname(allocator);
-	err = OOBase::Win32::utf8_to_wchar_t(strPipe.c_str(),wname);
+	TempPtr<wchar_t> wname(allocator);
+	err = Win32::utf8_to_wchar_t(strPipe.c_str(),wname);
 	if (err)
 		return NULL;
 
-	OOBase::Win32::SmartHandle hPipe;
+	Win32::SmartHandle hPipe;
 	for (;;)
 	{
 		hPipe = ::CreateFileW(wname,
@@ -682,7 +682,7 @@ OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorWin32::connect_local_soc
 		return NULL;
 
 	// Wrap socket
-	OOSvrBase::AsyncLocalSocket* pSocket = new (std::nothrow) AsyncPipe(this,hPipe);
+	AsyncLocalSocket* pSocket = new (std::nothrow) AsyncPipe(this,hPipe);
 	if (!pSocket)
 	{
 		unbind(hPipe);

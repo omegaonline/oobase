@@ -2,20 +2,20 @@
 //
 // Copyright (C) 2009 Rick Taylor
 //
-// This file is part of OOSvrBase, the Omega Online Base library.
+// This file is part of OOBase, the Omega Online Base library.
 //
-// OOSvrBase is free software: you can redistribute it and/or modify
+// OOBase is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// OOSvrBase is distributed in the hope that it will be useful,
+// OOBase is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with OOSvrBase.  If not, see <http://www.gnu.org/licenses/>.
+// along with OOBase.  If not, see <http://www.gnu.org/licenses/>.
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
@@ -26,7 +26,7 @@
 #include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Thread.h"
 
-OOSvrBase::Proactor* OOSvrBase::Proactor::create(int& err)
+OOBase::Proactor* OOBase::Proactor::create(int& err)
 {
 	detail::ProactorWin32* proactor = new (std::nothrow) detail::ProactorWin32();
 	if (!proactor)
@@ -34,7 +34,7 @@ OOSvrBase::Proactor* OOSvrBase::Proactor::create(int& err)
 	return proactor;
 }
 
-void OOSvrBase::Proactor::destroy(Proactor* proactor)
+void OOBase::Proactor::destroy(Proactor* proactor)
 {
 	if (proactor)
 	{
@@ -43,20 +43,20 @@ void OOSvrBase::Proactor::destroy(Proactor* proactor)
 	}
 }
 
-OOSvrBase::detail::ProactorWin32::ProactorWin32() : Proactor(),
+OOBase::detail::ProactorWin32::ProactorWin32() : Proactor(),
 		m_hPort(NULL),
 		m_bound(0)
 {
-	OOBase::Win32::WSAStartup();
+	Win32::WSAStartup();
 }
 
-OOSvrBase::detail::ProactorWin32::~ProactorWin32()
+OOBase::detail::ProactorWin32::~ProactorWin32()
 {
 }
 
-int OOSvrBase::detail::ProactorWin32::new_overlapped(Overlapped*& pOv, pfnCompletion_t callback)
+int OOBase::detail::ProactorWin32::new_overlapped(Overlapped*& pOv, pfnCompletion_t callback)
 {
-	pOv = static_cast<Overlapped*>(OOBase::CrtAllocator::allocate(sizeof(Overlapped)));
+	pOv = static_cast<Overlapped*>(CrtAllocator::allocate(sizeof(Overlapped)));
 	if (!pOv)
 		return ERROR_OUTOFMEMORY;
 	
@@ -70,15 +70,15 @@ int OOSvrBase::detail::ProactorWin32::new_overlapped(Overlapped*& pOv, pfnComple
 	return 0;
 }
 
-void OOSvrBase::detail::ProactorWin32::delete_overlapped(Overlapped* pOv)
+void OOBase::detail::ProactorWin32::delete_overlapped(Overlapped* pOv)
 {
 	if (InterlockedDecrement(&pOv->m_refcount) == 0)
-		OOBase::CrtAllocator::free(pOv);
+		CrtAllocator::free(pOv);
 }
 
-int OOSvrBase::detail::ProactorWin32::bind(HANDLE hFile)
+int OOBase::detail::ProactorWin32::bind(HANDLE hFile)
 {
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+	Guard<SpinLock> guard(m_lock);
 
 	HANDLE hPort = CreateIoCompletionPort(hFile,m_hPort,(ULONG_PTR)hFile,0);
 	if (!hPort)
@@ -91,9 +91,9 @@ int OOSvrBase::detail::ProactorWin32::bind(HANDLE hFile)
 	return 0;
 }
 
-void OOSvrBase::detail::ProactorWin32::unbind(HANDLE /*hFile*/)
+void OOBase::detail::ProactorWin32::unbind(HANDLE /*hFile*/)
 {
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+	Guard<SpinLock> guard(m_lock);
 
 	if (--m_bound == 0)
 	{
@@ -102,9 +102,9 @@ void OOSvrBase::detail::ProactorWin32::unbind(HANDLE /*hFile*/)
 	}
 }
 
-int OOSvrBase::detail::ProactorWin32::run(int& err, const OOBase::Timeout& timeout)
+int OOBase::detail::ProactorWin32::run(int& err, const Timeout& timeout)
 {
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+	Guard<SpinLock> guard(m_lock);
 	
 	if (!m_hPort)
 	{
@@ -158,7 +158,7 @@ int OOSvrBase::detail::ProactorWin32::run(int& err, const OOBase::Timeout& timeo
 	return 1;
 }
 
-void OOSvrBase::detail::ProactorWin32::stop()
+void OOBase::detail::ProactorWin32::stop()
 {
 	unbind(NULL);
 }
