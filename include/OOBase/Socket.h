@@ -67,6 +67,10 @@ namespace OOBase
 		int bind(socket_t sock, const sockaddr* addr, socklen_t addr_len);
 		int connect(socket_t sock, const sockaddr* addr, socklen_t addrlen, const Timeout& timeout = Timeout());
 		int accept(socket_t accept_sock, socket_t& new_sock, const Timeout& timeout = Timeout());
+
+#if defined(_WIN32)
+		int accept_local_socket(HANDLE hPipe, const Timeout& timeout = Timeout());
+#endif
 	}
 
 	class Socket : public RefCounted<CrtAllocator>
@@ -74,10 +78,6 @@ namespace OOBase
 	public:
 		static Socket* attach(socket_t sock, int& err);
 		static Socket* attach_local(socket_t sock, int& err);
-
-#if defined(_WIN32)
-		static Socket* accept_local_socket(HANDLE hPipe, int& err, const Timeout& timeout = Timeout());
-#endif
 
 		static Socket* connect(const char* address, const char* port, int& err, const Timeout& timeout = Timeout());
 		static Socket* connect_local(const char* path, int& err, const Timeout& timeout = Timeout());
