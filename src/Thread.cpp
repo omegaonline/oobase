@@ -225,9 +225,19 @@ namespace
 			m_running(false),
 			m_thread(pthread_t_def())
 	{
-		void* TODO; // Use CLOCK_MONOTONIC!
+		pthread_condattr_t attr;
+		int err = pthread_condattr_init(&attr);
+		if (!err)
+		{
+			err = pthread_condattr_setclock(&attr,CLOCK_MONOTONIC);
+			if (!err)
+				err = pthread_condattr_setpshared(&attr,PTHREAD_PROCESS_PRIVATE);
+			if (!err)
+				err = pthread_cond_init(&m_condition,&attr);
 
-		int err = pthread_cond_init(&m_condition,NULL);
+			pthread_condattr_destroy(&attr);
+		}
+
 		if (err)
 			OOBase_CallCriticalFailure(err);
 	}
@@ -301,7 +311,7 @@ namespace
 			// Wait for the started signal
 			while (m_running)
 			{
-				::timespec wt;
+				::timespec wt = {0};
 				timeout.get_abs_timespec(wt);
 				err = pthread_cond_timedwait(&m_condition,&join_mutex,&wt);
 				if (err)

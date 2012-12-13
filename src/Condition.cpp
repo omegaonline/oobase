@@ -66,9 +66,9 @@ OOBase::Condition::Condition()
 	int err = pthread_condattr_init(&attr);
 	if (!err)
 	{
-		void* TODO; // Use CLOCK_MONOTONIC!
-
-		err = pthread_condattr_setpshared(&attr,PTHREAD_PROCESS_PRIVATE);
+		err = pthread_condattr_setclock(&attr,CLOCK_MONOTONIC);
+		if (!err)
+			err = pthread_condattr_setpshared(&attr,PTHREAD_PROCESS_PRIVATE);
 		if (!err)
 			err = pthread_cond_init(&m_var,&attr);
 
