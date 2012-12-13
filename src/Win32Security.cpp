@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/SecurityWin32.h"
+#include "../include/OOBase/Win32Security.h"
 
 #if defined(_WIN32)
 

@@ -95,7 +95,6 @@ liboobase_la_SOURCES = \
 	include/OOBase/RefCount.h \
 	include/OOBase/Singleton.h \
 	include/OOBase/SmartPtr.h \
-	include/OOBase/SecurityWin32.h \
 	include/OOBase/Server.h \
 	include/OOBase/Set.h \
 	include/OOBase/Socket.h \
@@ -108,6 +107,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/TLSSingleton.h \
 	include/OOBase/utf8.h \
 	include/OOBase/Win32.h \
+	include/OOBase/Win32Security.h \
 	src/BSDSocket.h \
 	src/Win32Impl.h \
 	src/Win32Socket.h \
@@ -126,7 +126,6 @@ liboobase_la_SOURCES = \
 	src/Mutex.cpp \
 	src/Once.cpp \
 	src/Posix.cpp \
-	src/SecurityWin32.cpp \
 	src/Server.cpp \
 	src/String.cpp \
 	src/Thread.cpp \
@@ -138,6 +137,7 @@ liboobase_la_SOURCES = \
 	src/Win32.cpp \
 	src/Win32Pipe.cpp \
 	src/Win32Debugger.cpp \
+	src/Win32Security.cpp \
 	src/Win32Socket.cpp	\
 	src/ProactorPoll.h \
 	src/ProactorPosix.h \
