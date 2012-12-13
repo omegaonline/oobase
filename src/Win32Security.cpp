@@ -26,6 +26,7 @@
 #include "../include/OOBase/Memory.h"
 
 #include <shlwapi.h>
+#include <winsafer.h>
 
 namespace
 {
@@ -252,56 +253,56 @@ DWORD OOBase::Win32::EnableUserAccessToDir(const wchar_t* pszPath, const TOKEN_U
 
 DWORD OOBase::Win32::RestrictToken(HANDLE& hToken)
 {
-	// Work out what version of windows we are running on...
-	OSVERSIONINFOEXW os = {0};
-	os.dwOSVersionInfoSize = sizeof(os);
-	GetVersionExW((OSVERSIONINFOW*)&os);
-
-#if 0 && !defined(_DEBUG)
-	if ((os.dwMajorVersion == 5 && os.dwMinorVersion > 0) || os.dwMajorVersion >= 5)
+	HMODULE hKernel32 = GetModuleHandleW(L"Kernel32.dll");
+	if (hKernel32 != NULL)
 	{
-		//// Use SAFER API
-		//SAFER_LEVEL_HANDLE hAuthzLevel = NULL;
-		//if (!SaferCreateLevel(SAFER_SCOPEID_MACHINE,SAFER_LEVELID_UNTRUSTED,SAFER_LEVEL_OPEN,&hAuthzLevel,NULL))
-		//  return false;
+		if (GetProcAddress(hKernel32,"CreateRestrictedToken"))
+		{
+			// Create a restricted token...
+			HANDLE hNewToken = NULL;
+			if (!CreateRestrictedToken(hToken,DISABLE_MAX_PRIVILEGE /*| SANDBOX_INERT*/,0,NULL,0,NULL,0,NULL,&hNewToken))
+				return GetLastError();
 
-		//// Generate the restricted token we will use.
-		//bool bOk = false;
-		//HANDLE hNewToken = NULL;
-		//if (SaferComputeTokenFromLevel(
-		//  hAuthzLevel,    // SAFER Level handle
-		//  hToken,         // Source token
-		//  &hNewToken,     // Target token
-		//  0,              // No flags
-		//  NULL))          // Reserved
-		//{
-		//  // Swap the tokens
-		//  CloseHandle(hToken);
-		//  hToken = hNewToken;
-		//  bOk = true;
-		//}
+			CloseHandle(hToken);
+			hToken = hNewToken;
+		}
+		else
+		{
+			void* TODO;
+			// Duplicate Token
+			// Adjust Token to remove all privilege apart from SeChangeNotifyPrivilege
+			// Add membership of the least privilege SID
 
-		//SaferCloseLevel(hAuthzLevel);
-		//
-		//if (!bOk)
-		//  return false;
-	}
-#endif
+			// Apply SAFER rules if possible
+			if (GetProcAddress(hKernel32,"SaferCreateLevel"))
+			{
+				// Use SAFER API
+				SAFER_LEVEL_HANDLE hAuthzLevel = NULL;
+				if (!SaferCreateLevel(SAFER_SCOPEID_MACHINE,SAFER_LEVELID_UNTRUSTED,SAFER_LEVEL_OPEN,&hAuthzLevel,NULL))
+					return GetLastError();
 
-	if (os.dwMajorVersion >= 5)
-	{
-		// Create a restricted token...
-		HANDLE hNewToken = NULL;
-		if (!CreateRestrictedToken(hToken,DISABLE_MAX_PRIVILEGE | SANDBOX_INERT,0,NULL,0,NULL,0,NULL,&hNewToken))
-			return GetLastError();
+				//// Generate the restricted token we will use.
+				DWORD dwRes = ERROR_SUCCESS;
+				HANDLE hNewToken = NULL;
+				if (SaferComputeTokenFromLevel(
+					hAuthzLevel,    // SAFER Level handle
+					hToken,         // Source token
+					&hNewToken,     // Target token
+					0,              // No flags
+					NULL))          // Reserved
+				{
+					// Swap the tokens
+					CloseHandle(hToken);
+					hToken = hNewToken;
+				}
+				else
+					dwRes = GetLastError();
 
-		CloseHandle(hToken);
-		hToken = hNewToken;
-	}
+				SaferCloseLevel(hAuthzLevel);
 
-	if (os.dwMajorVersion > 5)
-	{
-		// Vista - use UAC as well...
+				return dwRes;
+			}
+		}
 	}
 
 	return ERROR_SUCCESS;
