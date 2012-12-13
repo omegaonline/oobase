@@ -137,6 +137,7 @@ liboobase_la_SOURCES = \
 	src/utf8.cpp \
 	src/Win32.cpp \
 	src/Win32Pipe.cpp \
+	src/Win32Debugger.cpp \
 	src/Win32Socket.cpp	\
 	src/ProactorPoll.h \
 	src/ProactorPosix.h \
