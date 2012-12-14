@@ -23,7 +23,7 @@
 #include "../include/OOBase/Once.h"
 #include "../include/OOBase/Mutex.h"
 #include "../include/OOBase/SmartPtr.h"
-#include "../include/OOBase/SecurityWin32.h"
+#include "../include/OOBase/Win32Security.h"
 #include "../include/OOBase/String.h"
 #include "../include/OOBase/Logger.h"
 #include "../include/OOBase/Environment.h"

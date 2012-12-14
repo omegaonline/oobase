@@ -363,6 +363,52 @@ void Pipe::close()
 	OOBase::Guard<OOBase::Mutex> guard2(m_send_lock);
 }
 
+int OOBase::Net::accept_local_socket(HANDLE hPipe, const Timeout& timeout)
+{
+	OVERLAPPED ov = {0};
+	ov.hEvent = CreateEventW(NULL,TRUE,TRUE,NULL);
+	if (!ov.hEvent)
+		return GetLastError();
+
+	// Control handle lifetime
+	OOBase::Win32::SmartHandle ev(ov.hEvent);
+
+	DWORD dwErr = 0;
+	if (ConnectNamedPipe(hPipe,&ov))
+		dwErr = ERROR_PIPE_CONNECTED;
+	else
+	{
+		dwErr = GetLastError();
+		if (dwErr == ERROR_IO_PENDING)
+			dwErr = 0;
+	}
+
+	if (dwErr == ERROR_PIPE_CONNECTED)
+	{
+		dwErr = 0;
+		if (!SetEvent(ov.hEvent))
+			return GetLastError();
+	}
+
+	if (dwErr != 0)
+		return dwErr;
+
+	if (!timeout.is_infinite())
+	{
+		DWORD dwRes = WaitForSingleObject(ov.hEvent,timeout.millisecs());
+		if (dwRes == WAIT_TIMEOUT)
+			return ERROR_TIMEOUT;
+		else if (dwRes != WAIT_OBJECT_0)
+			return GetLastError();
+	}
+
+	DWORD dw = 0;
+	if (!GetOverlappedResult(hPipe,&ov,&dw,TRUE))
+		return GetLastError();
+
+	return 0;
+}
+
 OOBase::Socket* OOBase::Socket::attach_local(socket_t sock, int& err)
 {
 	OOBase::Socket* pSocket = new (std::nothrow) Pipe((HANDLE)sock);
@@ -382,10 +428,15 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const 
 	if (err != 0)
 		return NULL;
 
+	OOBase::TempPtr<wchar_t> wname(allocator);
+	err = OOBase::Win32::utf8_to_wchar_t(pipe_name.c_str(),wname);
+	if (err)
+		return NULL;
+
 	Win32::SmartHandle hPipe;
 	for (;;)
 	{
-		hPipe = CreateFileA(pipe_name.c_str(),
+		hPipe = CreateFileW(wname,
 							PIPE_ACCESS_DUPLEX,
 							0,
 							NULL,
@@ -411,7 +462,7 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const 
 				dwWait = 1;
 		}
 
-		if (!WaitNamedPipeA(pipe_name.c_str(),dwWait))
+		if (!WaitNamedPipeW(wname,dwWait))
 		{
 			err = GetLastError();
 			if (err == ERROR_SEM_TIMEOUT)

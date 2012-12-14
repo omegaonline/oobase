@@ -2,20 +2,20 @@
 //
 // Copyright (C) 2011 Rick Taylor
 //
-// This file is part of OOSvrBase, the Omega Online Base library.
+// This file is part of OOBase, the Omega Online Base library.
 //
-// OOSvrBase is free software: you can redistribute it and/or modify
+// OOBase is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// OOSvrBase is distributed in the hope that it will be useful,
+// OOBase is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with OOSvrBase.  If not, see <http://www.gnu.org/licenses/>.
+// along with OOBase.  If not, see <http://www.gnu.org/licenses/>.
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
@@ -34,10 +34,10 @@
 
 namespace
 {
-	class AsyncSocket : public OOSvrBase::AsyncSocket
+	class AsyncSocket : public OOBase::AsyncSocket
 	{
 	public:
-		AsyncSocket(OOSvrBase::detail::ProactorWin32* pProactor, SOCKET hSocket);
+		AsyncSocket(OOBase::detail::ProactorWin32* pProactor, SOCKET hSocket);
 		
 		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes);
 		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
@@ -46,15 +46,15 @@ namespace
 	private:
 		virtual ~AsyncSocket();
 
-		OOSvrBase::detail::ProactorWin32* m_pProactor;
+		OOBase::detail::ProactorWin32* m_pProactor;
 		SOCKET                            m_hSocket;
 					
-		static void on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv);
-		static void on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv);
+		static void on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
+		static void on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
 	};
 }
 
-AsyncSocket::AsyncSocket(OOSvrBase::detail::ProactorWin32* pProactor, SOCKET hSocket) :
+AsyncSocket::AsyncSocket(OOBase::detail::ProactorWin32* pProactor, SOCKET hSocket) :
 		m_pProactor(pProactor),
 		m_hSocket(hSocket)
 { }
@@ -64,7 +64,7 @@ AsyncSocket::~AsyncSocket()
 	OOBase::Net::close_socket(m_hSocket);
 }
 
-int AsyncSocket::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
+int AsyncSocket::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
 {
 	// Must have a callback function
 	assert(callback);
@@ -74,7 +74,7 @@ int AsyncSocket::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callb
 	if (err != 0)
 		return err;
 		
-	OOSvrBase::detail::ProactorWin32::Overlapped* pOv = NULL;
+	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 	err = m_pProactor->new_overlapped(pOv,&on_recv);
 	if (err != 0)
 		return err;
@@ -110,7 +110,7 @@ int AsyncSocket::recv(void* param, OOSvrBase::AsyncSocket::recv_callback_t callb
 	return 0;
 }
 
-void AsyncSocket::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv)
+void AsyncSocket::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
 	// Get the actual result (because its actually different!)
 	DWORD dwFlags = 0;
@@ -138,7 +138,7 @@ int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buf
 	if (bytes == 0)
 		return 0;
 
-	OOSvrBase::detail::ProactorWin32::Overlapped* pOv = NULL;
+	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 	int err = m_pProactor->new_overlapped(pOv,&on_send);
 	if (err != 0)
 		return err;
@@ -171,7 +171,7 @@ int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buf
 	return 0;
 }
 
-void AsyncSocket::on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv)
+void AsyncSocket::on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
 	// Get the actual result (because its actually different!)
 	DWORD dwFlags = 0;
@@ -209,7 +209,7 @@ int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* b
 	if (total == 0)
 		return 0;
 
-	OOSvrBase::detail::ProactorWin32::Overlapped* pOv = NULL;
+	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 	int err = m_pProactor->new_overlapped(pOv,&on_send);
 	if (err != 0)
 		return err;
@@ -243,14 +243,14 @@ namespace
 	class InternalAcceptor
 	{
 	public:
-		InternalAcceptor(OOSvrBase::detail::ProactorWin32* pProactor, void* param, OOSvrBase::Proactor::accept_remote_callback_t callback);
+		InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_remote_callback_t callback);
 		
 		int listen(size_t backlog);
 		int stop(bool destroy);
 		int bind(const sockaddr* addr, socklen_t addr_len);
 		
 	private:
-		OOSvrBase::detail::ProactorWin32*                m_pProactor;
+		OOBase::detail::ProactorWin32*                m_pProactor;
 		OOBase::Condition::Mutex                         m_lock;
 		OOBase::Condition                                m_condition;
 		OOBase::SmartPtr<sockaddr,OOBase::FreeDestructor<OOBase::CrtAllocator> > m_addr;
@@ -262,9 +262,9 @@ namespace
 		OOBase::Win32::SmartHandle                       m_hEvent;
 		HANDLE                                           m_hWait;
 		void*                                            m_param;
-		OOSvrBase::Proactor::accept_remote_callback_t    m_callback;
+		OOBase::Proactor::accept_remote_callback_t    m_callback;
 
-		static void on_completion(HANDLE hSocket, DWORD dwBytes, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv);
+		static void on_completion(HANDLE hSocket, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
 		static void CALLBACK accept_ready(PVOID lpParameter, BOOLEAN TimerOrWaitFired);
 
 		int init_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard);
@@ -272,14 +272,14 @@ namespace
 		int do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard);
 	};
 
-	class SocketAcceptor : public OOSvrBase::Acceptor
+	class SocketAcceptor : public OOBase::Acceptor
 	{
 	public:
 		SocketAcceptor();
 		
 		int listen(size_t backlog);
 		int stop();
-		int bind(OOSvrBase::detail::ProactorWin32* pProactor, void* param, OOSvrBase::Proactor::accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len);
+		int bind(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len);
 	
 	private:
 		virtual ~SocketAcceptor();
@@ -314,7 +314,7 @@ int SocketAcceptor::stop()
 	return m_pAcceptor->stop(false);
 }
 
-int SocketAcceptor::bind(OOSvrBase::detail::ProactorWin32* pProactor, void* param, OOSvrBase::Proactor::accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len)
+int SocketAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len)
 {
 	m_pAcceptor = new (std::nothrow) InternalAcceptor(pProactor,param,callback);
 	if (!m_pAcceptor)
@@ -330,7 +330,7 @@ int SocketAcceptor::bind(OOSvrBase::detail::ProactorWin32* pProactor, void* para
 	return err;
 }
 
-InternalAcceptor::InternalAcceptor(OOSvrBase::detail::ProactorWin32* pProactor, void* param, OOSvrBase::Proactor::accept_remote_callback_t callback) :
+InternalAcceptor::InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_remote_callback_t callback) :
 		m_pProactor(pProactor),
 		m_addr_len(0),
 		m_socket(INVALID_SOCKET),
@@ -469,7 +469,7 @@ int InternalAcceptor::init_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard
 int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 {
 	int err = 0;
-	OOSvrBase::detail::ProactorWin32::Overlapped* pOv = NULL;
+	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 		
 	SOCKET sockNew = INVALID_SOCKET;
 	void* buf = NULL;
@@ -566,7 +566,7 @@ void InternalAcceptor::accept_ready(PVOID lpParameter, BOOLEAN)
 	}
 }
 
-void InternalAcceptor::on_completion(HANDLE /*hSocket*/, DWORD /*dwBytes*/, DWORD dwErr, OOSvrBase::detail::ProactorWin32::Overlapped* pOv)
+void InternalAcceptor::on_completion(HANDLE /*hSocket*/, DWORD /*dwBytes*/, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {	
 	InternalAcceptor* pThis = reinterpret_cast<InternalAcceptor*>(pOv->m_extras[0]);
 	
@@ -657,9 +657,9 @@ bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void
 	return false;
 }
 
-OOSvrBase::Acceptor* OOSvrBase::detail::ProactorWin32::accept_remote(void* param, accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err)
+OOBase::Acceptor* OOBase::detail::ProactorWin32::accept_remote(void* param, accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err)
 {
-	OOBase::Win32::WSAStartup();
+	Win32::WSAStartup();
 	
 	// Make sure we have valid inputs
 	if (!callback || !addr || addr_len == 0)
@@ -684,22 +684,22 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorWin32::accept_remote(void* param
 	return pAcceptor;
 }
 
-OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorWin32::connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::Timeout& timeout)
+OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout)
 {
-	SOCKET sock = OOBase::Net::open_socket(addr->sa_family,SOCK_STREAM,0,err);
+	SOCKET sock = Net::open_socket(addr->sa_family,SOCK_STREAM,0,err);
 	if (err)
 		return NULL;
 	
-	if ((err = OOBase::Net::connect(sock,addr,addr_len,timeout)) != 0)
+	if ((err = Net::connect(sock,addr,addr_len,timeout)) != 0)
 	{
-		OOBase::Net::close_socket(sock);
+		Net::close_socket(sock);
 		return NULL;
 	}
 
 	err = bind((HANDLE)sock);
 	if (err != 0)
 	{
-		OOBase::Net::close_socket(sock);
+		Net::close_socket(sock);
 		return NULL;
 	}
 	
@@ -707,14 +707,14 @@ OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorWin32::connect_socket(const s
 	if (!pSocket)
 	{
 		unbind((HANDLE)sock);
-		OOBase::Net::close_socket(sock);
+		Net::close_socket(sock);
 		err = ERROR_OUTOFMEMORY;
 	}
 		
 	return pSocket;
 }
 
-OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorWin32::attach_socket(OOBase::socket_t sock, int& err)
+OOBase::AsyncSocket* OOBase::detail::ProactorWin32::attach_socket(socket_t sock, int& err)
 {
 	err = bind((HANDLE)sock);
 	if (err != 0)

@@ -28,7 +28,7 @@
 namespace OOBase
 {
 	template <typename Allocator>
-	class RefCounted : public CustomNew<Allocator>
+	class RefCounted
 	{
 	public:
 		RefCounted() : m_refcount(1)

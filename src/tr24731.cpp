@@ -22,8 +22,6 @@
 #include "tr24731.h"
 
 #if defined(HAVE_TR_24731) && (!defined(__STDC_LIB_EXT1__) || (__STDC_LIB_EXT1__ < 200509L))
-#if defined(_MSC_VER)
-
 int OOBase::vsnprintf_s_fixed(char* s, rsize_t n, const char* format, va_list arg)
 {
 	if (!s || !format)
@@ -50,10 +48,6 @@ int OOBase::snprintf_s_fixed(char* s, size_t n, const char* format, ...)
 
 	return ret;
 }
-
-#else
-#error Fix for the early safe libc draft
-#endif
 #endif
 
 #if !defined(HAVE_TR_24731)

@@ -92,11 +92,10 @@ namespace
 		typedef BOOL (__stdcall *pfn_BindIoCompletionCallback)(HANDLE FileHandle, LPOVERLAPPED_COMPLETION_ROUTINE Function, ULONG Flags);
 		pfn_BindIoCompletionCallback m_BindIoCompletionCallback;
 
-		HMODULE m_hKernel32;
 		HANDLE  m_hHeap;
 		
 	private:
-		Win32Thunk() : m_hKernel32(NULL), m_hHeap(NULL)
+		Win32Thunk() : m_hHeap(NULL)
 		{}
 
 		static BOOL __stdcall init(INIT_ONCE*, void* i, void**);
@@ -107,25 +106,25 @@ namespace
 	{
 		Win32Thunk* instance = static_cast<Win32Thunk*>(i);
 		
-		instance->m_hKernel32 = GetModuleHandleW(L"Kernel32.dll");
-		if (instance->m_hKernel32 != NULL)
+		HMODULE hKernel32 = GetModuleHandleW(L"Kernel32.dll");
+		if (hKernel32 != NULL)
 		{
-			instance->m_InitOnceExecuteOnce = (pfn_InitOnceExecuteOnce)(GetProcAddress(instance->m_hKernel32,"InitOnceExecuteOnce"));
+			instance->m_InitOnceExecuteOnce = (pfn_InitOnceExecuteOnce)(GetProcAddress(hKernel32,"InitOnceExecuteOnce"));
 			
-			instance->m_InitializeSRWLock = (pfn_InitializeSRWLock)(GetProcAddress(instance->m_hKernel32,"InitializeSRWLock"));
-			instance->m_AcquireSRWLockShared = (pfn_AcquireSRWLockShared)(GetProcAddress(instance->m_hKernel32,"AcquireSRWLockShared"));
-			instance->m_AcquireSRWLockExclusive = (pfn_AcquireSRWLockExclusive)(GetProcAddress(instance->m_hKernel32,"AcquireSRWLockExclusive"));
-			instance->m_TryAcquireSRWLockShared = (pfn_TryAcquireSRWLockShared)(GetProcAddress(instance->m_hKernel32,"TryAcquireSRWLockShared"));
-			instance->m_TryAcquireSRWLockExclusive = (pfn_TryAcquireSRWLockExclusive)(GetProcAddress(instance->m_hKernel32,"TryAcquireSRWLockExclusive"));
-			instance->m_ReleaseSRWLockShared = (pfn_ReleaseSRWLockShared)(GetProcAddress(instance->m_hKernel32,"ReleaseSRWLockShared"));
-			instance->m_ReleaseSRWLockExclusive = (pfn_ReleaseSRWLockExclusive)(GetProcAddress(instance->m_hKernel32,"ReleaseSRWLockExclusive"));
+			instance->m_InitializeSRWLock = (pfn_InitializeSRWLock)(GetProcAddress(hKernel32,"InitializeSRWLock"));
+			instance->m_AcquireSRWLockShared = (pfn_AcquireSRWLockShared)(GetProcAddress(hKernel32,"AcquireSRWLockShared"));
+			instance->m_AcquireSRWLockExclusive = (pfn_AcquireSRWLockExclusive)(GetProcAddress(hKernel32,"AcquireSRWLockExclusive"));
+			instance->m_TryAcquireSRWLockShared = (pfn_TryAcquireSRWLockShared)(GetProcAddress(hKernel32,"TryAcquireSRWLockShared"));
+			instance->m_TryAcquireSRWLockExclusive = (pfn_TryAcquireSRWLockExclusive)(GetProcAddress(hKernel32,"TryAcquireSRWLockExclusive"));
+			instance->m_ReleaseSRWLockShared = (pfn_ReleaseSRWLockShared)(GetProcAddress(hKernel32,"ReleaseSRWLockShared"));
+			instance->m_ReleaseSRWLockExclusive = (pfn_ReleaseSRWLockExclusive)(GetProcAddress(hKernel32,"ReleaseSRWLockExclusive"));
 
-			instance->m_InitializeConditionVariable = (pfn_InitializeConditionVariable)(GetProcAddress(instance->m_hKernel32,"InitializeConditionVariable"));
-			instance->m_SleepConditionVariableCS = (pfn_SleepConditionVariableCS)(GetProcAddress(instance->m_hKernel32,"SleepConditionVariableCS"));
-			instance->m_WakeConditionVariable = (pfn_WakeConditionVariable)(GetProcAddress(instance->m_hKernel32,"WakeConditionVariable"));
-			instance->m_WakeAllConditionVariable = (pfn_WakeAllConditionVariable)(GetProcAddress(instance->m_hKernel32,"WakeAllConditionVariable"));
+			instance->m_InitializeConditionVariable = (pfn_InitializeConditionVariable)(GetProcAddress(hKernel32,"InitializeConditionVariable"));
+			instance->m_SleepConditionVariableCS = (pfn_SleepConditionVariableCS)(GetProcAddress(hKernel32,"SleepConditionVariableCS"));
+			instance->m_WakeConditionVariable = (pfn_WakeConditionVariable)(GetProcAddress(hKernel32,"WakeConditionVariable"));
+			instance->m_WakeAllConditionVariable = (pfn_WakeAllConditionVariable)(GetProcAddress(hKernel32,"WakeAllConditionVariable"));
 
-			instance->m_BindIoCompletionCallback = (pfn_BindIoCompletionCallback)(GetProcAddress(instance->m_hKernel32,"BindIoCompletionCallback"));
+			instance->m_BindIoCompletionCallback = (pfn_BindIoCompletionCallback)(GetProcAddress(hKernel32,"BindIoCompletionCallback"));
 		}
 			
 		if (!instance->m_InitOnceExecuteOnce)
@@ -157,10 +156,10 @@ namespace
 		if (!instance->m_hHeap)
 			OOBase_CallCriticalFailure(GetLastError());
 
-		init_low_frag_heap(instance->m_hKernel32,instance->m_hHeap);
+		init_low_frag_heap(hKernel32,instance->m_hHeap);
 
 #if defined(_MSC_VER)
-		init_low_frag_heap(instance->m_hKernel32,(HANDLE)_get_heap_handle());
+		init_low_frag_heap(hKernel32,(HANDLE)_get_heap_handle());
 #endif
 
 		return TRUE;

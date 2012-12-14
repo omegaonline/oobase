@@ -2,20 +2,20 @@
 //
 // Copyright (C) 2012 Rick Taylor
 //
-// This file is part of OOSvrBase, the Omega Online Base library.
+// This file is part of OOBase, the Omega Online Base library.
 //
-// OOSvrBase is free software: you can redistribute it and/or modify
+// OOBase is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// OOSvrBase is distributed in the hope that it will be useful,
+// OOBase is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with OOSvrBase.  If not, see <http://www.gnu.org/licenses/>.
+// along with OOBase.  If not, see <http://www.gnu.org/licenses/>.
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
@@ -38,10 +38,10 @@
 
 namespace
 {
-	class AsyncSocket : public OOSvrBase::AsyncLocalSocket
+	class AsyncSocket : public OOBase::AsyncLocalSocket
 	{
 	public:
-		AsyncSocket(OOSvrBase::detail::ProactorPosix* pProactor, int fd);
+		AsyncSocket(OOBase::detail::ProactorPosix* pProactor, int fd);
 		virtual ~AsyncSocket();
 
 		int init();
@@ -91,11 +91,11 @@ namespace
 			send_callback_t m_callback;
 		};
 
-		OOSvrBase::detail::ProactorPosix* m_pProactor;
-		int                               m_fd;
-		OOBase::SpinLock                  m_lock;
-		OOBase::Queue<RecvItem>           m_recv_queue;
-		OOBase::Queue<SendItem>           m_send_queue;
+		OOBase::detail::ProactorPosix* m_pProactor;
+		int                            m_fd;
+		OOBase::SpinLock               m_lock;
+		OOBase::Queue<RecvItem>        m_recv_queue;
+		OOBase::Queue<SendItem>        m_send_queue;
 
 		static void fd_callback(int fd, void* param, unsigned int events);
 		void process_recv(OOBase::Queue<RecvNotify,OOBase::AllocatorInstance>& notify_queue);
@@ -106,7 +106,7 @@ namespace
 	};
 }
 
-AsyncSocket::AsyncSocket(OOSvrBase::detail::ProactorPosix* pProactor, int fd) :
+AsyncSocket::AsyncSocket(OOBase::detail::ProactorPosix* pProactor, int fd) :
 		m_pProactor(pProactor),
 		m_fd(fd)
 { }
@@ -181,7 +181,7 @@ int AsyncSocket::recv(void* param, recv_callback_t callback, OOBase::Buffer* buf
 		return err;
 	}
 
-	return (watch ? m_pProactor->watch_fd(m_fd,OOSvrBase::detail::eTXRecv) : 0);
+	return (watch ? m_pProactor->watch_fd(m_fd,OOBase::detail::eTXRecv) : 0);
 }
 
 int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buffer)
@@ -206,7 +206,7 @@ int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buf
 		return err;
 	}
 
-	return (watch ? m_pProactor->watch_fd(m_fd,OOSvrBase::detail::eTXSend) : 0);
+	return (watch ? m_pProactor->watch_fd(m_fd,OOBase::detail::eTXSend) : 0);
 }
 
 int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count)
@@ -266,7 +266,7 @@ int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* b
 		return err;
 	}
 
-	return (watch ? m_pProactor->watch_fd(m_fd,OOSvrBase::detail::eTXSend) : 0);
+	return (watch ? m_pProactor->watch_fd(m_fd,OOBase::detail::eTXSend) : 0);
 }
 
 void AsyncSocket::fd_callback(int fd, void* param, unsigned int events)
@@ -280,10 +280,10 @@ void AsyncSocket::fd_callback(int fd, void* param, unsigned int events)
 
 		OOBase::Guard<OOBase::SpinLock> guard(pThis->m_lock);
 
-		if (events & OOSvrBase::detail::eTXRecv)
+		if (events & OOBase::detail::eTXRecv)
 			pThis->process_recv(recv_notify_queue);
 
-		if (events & OOSvrBase::detail::eTXSend)
+		if (events & OOBase::detail::eTXSend)
 			pThis->process_send(send_notify_queue);
 
 		guard.release();
@@ -356,7 +356,7 @@ void AsyncSocket::process_recv(OOBase::Queue<RecvNotify,OOBase::AllocatorInstanc
 			if (!err && watch_again)
 			{
 				// Watch for eTXRecv again
-				err = m_pProactor->watch_fd(m_fd,OOSvrBase::detail::eTXRecv);
+				err = m_pProactor->watch_fd(m_fd,OOBase::detail::eTXRecv);
 				if (!err)
 					break;
 			}
@@ -530,7 +530,7 @@ void AsyncSocket::process_send(OOBase::Queue<SendNotify,OOBase::AllocatorInstanc
 			if (!err && watch_again)
 			{
 				// Watch for eTXRecv again
-				err = m_pProactor->watch_fd(m_fd,OOSvrBase::detail::eTXSend);
+				err = m_pProactor->watch_fd(m_fd,OOBase::detail::eTXSend);
 				if (!err)
 					break;
 			}
@@ -550,35 +550,35 @@ void AsyncSocket::process_send(OOBase::Queue<SendNotify,OOBase::AllocatorInstanc
 	}
 }
 
-int AsyncSocket::get_uid(OOSvrBase::AsyncLocalSocket::uid_t& uid)
+int AsyncSocket::get_uid(OOBase::AsyncLocalSocket::uid_t& uid)
 {
 	return OOBase::POSIX::get_peer_uid(m_fd,uid);
 }
 
 namespace
 {
-	class SocketAcceptor : public OOSvrBase::Acceptor
+	class SocketAcceptor : public OOBase::Acceptor
 	{
 	public:
-		SocketAcceptor(OOSvrBase::detail::ProactorPosix* pProactor, void* param, OOSvrBase::Proactor::accept_remote_callback_t callback);
-		SocketAcceptor(OOSvrBase::detail::ProactorPosix* pProactor, void* param, OOSvrBase::Proactor::accept_local_callback_t callback);
+		SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_remote_callback_t callback);
+		SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_local_callback_t callback);
 		virtual ~SocketAcceptor();
 
 		int bind(const sockaddr* addr, socklen_t addr_len, mode_t mode);
 
 	private:
-		OOSvrBase::detail::ProactorPosix*             m_pProactor;
-		void*                                         m_param;
-		OOSvrBase::Proactor::accept_remote_callback_t m_callback;
-		OOSvrBase::Proactor::accept_local_callback_t  m_callback_local;
-		int                                           m_fd;
+		OOBase::detail::ProactorPosix*             m_pProactor;
+		void*                                      m_param;
+		OOBase::Proactor::accept_remote_callback_t m_callback;
+		OOBase::Proactor::accept_local_callback_t  m_callback_local;
+		int                                        m_fd;
 
 		static void fd_callback(int fd, void* param, unsigned int events);
 		void do_accept();
 	};
 }
 
-SocketAcceptor::SocketAcceptor(OOSvrBase::detail::ProactorPosix* pProactor, void* param, OOSvrBase::Proactor::accept_remote_callback_t callback) :
+SocketAcceptor::SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_remote_callback_t callback) :
 		m_pProactor(pProactor),
 		m_param(param),
 		m_callback(callback),
@@ -586,7 +586,7 @@ SocketAcceptor::SocketAcceptor(OOSvrBase::detail::ProactorPosix* pProactor, void
 		m_fd(-1)
 { }
 
-SocketAcceptor::SocketAcceptor(OOSvrBase::detail::ProactorPosix* pProactor, void* param, OOSvrBase::Proactor::accept_local_callback_t callback) :
+SocketAcceptor::SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_local_callback_t callback) :
 		m_pProactor(pProactor),
 		m_param(param),
 		m_callback(NULL),
@@ -622,7 +622,7 @@ int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len, mode_t mode)
 		if (!err)
 		{
 			m_fd = fd;
-			err = m_pProactor->watch_fd(fd,OOSvrBase::detail::eTXRecv);
+			err = m_pProactor->watch_fd(fd,OOBase::detail::eTXRecv);
 			if (err)
 			{
 				m_pProactor->unbind_fd(m_fd);
@@ -640,7 +640,7 @@ int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len, mode_t mode)
 void SocketAcceptor::fd_callback(int fd, void* param, unsigned int events)
 {
 	SocketAcceptor* pThis = static_cast<SocketAcceptor*>(param);
-	if (pThis->m_fd == fd && (events & OOSvrBase::detail::eTXRecv))
+	if (pThis->m_fd == fd && (events & OOBase::detail::eTXRecv))
 		pThis->do_accept();
 }
 
@@ -673,7 +673,7 @@ void SocketAcceptor::do_accept()
 			if (err == EAGAIN || err == EWOULDBLOCK)
 			{
 				// Will complete later...
-				err = m_pProactor->watch_fd(m_fd,OOSvrBase::detail::eTXRecv);
+				err = m_pProactor->watch_fd(m_fd,OOBase::detail::eTXRecv);
 				if (!err)
 					break;
 			}
@@ -719,7 +719,7 @@ void SocketAcceptor::do_accept()
 	}
 }
 
-OOSvrBase::Acceptor* OOSvrBase::detail::ProactorPosix::accept_remote(void* param, void (*callback)(void* param, OOSvrBase::AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err), const sockaddr* addr, socklen_t addr_len, int& err)
+OOBase::Acceptor* OOBase::detail::ProactorPosix::accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err), const sockaddr* addr, socklen_t addr_len, int& err)
 {
 	// Make sure we have valid inputs
 	if (!callback || !addr || addr_len == 0)
@@ -744,7 +744,7 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorPosix::accept_remote(void* param
 	return pAcceptor;
 }
 
-OOSvrBase::Acceptor* OOSvrBase::detail::ProactorPosix::accept_local(void* param, void (*callback)(void* param, OOSvrBase::AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa)
+OOBase::Acceptor* OOBase::detail::ProactorPosix::accept_local(void* param, void (*callback)(void* param, AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa)
 {
 	// Make sure we have valid inputs
 	if (!callback || !path)
@@ -765,7 +765,7 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorPosix::accept_local(void* param,
 		// Compose filename
 		sockaddr_un addr = {0};
 		socklen_t addr_len;
-		OOBase::POSIX::create_unix_socket_address(addr,addr_len,path);
+		POSIX::create_unix_socket_address(addr,addr_len,path);
 
 		err = pAcceptor->bind((sockaddr*)&addr,addr_len,mode);
 		if (err != 0)
@@ -778,58 +778,58 @@ OOSvrBase::Acceptor* OOSvrBase::detail::ProactorPosix::accept_local(void* param,
 	return pAcceptor;
 }
 
-OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorPosix::connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::Timeout& timeout)
+OOBase::AsyncSocket* OOBase::detail::ProactorPosix::connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout)
 {
-	int fd = OOBase::Net::open_socket(addr->sa_family,SOCK_STREAM,0,err);
+	int fd = Net::open_socket(addr->sa_family,SOCK_STREAM,0,err);
 	if (err)
 		return NULL;
 
-	if ((err = OOBase::Net::connect(fd,addr,addr_len,timeout)) != 0)
+	if ((err = Net::connect(fd,addr,addr_len,timeout)) != 0)
 	{
-		OOBase::Net::close_socket(fd);
+		Net::close_socket(fd);
 		return NULL;
 	}
 
-	OOSvrBase::AsyncLocalSocket* pSocket = attach_local_socket(fd,err);
+	AsyncLocalSocket* pSocket = attach_local_socket(fd,err);
 	if (!pSocket)
-		OOBase::Net::close_socket(fd);
+		Net::close_socket(fd);
 
 	return pSocket;
 }
 
-OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorPosix::connect_local_socket(const char* path, int& err, const OOBase::Timeout& timeout)
+OOBase::AsyncLocalSocket* OOBase::detail::ProactorPosix::connect_local_socket(const char* path, int& err, const Timeout& timeout)
 {
-	int fd = OOBase::Net::open_socket(AF_UNIX,SOCK_STREAM,0,err);
+	int fd = Net::open_socket(AF_UNIX,SOCK_STREAM,0,err);
 	if (err)
 		return NULL;
 
 	// Compose filename
 	sockaddr_un addr = {0};
 	socklen_t addr_len;
-	OOBase::POSIX::create_unix_socket_address(addr,addr_len,path);
+	POSIX::create_unix_socket_address(addr,addr_len,path);
 
-	if ((err = OOBase::Net::connect(fd,(sockaddr*)&addr,addr_len,timeout)) != 0)
+	if ((err = Net::connect(fd,(sockaddr*)&addr,addr_len,timeout)) != 0)
 	{
-		OOBase::Net::close_socket(fd);
+		Net::close_socket(fd);
 		return NULL;
 	}
 
-	OOSvrBase::AsyncLocalSocket* pSocket = attach_local_socket(fd,err);
+	AsyncLocalSocket* pSocket = attach_local_socket(fd,err);
 	if (!pSocket)
-		OOBase::Net::close_socket(fd);
+		Net::close_socket(fd);
 
 	return pSocket;
 }
 
-OOSvrBase::AsyncSocket* OOSvrBase::detail::ProactorPosix::attach_socket(OOBase::socket_t sock, int& err)
+OOBase::AsyncSocket* OOBase::detail::ProactorPosix::attach_socket(socket_t sock, int& err)
 {
 	return attach_local_socket(sock,err);
 }
 
-OOSvrBase::AsyncLocalSocket* OOSvrBase::detail::ProactorPosix::attach_local_socket(OOBase::socket_t sock, int& err)
+OOBase::AsyncLocalSocket* OOBase::detail::ProactorPosix::attach_local_socket(socket_t sock, int& err)
 {
 	// Set non-blocking...
-	err = OOBase::POSIX::set_non_blocking(sock,true);
+	err = POSIX::set_non_blocking(sock,true);
 	if (err)
 		return NULL;
 

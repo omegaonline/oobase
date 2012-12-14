@@ -27,23 +27,25 @@
 namespace OOBase
 {
 	template <typename T, typename Allocator = CrtAllocator>
-	class Stack : private Bag<T,Allocator>
+	class Stack : public detail::BagImpl<T,Allocator>
 	{
+		typedef detail::BagImpl<T,Allocator> baseClass;
+
 	public:
-		Stack() : Bag<T,Allocator>()
+		Stack() : baseClass()
 		{}
 
-		Stack(Allocator& allocator) : Bag<T,Allocator>(allocator)
+		Stack(Allocator& allocator) : baseClass(allocator)
 		{}
 			
 		int push(const T& value)
 		{
-			return Bag<T,Allocator>::add(value);
+			return baseClass::add(value);
 		}
 		
 		void remove_at(size_t pos)
 		{
-			Bag<T,Allocator>::remove_at_sorted(pos);
+			baseClass::remove_at_sorted(pos);
 		}
 
 		bool remove(const T& value)
@@ -59,30 +61,15 @@ namespace OOBase
 			}
 			return false;
 		}
-		
-		void clear()
-		{
-			Bag<T,Allocator>::clear();
-		}
-		
+
 		bool pop(T* value = NULL)
 		{
-			return Bag<T,Allocator>::pop(value);
+			return baseClass::pop(value);
 		}
 		
-		bool empty() const
-		{
-			return Bag<T,Allocator>::empty();
-		}			
-		
-		size_t size() const
-		{
-			return Bag<T,Allocator>::size();
-		}
-
 		const T* at(size_t pos) const
 		{
-			return Bag<T,Allocator>::at(pos);
+			return baseClass::at(pos);
 		}
 	};
 }

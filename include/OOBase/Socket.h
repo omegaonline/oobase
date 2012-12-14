@@ -67,6 +67,10 @@ namespace OOBase
 		int bind(socket_t sock, const sockaddr* addr, socklen_t addr_len);
 		int connect(socket_t sock, const sockaddr* addr, socklen_t addrlen, const Timeout& timeout = Timeout());
 		int accept(socket_t accept_sock, socket_t& new_sock, const Timeout& timeout = Timeout());
+
+#if defined(_WIN32)
+		int accept_local_socket(HANDLE hPipe, const Timeout& timeout = Timeout());
+#endif
 	}
 
 	class Socket : public RefCounted<CrtAllocator>

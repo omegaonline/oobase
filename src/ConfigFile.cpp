@@ -242,7 +242,13 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 	if (!f.is_valid())
 		return errno;
 #elif defined(_WIN32)
-	Win32::SmartHandle f(::CreateFileA(filename,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL));
+	OOBase::StackAllocator<256> allocator;
+	TempPtr<wchar_t> wname(allocator);
+	int err2 = Win32::utf8_to_wchar_t(filename,wname);
+	if (err2)
+		return err2;
+
+	Win32::SmartHandle f(::CreateFileW(wname,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL));
 	if (!f.is_valid())
 		return ::GetLastError();
 #else

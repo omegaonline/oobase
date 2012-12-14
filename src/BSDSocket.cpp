@@ -164,22 +164,25 @@ int OOBase::Net::accept(socket_t accept_sock, socket_t& new_sock, const Timeout&
 	// Check blocking state
 	bool non_blocking = false;
 	bool changed_blocking = false;
-	int err = 0;
+
+	int err = POSIX::get_non_blocking(accept_sock,non_blocking);
+	if (err)
+		return err;
 
 	// Make sure we are non-blocking
-	if (!timeout.is_infinite())
+	if (!non_blocking && !timeout.is_infinite())
 	{
-		err = POSIX::get_non_blocking(accept_sock,non_blocking);
+		changed_blocking = true;
+		err = POSIX::set_non_blocking(accept_sock,true);
 		if (err)
 			return err;
-
-		if (!non_blocking)
-		{
-			changed_blocking = true;
-			err = POSIX::set_non_blocking(accept_sock,true);
-			if (err)
-				return err;
-		}
+	}
+	else if (non_blocking && timeout.is_infinite())
+	{
+		changed_blocking = true;
+		err = POSIX::set_non_blocking(accept_sock,false);
+		if (err)
+			return err;
 	}
 
 	while (!err && !timeout.has_expired())

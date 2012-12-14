@@ -245,25 +245,7 @@ bool OOBase::Timeout::get_abs_timespec(::timespec& timeout) const
 	if (m_null)
 		return false;
 
-	::timespec mon_now = {0};
-	if (clock_gettime(CLOCK_MONOTONIC,&mon_now) != 0)
-		OOBase_CallCriticalFailure(errno);
-
-	::timespec diff = {0};
-	timespec_subtract(diff,m_end,mon_now);
-
-	::timespec rt_now = {0};
-	if (clock_gettime(CLOCK_REALTIME,&rt_now) != 0)
-		OOBase_CallCriticalFailure(errno);
-
-	timeout.tv_sec = rt_now.tv_sec + diff.tv_sec;
-	timeout.tv_nsec = rt_now.tv_nsec + diff.tv_nsec;
-	if (timeout.tv_nsec >= 1000000000)
-	{
-		timeout.tv_sec += timeout.tv_nsec / 1000000000;
-		timeout.tv_nsec %= 1000000000;
-	}
-
+	timeout = m_end;
 	return true;
 }
 

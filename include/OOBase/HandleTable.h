@@ -35,6 +35,10 @@ namespace OOBase
 		HandleTable(ID start) : baseClass(),
 				m_next(start)
 		{}
+
+		HandleTable(AllocatorInstance& allocator, ID start) : baseClass(allocator),
+				m_next(start)
+		{}
 			
 		~HandleTable()
 		{}

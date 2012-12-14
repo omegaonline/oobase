@@ -28,11 +28,16 @@ namespace OOBase
 {
 	namespace detail
 	{
-		template <typename T>
-		class PODQueueBase
+		template <typename Allocator, typename T>
+		class PODQueueBase : public AllocImpl<Allocator>
 		{
+			typedef AllocImpl<Allocator> baseClass;
+
 		public:
-			PODQueueBase() : m_data(NULL), m_capacity(0), m_front(0), m_back(0)
+			PODQueueBase() : baseClass(), m_data(NULL), m_capacity(0), m_front(0), m_back(0)
+			{}
+
+			PODQueueBase(AllocatorInstance& allocator) : baseClass(allocator), m_data(NULL), m_capacity(0), m_front(0), m_back(0)
 			{}
 
 		protected:
@@ -49,10 +54,18 @@ namespace OOBase
 			PODQueueBase& operator = (const PODQueueBase&);
 		};
 
-		template <typename T, bool POD = false>
-		class PODQueue : public PODQueueBase<T>
+		template <typename Allocator, typename T, bool POD = false>
+		class PODQueue : public PODQueueBase<Allocator,T>
 		{
+			typedef PODQueueBase<Allocator,T> baseClass;
+
 		public:
+			PODQueue() : baseClass()
+			{}
+
+			PODQueue(AllocatorInstance& allocator) : baseClass(allocator)
+			{}
+
 			void clear()
 			{
 				for (;this->m_capacity != 0 && this->m_front != this->m_back;this->m_front = (this->m_front+1) % this->m_capacity)
@@ -60,22 +73,16 @@ namespace OOBase
 			}
 
 		protected:
-			virtual ~PODQueue()
-			{}
-
 			static void copy_to(T* p, const T& v)
 			{
 				// Placement new with copy constructor
 				::new (p) T(v);
 			}
 
-			virtual void* allocate_i(size_t bytes, size_t align) = 0;
-			virtual void free_i(void* ptr) = 0;
-
 			int grow()
 			{
 				size_t new_size = (this->m_capacity == 0 ? 8 : this->m_capacity * 2);
-				T* new_data = static_cast<T*>(allocate_i(new_size*sizeof(T),alignof<T>::value));
+				T* new_data = static_cast<T*>(baseClass::allocate_i(new_size*sizeof(T),alignof<T>::value));
 				if (!new_data)
 					return ERROR_OUTOFMEMORY;
 
@@ -93,7 +100,7 @@ namespace OOBase
 					while (new_back)
 						new_data[--new_back].~T();
 
-					free_i(new_data);
+					baseClass::free_i(new_data);
 					throw;
 				}
 
@@ -108,7 +115,7 @@ namespace OOBase
 				}
 #endif
 
-				free_i(this->m_data);
+				baseClass::free_i(this->m_data);
 				this->m_data = new_data;
 				this->m_capacity = new_size;
 				this->m_front = 0;
@@ -118,31 +125,33 @@ namespace OOBase
 			}
 		};
 
-		template <typename T>
-		class PODQueue<T,true> : public PODQueueBase<T>
+		template <typename Allocator, typename T>
+		class PODQueue<Allocator,T,true> : public PODQueueBase<Allocator,T>
 		{
+			typedef PODQueueBase<Allocator,T> baseClass;
+
 		public:
+			PODQueue() : baseClass()
+			{}
+
+			PODQueue(AllocatorInstance& allocator) : baseClass(allocator)
+			{}
+
 			void clear()
 			{
 				this->m_capacity = this->m_front = this->m_back = 0;
 			}
 
 		protected:
-			virtual ~PODQueue()
-			{}
-
 			static void copy_to(T* p, const T& v)
 			{
 				*p = v;
 			}
 
-			virtual void* reallocate_i(void* ptr, size_t bytes, size_t align) = 0;
-			virtual void free_i(void* ptr) = 0;
-
 			int grow()
 			{
 				size_t new_size = (this->m_capacity == 0 ? 8 : this->m_capacity * 2);
-				T* new_data = static_cast<T*>(reallocate_i(this->m_data,new_size*sizeof(T),alignof<T>::value));
+				T* new_data = static_cast<T*>(baseClass::reallocate_i(this->m_data,new_size*sizeof(T),alignof<T>::value));
 				if (!new_data)
 					return ERROR_OUTOFMEMORY;
 				
@@ -151,100 +160,90 @@ namespace OOBase
 				return 0;
 			}
 		};
-		
-		template <typename T>
-		class QueueImpl : public PODQueue<T,is_pod<T>::value>
-		{
-			typedef PODQueue<T,is_pod<T>::value> baseClass;
-			
-		public:
-			QueueImpl()
-			{}
-
-			int push(const T& val)
-			{
-				if (this->m_capacity == 0 || size() == (this->m_capacity - 1))
-				{
-					int err = baseClass::grow();
-					if (err != 0)
-						return err;
-				}
-
-				baseClass::copy_to(&this->m_data[this->m_back],val);
-
-				this->m_back = (this->m_back + 1) % this->m_capacity;
-				return 0;
-			}
-			
-			T* front()
-			{
-				if (this->m_front == this->m_back)
-					return NULL;
-
-				return &this->m_data[this->m_front];
-			}
-
-			bool pop(T* value = NULL)
-			{
-				if (this->m_front == this->m_back)
-					return false;
-
-				if (value)
-					*value = this->m_data[this->m_front];
-
-				this->m_data[this->m_front].~T();
-				this->m_front = (this->m_front + 1) % this->m_capacity;
-				return true;
-			}
-
-			template <typename T1>
-			bool find(const T1& v) const
-			{
-				for (size_t pos = this->m_front;this->m_capacity != 0 && pos != this->m_back;pos = (pos+1) % this->m_capacity)
-				{
-					if (this->m_data[pos] == v)
-						return true;
-				}
-				return false;
-			}
-			
-			size_t size() const
-			{
-				if (!this->m_capacity)
-					return 0;
-	
-				return (this->m_capacity - this->m_front + this->m_back) % this->m_capacity;
-			}
-
-			bool empty() const
-			{
-				return (this->m_front == this->m_back);
-			}
-
-		protected:
-			void destroy()
-			{
-				baseClass::clear();
-				this->free_i(this->m_data);
-			}
-		};
 	}
-	
+
 	template <typename T, typename Allocator = CrtAllocator>
-	class Queue : public detail::AllocImpl<detail::QueueImpl<T>,Allocator >
+	class Queue : public detail::PODQueue<Allocator,T,detail::is_pod<T>::value>
 	{
-		typedef detail::AllocImpl<detail::QueueImpl<T>,Allocator > baseClass;
+		typedef detail::PODQueue<Allocator,T,detail::is_pod<T>::value> baseClass;
 
 	public:
 		Queue() : baseClass()
 		{}
 
-		Queue(Allocator& allocator) : baseClass(allocator)
+		Queue(AllocatorInstance& allocator) : baseClass(allocator)
 		{}
-
-		virtual ~Queue()
+		
+		~Queue()
 		{
-			baseClass::destroy();
+			destroy();
+		}
+
+		int push(const T& val)
+		{
+			if (this->m_capacity == 0 || size() == (this->m_capacity - 1))
+			{
+				int err = baseClass::grow();
+				if (err != 0)
+					return err;
+			}
+
+			baseClass::copy_to(&this->m_data[this->m_back],val);
+
+			this->m_back = (this->m_back + 1) % this->m_capacity;
+			return 0;
+		}
+
+		T* front()
+		{
+			if (this->m_front == this->m_back)
+				return NULL;
+
+			return &this->m_data[this->m_front];
+		}
+
+		bool pop(T* value = NULL)
+		{
+			if (this->m_front == this->m_back)
+				return false;
+
+			if (value)
+				*value = this->m_data[this->m_front];
+
+			this->m_data[this->m_front].~T();
+			this->m_front = (this->m_front + 1) % this->m_capacity;
+			return true;
+		}
+
+		template <typename T1>
+		bool find(const T1& v) const
+		{
+			for (size_t pos = this->m_front;this->m_capacity != 0 && pos != this->m_back;pos = (pos+1) % this->m_capacity)
+			{
+				if (this->m_data[pos] == v)
+					return true;
+			}
+			return false;
+		}
+
+		size_t size() const
+		{
+			if (!this->m_capacity)
+				return 0;
+
+			return (this->m_capacity - this->m_front + this->m_back) % this->m_capacity;
+		}
+
+		bool empty() const
+		{
+			return (this->m_front == this->m_back);
+		}
+
+	protected:
+		void destroy()
+		{
+			baseClass::clear();
+			this->free_i(this->m_data);
 		}
 	};
 }

@@ -28,11 +28,16 @@ namespace OOBase
 {
 	namespace detail
 	{
-		template <typename T>
-		class PODBagBase
+		template <typename Allocator, typename T>
+		class PODBagBase : public AllocImpl<Allocator>
 		{
+			typedef AllocImpl<Allocator> baseClass;
+
 		public:
-			PODBagBase() : m_data(NULL), m_size(0), m_capacity(0)
+			PODBagBase() : baseClass(), m_data(NULL), m_size(0), m_capacity(0)
+			{}
+
+			PODBagBase(AllocatorInstance& allocator) : baseClass(allocator), m_data(NULL), m_size(0), m_capacity(0)
 			{}
 
 		protected:
@@ -48,10 +53,18 @@ namespace OOBase
 			PODBagBase& operator = (const PODBagBase&);
 		};
 
-		template <typename T, bool POD = false>
-		class PODBag : public PODBagBase<T>
+		template <typename Allocator, typename T, bool POD = false>
+		class PODBag : public PODBagBase<Allocator,T>
 		{
+			typedef PODBagBase<Allocator,T> baseClass;
+
 		public:
+			PODBag() : baseClass()
+			{}
+
+			PODBag(AllocatorInstance& allocator) : baseClass(allocator)
+			{}
+
 			void clear()
 			{
 				while (this->m_size > 0)
@@ -59,23 +72,17 @@ namespace OOBase
 			}
 
 		protected:
-			virtual ~PODBag()
-			{}
-
 			static void copy_to(T* p, const T& v)
 			{
 				// Placement new with copy constructor
 				::new (p) T(v);
 			}
 
-			virtual void* allocate_i(size_t bytes, size_t align) = 0;
-			virtual void free_i(void* ptr) = 0;
-
 			int reserve_i(size_t capacity)
 			{
 				if (this->m_capacity < capacity)
 				{
-					T* new_data = static_cast<T*>(allocate_i(capacity*sizeof(T),detail::alignof<T>::value));
+					T* new_data = static_cast<T*>(baseClass::allocate_i(capacity*sizeof(T),alignof<T>::value));
 					if (!new_data)
 						return ERROR_OUTOFMEMORY;
 
@@ -91,7 +98,7 @@ namespace OOBase
 						for (;i>0;--i)
 							new_data[i-1].~T();
 
-						free_i(new_data);
+						baseClass::free_i(new_data);
 						throw;
 					}
 
@@ -106,7 +113,7 @@ namespace OOBase
 					}
 #endif
 
-					free_i(this->m_data);
+					baseClass::free_i(this->m_data);
 					this->m_data = new_data;
 					this->m_capacity = capacity;
 				}
@@ -114,32 +121,34 @@ namespace OOBase
 			}
 		};
 
-		template <typename T>
-		class PODBag<T,true> : public PODBagBase<T>
+		template <typename Allocator, typename T>
+		class PODBag<Allocator,T,true> : public PODBagBase<Allocator,T>
 		{
+			typedef PODBagBase<Allocator,T> baseClass;
+
 		public:
+			PODBag() : baseClass()
+			{}
+
+			PODBag(AllocatorInstance& allocator) : baseClass(allocator)
+			{}
+
 			void clear()
 			{
 				this->m_size = 0;
 			}
 
 		protected:
-			virtual ~PODBag()
-			{}
-
 			static void copy_to(T* p, const T& v)
 			{
 				*p = v;
 			}
 
-			virtual void* reallocate_i(void* ptr, size_t bytes, size_t align) = 0;
-			virtual void free_i(void* ptr) = 0;
-
 			int reserve_i(size_t capacity)
 			{
 				if (this->m_capacity < capacity)
 				{
-					T* new_data = static_cast<T*>(reallocate_i(this->m_data,capacity*sizeof(T),detail::alignof<T>::value));
+					T* new_data = static_cast<T*>(baseClass::reallocate_i(this->m_data,capacity*sizeof(T),alignof<T>::value));
 					if (!new_data)
 						return ERROR_OUTOFMEMORY;
 
@@ -150,14 +159,22 @@ namespace OOBase
 			}
 		};
 
-		template <typename T>
-		class BagImpl : public PODBag<T,is_pod<T>::value>
+		template <typename T, typename Allocator>
+		class BagImpl : public PODBag<Allocator,T,is_pod<T>::value>
 		{
-			typedef PODBag<T,is_pod<T>::value> baseClass;
+			typedef PODBag<Allocator,T,is_pod<T>::value> baseClass;
 
 		public:
 			BagImpl() : baseClass()
 			{}
+
+			BagImpl(AllocatorInstance& allocator) : baseClass(allocator)
+			{}
+
+			~BagImpl()
+			{
+				destroy();
+			}
 
 			bool empty() const
 			{
@@ -238,9 +255,9 @@ namespace OOBase
 	}
 
 	template <typename T, typename Allocator = CrtAllocator>
-	class Bag : public detail::AllocImpl<detail::BagImpl<T>,Allocator >
+	class Bag : public detail::BagImpl<T,Allocator>
 	{
-		typedef detail::AllocImpl<detail::BagImpl<T>,Allocator > baseClass;
+		typedef detail::BagImpl<T,Allocator> baseClass;
 
 	public:
 		Bag() : baseClass()
@@ -248,11 +265,6 @@ namespace OOBase
 
 		Bag(Allocator& allocator) : baseClass(allocator)
 		{}
-
-		virtual ~Bag()
-		{
-			baseClass::destroy();
-		}
 
 		int add(const T& value)
 		{

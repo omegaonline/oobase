@@ -54,18 +54,18 @@ namespace OOBase
 	struct critical_t { int unused; };
 	extern const critical_t critical;
 
+	template <typename T>
+	struct alignof
+	{
+#if defined(HAVE__ALIGNOF)
+		static const size_t value = ALIGNOF(T);
+#else
+		static const size_t value = sizeof(T) > 16 ? 16 : sizeof(T);
+#endif
+	};
+
 	namespace detail
 	{
-		template <typename T>
-		struct alignof
-		{
-#if defined(HAVE__ALIGNOF)
-			static const size_t value = ALIGNOF(T);
-#else
-			static const size_t value = sizeof(T) > 16 ? 16 : sizeof(T);
-#endif
-		};
-
 		template <typename T>
 		struct is_pod
 		{
@@ -134,22 +134,18 @@ namespace OOBase
 		virtual void* allocate(size_t bytes, size_t align) = 0;
 		virtual void* reallocate(void* ptr, size_t bytes, size_t align) = 0;
 		virtual void free(void* ptr) = 0;
-
 	};
 
 	namespace detail
 	{
-		template <typename BaseClass, typename Allocator = CrtAllocator>
-		class AllocImpl : public BaseClass
+		template <typename Allocator = CrtAllocator>
+		class AllocImpl
 		{
 		public:
-			AllocImpl() : BaseClass()
+			AllocImpl()
 			{}
 
-			virtual ~AllocImpl()
-			{}
-
-		private:
+		protected:
 			void* allocate_i(size_t bytes, size_t align)
 			{
 				return Allocator::allocate(bytes,align);
@@ -166,14 +162,11 @@ namespace OOBase
 			}
 		};
 
-		template <typename BaseClass>
-		class AllocImpl<BaseClass,AllocatorInstance> : public BaseClass
+		template <>
+		class AllocImpl<AllocatorInstance>
 		{
 		public:
-			AllocImpl(AllocatorInstance& allocator) : BaseClass(), m_allocator(allocator)
-			{}
-
-			virtual ~AllocImpl()
+			AllocImpl(AllocatorInstance& allocator) : m_allocator(allocator)
 			{}
 
 			AllocatorInstance& get_allocator() const
@@ -181,9 +174,7 @@ namespace OOBase
 				return m_allocator;
 			}
 
-		private:
-			AllocatorInstance& m_allocator;
-
+		protected:
 			void* allocate_i(size_t bytes, size_t align)
 			{
 				return m_allocator.allocate(bytes,align);
@@ -198,81 +189,11 @@ namespace OOBase
 			{
 				m_allocator.free(ptr);
 			}
+
+		private:
+			AllocatorInstance& m_allocator;
 		};
 	}
-
-	template <typename Allocator>
-	class CustomNew
-	{
-	public:
-		void* operator new(size_t bytes)
-		{
-			assert(false);
-			return NULL;
-		}
-
-		void* operator new[](size_t bytes)
-		{
-			assert(false);
-			return NULL;
-		}
-
-		void operator delete(void* ptr)
-		{
-			Allocator::free(ptr);
-		}
-
-		void operator delete[](void* ptr)
-		{
-			Allocator::free(ptr);
-		}
-
-		void* operator new(size_t bytes, const std::nothrow_t&)
-		{
-			return Allocator::allocate(bytes);
-		}
-
-		void* operator new[](size_t bytes, const std::nothrow_t&)
-		{
-			return Allocator::allocate(bytes);
-		}
-
-		void operator delete(void* ptr, const std::nothrow_t&)
-		{
-			Allocator::free(ptr);
-		}
-
-		void operator delete[](void* ptr, const std::nothrow_t&)
-		{
-			Allocator::free(ptr);
-		}
-
-		void* operator new(size_t bytes, const OOBase::critical_t&)
-		{
-			void* ptr = Allocator::allocate(bytes);
-			if (!ptr)
-				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-			return ptr;
-		}
-
-		void* operator new[](size_t bytes, const OOBase::critical_t&)
-		{
-			void* ptr = Allocator::allocate(bytes);
-			if (!ptr)
-				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-			return ptr;
-		}
-
-		void operator delete(void* ptr, const OOBase::critical_t&)
-		{
-			Allocator::free(ptr);
-		}
-
-		void operator delete[](void* ptr, const OOBase::critical_t&)
-		{
-			Allocator::free(ptr);
-		}
-	};
 }
 
 // Call the OOBase::OnCriticalError handler on failure

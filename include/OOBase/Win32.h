@@ -53,7 +53,7 @@ namespace OOBase
 			
 			static void destroy(void* ptr)
 			{
-				::LocalFree(ptr);
+				::LocalFree((HLOCAL)ptr);
 			}
 		};
 
@@ -214,6 +214,8 @@ namespace OOBase
 				err = str.assign(ptrBuf);
 			return err;
 		}
+
+		void AttachDebugger(DWORD pid);
 	}
 }
 #endif // !defined(DOXYGEN)

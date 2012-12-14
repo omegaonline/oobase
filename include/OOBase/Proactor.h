@@ -2,20 +2,20 @@
 //
 // Copyright (C) 2009 Rick Taylor
 //
-// This file is part of OOSvrBase, the Omega Online Base library.
+// This file is part of OOBase, the Omega Online Base library.
 //
-// OOSvrBase is free software: you can redistribute it and/or modify
+// OOBase is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// OOSvrBase is distributed in the hope that it will be useful,
+// OOBase is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with OOSvrBase.  If not, see <http://www.gnu.org/licenses/>.
+// along with OOBase.  If not, see <http://www.gnu.org/licenses/>.
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
@@ -33,13 +33,13 @@ typedef struct
 } SECURITY_ATTRIBUTES;
 #endif
 
-namespace OOSvrBase
+namespace OOBase
 {
-	class AsyncSocket : public OOBase::RefCounted<OOBase::CrtAllocator>
+	class AsyncSocket : public RefCounted<CrtAllocator>
 	{
 	public:
 		template <typename T>
-		int recv(T* param, void (T::*callback)(OOBase::Buffer* buffer, int err), OOBase::Buffer* buffer, size_t bytes)
+		int recv(T* param, void (T::*callback)(Buffer* buffer, int err), Buffer* buffer, size_t bytes)
 		{
 			ThunkR<T>* thunk = ThunkR<T>::create(param,callback);
 			if (!thunk)
@@ -49,7 +49,7 @@ namespace OOSvrBase
 		}
 
 		template <typename T>
-		int send(T* param, void (T::*callback)(int err), OOBase::Buffer* buffer)
+		int send(T* param, void (T::*callback)(int err), Buffer* buffer)
 		{
 			ThunkS<T>* thunk = ThunkS<T>::create(param,callback);
 			if (!thunk)
@@ -59,7 +59,7 @@ namespace OOSvrBase
 		}
 
 		template <typename T>
-		int send_v(T* param, void (T::*callback)(int err), OOBase::Buffer* buffers[], size_t count)
+		int send_v(T* param, void (T::*callback)(int err), Buffer* buffers[], size_t count)
 		{
 			ThunkS<T>* thunk = ThunkS<T>::create(param,callback);
 			if (!thunk)
@@ -68,15 +68,15 @@ namespace OOSvrBase
 			return send_v(thunk,&ThunkS<T>::fn,buffers,count);
 		}
 
-		int recv(OOBase::Buffer* buffer, size_t bytes);
-		int send(OOBase::Buffer* buffer);
+		int recv(Buffer* buffer, size_t bytes);
+		int send(Buffer* buffer);
 
-		typedef void (*recv_callback_t)(void* param, OOBase::Buffer* buffer, int err);
-		virtual int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes) = 0;
+		typedef void (*recv_callback_t)(void* param, Buffer* buffer, int err);
+		virtual int recv(void* param, recv_callback_t callback, Buffer* buffer, size_t bytes) = 0;
 
 		typedef void (*send_callback_t)(void* param, int err);
-		virtual int send(void* param, send_callback_t callback, OOBase::Buffer* buffer) = 0;
-		virtual int send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count) = 0;
+		virtual int send(void* param, send_callback_t callback, Buffer* buffer) = 0;
+		virtual int send_v(void* param, send_callback_t callback, Buffer* buffers[], size_t count) = 0;
 
 	protected:
 		AsyncSocket() {}
@@ -87,11 +87,11 @@ namespace OOSvrBase
 		struct ThunkR
 		{
 			T* m_param;
-			void (T::*m_callback)(OOBase::Buffer* buffer, int err);
+			void (T::*m_callback)(Buffer* buffer, int err);
 
-			static ThunkR* create(T* param, void (T::*callback)(OOBase::Buffer*,int))
+			static ThunkR* create(T* param, void (T::*callback)(Buffer*,int))
 			{
-				ThunkR* t = static_cast<ThunkR*>(OOBase::CrtAllocator::allocate(sizeof(ThunkR)));
+				ThunkR* t = static_cast<ThunkR*>(CrtAllocator::allocate(sizeof(ThunkR)));
 				if (t)
 				{
 					t->m_callback = callback;
@@ -100,10 +100,10 @@ namespace OOSvrBase
 				return t;
 			}
 		
-			static void fn(void* param, OOBase::Buffer* buffer, int err)
+			static void fn(void* param, Buffer* buffer, int err)
 			{
 				ThunkR thunk = *static_cast<ThunkR*>(param);
-				OOBase::CrtAllocator::free(param);
+				CrtAllocator::free(param);
 				
 				(thunk.m_param->*thunk.m_callback)(buffer,err);
 			}
@@ -117,7 +117,7 @@ namespace OOSvrBase
 
 			static ThunkS* create(T* param, void (T::*callback)(int))
 			{
-				ThunkS* t = static_cast<ThunkS*>(OOBase::CrtAllocator::allocate(sizeof(ThunkS)));
+				ThunkS* t = static_cast<ThunkS*>(CrtAllocator::allocate(sizeof(ThunkS)));
 				if (t)
 				{
 					t->m_callback = callback;
@@ -129,7 +129,7 @@ namespace OOSvrBase
 			static void fn(void* param, int err)
 			{
 				ThunkS thunk = *static_cast<ThunkS*>(param);
-				OOBase::CrtAllocator::free(param);
+				CrtAllocator::free(param);
 				
 				(thunk.m_param->*thunk.m_callback)(err);
 			}
@@ -156,7 +156,7 @@ namespace OOSvrBase
 		virtual ~AsyncLocalSocket() {}
 	};
 	
-	class Acceptor : public OOBase::RefCounted<OOBase::CrtAllocator>
+	class Acceptor : public RefCounted<CrtAllocator>
 	{
 	public:
 		// No members, just release() to close
@@ -179,13 +179,13 @@ namespace OOSvrBase
 		typedef void (*accept_remote_callback_t)(void* param, AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err);
 		virtual Acceptor* accept_remote(void* param, accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err) = 0;
 
-		virtual AsyncSocket* attach_socket(OOBase::socket_t sock, int& err) = 0;
-		virtual AsyncLocalSocket* attach_local_socket(OOBase::socket_t sock, int& err) = 0;
+		virtual AsyncSocket* attach_socket(socket_t sock, int& err) = 0;
+		virtual AsyncLocalSocket* attach_local_socket(socket_t sock, int& err) = 0;
 
-		virtual AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const OOBase::Timeout& timeout = OOBase::Timeout()) = 0;
-		virtual AsyncLocalSocket* connect_local_socket(const char* path, int& err, const OOBase::Timeout& timeout = OOBase::Timeout()) = 0;
+		virtual AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout = Timeout()) = 0;
+		virtual AsyncLocalSocket* connect_local_socket(const char* path, int& err, const Timeout& timeout = Timeout()) = 0;
 
-		virtual int run(int& err, const OOBase::Timeout& timeout = OOBase::Timeout()) = 0;
+		virtual int run(int& err, const Timeout& timeout = Timeout()) = 0;
 		virtual void stop() = 0;
 
 	protected:
@@ -197,15 +197,12 @@ namespace OOSvrBase
 		Proactor(const Proactor&);
 		Proactor& operator = (const Proactor&);
 	};
-}
 
-namespace OOBase
-{
 	template <typename LibraryType>
-	class Singleton<OOSvrBase::Proactor,LibraryType>
+	class Singleton<Proactor,LibraryType>
 	{
 	public:
-		static OOSvrBase::Proactor* instance_ptr()
+		static Proactor* instance_ptr()
 		{
 			static Once::once_t key = ONCE_T_INIT;
 			Once::Run(&key,init);
@@ -213,9 +210,9 @@ namespace OOBase
 			return s_instance;
 		}
 
-		static OOSvrBase::Proactor& instance()
+		static Proactor& instance()
 		{
-			OOSvrBase::Proactor* i = instance_ptr();
+			Proactor* i = instance_ptr();
 			if (!i)
 				OOBase_CallCriticalFailure("Null instance pointer");
 
@@ -229,19 +226,19 @@ namespace OOBase
 		Singleton& operator = (const Singleton&);
 		~Singleton();
 
-		static OOSvrBase::Proactor* s_instance;
+		static Proactor* s_instance;
 
 		static void init()
 		{
 			int err = 0;
-			OOSvrBase::Proactor* i = OOSvrBase::Proactor::create(err);
+			Proactor* i = Proactor::create(err);
 			if (err)
 				OOBase_CallCriticalFailure(err);
 
 			err = DLLDestructor<LibraryType>::add_destructor(&destroy,i);
 			if (err)
 			{
-				OOSvrBase::Proactor::destroy(i);
+				Proactor::destroy(i);
 				OOBase_CallCriticalFailure(err);
 			}
 
@@ -252,14 +249,14 @@ namespace OOBase
 		{
 			if (i == s_instance)
 			{
-				OOSvrBase::Proactor::destroy(static_cast<OOSvrBase::Proactor*>(i));
+				Proactor::destroy(static_cast<Proactor*>(i));
 				s_instance = NULL;
 			}
 		}
 	};
 
 	template <typename LibraryType>
-	OOSvrBase::Proactor* Singleton<OOSvrBase::Proactor,LibraryType>::s_instance = NULL;
+	Proactor* Singleton<Proactor,LibraryType>::s_instance = NULL;
 }
 
 #endif // OOSVRBASE_PROACTOR_H_INCLUDED_

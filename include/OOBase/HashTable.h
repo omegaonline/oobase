@@ -118,17 +118,79 @@ namespace OOBase
 			return Hash<const char*>::hash(v.c_str());
 		}
 	};
+
+	template <>
+	struct Hash<LocalString>
+	{
+		static size_t hash(const LocalString& v)
+		{
+			return Hash<const char*>::hash(v.c_str());
+		}
+	};
 #endif
 
-	template <typename K, typename V, typename Allocator = CrtAllocator, typename H = OOBase::Hash<K> >
-	class HashTable
+	namespace detail
 	{
+		namespace HashTable
+		{
+			template <typename K, typename V>
+			struct PODCheck
+			{
+				K k;
+				V v;
+			};
+		}
+
+		template <typename K, typename V, bool POD = false>
+		struct HashTableNode
+		{
+			template <typename K1, typename V1>
+			HashTableNode(const K1& k, const V1& v) : m_in_use(2), m_key(k), m_value(v)
+			{}
+
+			template <typename K1, typename V1>
+			static void inplace_copy(void* p, const K1& k, const V1& v)
+			{
+				::new (p) HashTableNode(k,v);
+			}
+
+			int m_in_use;
+			K m_key;
+			V m_value;
+		};
+
+		template <typename K, typename V>
+		struct HashTableNode<K,V,true>
+		{
+			template <typename K1, typename V1>
+			static void inplace_copy(void* p, const K1& k, const V1& v)
+			{
+				static_cast<HashTableNode*>(p)->m_in_use = 2;
+				static_cast<HashTableNode*>(p)->m_key = k;
+				static_cast<HashTableNode*>(p)->m_value = v;
+			}
+
+			int m_in_use;
+			K m_key;
+			V m_value;
+		};
+	}
+
+	template <typename K, typename V, typename Allocator = CrtAllocator, typename H = OOBase::Hash<K> >
+	class HashTable : public detail::AllocImpl<Allocator>
+	{
+		typedef detail::AllocImpl<Allocator> baseClass;
+		typedef detail::HashTableNode<K,V,detail::is_pod<detail::HashTable::PODCheck<K,V> >::value> Node;
+
 	public:
 		static const size_t npos = size_t(-1);
 
-		HashTable(const H& h = H()) : m_data(NULL), m_size(0), m_count(0), m_hash(h), m_clone(false)
+		HashTable(const H& h = H()) : baseClass(), m_data(NULL), m_size(0), m_count(0), m_hash(h), m_clone(false)
 		{}
-			
+
+		HashTable(AllocatorInstance& allocator, const H& h = H()) : baseClass(allocator), m_data(NULL), m_size(0), m_count(0), m_hash(h), m_clone(false)
+		{}
+
 		~HashTable()
 		{
 			destroy(m_data,m_size);
@@ -148,11 +210,11 @@ namespace OOBase
 				if (err != 0)
 					return err;
 			}
-				
+
 			int err = insert_i(m_data,m_size,key,value);
 			if (err == 0)
 				++m_count;
-			
+
 			return err;
 		}
 
@@ -160,7 +222,7 @@ namespace OOBase
 		{
 			return (find_i(key) != npos);
 		}
-		
+
 		bool find(const K& key, V& value) const
 		{
 			size_t pos = find_i(key);
@@ -179,7 +241,7 @@ namespace OOBase
 			
 			return &m_data[pos].m_value;
 		}
-		
+
 		void remove_at(size_t pos)
 		{
 			m_data[pos].~Node();
@@ -203,7 +265,7 @@ namespace OOBase
 			remove_at(pos);
 			return true;
 		}
-		
+
 		bool pop(K* key = NULL, V* value = NULL)
 		{
 			for (size_t i=0;i<m_size && m_count>0;++i)
@@ -212,17 +274,17 @@ namespace OOBase
 				{
 					if (key)
 						*key = m_data[i].m_key;
-					
+
 					if (value)
 						*value = m_data[i].m_value;
-					
+
 					remove_at(i);
 					return true;
 				}
 			}
 			return false;
 		}
-		
+
 		void clear()
 		{
 			for (size_t i=0;i<m_size && m_count>0;++i)
@@ -235,12 +297,12 @@ namespace OOBase
 				}
 			}
 		}
-		
+
 		bool empty() const
 		{
 			return (m_count == 0);
 		}
-		
+
 		size_t size() const
 		{
 			return m_count;
@@ -270,34 +332,24 @@ namespace OOBase
 		{
 			return (m_data && pos < m_size && m_data[pos].m_in_use==2 ? &m_data[pos].m_value : NULL);
 		}
-		
+
 		const V* at(size_t pos) const
 		{
 			return (m_data && pos < m_size && m_data[pos].m_in_use==2 ? &m_data[pos].m_value : NULL);
 		}
-		
+
 		const K* key_at(size_t pos) const
 		{
 			return (m_data && pos < m_size && m_data[pos].m_in_use==2 ? &m_data[pos].m_key : NULL);
 		}
-		
+
 	private:
 		// Do not allow copy constructors or assignment
-		// as memory allocation will occur... 
+		// as memory allocation will occur...
 		// and you probably don't want to be copying these around
 		HashTable(const HashTable&);
 		HashTable& operator = (const HashTable&);
-	
-		struct Node
-		{
-			Node(const K& k, const V& v) : m_in_use(2), m_key(k), m_value(v)
-			{}
-				
-			int m_in_use;
-			K   m_key;
-			V   m_value;
-		};
-				
+
 		Node*    m_data;
 		size_t   m_size;
 		size_t   m_count;
@@ -310,20 +362,33 @@ namespace OOBase
 			m_clone = false;
 
 			size_t new_size = (m_size == 0 ? 16 : (grow ? m_size * 2 : m_size));
-			Node* new_data = static_cast<Node*>(Allocator::allocate(new_size*sizeof(Node)));
+			Node* new_data = static_cast<Node*>(baseClass::allocate_i(new_size * sizeof(Node),alignof<Node>::value));
 			if (!new_data)
 				return ERROR_OUTOFMEMORY;
-			
+
 			// Set nothing in use
 			for (size_t i=0;i<new_size;++i)
 				new_data[i].m_in_use = 0;
-				
+
 			// Now reinsert the contents of m_data into new_data
 			for (size_t i=0;i<m_size;++i)
 			{
 				if (m_data[i].m_in_use == 2)
 				{
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+					int err = 0;
+					try
+					{
+						err = insert_i(new_data,new_size,m_data[i].m_key,m_data[i].m_value);
+					}
+					catch (...)
+					{
+						destroy(new_data,new_size);
+						throw;
+					}
+#else
 					int err = insert_i(new_data,new_size,m_data[i].m_key,m_data[i].m_value);
+#endif
 					if (err != 0)
 					{
 						destroy(new_data,new_size);
@@ -335,30 +400,30 @@ namespace OOBase
 			destroy(m_data,m_size);
 			m_data = new_data;
 			m_size = new_size;
-			
+
 			return 0;
 		}
-		
-		static void destroy(Node* data, size_t size)
+
+		void destroy(Node* data, size_t size)
 		{
 			for (size_t i=0;i<size;++i)
 			{
 				if (data[i].m_in_use == 2)
 					data[i].~Node();
 			}
-			Allocator::free(data);
+			baseClass::free_i(data);
 		}
 
 		size_t find_i(const K& key) const
 		{
 			if (m_count == 0)
 				return npos;
-			
+
 			size_t start = m_hash.hash(key);
 			for (size_t h = start;h < start + m_size;++h)
 			{
 				size_t h1 = h & (m_size-1);
-				
+
 				if (m_data[h1].m_in_use == 0)
 					return npos;
 				
@@ -369,20 +434,19 @@ namespace OOBase
 			m_clone = true;
 			return npos;
 		}
-		
+
 		int insert_i(Node* data, size_t size, const K& key, const V& value)
 		{
 			for (size_t h = m_hash.hash(key);;++h)
 			{
 				size_t h1 = h & (size-1);
-				
+
 				if (data[h1].m_in_use != 2)
 				{
-					// Placement new
-					::new (&data[h1]) Node(key,value);
+					Node::inplace_copy(&data[h1],key,value);
 					return 0;
 				}
-				
+
 				if (data[h1].m_key == key)
 					return EEXIST;
 			}
