@@ -127,41 +127,46 @@ namespace
 		if FAILED(hr)
 			return false;
 
+#if defined(OOBASE_HAVE_EXCEPTIONS)
 		try
 		{
+#endif
 			MyMessageFilter* pFilter = new (std::nothrow) MyMessageFilter();
-			if (!pFilter)
-				return false;
-
-			IMessageFilter* pPrev = 0;
-			hr = CoRegisterMessageFilter(pFilter,&pPrev);
-			if FAILED(hr)
-				throw _com_error(hr);
-			pFilter->Release();
-			if (pPrev)
-				pPrev->Release();
-
-			IUnknownPtr ptrUnk;
-			ptrUnk.GetActiveObject("VisualStudio.DTE." DTE_VER);
-			if (ptrUnk != NULL)
+			if (pFilter)
 			{
-				EnvDTE::_DTEPtr ptrDTE = ptrUnk;
-
-				EnvDTE::ProcessesPtr ptrProcesses = ptrDTE->Debugger->LocalProcesses;
-				for (long i = 1; i <= ptrProcesses->Count; ++i)
+				IMessageFilter* pPrev = 0;
+				hr = CoRegisterMessageFilter(pFilter,&pPrev);
+				if SUCCEEDED(hr)
 				{
-					EnvDTE::ProcessPtr ptrProcess = ptrProcesses->Item(i);
-					if (ptrProcess->ProcessID == static_cast<long>(our_pid))
+					pFilter->Release();
+					if (pPrev)
+						pPrev->Release();
+
+					IUnknownPtr ptrUnk;
+					ptrUnk.GetActiveObject("VisualStudio.DTE." DTE_VER);
+					if (ptrUnk != NULL)
 					{
-						ptrProcess->Attach();
-						bRet = true;
-						break;
+						EnvDTE::_DTEPtr ptrDTE = ptrUnk;
+
+						EnvDTE::ProcessesPtr ptrProcesses = ptrDTE->Debugger->LocalProcesses;
+						for (long i = 1; i <= ptrProcesses->Count; ++i)
+						{
+							EnvDTE::ProcessPtr ptrProcess = ptrProcesses->Item(i);
+							if (ptrProcess->ProcessID == static_cast<long>(our_pid))
+							{
+								ptrProcess->Attach();
+								bRet = true;
+								break;
+							}
+						}
 					}
 				}
 			}
+#if defined(OOBASE_HAVE_EXCEPTIONS)
 		}
 		catch (_com_error&)
 		{}
+#endif
 
 		CoUninitialize();
 

@@ -191,6 +191,9 @@ namespace OOBase
 			}
 
 		private:
+			AllocImpl(const AllocImpl&);
+			AllocImpl& operator = (const AllocImpl&);
+
 			AllocatorInstance& m_allocator;
 		};
 	}

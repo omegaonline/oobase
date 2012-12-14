@@ -49,9 +49,6 @@
     <ClCompile Include="Logger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SecurityWin32.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="tr24731.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -83,6 +80,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ArenaAllocator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Win32Debugger.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Win32Security.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -192,9 +195,6 @@
     <ClInclude Include="..\include\OOBase\RefCount.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\SecurityWin32.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\OOBase\Set.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -229,6 +229,12 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\OOBase\ArenaAllocator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\OOBase\Proactor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\OOBase\Win32Security.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

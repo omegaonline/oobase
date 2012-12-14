@@ -176,7 +176,6 @@
     <ClCompile Include="ProactorWin32.cpp" />
     <ClCompile Include="ProactorWin32Pipe.cpp" />
     <ClCompile Include="ProactorWin32Socket.cpp" />
-    <ClCompile Include="SecurityWin32.cpp" />
     <ClCompile Include="Server.cpp" />
     <ClCompile Include="String.cpp" />
     <ClCompile Include="Thread.cpp" />
@@ -185,7 +184,9 @@
     <ClCompile Include="tr24731.cpp" />
     <ClCompile Include="utf8.cpp" />
     <ClCompile Include="Win32.cpp" />
+    <ClCompile Include="Win32Debugger.cpp" />
     <ClCompile Include="Win32Pipe.cpp" />
+    <ClCompile Include="Win32Security.cpp" />
     <ClCompile Include="Win32Socket.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -199,11 +200,12 @@
     <ClInclude Include="..\include\OOBase\Environment.h" />
     <ClInclude Include="..\include\OOBase\GlobalNew.h" />
     <ClInclude Include="..\include\OOBase\Logger.h" />
+    <ClInclude Include="..\include\OOBase\Proactor.h" />
     <ClInclude Include="..\include\OOBase\RefCount.h" />
-    <ClInclude Include="..\include\OOBase\SecurityWin32.h" />
     <ClInclude Include="..\include\OOBase\Server.h" />
     <ClInclude Include="..\include\OOBase\Set.h" />
     <ClInclude Include="..\include\OOBase\StackAllocator.h" />
+    <ClInclude Include="..\include\OOBase\Win32Security.h" />
     <ClInclude Include="BSDSocket.h" />
     <ClInclude Include="..\include\OOBase\Buffer.h" />
     <ClInclude Include="..\include\OOBase\ByteSwap.h" />
