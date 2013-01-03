@@ -27,47 +27,63 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <dirent.h>
+#include <sys/wait.h>
 
 int OOBase::POSIX::open(const char *pathname, int flags, mode_t mode)
 {
-	for (;;)
+	int fd = -1;
+	do
 	{
-		int fd = ::open(pathname,flags,mode);
-		if (fd != -1 || errno != EINTR)
-			return fd;
+		fd = ::open(pathname,flags,mode);
 	}
+	while (fd == -1 && errno == EINTR);
+
+	return fd;
 }
 
 ssize_t OOBase::POSIX::read(int fd, void* buf, size_t count)
 {
-	for (;;)
+	ssize_t r = -1;
+	do
 	{
-		ssize_t r = ::read(fd,buf,count);
-		if (r != -1 || errno != EINTR)
-			return r;
+		r = ::read(fd,buf,count);
 	}
+	while (r == -1 && errno == EINTR);
+
+	return r;
 }
 
 ssize_t OOBase::POSIX::write(int fd, const void* buf, size_t count)
 {
-	for (;;)
+	ssize_t w = -1;
+	do
 	{
-		ssize_t w = ::write(fd,buf,count);
-		if (w != -1 || errno != EINTR)
-			return w;
+		w = ::write(fd,buf,count);
 	}
+	while (w == -1 && errno == EINTR);
+
+	return w;
 }
 
 int OOBase::POSIX::close(int fd)
 {
-	for (;;)
-	{
-		if (::close(fd) == 0)
-			return 0;
+	// Don't attempt to spin on EINTR, as the handle might be closed and reused before we call close again
+	if (::close(fd) == -1 && errno != EINTR)
+		return -1;
 
-		if (errno != EINTR)
-			return -1;
+	return 0;
+}
+
+pid_t OOBase::POSIX::waitpid(pid_t pid, int* status, int options)
+{
+	pid_t ret = -1;
+	do
+	{
+		ret = ::waitpid(pid,status,options);
 	}
+	while (ret == -1 && errno == EINTR);
+
+	return ret;
 }
 
 int OOBase::POSIX::set_non_blocking(int sock, bool set)

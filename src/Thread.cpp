@@ -469,14 +469,15 @@ void OOBase::Thread::sleep(unsigned int millisecs)
 	::timespec wt = {0};
 	Timeout(millisecs / 1000,(millisecs % 1000) * 1000).get_timespec(wt);
 
-	for (;;)
+	int rc = -1;
+	do
 	{
-		if (!nanosleep(&wt,&wt))
-			break;
-
-		if (errno != EINTR)
-			OOBase_CallCriticalFailure(errno);
+		rc = ::nanosleep(&wt,&wt);
 	}
+	while (rc == -1 && errno == EINTR);
+
+	if (rc == -1)
+		OOBase_CallCriticalFailure(errno);
 #endif
 }
 

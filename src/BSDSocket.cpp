@@ -100,7 +100,7 @@ int OOBase::Net::connect(socket_t sock, const sockaddr* addr, socklen_t addrlen,
 	{
 		err = ::connect(sock,addr,addrlen);
 	}
-	while (err != 0 && errno == EINTR);
+	while (err == -1 && errno == EINTR);
 
 	if (!err)
 	{

@@ -43,6 +43,7 @@ namespace OOBase
 		ssize_t read(int fd, void* buf, size_t count);
 		ssize_t write(int fd, const void* buf, size_t count);
 		int close(int fd);
+		pid_t waitpid(pid_t pid, int* status, int options);
 
 		int random_bytes(void* buffer, size_t len);
 		int random_chars(char* buffer, size_t len);
