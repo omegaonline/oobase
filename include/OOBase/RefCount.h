@@ -27,7 +27,6 @@
 
 namespace OOBase
 {
-	template <typename Allocator>
 	class RefCounted
 	{
 	public:

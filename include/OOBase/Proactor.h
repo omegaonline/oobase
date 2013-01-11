@@ -35,7 +35,7 @@ typedef struct
 
 namespace OOBase
 {
-	class AsyncSocket : public RefCounted<CrtAllocator>
+	class AsyncSocket : public RefCounted
 	{
 	public:
 		template <typename T>
@@ -156,7 +156,7 @@ namespace OOBase
 		virtual ~AsyncLocalSocket() {}
 	};
 	
-	class Acceptor : public RefCounted<CrtAllocator>
+	class Acceptor : public RefCounted
 	{
 	public:
 		// No members, just release() to close

@@ -73,7 +73,7 @@ namespace OOBase
 #endif
 	}
 
-	class Socket : public RefCounted<CrtAllocator>
+	class Socket : public RefCounted
 	{
 	public:
 		static Socket* attach(socket_t sock, int& err);

@@ -46,7 +46,7 @@ namespace OOBase
 	                         length()        space()      \endverbatim
 	 *  \warning This class is not thread-safe.
 	 */
-	class Buffer : public RefCounted<CrtAllocator>
+	class Buffer : public RefCounted
 	{
 	public:
 		/// The constructor allocates the internal buffer to size \p cbSize.
