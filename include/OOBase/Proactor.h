@@ -39,7 +39,7 @@ namespace OOBase
 	{
 	public:
 		template <typename T>
-		int recv(T* param, void (T::*callback)(Buffer* buffer, int err), Buffer* buffer, size_t bytes)
+		int recv(T* param, void (T::*callback)(Buffer* buffer, int err), Buffer* buffer, size_t bytes = 0)
 		{
 			ThunkR<T>* thunk = ThunkR<T>::create(param,callback);
 			if (!thunk)
@@ -68,11 +68,11 @@ namespace OOBase
 			return send_v(thunk,&ThunkS<T>::fn,buffers,count);
 		}
 
-		int recv(Buffer* buffer, size_t bytes);
+		int recv(Buffer* buffer, size_t bytes = 0);
 		int send(Buffer* buffer);
 
 		typedef void (*recv_callback_t)(void* param, Buffer* buffer, int err);
-		virtual int recv(void* param, recv_callback_t callback, Buffer* buffer, size_t bytes) = 0;
+		virtual int recv(void* param, recv_callback_t callback, Buffer* buffer, size_t bytes = 0) = 0;
 
 		typedef void (*send_callback_t)(void* param, int err);
 		virtual int send(void* param, send_callback_t callback, Buffer* buffer) = 0;
@@ -185,6 +185,7 @@ namespace OOBase
 		virtual AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout = Timeout()) = 0;
 		virtual AsyncLocalSocket* connect_local_socket(const char* path, int& err, const Timeout& timeout = Timeout()) = 0;
 
+		// Returns -1 on error, 0 on timeout, 1 on nothing more to do
 		virtual int run(int& err, const Timeout& timeout = Timeout()) = 0;
 		virtual void stop() = 0;
 
