@@ -50,7 +50,7 @@ namespace OOBase
 	{
 	public:
 		/// The constructor allocates the internal buffer to size \p cbSize.
-		Buffer(size_t cbSize = 256, size_t align = 1);
+		Buffer(size_t cbSize = 256, size_t align = 16);
 
 		/// Get the current read pointer value.
 		const char* rd_ptr() const;
