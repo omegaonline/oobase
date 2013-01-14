@@ -48,9 +48,11 @@ namespace
 
 		size_t recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout);
 		int recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
+		size_t recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout);
 		
 		size_t send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout);
 		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
+		size_t send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout);
 
 		int recv_socket(OOBase::socket_t& sock, const OOBase::Timeout& timeout);
 		int send_socket(OOBase::socket_t sock, DWORD pid, const OOBase::Timeout& timeout);
@@ -120,6 +122,11 @@ int Pipe::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout&
 	return err;
 }
 
+size_t Pipe::send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout)
+{
+	return send(data_buf,data_len,err,timeout);
+}
+
 size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout)
 {
 	if (!m_send_allowed)
@@ -145,44 +152,34 @@ size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::Timeout
 	size_t to_write = len;
 	while (to_write > 0)
 	{
-		err = 0;
-		DWORD dwWritten = 0;
-		if (!WriteFile(m_handle,cbuf,static_cast<DWORD>(to_write),&dwWritten,&ov))
+		if (!WriteFile(m_handle,cbuf,static_cast<DWORD>(to_write),NULL,&ov))
 		{
-			err = GetLastError();
-			if (err != ERROR_OPERATION_ABORTED)
+			DWORD dwErr = GetLastError();
+			if (dwErr == ERROR_IO_PENDING)
 			{
-				if (err != ERROR_IO_PENDING)
-					break;
-
-				err = 0;
 				if (!timeout.is_infinite())
 				{
 					DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout.millisecs());
 					if (dwWait == WAIT_TIMEOUT)
-					{
-						CancelIo(m_handle);
 						err = WSAETIMEDOUT;
-					}
 					else if (dwWait != WAIT_OBJECT_0)
-					{
 						err = GetLastError();
-						CancelIo(m_handle);
-					}
-				}
-			
-				if (!GetOverlappedResult(m_handle,&ov,&dwWritten,TRUE))
-				{
-					int dwErr = GetLastError();
-					if (err == 0 && dwErr != ERROR_OPERATION_ABORTED)
-						err = dwErr;
-
-					if (err != 0)
-						break;
 				}
 			}
+			else
+				err = dwErr;
+
+			if (err)
+				break;
 		}
 		
+		DWORD dwWritten = 0;
+		if (!GetOverlappedResult(m_handle,&ov,&dwWritten,TRUE))
+		{
+			err = GetLastError();
+			break;
+		}
+
 		cbuf += dwWritten;
 		to_write -= dwWritten;
 
@@ -247,6 +244,11 @@ int Pipe::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout&
 	return err;
 }
 
+size_t Pipe::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout)
+{
+	return recv(data_buf,data_len,false,err,timeout);
+}
+
 size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout)
 {
 	if (!m_recv_allowed)
@@ -272,44 +274,35 @@ size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::Ti
 	size_t to_read = len;
 	while (to_read > 0)
 	{
-		err = 0;
+		if (!ReadFile(m_handle,cbuf,static_cast<DWORD>(to_read),NULL,&ov))
+		{
+			DWORD dwErr = GetLastError();
+			if (dwErr != ERROR_MORE_DATA)
+			{
+				if (dwErr == ERROR_IO_PENDING)
+				{
+					if (!timeout.is_infinite())
+					{
+						DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout.millisecs());
+						if (dwWait == WAIT_TIMEOUT)
+							err = WAIT_TIMEOUT;
+						else if (dwWait != WAIT_OBJECT_0)
+							err = GetLastError();
+					}
+				}
+				else
+					err = dwErr;
+
+				if (err)
+					break;
+			}
+		}
+
 		DWORD dwRead = 0;
-		if (!ReadFile(m_handle,cbuf,static_cast<DWORD>(to_read),&dwRead,&ov))
+		if (!GetOverlappedResult(m_handle,&ov,&dwRead,TRUE))
 		{
 			err = GetLastError();
-			if (err == ERROR_MORE_DATA)
-				dwRead = static_cast<DWORD>(to_read);
-			else if (err != ERROR_OPERATION_ABORTED)
-			{
-				if (err != ERROR_IO_PENDING)
-					break;
-
-				err = 0;
-				if (!timeout.is_infinite())
-				{
-					DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout.millisecs());
-					if (dwWait == WAIT_TIMEOUT)
-					{
-						CancelIo(m_handle);
-						err = WAIT_TIMEOUT;
-					}
-					else if (dwWait != WAIT_OBJECT_0)
-					{
-						err = GetLastError();
-						CancelIo(m_handle);
-					}
-				}
-					
-				if (!GetOverlappedResult(m_handle,&ov,&dwRead,TRUE))
-				{
-					int dwErr = GetLastError();
-					if (err == 0 && dwErr != ERROR_OPERATION_ABORTED)
-						err = dwErr;
-
-					if (err != 0)
-						break;
-				}
-			}
+			break;
 		}
 
 		cbuf += dwRead;

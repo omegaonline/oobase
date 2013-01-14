@@ -84,6 +84,7 @@ namespace OOBase
 
 		virtual size_t send(const void* buf, size_t len, int& err, const Timeout& timeout = Timeout()) = 0;
 		virtual int send_v(Buffer* buffers[], size_t count, const Timeout& timeout = Timeout()) = 0;
+		virtual size_t send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const Timeout& timeout = Timeout()) = 0;
 				
 		template <typename T>
 		int send(const T& val, const Timeout& timeout = Timeout())
@@ -108,14 +109,9 @@ namespace OOBase
 			return err;
 		}
 
-#if defined(_WIN32)
-		virtual int send_socket(socket_t sock, DWORD pid, const Timeout& timeout = Timeout()) = 0;
-#else
-		virtual int send_socket(socket_t sock, const Timeout& timeout = Timeout()) = 0;
-#endif
-
 		virtual size_t recv(void* buf, size_t len, bool bAll, int& err, const Timeout& timeout = Timeout()) = 0;
 		virtual int recv_v(Buffer* buffers[], size_t count, const Timeout& timeout = Timeout()) = 0;
+		virtual size_t recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t ctl_len, int& err, const Timeout& timeout = Timeout()) = 0;
 
 		template <typename T>
 		int recv(T& val, const Timeout& timeout = Timeout())
@@ -174,8 +170,6 @@ namespace OOBase
 			}
 			return err;
 		}
-
-		virtual int recv_socket(socket_t& sock, const Timeout& timeout = Timeout()) = 0;
 
 		virtual void close() = 0;
 	};

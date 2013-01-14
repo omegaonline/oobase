@@ -248,13 +248,12 @@ namespace
 
 		size_t send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout);
 		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
+		size_t send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout);
 		size_t recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout);
 		int recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
+		size_t recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout);
 
 		void close();
-
-		int send_socket(OOBase::socket_t sock, const OOBase::Timeout& timeout);
-		int recv_socket(OOBase::socket_t& sock, const OOBase::Timeout& timeout);
 
 	private:
 		const int  m_sock;
@@ -478,32 +477,25 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 	return err;
 }
 
-int Socket::send_socket(OOBase::socket_t sock, const OOBase::Timeout& timeout)
+size_t Socket::send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout)
 {
+	err = 0;
+
+	struct iovec io = {0};
+	io.iov_base = const_cast<void*>(data_buf);
+	io.iov_len = data_len;
+
+	struct msghdr msg = {0};
+	msg.msg_iov = &io;
+	msg.msg_iovlen = 1;
+	msg.msg_control = const_cast<void*>(ctl_buf);
+	msg.msg_controllen = ctl_len;
+
 	OOBase::Guard<OOBase::Mutex> guard(m_send_lock);
 
-	int err = 0;
+	ssize_t sent = 0;
 	do
 	{
-		struct iovec iov;
-		iov.iov_base = const_cast<char*>("F");
-		iov.iov_len = 1;
-
-		char control[CMSG_SPACE(sizeof(OOBase::socket_t))] = {0};
-
-		struct msghdr msg = {0};
-		msg.msg_iov = &iov;
-		msg.msg_iovlen = 1;
-		msg.msg_control = control;
-		msg.msg_controllen = sizeof(control);
-
-		struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
-		cmsg->cmsg_level = SOL_SOCKET;
-		cmsg->cmsg_type = SCM_RIGHTS;
-		cmsg->cmsg_len = CMSG_LEN(sizeof(OOBase::socket_t));
-		*reinterpret_cast<OOBase::socket_t*>(CMSG_DATA(cmsg)) = sock;
-
-		ssize_t sent = 0;
 		do
 		{
 			sent = ::sendmsg(m_sock,&msg,0
@@ -514,7 +506,7 @@ int Socket::send_socket(OOBase::socket_t sock, const OOBase::Timeout& timeout)
 		}
 		while (sent == -1 && errno == EINTR);
 
-		if (sent == 1)
+		if (sent > 0)
 			break;
 
 		err = errno;
@@ -526,7 +518,7 @@ int Socket::send_socket(OOBase::socket_t sock, const OOBase::Timeout& timeout)
 	}
 	while (err == 0);
 
-	return err;
+	return sent;
 }
 
 size_t Socket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout)
@@ -644,59 +636,44 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 	return err;
 }
 
-int Socket::recv_socket(OOBase::socket_t& sock, const OOBase::Timeout& timeout)
+size_t Socket::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout)
 {
+	err = 0;
+
+	struct iovec io = {0};
+	io.iov_base = data_buf;
+	io.iov_len = data_len;
+
+	struct msghdr msg = {0};
+	msg.msg_iov = &io;
+	msg.msg_iovlen = 1;
+	msg.msg_control = ctl_buf;
+	msg.msg_controllen = ctl_len;
+
 	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock);
 
-	int err = 0;
+	ssize_t recvd = 0;
 	do
 	{
-		char c;
-		struct iovec iov;
-		iov.iov_base = &c;
-		iov.iov_len = 1;
-
-		char control[CMSG_SPACE(sizeof(OOBase::socket_t))] = {0};
-
-		struct msghdr msg = {0};
-		msg.msg_iov = &iov;
-		msg.msg_iovlen = 1;
-		msg.msg_control = control;
-		msg.msg_controllen = sizeof(control);
-
-		struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
-		cmsg->cmsg_level = SOL_SOCKET;
-		cmsg->cmsg_type = SCM_RIGHTS;
-		cmsg->cmsg_len = CMSG_LEN(sizeof(OOBase::socket_t));
-
-		ssize_t recvd = 0;
 		do
 		{
 			recvd = ::recvmsg(m_sock,&msg,0);
 		}
 		while (recvd == -1 && errno == EINTR);
 
-		if (recvd > 0)
-		{
-			sock = *reinterpret_cast<OOBase::socket_t*>(CMSG_DATA(cmsg));
+		if (recvd >= 0)
 			break;
-		}
 
-		if (recvd == 0)
-			err = ECONNABORTED;
-		else
+		err = errno;
+		if (err == EAGAIN || err == EWOULDBLOCK)
 		{
-			err = errno;
-			if (err == EAGAIN || err == EWOULDBLOCK)
-			{
-				// Do the select...
-				err = do_select(false,timeout);
-			}
+			// Do the select...
+			err = do_select(false,timeout);
 		}
 	}
 	while (err == 0);
 
-	return err;
+	return recvd;
 }
 
 void Socket::close()

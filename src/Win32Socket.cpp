@@ -50,7 +50,7 @@ typedef BOOL (PASCAL* LPFN_ACCEPTEX)(
 
 #if !defined(WSAID_GETACCEPTEXSOCKADDRS)
 
-typedef VOID (PASCAL* LPFN_GETACCEPTEXSOCKADDRS)(
+typedef VOID (WINAPI* LPFN_GETACCEPTEXSOCKADDRS)(
     PVOID lpOutputBuffer,
     DWORD dwReceiveDataLength,
     DWORD dwLocalAddressLength,
@@ -67,7 +67,7 @@ typedef VOID (PASCAL* LPFN_GETACCEPTEXSOCKADDRS)(
 
 #if !defined(WSAID_CONNECTEX)
 
-typedef BOOL (PASCAL * LPFN_CONNECTEX)(
+typedef BOOL (WINAPI* LPFN_CONNECTEX)(
     SOCKET s,
     const sockaddr *name,
     int namelen,
@@ -84,6 +84,28 @@ typedef BOOL (PASCAL * LPFN_CONNECTEX)(
 #endif
 
 #endif // !defined(WSAID_CONNECTEX)
+
+#if !defined(WSAID_WSARECVMSG)
+
+typedef INT (WINAPI* LPFN_WSARECVMSG)(SOCKET s, LPWSAMSG lpMsg,
+	LPDWORD lpdwNumberOfBytesRecvd,
+	LPWSAOVERLAPPED lpOverlapped,
+	LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine);
+
+#define WSAID_WSARECVMSG {0xf689d7c8,0x6f1f,0x436b,{0x8a,0x53,0xe5,0x4f,0xe3,0x51,0xc3,0x22}}
+
+#endif // !defined(WSAID_WSARECVMSG)
+
+#if !defined(WSAID_WSASENDMSG)
+
+typedef INT (WINAPI *LPFN_WSASENDMSG)(SOCKET s, LPWSAMSG lpMsg, DWORD dwFlags,
+					LPDWORD lpNumberOfBytesSent,
+					LPWSAOVERLAPPED lpOverlapped,
+					LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine);
+
+#define WSAID_WSASENDMSG {0xa441e712,0x754f,0x43ca,{0x84,0xa7,0x0d,0xee,0x44,0xcf,0x60,0x6d}}
+
+#endif // !defined(WSAID_WSASENDMSG)
 
 namespace
 {
@@ -141,14 +163,14 @@ BOOL OOBase::Win32::WSAAcceptEx(SOCKET sListenSocket, SOCKET sAcceptSocket, void
 
 	LPFN_ACCEPTEX lpfnAcceptEx = NULL;
 	DWORD dwBytes = 0;
-	if (WSAIoctl(sListenSocket, 
-		SIO_GET_EXTENSION_FUNCTION_POINTER, 
-		(void*)&guid_AcceptEx, 
+	if (WSAIoctl(sListenSocket,
+		SIO_GET_EXTENSION_FUNCTION_POINTER,
+		(void*)&guid_AcceptEx,
 		sizeof(guid_AcceptEx),
-		&lpfnAcceptEx, 
-		sizeof(lpfnAcceptEx), 
-		&dwBytes, 
-		NULL, 
+		&lpfnAcceptEx,
+		sizeof(lpfnAcceptEx),
+		&dwBytes,
+		NULL,
 		NULL) != 0)
 	{
 		OOBase_CallCriticalFailure("Failed to load address of AcceptEx");
@@ -163,20 +185,64 @@ void OOBase::Win32::WSAGetAcceptExSockAddrs(SOCKET sListenSocket, void* lpOutput
 
 	LPFN_GETACCEPTEXSOCKADDRS lpfnGetAcceptExSockAddrs = NULL;
 	DWORD dwBytes = 0;
-	if (WSAIoctl(sListenSocket, 
-		SIO_GET_EXTENSION_FUNCTION_POINTER, 
-		(void*)&guid_GetAcceptExSockAddrs, 
+	if (WSAIoctl(sListenSocket,
+		SIO_GET_EXTENSION_FUNCTION_POINTER,
+		(void*)&guid_GetAcceptExSockAddrs,
 		sizeof(guid_GetAcceptExSockAddrs),
-		&lpfnGetAcceptExSockAddrs, 
-		sizeof(lpfnGetAcceptExSockAddrs), 
-		&dwBytes, 
-		NULL, 
+		&lpfnGetAcceptExSockAddrs,
+		sizeof(lpfnGetAcceptExSockAddrs),
+		&dwBytes,
+		NULL,
 		NULL) != 0)
 	{
 		OOBase_CallCriticalFailure("Failed to load address of GetAcceptExSockAddrs");
 	}
 
 	return (*lpfnGetAcceptExSockAddrs)(lpOutputBuffer,dwReceiveDataLength,dwLocalAddressLength,dwRemoteAddressLength,LocalSockaddr,LocalSockaddrLength,RemoteSockaddr,RemoteSockaddrLength);
+}
+
+INT OOBase::Win32::WSARecvMsg(SOCKET s, LPWSAMSG lpMsg, LPDWORD lpdwNumberOfBytesRecvd, LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine)
+{
+	static const GUID guid_WSARecvMsg = WSAID_WSARECVMSG;
+
+	LPFN_WSARECVMSG lpfnWSARecvMsg = NULL;
+	DWORD dwBytes = 0;
+	if (WSAIoctl(s,
+		SIO_GET_EXTENSION_FUNCTION_POINTER,
+		(void*)&guid_WSARecvMsg,
+		sizeof(guid_WSARecvMsg),
+		&lpfnWSARecvMsg,
+		sizeof(lpfnWSARecvMsg),
+		&dwBytes,
+		NULL,
+		NULL) != 0)
+	{
+		OOBase_CallCriticalFailure("Failed to load address of WSARecvMsg");
+	}
+
+	return (*lpfnWSARecvMsg)(s,lpMsg,lpdwNumberOfBytesRecvd,lpOverlapped,lpCompletionRoutine);
+}
+
+INT OOBase::Win32::WSASendMsg(SOCKET s, LPWSAMSG lpMsg, DWORD dwFlags, LPDWORD lpNumberOfBytesSent, LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine)
+{
+	static const GUID guid_WSASendMsg = WSAID_WSASENDMSG;
+
+	LPFN_WSASENDMSG lpfnWSASendMsg = NULL;
+	DWORD dwBytes = 0;
+	if (WSAIoctl(s,
+		SIO_GET_EXTENSION_FUNCTION_POINTER,
+		(void*)&guid_WSASendMsg,
+		sizeof(guid_WSASendMsg),
+		&lpfnWSASendMsg,
+		sizeof(lpfnWSASendMsg),
+		&dwBytes,
+		NULL,
+		NULL) != 0)
+	{
+		OOBase_CallCriticalFailure("Failed to load address of WSARecvMsg");
+	}
+
+	return (*lpfnWSASendMsg)(s,lpMsg,dwFlags,lpNumberOfBytesSent,lpOverlapped,lpCompletionRoutine);
 }
 
 OOBase::socket_t OOBase::Net::open_socket(int family, int socktype, int protocol, int& err)
@@ -280,9 +346,11 @@ namespace
 
 		size_t recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout);
 		int recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
+		size_t recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout);
 		
 		size_t send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout);
 		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
+		size_t send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout);
 
 		int recv_socket(OOBase::socket_t& /*sock*/, const OOBase::Timeout& /*timeout*/)
 		{
@@ -484,33 +552,99 @@ DWORD WinSocket::send_i(WSABUF* wsabuf, DWORD count, int& err, const OOBase::Tim
 	}
 	else
 	{
-		if (WSASend(m_socket,wsabuf,static_cast<DWORD>(count),&dwWritten,0,&ov,NULL) != 0)
+		if (WSASend(m_socket,wsabuf,static_cast<DWORD>(count),NULL,0,&ov,NULL) != 0)
 		{
-			err = WSAGetLastError();
-			if (err == WSA_IO_PENDING)
+			DWORD dwErr = WSAGetLastError();
+			if (dwErr == WSA_IO_PENDING)
 			{
-				err = 0;
 				DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout.millisecs());
 				if (dwWait == WAIT_TIMEOUT)
-				{
-					CancelIo(reinterpret_cast<HANDLE>(m_socket));
 					err = WAIT_TIMEOUT;
-				}
 				else if (dwWait != WAIT_OBJECT_0)
-				{
 					err = GetLastError();
-					CancelIo(reinterpret_cast<HANDLE>(m_socket));
-				}
+			}
+			else
+				err = dwErr;
+		}
 
-				DWORD dwFlags = 0;
-				if (!WSAGetOverlappedResult(m_socket,&ov,&dwWritten,TRUE,&dwFlags))
-				{
-					int dwErr = WSAGetLastError();
-					if (err == 0 && dwErr != ERROR_OPERATION_ABORTED)
-						err = dwErr;
-				}
+		DWORD dwFlags = 0;
+		if (!err && !WSAGetOverlappedResult(m_socket,&ov,&dwWritten,TRUE,&dwFlags))
+			err = WSAGetLastError();
+	}
+
+	return dwWritten;
+}
+
+size_t WinSocket::send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout)
+{
+	err = 0;
+	if (data_len > 0xFFFFFFFF || ctl_len > 0xFFFFFFFF)
+	{
+		err = ERROR_BUFFER_OVERFLOW;
+		return 0;
+	}
+
+	WSAOVERLAPPED ov = {0};
+	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,false);
+
+	if (!timeout.is_infinite())
+	{
+		if (!guard.acquire(timeout))
+		{
+			err = WSAETIMEDOUT;
+			return 0;
+		}
+
+		if (!m_send_event.is_valid())
+		{
+			m_send_event = CreateEventW(NULL,TRUE,FALSE,NULL);
+			if (!m_send_event.is_valid())
+			{
+				err = GetLastError();
+				return 0;
 			}
 		}
+
+		ov.hEvent = m_send_event;
+	}
+
+	WSABUF wsabuf;
+	wsabuf.buf = const_cast<char*>(static_cast<const char*>(data_buf));
+	wsabuf.len = static_cast<ULONG>(data_len);
+
+	WSAMSG msg = {0};
+	msg.lpBuffers = &wsabuf;
+	msg.dwBufferCount = 1;
+	msg.Control.buf = const_cast<char*>(static_cast<const char*>(ctl_buf));
+	msg.Control.len = static_cast<ULONG>(ctl_len);
+	msg.dwFlags = 0;
+
+	DWORD dwWritten = 0;
+	if (timeout.is_infinite())
+	{
+		if (OOBase::Win32::WSASendMsg(m_socket,&msg,0,&dwWritten,NULL,NULL) != 0)
+			err = WSAGetLastError();
+	}
+	else
+	{
+		if (OOBase::Win32::WSASendMsg(m_socket,&msg,0,NULL,&ov,NULL) != 0)
+		{
+			DWORD dwErr = WSAGetLastError();
+			if (dwErr == WSA_IO_PENDING)
+			{
+				DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout.millisecs());
+				if (dwWait == WAIT_TIMEOUT)
+					err = WAIT_TIMEOUT;
+				else if (dwWait != WAIT_OBJECT_0)
+					err = GetLastError();
+			}
+			else
+				err = dwErr;
+		}
+
+		DWORD dwFlags = 0;
+		if (!err && !WSAGetOverlappedResult(m_socket,&ov,&dwWritten,TRUE,&dwFlags))
+			err = WSAGetLastError();
 	}
 
 	return dwWritten;
@@ -635,32 +769,92 @@ DWORD WinSocket::recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int& err, const 
 	}
 	else
 	{
-		if (WSARecv(m_socket,wsabuf,static_cast<DWORD>(count),&dwRead,&dwFlags,&ov,NULL) != 0)
+		if (WSARecv(m_socket,wsabuf,static_cast<DWORD>(count),NULL,&dwFlags,&ov,NULL) != 0)
 		{
-			err = WSAGetLastError();
-			if (err == WSA_IO_PENDING)
+			DWORD dwErr = WSAGetLastError();
+			if (dwErr == WSA_IO_PENDING)
 			{
-				err = 0;
 				DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout.millisecs());
 				if (dwWait == WAIT_TIMEOUT)
-				{
-					CancelIo(reinterpret_cast<HANDLE>(m_socket));
 					err = WAIT_TIMEOUT;
-				}
 				else if (dwWait != WAIT_OBJECT_0)
-				{
 					err = GetLastError();
-					CancelIo(reinterpret_cast<HANDLE>(m_socket));
-				}
+			}
+			else
+				err = dwErr;
+		}
 
-				if (!WSAGetOverlappedResult(m_socket,&ov,&dwRead,TRUE,&dwFlags))
-				{
-					int dwErr = WSAGetLastError();
-					if (err == 0 && dwErr != ERROR_OPERATION_ABORTED)
-						err = dwErr;
-				}
+		if (!err && !WSAGetOverlappedResult(m_socket,&ov,&dwRead,TRUE,&dwFlags))
+			err = WSAGetLastError();
+	}
+
+	return dwRead;
+}
+
+size_t WinSocket::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout)
+{
+	WSAOVERLAPPED ov = {0};
+
+	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,false);
+
+	if (!timeout.is_infinite())
+	{
+		if (!guard.acquire(timeout))
+		{
+			err = WSAETIMEDOUT;
+			return 0;
+		}
+
+		if (!m_recv_event.is_valid())
+		{
+			m_recv_event = CreateEventW(NULL,TRUE,FALSE,NULL);
+			if (!m_recv_event.is_valid())
+			{
+				err = GetLastError();
+				return 0;
 			}
 		}
+
+		ov.hEvent = m_recv_event;
+	}
+
+	WSABUF wsabuf;
+	wsabuf.buf = static_cast<char*>(data_buf);
+	wsabuf.len = static_cast<ULONG>(data_len);
+
+	WSAMSG msg = {0};
+	msg.lpBuffers = &wsabuf;
+	msg.dwBufferCount = 1;
+	msg.Control.buf = static_cast<char*>(ctl_buf);
+	msg.Control.len = static_cast<ULONG>(ctl_len);
+	msg.dwFlags = 0;
+
+	DWORD dwRead = 0;
+	if (timeout.is_infinite())
+	{
+		if (OOBase::Win32::WSARecvMsg(m_socket,&msg,&dwRead,NULL,NULL) != 0)
+			err = WSAGetLastError();
+	}
+	else
+	{
+		if (OOBase::Win32::WSARecvMsg(m_socket,&msg,NULL,&ov,NULL) != 0)
+		{
+			DWORD dwErr = WSAGetLastError();
+			if (dwErr == WSA_IO_PENDING)
+			{
+				DWORD dwWait = WaitForSingleObject(ov.hEvent,timeout.millisecs());
+				if (dwWait == WAIT_TIMEOUT)
+					err = WAIT_TIMEOUT;
+				else if (dwWait != WAIT_OBJECT_0)
+					err = GetLastError();
+			}
+			else
+				err = dwErr;
+		}
+
+		DWORD dwFlags = 0;
+		if (!err && !WSAGetOverlappedResult(m_socket,&ov,&dwRead,TRUE,&dwFlags))
+			err = WSAGetLastError();
 	}
 
 	return dwRead;
