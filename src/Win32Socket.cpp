@@ -449,7 +449,7 @@ size_t WinSocket::send(const void* buf, size_t len, int& err, const OOBase::Time
 
 	WSABUF wsabuf;
 	wsabuf.buf = const_cast<char*>(static_cast<const char*>(buf));
-	wsabuf.len = static_cast<ULONG>(len);
+	wsabuf.len = static_cast<u_long>(len);
 
 	return send_i(&wsabuf,1,err,timeout);
 }
@@ -610,7 +610,7 @@ size_t WinSocket::send_msg(const void* data_buf, size_t data_len, const void* ct
 
 	WSABUF wsabuf;
 	wsabuf.buf = const_cast<char*>(static_cast<const char*>(data_buf));
-	wsabuf.len = static_cast<ULONG>(data_len);
+	wsabuf.len = static_cast<u_long>(data_len);
 
 	WSAMSG msg = {0};
 	msg.lpBuffers = &wsabuf;
@@ -664,7 +664,7 @@ size_t WinSocket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase:
 
 	WSABUF wsabuf;
 	wsabuf.buf = static_cast<char*>(buf);
-	wsabuf.len = static_cast<ULONG>(len);
+	wsabuf.len = static_cast<u_long>(len);
 
 	return recv_i(&wsabuf,1,bAll,err,timeout);
 }
@@ -820,13 +820,13 @@ size_t WinSocket::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_
 
 	WSABUF wsabuf;
 	wsabuf.buf = static_cast<char*>(data_buf);
-	wsabuf.len = static_cast<ULONG>(data_len);
+	wsabuf.len = static_cast<u_long>(data_len);
 
 	WSAMSG msg = {0};
 	msg.lpBuffers = &wsabuf;
 	msg.dwBufferCount = 1;
 	msg.Control.buf = static_cast<char*>(ctl_buf);
-	msg.Control.len = static_cast<ULONG>(ctl_len);
+	msg.Control.len = static_cast<u_long>(ctl_len);
 	msg.dwFlags = 0;
 
 	DWORD dwRead = 0;
