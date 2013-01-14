@@ -88,22 +88,20 @@ int AsyncSocket::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback
 	wsa_buf.buf = buffer->wr_ptr();
 	wsa_buf.len = static_cast<u_long>(bytes);
 	
-	DWORD dwRead = 0;
 	DWORD dwFlags = (bytes != 0 ? MSG_WAITALL : 0);
-	if (WSARecv(m_hSocket,&wsa_buf,1,&dwRead,&dwFlags,pOv,NULL) == SOCKET_ERROR)
+	if (WSARecv(m_hSocket,&wsa_buf,1,NULL,&dwFlags,pOv,NULL) == SOCKET_ERROR)
 	{
 		err = GetLastError();
 		if (err == WSA_IO_PENDING)
 		{
 			// Will complete later...
-			m_pProactor->delete_overlapped(pOv);
 			return 0;
 		}
 	}
 	
-	assert(err || bytes == dwRead);
-
-	m_pProactor->delete_overlapped(pOv);
+	DWORD dwRead = 0;
+	if (!WSAGetOverlappedResult(m_hSocket,pOv,&dwRead,TRUE,&dwFlags))
+		err = WSAGetLastError();
 
 	on_recv((HANDLE)m_hSocket,dwRead,err,pOv);
 
@@ -112,11 +110,6 @@ int AsyncSocket::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback
 
 void AsyncSocket::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
-	// Get the actual result (because its actually different!)
-	DWORD dwFlags = 0;
-	if (!WSAGetOverlappedResult((SOCKET)handle,pOv,&dwBytes,TRUE,&dwFlags))
-		dwErr = WSAGetLastError();
-	
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	recv_callback_t callback = reinterpret_cast<recv_callback_t>(pOv->m_extras[1]);
 	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
@@ -150,22 +143,21 @@ int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buf
 	wsa_buf.buf = const_cast<char*>(buffer->rd_ptr());
 	wsa_buf.len = static_cast<u_long>(bytes);
 	
-	DWORD dwSent = 0;
-	if (WSASend(m_hSocket,&wsa_buf,1,&dwSent,0,pOv,NULL) == SOCKET_ERROR)
+	if (WSASend(m_hSocket,&wsa_buf,1,NULL,0,pOv,NULL) == SOCKET_ERROR)
 	{
 		err = GetLastError();
 		if (err == WSA_IO_PENDING)
 		{
 			// Will complete later...
-			m_pProactor->delete_overlapped(pOv);
 			return 0;
 		}
 	}
 		
-	assert(err || bytes == dwSent);
+	DWORD dwSent = 0;
+	DWORD dwFlags = 0;
+	if (!WSAGetOverlappedResult(m_hSocket,pOv,&dwSent,TRUE,&dwFlags))
+		err = WSAGetLastError();
 	
-	m_pProactor->delete_overlapped(pOv);
-
 	on_send((HANDLE)m_hSocket,dwSent,err,pOv);
 
 	return 0;
@@ -173,11 +165,6 @@ int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buf
 
 void AsyncSocket::on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
-	// Get the actual result (because its actually different!)
-	DWORD dwFlags = 0;
-	if (!WSAGetOverlappedResult((SOCKET)handle,pOv,&dwBytes,TRUE,&dwFlags))
-		dwErr = WSAGetLastError();
-	
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	send_callback_t callback = reinterpret_cast<send_callback_t>(pOv->m_extras[1]);
 
@@ -217,21 +204,20 @@ int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* b
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
 
-	DWORD dwSent = 0;
-	if (WSASend(m_hSocket,wsa_bufs,static_cast<DWORD>(count),&dwSent,0,pOv,NULL) == SOCKET_ERROR)
+	if (WSASend(m_hSocket,wsa_bufs,static_cast<DWORD>(count),NULL,0,pOv,NULL) == SOCKET_ERROR)
 	{
 		err = GetLastError();
 		if (err == WSA_IO_PENDING)
 		{
 			// Will complete later...
-			m_pProactor->delete_overlapped(pOv);
 			return 0;
 		}
 	}
 	
-	assert(err || dwSent);
-	
-	m_pProactor->delete_overlapped(pOv);
+	DWORD dwSent = 0;
+	DWORD dwFlags = 0;
+	if (!WSAGetOverlappedResult(m_hSocket,pOv,&dwSent,TRUE,&dwFlags))
+		err = WSAGetLastError();
 
 	on_send((HANDLE)m_hSocket,dwSent,err,pOv);
 	
@@ -486,6 +472,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 							
 		if (!pOv)
 		{
+			void* TODO; // This looks iffy!!
 			buf = OOBase::CrtAllocator::allocate((m_addr_len+16)*2);
 			if (!buf)
 			{
@@ -520,7 +507,6 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 			
 			// Will complete later...
 			++m_pending;
-			m_pProactor->delete_overlapped(pOv);
 			pOv = NULL;
 			buf = NULL;
 			err = 0;
@@ -528,8 +514,6 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 			continue;
 		}
 
-		m_pProactor->delete_overlapped(pOv);
-		
 		// Call the callback
 		if (on_accept(sockNew,false,0,NULL,guard))
 		{
@@ -569,13 +553,15 @@ void InternalAcceptor::accept_ready(PVOID lpParameter, BOOLEAN)
 void InternalAcceptor::on_completion(HANDLE /*hSocket*/, DWORD /*dwBytes*/, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {	
 	InternalAcceptor* pThis = reinterpret_cast<InternalAcceptor*>(pOv->m_extras[0]);
+	SOCKET s = static_cast<SOCKET>(pOv->m_extras[1]);
+	void* p = reinterpret_cast<void*>(pOv->m_extras[2]);
 	
+	pOv->m_pProactor->delete_overlapped(pOv);
+
 	OOBase::Guard<OOBase::Condition::Mutex> guard(pThis->m_lock);
 	
 	// Perform the callback
-	pThis->on_accept(static_cast<SOCKET>(pOv->m_extras[1]),true,dwErr,reinterpret_cast<void*>(pOv->m_extras[2]),guard);
-	
-	pOv->m_pProactor->delete_overlapped(pOv);
+	pThis->on_accept(s,true,dwErr,p,guard);
 }
 
 bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void* addr_buf, OOBase::Guard<OOBase::Condition::Mutex>& guard)

@@ -63,9 +63,7 @@ int OOBase::detail::ProactorWin32::new_overlapped(Overlapped*& pOv, pfnCompletio
 	ZeroMemory(pOv,sizeof(Overlapped));
 	pOv->m_callback = callback;
 	pOv->m_pProactor = this;
-	pOv->m_refcount = 2;
-
-	void* TODO; // Why is the refcount 2 ?!?!?
+	pOv->m_refcount = 1;
 
 	return 0;
 }
