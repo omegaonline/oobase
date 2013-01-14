@@ -119,9 +119,10 @@ int Pipe::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout&
 	return err;
 }
 
-size_t Pipe::send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout)
+size_t Pipe::send_msg(const void*, size_t, const void*, size_t, int& err, const OOBase::Timeout&)
 {
-	return send(data_buf,data_len,err,timeout);
+	err = ERROR_NOT_SUPPORTED;
+	return 0;
 }
 
 size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout)
@@ -241,9 +242,10 @@ int Pipe::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout&
 	return err;
 }
 
-size_t Pipe::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout)
+size_t Pipe::recv_msg(void*, size_t, void*, size_t, int& err, const OOBase::Timeout& timeout)
 {
-	return recv(data_buf,data_len,false,err,timeout);
+	err = ERROR_NOT_SUPPORTED;
+	return 0;
 }
 
 size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout)
