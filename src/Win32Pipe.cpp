@@ -356,7 +356,7 @@ void Pipe::close()
 	OOBase::Guard<OOBase::Mutex> guard2(m_send_lock);
 }
 
-int OOBase::Net::accept_local_socket(HANDLE hPipe, const Timeout& timeout)
+int OOBase::Net::accept(HANDLE hPipe, const Timeout& timeout)
 {
 	OVERLAPPED ov = {0};
 	ov.hEvent = CreateEventW(NULL,TRUE,TRUE,NULL);
@@ -402,16 +402,16 @@ int OOBase::Net::accept_local_socket(HANDLE hPipe, const Timeout& timeout)
 	return 0;
 }
 
-OOBase::Socket* OOBase::Socket::attach_local(socket_t sock, int& err)
+OOBase::Socket* OOBase::Socket::attach(HANDLE hPipe, int& err)
 {
-	OOBase::Socket* pSocket = new (std::nothrow) Pipe((HANDLE)sock);
+	OOBase::Socket* pSocket = new (std::nothrow) Pipe(hPipe);
 	if (!pSocket)
 		err = ERROR_OUTOFMEMORY;
 
 	return pSocket;
 }
 
-OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const Timeout& timeout)
+OOBase::Socket* OOBase::Socket::connect(const char* path, int& err, const Timeout& timeout)
 {
 	OOBase::StackAllocator<256> allocator;
 	OOBase::LocalString pipe_name(allocator);

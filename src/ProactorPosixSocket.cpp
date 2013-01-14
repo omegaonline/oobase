@@ -38,7 +38,7 @@
 
 namespace
 {
-	class AsyncSocket : public OOBase::AsyncLocalSocket
+	class AsyncSocket : public OOBase::AsyncSocket
 	{
 	public:
 		AsyncSocket(OOBase::detail::ProactorPosix* pProactor, int fd);
@@ -553,25 +553,25 @@ namespace
 	class SocketAcceptor : public OOBase::Acceptor
 	{
 	public:
-		SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_remote_callback_t callback);
-		SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_local_callback_t callback);
+		SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_callback_t callback);
+		SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_pipe_callback_t callback);
 		virtual ~SocketAcceptor();
 
 		int bind(const sockaddr* addr, socklen_t addr_len, mode_t mode);
 
 	private:
-		OOBase::detail::ProactorPosix*             m_pProactor;
-		void*                                      m_param;
-		OOBase::Proactor::accept_remote_callback_t m_callback;
-		OOBase::Proactor::accept_local_callback_t  m_callback_local;
-		int                                        m_fd;
+		OOBase::detail::ProactorPosix*           m_pProactor;
+		void*                                    m_param;
+		OOBase::Proactor::accept_callback_t      m_callback;
+		OOBase::Proactor::accept_pipe_callback_t m_callback_local;
+		int                                      m_fd;
 
 		static void fd_callback(int fd, void* param, unsigned int events);
 		void do_accept();
 	};
 }
 
-SocketAcceptor::SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_remote_callback_t callback) :
+SocketAcceptor::SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_callback_t callback) :
 		m_pProactor(pProactor),
 		m_param(param),
 		m_callback(callback),
@@ -579,7 +579,7 @@ SocketAcceptor::SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* p
 		m_fd(-1)
 { }
 
-SocketAcceptor::SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_local_callback_t callback) :
+SocketAcceptor::SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_pipe_callback_t callback) :
 		m_pProactor(pProactor),
 		m_param(param),
 		m_callback(NULL),
@@ -712,7 +712,7 @@ void SocketAcceptor::do_accept()
 	}
 }
 
-OOBase::Acceptor* OOBase::detail::ProactorPosix::accept_remote(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err), const sockaddr* addr, socklen_t addr_len, int& err)
+OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err), const sockaddr* addr, socklen_t addr_len, int& err)
 {
 	// Make sure we have valid inputs
 	if (!callback || !addr || addr_len == 0)
@@ -737,7 +737,7 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept_remote(void* param, void
 	return pAcceptor;
 }
 
-OOBase::Acceptor* OOBase::detail::ProactorPosix::accept_local(void* param, void (*callback)(void* param, AsyncLocalSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa)
+OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, void (*callback)(void* param, AsyncSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa)
 {
 	// Make sure we have valid inputs
 	if (!callback || !path)
@@ -771,7 +771,7 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept_local(void* param, void 
 	return pAcceptor;
 }
 
-OOBase::AsyncSocket* OOBase::detail::ProactorPosix::connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout)
+OOBase::AsyncSocket* OOBase::detail::ProactorPosix::connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout)
 {
 	int fd = Net::open_socket(addr->sa_family,SOCK_STREAM,0,err);
 	if (err)
@@ -783,14 +783,14 @@ OOBase::AsyncSocket* OOBase::detail::ProactorPosix::connect_socket(const sockadd
 		return NULL;
 	}
 
-	AsyncLocalSocket* pSocket = attach_local_socket(fd,err);
+	AsyncSocket* pSocket = attach(fd,err);
 	if (!pSocket)
 		Net::close_socket(fd);
 
 	return pSocket;
 }
 
-OOBase::AsyncLocalSocket* OOBase::detail::ProactorPosix::connect_local_socket(const char* path, int& err, const Timeout& timeout)
+OOBase::AsyncSocket* OOBase::detail::ProactorPosix::connect(const char* path, int& err, const Timeout& timeout)
 {
 	int fd = Net::open_socket(AF_UNIX,SOCK_STREAM,0,err);
 	if (err)
@@ -807,19 +807,14 @@ OOBase::AsyncLocalSocket* OOBase::detail::ProactorPosix::connect_local_socket(co
 		return NULL;
 	}
 
-	AsyncLocalSocket* pSocket = attach_local_socket(fd,err);
+	AsyncSocket* pSocket = attach(fd,err);
 	if (!pSocket)
 		Net::close_socket(fd);
 
 	return pSocket;
 }
 
-OOBase::AsyncSocket* OOBase::detail::ProactorPosix::attach_socket(socket_t sock, int& err)
-{
-	return attach_local_socket(sock,err);
-}
-
-OOBase::AsyncLocalSocket* OOBase::detail::ProactorPosix::attach_local_socket(socket_t sock, int& err)
+OOBase::AsyncSocket* OOBase::detail::ProactorPosix::attach(socket_t sock, int& err)
 {
 	// Set non-blocking...
 	err = POSIX::set_non_blocking(sock,true);

@@ -44,14 +44,13 @@ namespace OOBase
 		{
 		// Proactor public members
 		public:
-			Acceptor* accept_local(void* param, accept_local_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa);
-			Acceptor* accept_remote(void* param, accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err);
+			Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa);
+			Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err);
 
-			AsyncSocket* attach_socket(socket_t sock, int& err);
-			AsyncLocalSocket* attach_local_socket(socket_t sock, int& err);
+			AsyncSocket* attach(socket_t sock, int& err);
 
-			AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout = Timeout());
-			AsyncLocalSocket* connect_local_socket(const char* path, int& err, const Timeout& timeout = Timeout());
+			AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout = Timeout());
+			AsyncSocket* connect(const char* path, int& err, const Timeout& timeout = Timeout());
 
 		// 'Internal' public members
 		public:

@@ -243,14 +243,14 @@ namespace
 	class InternalAcceptor
 	{
 	public:
-		InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_remote_callback_t callback);
+		InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_callback_t callback);
 		
 		int listen(size_t backlog);
 		int stop(bool destroy);
 		int bind(const sockaddr* addr, socklen_t addr_len);
 		
 	private:
-		OOBase::detail::ProactorWin32*                m_pProactor;
+		OOBase::detail::ProactorWin32*                   m_pProactor;
 		OOBase::Condition::Mutex                         m_lock;
 		OOBase::Condition                                m_condition;
 		OOBase::SmartPtr<sockaddr,OOBase::FreeDestructor<OOBase::CrtAllocator> > m_addr;
@@ -262,7 +262,7 @@ namespace
 		OOBase::Win32::SmartHandle                       m_hEvent;
 		HANDLE                                           m_hWait;
 		void*                                            m_param;
-		OOBase::Proactor::accept_remote_callback_t    m_callback;
+		OOBase::Proactor::accept_callback_t              m_callback;
 
 		static void on_completion(HANDLE hSocket, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
 		static void CALLBACK accept_ready(PVOID lpParameter, BOOLEAN TimerOrWaitFired);
@@ -279,7 +279,7 @@ namespace
 		
 		int listen(size_t backlog);
 		int stop();
-		int bind(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len);
+		int bind(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_callback_t callback, const sockaddr* addr, socklen_t addr_len);
 	
 	private:
 		virtual ~SocketAcceptor();
@@ -314,7 +314,7 @@ int SocketAcceptor::stop()
 	return m_pAcceptor->stop(false);
 }
 
-int SocketAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len)
+int SocketAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_callback_t callback, const sockaddr* addr, socklen_t addr_len)
 {
 	m_pAcceptor = new (std::nothrow) InternalAcceptor(pProactor,param,callback);
 	if (!m_pAcceptor)
@@ -330,7 +330,7 @@ int SocketAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, void* param, 
 	return err;
 }
 
-InternalAcceptor::InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_remote_callback_t callback) :
+InternalAcceptor::InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_callback_t callback) :
 		m_pProactor(pProactor),
 		m_addr_len(0),
 		m_socket(INVALID_SOCKET),
@@ -657,7 +657,7 @@ bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void
 	return false;
 }
 
-OOBase::Acceptor* OOBase::detail::ProactorWin32::accept_remote(void* param, accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err)
+OOBase::Acceptor* OOBase::detail::ProactorWin32::accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err)
 {
 	Win32::WSAStartup();
 	
@@ -684,7 +684,7 @@ OOBase::Acceptor* OOBase::detail::ProactorWin32::accept_remote(void* param, acce
 	return pAcceptor;
 }
 
-OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout)
+OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout)
 {
 	SOCKET sock = Net::open_socket(addr->sa_family,SOCK_STREAM,0,err);
 	if (err)
@@ -714,7 +714,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect_socket(const sockadd
 	return pSocket;
 }
 
-OOBase::AsyncSocket* OOBase::detail::ProactorWin32::attach_socket(socket_t sock, int& err)
+OOBase::AsyncSocket* OOBase::detail::ProactorWin32::attach(socket_t sock, int& err)
 {
 	err = bind((HANDLE)sock);
 	if (err != 0)

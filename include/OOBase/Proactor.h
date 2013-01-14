@@ -136,25 +136,6 @@ namespace OOBase
 		};
 	};
 
-	class AsyncLocalSocket : public AsyncSocket
-	{
-	public:
-		/** \typedef uid_t
-		 *  The platform specific user id type.
-		 */
-#if defined(_WIN32)
-		typedef HANDLE uid_t;
-#elif defined(HAVE_UNISTD_H)
-		typedef ::uid_t uid_t;
-#else
-#error Fix me!
-#endif
-
-	protected:
-		AsyncLocalSocket() {}
-		virtual ~AsyncLocalSocket() {}
-	};
-	
 	class Acceptor : public RefCounted
 	{
 	public:
@@ -172,17 +153,19 @@ namespace OOBase
 		static Proactor* create(int& err);
 		static void destroy(Proactor* proactor);
 
-		typedef void (*accept_local_callback_t)(void* param, AsyncLocalSocket* pSocket, int err);
-		virtual Acceptor* accept_local(void* param, accept_local_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa = NULL) = 0;
+		typedef void (*accept_pipe_callback_t)(void* param, AsyncSocket* pSocket, int err);
+		virtual Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa = NULL) = 0;
 
-		typedef void (*accept_remote_callback_t)(void* param, AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err);
-		virtual Acceptor* accept_remote(void* param, accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err) = 0;
+		typedef void (*accept_callback_t)(void* param, AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err);
+		virtual Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err) = 0;
 
-		virtual AsyncSocket* attach_socket(socket_t sock, int& err) = 0;
-		virtual AsyncLocalSocket* attach_local_socket(socket_t sock, int& err) = 0;
+		virtual AsyncSocket* attach(socket_t sock, int& err) = 0;
+#if defined(_WIN32)
+		virtual AsyncSocket* attach(HANDLE hPipe, int& err) = 0;
+#endif
 
-		virtual AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout = Timeout()) = 0;
-		virtual AsyncLocalSocket* connect_local_socket(const char* path, int& err, const Timeout& timeout = Timeout()) = 0;
+		virtual AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout = Timeout()) = 0;
+		virtual AsyncSocket* connect(const char* path, int& err, const Timeout& timeout = Timeout()) = 0;
 
 		// Returns -1 on error, 0 on timeout, 1 on nothing more to do
 		virtual int run(int& err, const Timeout& timeout = Timeout()) = 0;

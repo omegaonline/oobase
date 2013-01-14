@@ -29,7 +29,7 @@
 
 namespace
 {
-	class AsyncPipe : public OOBase::AsyncLocalSocket
+	class AsyncPipe : public OOBase::AsyncSocket
 	{
 	public:
 		AsyncPipe(OOBase::detail::ProactorWin32* pProactor, HANDLE hPipe);
@@ -294,22 +294,22 @@ namespace
 	class InternalAcceptor
 	{
 	public:
-		InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_local_callback_t callback);
+		InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback);
 		
 		int start();
 		int stop();
 				
 	private:
-		OOBase::detail::ProactorWin32*            m_pProactor;
-		OOBase::Condition::Mutex                  m_lock;
-		OOBase::Condition                         m_condition;
-		OOBase::String                            m_pipe_name;
-		SECURITY_ATTRIBUTES*                      m_psa;
-		size_t                                    m_backlog;
-		size_t                                    m_refcount;
-		OOBase::Stack<HANDLE>                     m_stkPending;
-		void*                                     m_param;
-		OOBase::Proactor::accept_local_callback_t m_callback;
+		OOBase::detail::ProactorWin32*           m_pProactor;
+		OOBase::Condition::Mutex                 m_lock;
+		OOBase::Condition                        m_condition;
+		OOBase::String                           m_pipe_name;
+		SECURITY_ATTRIBUTES*                     m_psa;
+		size_t                                   m_backlog;
+		size_t                                   m_refcount;
+		OOBase::Stack<HANDLE>                    m_stkPending;
+		void*                                    m_param;
+		OOBase::Proactor::accept_pipe_callback_t m_callback;
 	
 		~InternalAcceptor();
 		
@@ -323,7 +323,7 @@ namespace
 	public:
 		PipeAcceptor();
 		
-		int bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_local_callback_t callback);
+		int bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback);
 		
 	private:
 		virtual ~PipeAcceptor();
@@ -342,7 +342,7 @@ PipeAcceptor::~PipeAcceptor()
 		m_pAcceptor->stop();
 }
 
-int PipeAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_local_callback_t callback)
+int PipeAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback)
 {
 	m_pAcceptor = new (std::nothrow) InternalAcceptor(pProactor,pipe_name,psa,param,callback);
 	if (!m_pAcceptor)
@@ -358,7 +358,7 @@ int PipeAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::S
 	return err;
 }
 
-InternalAcceptor::InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_local_callback_t callback) :
+InternalAcceptor::InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback) :
 		m_pProactor(pProactor),
 		m_pipe_name(pipe_name),
 		m_psa(psa),
@@ -577,7 +577,7 @@ bool InternalAcceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase
 	return false;
 }
 
-OOBase::Acceptor* OOBase::detail::ProactorWin32::accept_local(void* param, accept_local_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa)
+OOBase::Acceptor* OOBase::detail::ProactorWin32::accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa)
 {
 	// Make sure we have valid inputs
 	if (!callback || !path)
@@ -609,23 +609,23 @@ OOBase::Acceptor* OOBase::detail::ProactorWin32::accept_local(void* param, accep
 	return pAcceptor;
 }
 
-OOBase::AsyncLocalSocket* OOBase::detail::ProactorWin32::attach_local_socket(socket_t sock, int& err)
+OOBase::AsyncSocket* OOBase::detail::ProactorWin32::attach(HANDLE hPipe, int& err)
 {
-	err = bind((HANDLE)sock);
+	err = bind(hPipe);
 	if (err != 0)
 		return NULL;
 
-	AsyncPipe* pPipe = new (std::nothrow) AsyncPipe(this,(HANDLE)sock);
+	AsyncPipe* pPipe = new (std::nothrow) AsyncPipe(this,hPipe);
 	if (!pPipe)
 	{
-		unbind((HANDLE)sock);
+		unbind(hPipe);
 		err = ERROR_OUTOFMEMORY;
 	}
-		
+
 	return pPipe;
 }
 
-OOBase::AsyncLocalSocket* OOBase::detail::ProactorWin32::connect_local_socket(const char* path, int& err, const Timeout& timeout)
+OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const char* path, int& err, const Timeout& timeout)
 {
 	StackAllocator<256> allocator;
 	LocalString strPipe(allocator);
@@ -680,7 +680,7 @@ OOBase::AsyncLocalSocket* OOBase::detail::ProactorWin32::connect_local_socket(co
 		return NULL;
 
 	// Wrap socket
-	AsyncLocalSocket* pSocket = new (std::nothrow) AsyncPipe(this,hPipe);
+	AsyncSocket* pSocket = new (std::nothrow) AsyncPipe(this,hPipe);
 	if (!pSocket)
 	{
 		unbind(hPipe);

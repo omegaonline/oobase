@@ -42,13 +42,13 @@ namespace OOBase
 
 			void stop();
 
-			AsyncSocket* attach_socket(socket_t sock, int& err);
-			AsyncLocalSocket* attach_local_socket(socket_t sock, int& err);
+			AsyncSocket* attach(socket_t sock, int& err);
+			AsyncSocket* attach(HANDLE hPipe, int& err);
 
-			AsyncLocalSocket* accept_local_socket(HANDLE hPipe, int& err, const Timeout& timeout);
+			AsyncSocket* accept(HANDLE hPipe, int& err, const Timeout& timeout);
 
-			AsyncSocket* connect_socket(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout);
-			AsyncLocalSocket* connect_local_socket(const char* path, int& err, const Timeout& timeout);
+			AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout);
+			AsyncSocket* connect(const char* path, int& err, const Timeout& timeout);
 		
 			struct Overlapped : public OVERLAPPED
 			{
@@ -68,8 +68,8 @@ namespace OOBase
 			int run(int& err, const Timeout& timeout);
 
 		protected:
-			Acceptor* accept_local(void* param, accept_local_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa);
-			Acceptor* accept_remote(void* param, accept_remote_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err);
+			Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa);
+			Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err);
 
 		private:
 			HANDLE   m_hPort;

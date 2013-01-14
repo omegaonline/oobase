@@ -694,11 +694,6 @@ OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)
 	return pSocket;
 }
 
-OOBase::Socket* OOBase::Socket::attach_local(socket_t sock, int& err)
-{
-	return attach(sock,err);
-}
-
 OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, int& err, const Timeout& timeout)
 {
 	socket_t sock = connect_i(address,port,err,timeout);
@@ -733,7 +728,7 @@ void OOBase::POSIX::create_unix_socket_address(sockaddr_un& addr, socklen_t& len
 	}
 }
 
-OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const Timeout& timeout)
+OOBase::Socket* OOBase::Socket::connect(const char* path, int& err, const Timeout& timeout)
 {
 	int sock = Net::open_socket(AF_UNIX,SOCK_STREAM,0,err);
 	if (err)

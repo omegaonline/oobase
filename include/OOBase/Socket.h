@@ -69,7 +69,7 @@ namespace OOBase
 		int accept(socket_t accept_sock, socket_t& new_sock, const Timeout& timeout = Timeout());
 
 #if defined(_WIN32)
-		int accept_local_socket(HANDLE hPipe, const Timeout& timeout = Timeout());
+		int accept(HANDLE hPipe, const Timeout& timeout = Timeout());
 #endif
 	}
 
@@ -77,10 +77,13 @@ namespace OOBase
 	{
 	public:
 		static Socket* attach(socket_t sock, int& err);
-		static Socket* attach_local(socket_t sock, int& err);
+
+#if defined(_WIN32)
+		static Socket* attach(HANDLE hPipe, int& err);
+#endif
 
 		static Socket* connect(const char* address, const char* port, int& err, const Timeout& timeout = Timeout());
-		static Socket* connect_local(const char* path, int& err, const Timeout& timeout = Timeout());
+		static Socket* connect(const char* path, int& err, const Timeout& timeout = Timeout());
 
 		virtual size_t send(const void* buf, size_t len, int& err, const Timeout& timeout = Timeout()) = 0;
 		virtual int send_v(Buffer* buffers[], size_t count, const Timeout& timeout = Timeout()) = 0;
