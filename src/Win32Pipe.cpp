@@ -54,9 +54,6 @@ namespace
 		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
 		size_t send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout);
 
-		int recv_socket(OOBase::socket_t& sock, const OOBase::Timeout& timeout);
-		int send_socket(OOBase::socket_t sock, DWORD pid, const OOBase::Timeout& timeout);
-		
 		void close();
 					
 	private:
@@ -193,7 +190,7 @@ size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::Timeout
 	return (len - to_write);
 }
 
-int Pipe::send_socket(OOBase::socket_t sock, DWORD pid, const OOBase::Timeout& timeout)
+/*int Pipe::send_socket(OOBase::socket_t sock, DWORD pid, const OOBase::Timeout& timeout)
 {
 	OOBase::Win32::WSAStartup();
 
@@ -204,7 +201,7 @@ int Pipe::send_socket(OOBase::socket_t sock, DWORD pid, const OOBase::Timeout& t
 	int err = 0;
 	send(&pi,sizeof(pi),err,timeout);
 	return err;
-}
+}*/
 
 size_t Pipe::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout)
 {
@@ -321,7 +318,7 @@ size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::Ti
 	return (len - to_read);
 }
 
-int Pipe::recv_socket(OOBase::socket_t& sock, const OOBase::Timeout& timeout)
+/*int Pipe::recv_socket(OOBase::socket_t& sock, const OOBase::Timeout& timeout)
 {
 	OOBase::Win32::WSAStartup();
 
@@ -336,7 +333,7 @@ int Pipe::recv_socket(OOBase::socket_t& sock, const OOBase::Timeout& timeout)
 		return WSAGetLastError();
 
 	return 0;
-}
+}*/
 
 void Pipe::close()
 {
