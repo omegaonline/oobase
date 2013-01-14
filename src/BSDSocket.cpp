@@ -243,7 +243,7 @@ namespace
 	class Socket : public OOBase::Socket
 	{
 	public:
-		Socket(OOBase::socket_t sock, bool local);
+		Socket(OOBase::socket_t sock);
 		virtual ~Socket();
 
 		size_t send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout);
@@ -253,13 +253,11 @@ namespace
 
 		void close();
 
-		int get_peer_uid(uid_t& uid) const;
 		int send_socket(OOBase::socket_t sock, const OOBase::Timeout& timeout);
 		int recv_socket(OOBase::socket_t& sock, const OOBase::Timeout& timeout);
 
 	private:
 		const int  m_sock;
-		const bool m_local;
 
 		OOBase::Mutex              m_recv_lock;  // These are mutexes to enforce ordering
 		OOBase::Mutex              m_send_lock;
@@ -316,9 +314,8 @@ namespace
 	}
 }
 
-Socket::Socket(int sock, bool local) :
-		m_sock(sock),
-		m_local(local)
+Socket::Socket(int sock) :
+		m_sock(sock)
 {
 }
 
@@ -707,21 +704,13 @@ void Socket::close()
 	::shutdown(m_sock,SHUT_WR);
 }
 
-int Socket::get_peer_uid(uid_t& uid) const
-{
-	if (!m_local)
-		return ENOTSUP;
-
-	return OOBase::POSIX::get_peer_uid(m_sock,uid);
-}
-
 OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)
 {
 	err = OOBase::POSIX::set_non_blocking(sock,true);
 	if (err)
 		return NULL;
 
-	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock,false);
+	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock);
 	if (!pSocket)
 		err = ENOMEM;
 
@@ -730,15 +719,7 @@ OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)
 
 OOBase::Socket* OOBase::Socket::attach_local(socket_t sock, int& err)
 {
-	err = OOBase::POSIX::set_non_blocking(sock,true);
-	if (err)
-		return NULL;
-
-	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock,true);
-	if (!pSocket)
-		err = ENOMEM;
-
-	return pSocket;
+	return attach(sock,err);
 }
 
 OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, int& err, const Timeout& timeout)
@@ -747,7 +728,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, i
 	if (sock == -1)
 		return NULL;
 
-	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock,false);
+	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock);
 	if (!pSocket)
 	{
 		err = ENOMEM;
@@ -791,7 +772,7 @@ OOBase::Socket* OOBase::Socket::connect_local(const char* path, int& err, const 
 		return NULL;
 	}
 
-	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock,true);
+	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock);
 	if (!pSocket)
 	{
 		err = ENOMEM;

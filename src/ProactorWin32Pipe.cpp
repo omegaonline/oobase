@@ -37,8 +37,6 @@ namespace
 		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes);
 		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
 		int send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count);
-
-		int get_uid(uid_t& uid);
 	
 	private:
 		virtual ~AsyncPipe();
@@ -269,7 +267,7 @@ int AsyncPipe::send_v(void* param, send_callback_t callback, OOBase::Buffer* buf
 	return 0;
 }
 
-int AsyncPipe::get_uid(OOBase::AsyncLocalSocket::uid_t& uid)
+/*int AsyncPipe::get_uid(OOBase::AsyncLocalSocket::uid_t& uid)
 {
 	if (!ImpersonateNamedPipeClient(m_hPipe))
 		return GetLastError();
@@ -289,7 +287,7 @@ int AsyncPipe::get_uid(OOBase::AsyncLocalSocket::uid_t& uid)
 	uid = ptruid.detach();
 	
 	return 0;
-}
+}*/
 
 namespace
 {	

@@ -53,8 +53,6 @@ namespace
 		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
 		int send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 
-		int get_uid(uid_t& uid);
-
 	private:
 		struct RecvItem
 		{
@@ -548,11 +546,6 @@ void AsyncSocket::process_send(OOBase::Queue<SendNotify,OOBase::AllocatorInstanc
 				OOBase_CallCriticalFailure(err);
 		}
 	}
-}
-
-int AsyncSocket::get_uid(OOBase::AsyncLocalSocket::uid_t& uid)
-{
-	return OOBase::POSIX::get_peer_uid(m_fd,uid);
 }
 
 namespace

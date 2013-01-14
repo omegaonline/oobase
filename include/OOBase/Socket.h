@@ -178,13 +178,6 @@ namespace OOBase
 		virtual int recv_socket(socket_t& sock, const Timeout& timeout = Timeout()) = 0;
 
 		virtual void close() = 0;
-
-#if defined(HAVE_UNISTD_H)
-		virtual int get_peer_uid(uid_t& uid) const
-		{
-			return EPERM;
-		}
-#endif
 	};
 }
 

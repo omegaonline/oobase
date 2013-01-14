@@ -149,7 +149,6 @@ namespace OOBase
 #else
 #error Fix me!
 #endif
-		virtual int get_uid(uid_t& uid) = 0;
 
 	protected:
 		AsyncLocalSocket() {}
