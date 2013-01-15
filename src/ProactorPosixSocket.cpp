@@ -46,28 +46,37 @@ namespace
 
 		int init();
 
-		typedef void (*recv_callback_t)(void* param, OOBase::Buffer* buffer, int err);
-		typedef void (*send_callback_t)(void* param, int err);
-
 		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes);
+		int recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer, size_t data_bytes);
 		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
 		int send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count);
+		int send_msg(void* param, send_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
 
 	private:
 		struct RecvItem
 		{
 			void*           m_param;
-			recv_callback_t m_callback;
-			OOBase::Buffer* m_buffer;
-			size_t          m_bytes;
+			OOBase::Buffer* m_data_buffer;
+			size_t          m_data_bytes;
+			OOBase::Buffer* m_ctl_buffer;
+			union
+			{
+				recv_callback_t     m_callback;
+				recv_msg_callback_t m_msg_callback;
+			};
 		};
 
 		struct RecvNotify
 		{
 			int             m_err;
 			void*           m_param;
-			recv_callback_t m_callback;
-			OOBase::Buffer* m_buffer;
+			OOBase::Buffer* m_data_buffer;
+			OOBase::Buffer* m_ctl_buffer;
+			union
+			{
+				recv_callback_t     m_callback;
+				recv_msg_callback_t m_msg_callback;
+			};
 		};
 
 		struct SendItem
@@ -75,6 +84,7 @@ namespace
 			void*           m_param;
 			send_callback_t m_callback;
 			size_t          m_count;
+			OOBase::Buffer* m_ctl_buffer;
 			union
 			{
 				OOBase::Buffer*  m_buffer;
@@ -98,9 +108,11 @@ namespace
 		static void fd_callback(int fd, void* param, unsigned int events);
 		void process_recv(OOBase::Queue<RecvNotify,OOBase::AllocatorInstance>& notify_queue);
 		int process_recv_i(RecvItem* item, bool& watch_again);
+		int process_recv_msg(RecvItem* item, bool& watch_again);
 		void process_send(OOBase::Queue<SendNotify,OOBase::AllocatorInstance>& notify_queue);
 		int process_send_i(SendItem* item, bool& watch_again);
 		int process_send_v(SendItem* item, bool& watch_again);
+		int process_send_msg(SendItem* item, bool& watch_again);
 	};
 }
 
@@ -119,13 +131,18 @@ AsyncSocket::~AsyncSocket()
 	RecvItem recv_item;
 	while (m_recv_queue.pop(&recv_item))
 	{
-		if (recv_item.m_buffer)
-			recv_item.m_buffer->release();
+		if (recv_item.m_data_buffer)
+			recv_item.m_data_buffer->release();
+		if (recv_item.m_ctl_buffer)
+			recv_item.m_ctl_buffer->release();
 	}
 
 	SendItem send_item;
 	while (m_send_queue.pop(&send_item))
 	{
+		if (send_item.m_ctl_buffer)
+			send_item.m_ctl_buffer->release();
+
 		if (send_item.m_count == 1)
 		{
 			if (send_item.m_buffer)
@@ -151,35 +168,76 @@ int AsyncSocket::init()
 
 int AsyncSocket::recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
 {
-	if (!buffer)
-		return EINVAL;
-
 	int err = 0;
 	if (bytes)
 	{
+		if (!buffer)
+			return EINVAL;
+
 		err = buffer->space(bytes);
 		if (err)
 			return err;
 	}
-	else if (!buffer->space())
+	else if (!buffer || !buffer->space())
 		return 0;
 
 	if (!callback)
 		return EINVAL;
 
-	RecvItem item = { param, callback, buffer, bytes};
-	item.m_buffer->addref();
+	RecvItem item = { param, buffer, bytes, NULL };
+	item.m_callback = callback;
+	item.m_data_buffer->addref();
 
 	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 
 	bool watch = m_recv_queue.empty();
-	int err = m_recv_queue.push(item);
+	err = m_recv_queue.push(item);
 
 	guard.release();
 
 	if (err)
 	{
-		item.m_buffer->release();
+		item.m_data_buffer->release();
+		return err;
+	}
+
+	return (watch ? m_pProactor->watch_fd(m_fd,OOBase::detail::eTXRecv) : 0);
+}
+
+int AsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer, size_t data_bytes)
+{
+	int err = 0;
+	if (data_bytes)
+	{
+		if (!data_buffer)
+			return EINVAL;
+
+		err = data_buffer->space(data_bytes);
+		if (err)
+			return err;
+	}
+	else if ((!data_buffer || !data_buffer->space()) && (!ctl_buffer || !ctl_buffer->space()))
+		return 0;
+
+	if (!data_buffer || !data_buffer->space() || !ctl_buffer || !ctl_buffer->space() || !callback)
+		return EINVAL;
+
+	RecvItem item = { param, data_buffer, data_bytes, ctl_buffer };
+	item.m_msg_callback = callback;
+	item.m_data_buffer->addref();
+	item.m_ctl_buffer->addref();
+
+	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+
+	bool watch = m_recv_queue.empty();
+	err = m_recv_queue.push(item);
+
+	guard.release();
+
+	if (err)
+	{
+		item.m_data_buffer->release();
+		item.m_ctl_buffer->release();
 		return err;
 	}
 
@@ -195,7 +253,7 @@ int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buf
 	if (!buffer)
 		return EINVAL;
 
-	SendItem item = { param, callback, 1 };
+	SendItem item = { param, callback, 1, NULL };
 	item.m_buffer = buffer;
 	item.m_buffer->addref();
 
@@ -243,7 +301,7 @@ int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* b
 	if (actual_count == 1 && single)
 		return send(param,callback,single);
 
-	SendItem item = { param, callback, actual_count };
+	SendItem item = { param, callback, actual_count, NULL };
 	item.m_buffers = static_cast<OOBase::Buffer**>(OOBase::CrtAllocator::allocate(actual_count * sizeof(OOBase::Buffer*)));
 	if (!item.m_buffers)
 		return ERROR_OUTOFMEMORY;
@@ -278,6 +336,38 @@ int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* b
 	return (watch ? m_pProactor->watch_fd(m_fd,OOBase::detail::eTXSend) : 0);
 }
 
+int AsyncSocket::send_msg(void* param, send_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer)
+{
+	size_t data_len = (data_buffer ? data_buffer->length() : 0);
+	size_t ctl_len = (ctl_buffer ? ctl_buffer->length() : 0);
+
+	if (!data_len && !ctl_len)
+		return 0;
+
+	if (!data_len || !ctl_len)
+		return EINVAL;
+
+	SendItem item = { param, callback, 1, ctl_buffer };
+	item.m_ctl_buffer->addref();
+	item.m_buffer = data_buffer;
+	item.m_buffer->addref();
+
+	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+
+	bool watch = m_send_queue.empty();
+	int err = m_send_queue.push(item);
+
+	guard.release();
+
+	if (err)
+	{
+		item.m_buffer->release();
+		return err;
+	}
+
+	return (watch ? m_pProactor->watch_fd(m_fd,OOBase::detail::eTXSend) : 0);
+}
+
 void AsyncSocket::fd_callback(int fd, void* param, unsigned int events)
 {
 	AsyncSocket* pThis = static_cast<AsyncSocket*>(param);
@@ -300,8 +390,15 @@ void AsyncSocket::fd_callback(int fd, void* param, unsigned int events)
 		RecvNotify recv_notify;
 		while (recv_notify_queue.pop(&recv_notify))
 		{
-			(*recv_notify.m_callback)(recv_notify.m_param,recv_notify.m_buffer,recv_notify.m_err);
-			recv_notify.m_buffer->release();
+			if (recv_notify.m_ctl_buffer)
+			{
+				(*recv_notify.m_msg_callback)(recv_notify.m_param,recv_notify.m_data_buffer,recv_notify.m_ctl_buffer,recv_notify.m_err);
+				recv_notify.m_ctl_buffer->release();
+			}
+			else
+				(*recv_notify.m_callback)(recv_notify.m_param,recv_notify.m_data_buffer,recv_notify.m_err);
+
+			recv_notify.m_data_buffer->release();
 		}
 
 		SendNotify send_notify;
@@ -316,11 +413,12 @@ int AsyncSocket::process_recv_i(RecvItem* item, bool& watch_again)
 	int err = 0;
 	for (;;)
 	{
-		size_t to_read = (item->m_bytes ? item->m_bytes : item->m_buffer->space());
+		size_t to_read = (item->m_data_bytes ? item->m_data_bytes : item->m_data_buffer->space());
 		ssize_t r = 0;
+
 		do
 		{
-			r = ::recv(m_fd,item->m_buffer->wr_ptr(),to_read,0);
+			r = ::recv(m_fd,item->m_data_buffer->wr_ptr(),to_read,0);
 		}
 		while (r == -1 && errno == EINTR);
 
@@ -336,18 +434,57 @@ int AsyncSocket::process_recv_i(RecvItem* item, bool& watch_again)
 		if (r == 0)
 			break;
 
-		err = item->m_buffer->wr_ptr(r);
+		err = item->m_data_buffer->wr_ptr(r);
 		if (err)
 			break;
 
-		if (item->m_bytes)
-			item->m_bytes -= r;
+		if (item->m_data_bytes)
+			item->m_data_bytes -= r;
 
-		if (item->m_bytes == 0)
+		if (item->m_data_bytes == 0)
 			break;
 	}
 
 	return err;
+}
+
+int AsyncSocket::process_recv_msg(RecvItem* item, bool& watch_again)
+{
+	// We only do a single read
+	struct iovec io = {0};
+	io.iov_base = item->m_data_buffer->wr_ptr();
+	io.iov_len = (item->m_data_bytes ? item->m_data_bytes : item->m_data_buffer->space());
+
+	struct msghdr msg = {0};
+	msg.msg_iov = &io;
+	msg.msg_iovlen = 1;
+	msg.msg_control = item->m_ctl_buffer->wr_ptr();
+	msg.msg_controllen = item->m_ctl_buffer->space();
+
+	ssize_t r = 0;
+	do
+	{
+		r = ::recvmsg(m_fd,&msg,0);
+	}
+	while (r == -1 && errno == EINTR);
+
+	if (r == -1)
+	{
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+			watch_again = true;
+		else
+			return errno;
+	}
+	else if (r > 0)
+	{
+		int err = item->m_ctl_buffer->wr_ptr(msg.msg_controllen);
+		if (!err)
+			err = item->m_data_buffer->wr_ptr(r);
+		if (err)
+			return err;
+	}
+
+	return 0;
 }
 
 void AsyncSocket::process_recv(OOBase::Queue<RecvNotify,OOBase::AllocatorInstance>& notify_queue)
@@ -360,7 +497,10 @@ void AsyncSocket::process_recv(OOBase::Queue<RecvNotify,OOBase::AllocatorInstanc
 			RecvItem* front = m_recv_queue.front();
 
 			bool watch_again = false;
-			err = process_recv_i(front,watch_again);
+			if (front->m_ctl_buffer)
+				err = process_recv_msg(front,watch_again);
+			else
+				err = process_recv_i(front,watch_again);
 
 			if (!err && watch_again)
 			{
@@ -375,17 +515,20 @@ void AsyncSocket::process_recv(OOBase::Queue<RecvNotify,OOBase::AllocatorInstanc
 		RecvItem item;
 		m_recv_queue.pop(&item);
 
-		if (!item.m_callback)
-			item.m_buffer->release();
+		RecvNotify notify = { err, item.m_param, item.m_data_buffer, item.m_ctl_buffer };
+		if (item.m_ctl_buffer)
+			notify.m_msg_callback = item.m_msg_callback;
 		else
+			notify.m_callback = item.m_callback;
+
+		err = notify_queue.push(notify);
+		if (err)
 		{
-			RecvNotify notify = { err, item.m_param, item.m_callback, item.m_buffer };
-			err = notify_queue.push(notify);
-			if (err)
-			{
-				item.m_buffer->release();
-				OOBase_CallCriticalFailure(err);
-			}
+			item.m_data_buffer->release();
+			if (item.m_ctl_buffer)
+				item.m_ctl_buffer->release();
+
+			OOBase_CallCriticalFailure(err);
 		}
 	}
 }
@@ -399,7 +542,11 @@ int AsyncSocket::process_send_i(SendItem* item, bool& watch_again)
 		ssize_t sent = 0;
 		do
 		{
-			sent = ::send(m_fd,item->m_buffer->rd_ptr(),item->m_buffer->length(),MSG_NOSIGNAL);
+			sent = ::send(m_fd,item->m_buffer->rd_ptr(),item->m_buffer->length(),0
+#if defined(MSG_NOSIGNAL)
+				| MSG_NOSIGNAL
+#endif
+			);
 		}
 		while (sent == -1 && errno == EINTR);
 
@@ -418,13 +565,6 @@ int AsyncSocket::process_send_i(SendItem* item, bool& watch_again)
 			break;
 	}
 
-	if (!watch_again)
-	{
-		// Done with the buffer
-		item->m_buffer->release();
-		item->m_buffer = NULL;
-	}
-
 	return err;
 }
 
@@ -436,7 +576,7 @@ int AsyncSocket::process_send_v(SendItem* item, bool& watch_again)
 	size_t first_buffer = 0;
 	for (size_t i = 0;i<item->m_count;++i)
 	{
-		if (item->m_buffers[i])
+		if (item->m_buffers[i]->length())
 			break;
 
 		++first_buffer;
@@ -465,7 +605,11 @@ int AsyncSocket::process_send_v(SendItem* item, bool& watch_again)
 				ssize_t sent = 0;
 				do
 				{
-					sent = ::sendmsg(m_fd,&msg,MSG_NOSIGNAL);
+					sent = ::sendmsg(m_fd,&msg,0
+#if defined(MSG_NOSIGNAL)
+						| MSG_NOSIGNAL
+#endif
+					);
 				}
 				while (sent == -1 && errno == EINTR);
 
@@ -485,13 +629,12 @@ int AsyncSocket::process_send_v(SendItem* item, bool& watch_again)
 						if (static_cast<size_t>(sent) >= msg.msg_iov->iov_len)
 						{
 							item->m_buffers[first_buffer]->rd_ptr(msg.msg_iov->iov_len);
-							item->m_buffers[first_buffer]->release();
-							item->m_buffers[first_buffer] = NULL;
 							++first_buffer;
 
 							sent -= msg.msg_iov->iov_len;
 							++msg.msg_iov;
-							--msg.msg_iovlen;
+							if (--msg.msg_iovlen == 0)
+								break;
 						}
 						else
 						{
@@ -506,19 +649,47 @@ int AsyncSocket::process_send_v(SendItem* item, bool& watch_again)
 		}
 	}
 
-	if (!watch_again)
-	{
-		for (size_t i = 0;i<item->m_count;++i)
-		{
-			if (item->m_buffers[i])
-				item->m_buffers[i]->release();
-		}
+	return err;
+}
 
-		OOBase::CrtAllocator::free(item->m_buffers);
-		item->m_buffers = NULL;
+int AsyncSocket::process_send_msg(SendItem* item, bool& watch_again)
+{
+	// We only do a single write
+	struct iovec io = {0};
+	io.iov_base = const_cast<char*>(item->m_buffer->rd_ptr());
+	io.iov_len = item->m_buffer->length();
+
+	struct msghdr msg = {0};
+	msg.msg_iov = &io;
+	msg.msg_iovlen = 1;
+	msg.msg_control = const_cast<char*>(item->m_ctl_buffer->rd_ptr());
+	msg.msg_controllen = item->m_ctl_buffer->length();
+
+	ssize_t sent = 0;
+	do
+	{
+		sent = ::sendmsg(m_fd,&msg,0
+#if defined(MSG_NOSIGNAL)
+					| MSG_NOSIGNAL
+#endif
+				);
+	}
+	while (sent == -1 && errno == EINTR);
+
+	if (sent == -1)
+	{
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+			watch_again = true;
+		else
+			return errno;
+	}
+	else
+	{
+		item->m_buffer->rd_ptr(sent);
+		item->m_ctl_buffer->rd_ptr(msg.msg_controllen);
 	}
 
-	return err;
+	return 0;
 }
 
 void AsyncSocket::process_send(OOBase::Queue<SendNotify,OOBase::AllocatorInstance>& notify_queue)
@@ -532,7 +703,12 @@ void AsyncSocket::process_send(OOBase::Queue<SendNotify,OOBase::AllocatorInstanc
 
 			bool watch_again = false;
 			if (front->m_count == 1)
-				err = process_send_i(front,watch_again);
+			{
+				if (front->m_ctl_buffer)
+					err = process_send_msg(front,watch_again);
+				else
+					err = process_send_i(front,watch_again);
+			}
 			else
 				err = process_send_v(front,watch_again);
 
@@ -555,6 +731,25 @@ void AsyncSocket::process_send(OOBase::Queue<SendNotify,OOBase::AllocatorInstanc
 			err = notify_queue.push(notify);
 			if (err)
 				OOBase_CallCriticalFailure(err);
+		}
+
+		if (item.m_count == 1)
+		{
+			if (item.m_buffer)
+				item.m_ctl_buffer->release();
+
+			// Done with the buffer
+			item.m_buffer->release();
+		}
+		else
+		{
+			for (size_t i = 0;i<item.m_count;++i)
+			{
+				if (item.m_buffers[i])
+					item.m_buffers[i]->release();
+			}
+
+			OOBase::CrtAllocator::free(item.m_buffers);
 		}
 	}
 }

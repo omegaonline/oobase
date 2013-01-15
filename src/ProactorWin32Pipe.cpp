@@ -35,8 +35,10 @@ namespace
 		AsyncPipe(OOBase::detail::ProactorWin32* pProactor, HANDLE hPipe);
 		
 		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes);
+		int recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer, size_t data_bytes);
 		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
 		int send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count);
+		int send_msg(void* param, send_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
 	
 	private:
 		virtual ~AsyncPipe();
@@ -93,17 +95,17 @@ void AsyncPipe::translate_error(DWORD& dwErr)
 
 int AsyncPipe::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
 {
-	if (!buffer)
-		return ERROR_INVALID_PARAMETER;
-
 	int err = 0;
 	if (bytes)
 	{
+		if (!buffer)
+			return ERROR_INVALID_PARAMETER;
+
 		err = buffer->space(bytes);
 		if (err)
 			return err;
 	}
-	else if (!buffer->space())
+	else if (!buffer || !buffer->space())
 		return 0;
 
 	if (!callback)
@@ -132,6 +134,11 @@ int AsyncPipe::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, 
 	}
 
 	return 0;
+}
+
+int AsyncPipe::recv_msg(void*, recv_msg_callback_t, OOBase::Buffer*, OOBase::Buffer*, size_t)
+{
+	return ERROR_NOT_SUPPORTED;
 }
 
 void AsyncPipe::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
@@ -282,6 +289,11 @@ int AsyncPipe::send_v(void* param, send_callback_t callback, OOBase::Buffer* buf
 	}
 
 	return 0;
+}
+
+int AsyncPipe::send_msg(void*, send_callback_t, OOBase::Buffer*, OOBase::Buffer*)
+{
+	return ERROR_NOT_SUPPORTED;
 }
 
 /*int AsyncPipe::get_uid(OOBase::AsyncLocalSocket::uid_t& uid)

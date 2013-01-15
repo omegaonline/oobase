@@ -74,9 +74,13 @@ namespace OOBase
 		typedef void (*recv_callback_t)(void* param, Buffer* buffer, int err);
 		virtual int recv(void* param, recv_callback_t callback, Buffer* buffer, size_t bytes = 0) = 0;
 
+		typedef void (*recv_msg_callback_t)(void* param, Buffer* data_buffer, Buffer* ctl_buffer, int err);
+		virtual int recv_msg(void* param, recv_msg_callback_t callback, Buffer* data_buffer, Buffer* ctl_buffer, size_t data_bytes = 0) = 0;
+
 		typedef void (*send_callback_t)(void* param, int err);
 		virtual int send(void* param, send_callback_t callback, Buffer* buffer) = 0;
 		virtual int send_v(void* param, send_callback_t callback, Buffer* buffers[], size_t count) = 0;
+		virtual int send_msg(void* param, send_callback_t callback, Buffer* data_buffer, Buffer* ctl_buffer) = 0;
 
 	protected:
 		AsyncSocket() {}

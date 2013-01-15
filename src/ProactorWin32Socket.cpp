@@ -40,8 +40,10 @@ namespace
 		AsyncSocket(OOBase::detail::ProactorWin32* pProactor, SOCKET hSocket);
 		
 		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes);
+		int recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer, size_t data_bytes);
 		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
 		int send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count);
+		int send_msg(void* param, send_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
 	
 	private:
 		virtual ~AsyncSocket();
@@ -50,7 +52,9 @@ namespace
 		SOCKET                            m_hSocket;
 					
 		static void on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
+		static void on_recv_msg(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
 		static void on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
+		static void on_send_msg(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
 	};
 }
 
@@ -66,23 +70,23 @@ AsyncSocket::~AsyncSocket()
 
 int AsyncSocket::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
 {
-	if (!buffer)
-		return ERROR_INVALID_PARAMETER;
-
 	int err = 0;
 	if (bytes)
 	{
+		if (!buffer)
+			return ERROR_INVALID_PARAMETER;
+
 		err = buffer->space(bytes);
 		if (err)
 			return err;
 	}
-	else if (!buffer->space())
+	else if (!buffer || !buffer->space())
 		return 0;
 
 	if (!callback)
 		return ERROR_INVALID_PARAMETER;
 
-	if (bytes > u_long(-1) || bytes > (DWORD)-1)
+	if (bytes > u_long(-1) || bytes > DWORD(-1))
 		return ERROR_BUFFER_OVERFLOW;
 
 	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
@@ -133,6 +137,92 @@ void AsyncSocket::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::det
 		buffer->wr_ptr(dwBytes);
 
 		(*callback)(param,buffer,dwErr);
+	}
+}
+
+int AsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer, size_t data_bytes)
+{
+	int err = 0;
+	if (data_bytes)
+	{
+		if (!data_buffer)
+			return ERROR_INVALID_PARAMETER;
+
+		err = data_buffer->space(data_bytes);
+		if (err)
+			return err;
+	}
+	else if ((!data_buffer || !data_buffer->space()) && (!ctl_buffer || !ctl_buffer->space()))
+		return 0;
+
+	if (!data_buffer || !data_buffer->space() || !ctl_buffer || !ctl_buffer->space() || !callback)
+		return ERROR_INVALID_PARAMETER;
+
+	if (ctl_buffer->space() > u_long(-1))
+		return ERROR_BUFFER_OVERFLOW;
+
+	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
+	err = m_pProactor->new_overlapped(pOv,&on_recv);
+	if (err != 0)
+		return err;
+
+	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
+	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
+	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(data_buffer);
+	pOv->m_extras[3] = reinterpret_cast<ULONG_PTR>(ctl_buffer);
+	data_buffer->addref();
+	ctl_buffer->addref();
+
+	WSABUF wsa_buf;
+	wsa_buf.buf = data_buffer->wr_ptr();
+	wsa_buf.len = static_cast<u_long>(data_bytes);
+
+	WSAMSG msg = {0};
+	msg.lpBuffers = &wsa_buf;
+	msg.dwBufferCount = 1;
+	msg.Control.buf = ctl_buffer->wr_ptr();
+	msg.Control.len = static_cast<u_long>(ctl_buffer->space());
+	msg.dwFlags = 0;
+
+	// Increase and zero the ctl_buffer wr_ptr() as we have no way of knowing how much data is read
+	ctl_buffer->wr_ptr(msg.Control.len);
+	memset(msg.Control.buf,0,msg.Control.len);
+
+	if (OOBase::Win32::WSARecvMsg(m_hSocket,&msg,NULL,pOv,NULL) == SOCKET_ERROR)
+	{
+		err = GetLastError();
+		if (err == WSA_IO_PENDING)
+		{
+			// Will complete later...
+			return 0;
+		}
+	}
+
+	DWORD dwRead = 0;
+	DWORD dwFlags = 0;
+	if (!WSAGetOverlappedResult(m_hSocket,pOv,&dwRead,TRUE,&dwFlags))
+		err = WSAGetLastError();
+
+	on_recv_msg((HANDLE)m_hSocket,dwRead,err,pOv);
+
+	return 0;
+}
+
+void AsyncSocket::on_recv_msg(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
+{
+	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
+	recv_msg_callback_t callback = reinterpret_cast<recv_msg_callback_t>(pOv->m_extras[1]);
+	OOBase::RefPtr<OOBase::Buffer> data_buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
+	OOBase::RefPtr<OOBase::Buffer> ctl_buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[3]));
+
+	pOv->m_pProactor->delete_overlapped(pOv);
+
+	// Call callback
+	if (callback)
+	{
+		data_buffer->wr_ptr(dwBytes);
+
+		(*callback)(param,data_buffer,ctl_buffer,dwErr);
 	}
 }
 
@@ -255,6 +345,59 @@ int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* b
 
 	on_send((HANDLE)m_hSocket,dwSent,err,pOv);
 	
+	return 0;
+}
+
+int AsyncSocket::send_msg(void* param, send_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer)
+{
+	size_t data_len = (data_buffer ? data_buffer->length() : 0);
+	size_t ctl_len = (ctl_buffer ? ctl_buffer->length() : 0);
+
+	if (!data_len && !ctl_len)
+		return 0;
+
+	if (!data_len || !ctl_len)
+		return ERROR_INVALID_PARAMETER;
+
+	if (data_len > u_long(-1) || ctl_len > u_long(-1))
+		return ERROR_BUFFER_OVERFLOW;
+
+	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
+	int err = m_pProactor->new_overlapped(pOv,&on_send);
+	if (err != 0)
+		return err;
+
+	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
+	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
+
+	WSABUF wsa_buf;
+	wsa_buf.buf = const_cast<char*>(data_buffer->rd_ptr());
+	wsa_buf.len = static_cast<u_long>(data_len);
+
+	WSAMSG msg = {0};
+	msg.lpBuffers = &wsa_buf;
+	msg.dwBufferCount = 1;
+	msg.Control.buf = const_cast<char*>(ctl_buffer->rd_ptr());
+	msg.Control.len = static_cast<u_long>(ctl_len);
+	msg.dwFlags = 0;
+
+	if (OOBase::Win32::WSASendMsg(m_hSocket,&msg,0,NULL,pOv,NULL) == SOCKET_ERROR)
+	{
+		err = GetLastError();
+		if (err == WSA_IO_PENDING)
+		{
+			// Will complete later...
+			return 0;
+		}
+	}
+
+	DWORD dwSent = 0;
+	DWORD dwFlags = 0;
+	if (!WSAGetOverlappedResult(m_hSocket,pOv,&dwSent,TRUE,&dwFlags))
+		err = WSAGetLastError();
+
+	on_send((HANDLE)m_hSocket,dwSent,err,pOv);
+
 	return 0;
 }
 
