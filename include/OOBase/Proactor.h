@@ -49,6 +49,16 @@ namespace OOBase
 		}
 
 		template <typename T>
+		int recv_msg(T* param, void (T::*callback)(Buffer* data_buffer, Buffer* ctl_buffer, int err), Buffer* data_buffer, Buffer* ctl_buffer, size_t data_bytes = 0)
+		{
+			ThunkRM<T>* thunk = ThunkRM<T>::create(param,callback);
+			if (!thunk)
+				return ERROR_OUTOFMEMORY;
+
+			return recv_msg(thunk,&ThunkRM<T>::fn,data_buffer,ctl_buffer,data_bytes);
+		}
+
+		template <typename T>
 		int send(T* param, void (T::*callback)(int err), Buffer* buffer)
 		{
 			ThunkS<T>* thunk = ThunkS<T>::create(param,callback);
@@ -113,6 +123,32 @@ namespace OOBase
 			}
 		};
 		
+		template <typename T>
+		struct ThunkRM
+		{
+			T* m_param;
+			void (T::*m_callback)(Buffer* data_buffer, Buffer* ctl_buffer, int err);
+
+			static ThunkRM* create(T* param, void (T::*callback)(Buffer*,Buffer*,int))
+			{
+				ThunkRM* t = static_cast<ThunkRM*>(CrtAllocator::allocate(sizeof(ThunkRM)));
+				if (t)
+				{
+					t->m_callback = callback;
+					t->m_param = param;
+				}
+				return t;
+			}
+
+			static void fn(void* param, Buffer* data_buffer, Buffer* ctl_buffer, int err)
+			{
+				ThunkRM thunk = *static_cast<ThunkRM*>(param);
+				CrtAllocator::free(param);
+
+				(thunk.m_param->*thunk.m_callback)(data_buffer,ctl_buffer,err);
+			}
+		};
+
 		template <typename T>
 		struct ThunkS
 		{
