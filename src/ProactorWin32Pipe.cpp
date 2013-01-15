@@ -93,13 +93,24 @@ void AsyncPipe::translate_error(DWORD& dwErr)
 
 int AsyncPipe::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
 {
-	// Must have a callback function
-	assert(callback);
+	if (!buffer)
+		return ERROR_INVALID_PARAMETER;
 
-	// Make sure we have room
-	int err = buffer->space(bytes);
-	if (err != 0)
-		return err;
+	int err = 0;
+	if (bytes)
+	{
+		err = buffer->space(bytes);
+		if (err)
+			return err;
+	}
+	else if (!buffer->space())
+		return 0;
+
+	if (!callback)
+		return ERROR_INVALID_PARAMETER;
+
+	if (bytes > DWORD(-1))
+		return ERROR_BUFFER_OVERFLOW;
 		
 	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 	err = m_pProactor->new_overlapped(pOv,&on_recv);
@@ -166,10 +177,16 @@ void AsyncPipe::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detai
 
 int AsyncPipe::send(void* param, send_callback_t callback, OOBase::Buffer* buffer)
 {
-	size_t bytes = buffer->length();
+	size_t bytes = (buffer ? buffer->length() : 0);
 	if (bytes == 0)
 		return 0;
 	
+	if (!buffer)
+		return EINVAL;
+
+	if (bytes > DWORD(-1))
+		return ERROR_BUFFER_OVERFLOW;
+
 	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 	int dwErr = m_pProactor->new_overlapped(pOv,&on_send);
 	if (dwErr != 0)
@@ -210,18 +227,25 @@ int AsyncPipe::send_v(void* param, send_callback_t callback, OOBase::Buffer* buf
 {
 	// Because scatter-gather just doesn't work on named pipes,
 	// we concatenate the buffers and send as one 'atomic' write
+
 	if (count == 0)
 		return 0;
 	
+	if (!buffers)
+		return ERROR_INVALID_PARAMETER;
+
 	// Its more efficient to ask for the total block size up front rather than multiple small reallocs
 	size_t total = 0;
 	for (size_t i=0;i<count;++i)
 	{
-		size_t len = buffers[i]->length();
-		if (len > 0xFFFFFFFF || total > 0xFFFFFFFF - len)
-			return ERROR_BUFFER_OVERFLOW;
+		if (buffers[i])
+		{
+			size_t len = buffers[i]->length();
+			if (len > DWORD(-1) || total > DWORD(-1) - len)
+				return ERROR_BUFFER_OVERFLOW;
 		
-		total += len;
+			total += len;
+		}
 	}
 	
 	if (total == 0)
@@ -233,9 +257,12 @@ int AsyncPipe::send_v(void* param, send_callback_t callback, OOBase::Buffer* buf
 	
 	for (size_t i=0;i<count;++i)
 	{
-		size_t len = buffers[i]->length();
-		memcpy(buffer->wr_ptr(),buffers[i]->rd_ptr(),len);
-		buffer->wr_ptr(len);
+		if (buffers[i])
+		{
+			size_t len = buffers[i]->length();
+			memcpy(buffer->wr_ptr(),buffers[i]->rd_ptr(),len);
+			buffer->wr_ptr(len);
+		}
 	}
 			
 	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;

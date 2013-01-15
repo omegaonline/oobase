@@ -66,14 +66,25 @@ AsyncSocket::~AsyncSocket()
 
 int AsyncSocket::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
 {
-	// Must have a callback function
-	assert(callback);
+	if (!buffer)
+		return ERROR_INVALID_PARAMETER;
 
-	// Make sure we have room
-	int err = buffer->space(bytes);
-	if (err != 0)
-		return err;
-		
+	int err = 0;
+	if (bytes)
+	{
+		err = buffer->space(bytes);
+		if (err)
+			return err;
+	}
+	else if (!buffer->space())
+		return 0;
+
+	if (!callback)
+		return ERROR_INVALID_PARAMETER;
+
+	if (bytes > u_long(-1) || bytes > (DWORD)-1)
+		return ERROR_BUFFER_OVERFLOW;
+
 	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 	err = m_pProactor->new_overlapped(pOv,&on_recv);
 	if (err != 0)
@@ -127,9 +138,15 @@ void AsyncSocket::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::det
 
 int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buffer)
 {
-	size_t bytes = buffer->length();
+	size_t bytes = (buffer ? buffer->length() : 0);
 	if (bytes == 0)
 		return 0;
+
+	if (!buffer)
+		return EINVAL;
+
+	if (bytes > u_long(-1) || bytes > DWORD(-1))
+		return ERROR_BUFFER_OVERFLOW;
 
 	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 	int err = m_pProactor->new_overlapped(pOv,&on_send);
@@ -180,17 +197,34 @@ int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* b
 	if (count == 0)
 		return 0;
 
+	if (!buffers)
+		return ERROR_INVALID_PARAMETER;
+
+	if (count > DWORD(-1))
+		return ERROR_BUFFER_OVERFLOW;
+
 	OOBase::StackArrayPtr<WSABUF,8> wsa_bufs(count);
 	if (!wsa_bufs)
 		return ERROR_OUTOFMEMORY;
 	
+	DWORD buf_count = 0;
 	size_t total = 0;
 	for (size_t i=0;i<count;++i)
 	{
-		wsa_bufs[i].len = static_cast<u_long>(buffers[i]->length());
-		total += wsa_bufs[i].len;
+		size_t len = (buffers[i] ? buffers[i]->length() : 0);
+		if (len)
+		{
+			if (len > u_long(-1) || total > DWORD(-1) - len)
+				return ERROR_BUFFER_OVERFLOW;
 
-		wsa_bufs[i].buf = const_cast<char*>(buffers[i]->rd_ptr());
+			total += len;
+
+			wsa_bufs[buf_count].len = static_cast<u_long>(len);
+			wsa_bufs[buf_count].buf = const_cast<char*>(buffers[i]->rd_ptr());
+
+			if (++buf_count == DWORD(-1))
+				return ERROR_BUFFER_OVERFLOW;
+		}
 	}
 
 	if (total == 0)
@@ -204,7 +238,7 @@ int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* b
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
 
-	if (WSASend(m_hSocket,wsa_bufs,static_cast<DWORD>(count),NULL,0,pOv,NULL) == SOCKET_ERROR)
+	if (WSASend(m_hSocket,wsa_bufs,buf_count,NULL,0,pOv,NULL) == SOCKET_ERROR)
 	{
 		err = GetLastError();
 		if (err == WSA_IO_PENDING)

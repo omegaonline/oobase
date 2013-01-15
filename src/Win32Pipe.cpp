@@ -83,6 +83,16 @@ Pipe::~Pipe()
 
 size_t Pipe::send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout)
 {
+	err = 0;
+	if (len == 0)
+		return 0;
+
+	if (!buf)
+	{
+		err = ERROR_INVALID_PARAMETER;
+		return 0;
+	}
+
 	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,false);
 	if (!guard.acquire(timeout))
 	{
@@ -98,20 +108,20 @@ int Pipe::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout&
 	if (count == 0)
 		return 0;
 
-	int err = 0;
+	if (!buffers)
+		return ERROR_INVALID_PARAMETER;
 
 	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,false);
 	if (!guard.acquire(timeout))
-	{
-		err = WSAETIMEDOUT;
-		return 0;
-	}
+		return WSAETIMEDOUT;
 	
+	int err = 0;
 	for (size_t i=0;i<count && err == 0 ;++i)
 	{
-		if (buffers[i]->length() > 0)
+		size_t to_send = (buffers[i] ? buffers[i]->length() : 0);
+		if (to_send)
 		{
-			size_t len = send_i(buffers[i]->rd_ptr(),buffers[i]->length(),err,timeout);
+			size_t len = send_i(buffers[i]->rd_ptr(),to_send,err,timeout);
 			buffers[i]->wr_ptr(len);
 		}
 	}
@@ -206,6 +216,16 @@ size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::Timeout
 
 size_t Pipe::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout)
 {
+	err = 0;
+	if (len == 0)
+		return 0;
+
+	if (!buf)
+	{
+		err = ERROR_INVALID_PARAMETER;
+		return 0;
+	}
+
 	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,false);
 	if (!guard.acquire(timeout))
 	{
@@ -221,6 +241,9 @@ int Pipe::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout&
 	if (count == 0)
 		return 0;
 
+	if (!buffers)
+		return ERROR_INVALID_PARAMETER;
+
 	int err = 0;
 
 	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,false);
@@ -232,7 +255,7 @@ int Pipe::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout&
 
 	for (size_t i=0;i<count && err == 0 ;++i)
 	{
-		if (buffers[i]->space() > 0)
+		if (buffers[i] && buffers[i]->space() > 0)
 		{
 			size_t len = recv_i(buffers[i]->wr_ptr(),buffers[i]->space(),true,err,timeout);
 			buffers[i]->wr_ptr(len);
@@ -351,8 +374,11 @@ void Pipe::close()
 		SetEvent(m_send_event);
 	
 	// This ensures there are no other sends or recvs in progress...
-	OOBase::Guard<OOBase::Mutex> guard1(m_recv_lock);
-	OOBase::Guard<OOBase::Mutex> guard2(m_send_lock);
+	OOBase::Guard<OOBase::Mutex> guard1(m_recv_lock,false);
+	guard1.acquire();
+
+	OOBase::Guard<OOBase::Mutex> guard2(m_send_lock,false);
+	guard2.acquire();
 }
 
 int OOBase::Net::accept(HANDLE hPipe, const Timeout& timeout)

@@ -363,9 +363,18 @@ int Socket::do_select(bool bWrite, const OOBase::Timeout& timeout)
 
 size_t Socket::send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout)
 {
+	err = 0;
+	if (len == 0)
+		return 0;
+
+	if (!buf)
+	{
+		err = EINVAL;
+		return 0;
+	}
+
 	const char* cbuf = static_cast<const char*>(buf);
 	size_t to_send = len;
-	err = 0;
 
 	OOBase::Guard<OOBase::Mutex> guard(m_send_lock);
 
@@ -397,7 +406,7 @@ size_t Socket::send(const void* buf, size_t len, int& err, const OOBase::Timeout
 			}
 		}
 	}
-	while (err == 0 && to_send);
+	while (!err && to_send);
 
 	return (len - to_send);
 }
@@ -407,19 +416,30 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 	if (count == 0)
 		return 0;
 
+	if (!buffers)
+		return EINVAL;
+
 	OOBase::StackArrayPtr<struct iovec,8> iovecs(count);
 	if (!iovecs)
 		return ERROR_OUTOFMEMORY;
 
 	struct msghdr msg = {0};
 	msg.msg_iov = iovecs;
-	msg.msg_iovlen = count;
+	msg.msg_iovlen = 0;
 
 	for (size_t i=0;i<count;++i)
 	{
-		msg.msg_iov[i].iov_len = buffers[i]->length();
-		msg.msg_iov[i].iov_base = const_cast<char*>(buffers[i]->rd_ptr());
+		size_t to_write = (buffers[i] ? buffers[i]->length() : 0);
+		if (to_write)
+		{
+			msg.msg_iov[msg.msg_iovlen].iov_len = to_write;
+			msg.msg_iov[msg.msg_iovlen].iov_base = const_cast<char*>(buffers[i]->rd_ptr());
+			++msg.msg_iovlen;
+		}
 	}
+
+	if (msg.msg_iovlen == 0)
+		return 0;
 
 	OOBase::Guard<OOBase::Mutex> guard(m_send_lock);
 
@@ -443,24 +463,29 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 			// Update buffers...
 			do
 			{
-				if (static_cast<size_t>(sent) >= msg.msg_iov->iov_len)
+				if (buffers[first_buffer] && buffers[first_buffer]->length())
 				{
-					buffers[first_buffer]->rd_ptr(msg.msg_iov->iov_len);
-					++first_buffer;
-					sent -= msg.msg_iov->iov_len;
-					++msg.msg_iov;
-					if (--msg.msg_iovlen == 0)
-						break;
+					if (static_cast<size_t>(sent) >= msg.msg_iov->iov_len)
+					{
+						buffers[first_buffer]->rd_ptr(msg.msg_iov->iov_len);
+						++first_buffer;
+						sent -= msg.msg_iov->iov_len;
+						++msg.msg_iov;
+						if (--msg.msg_iovlen == 0)
+							break;
+					}
+					else
+					{
+						buffers[first_buffer]->rd_ptr(sent);
+						msg.msg_iov->iov_len -= sent;
+						msg.msg_iov->iov_base = static_cast<char*>(msg.msg_iov->iov_base) + sent;
+						sent = 0;
+					}
 				}
 				else
-				{
-					buffers[first_buffer]->rd_ptr(sent);
-					msg.msg_iov->iov_len -= sent;
-					msg.msg_iov->iov_base = static_cast<char*>(msg.msg_iov->iov_base) + sent;
-					sent = 0;
-				}
+					++first_buffer;
 			}
-			while (sent > 0);
+			while (first_buffer < count && sent > 0);
 		}
 		else
 		{
@@ -472,7 +497,7 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 			}
 		}
 	}
-	while (err == 0 && msg.msg_iovlen);
+	while (!err && msg.msg_iovlen);
 
 	return err;
 }
@@ -480,6 +505,17 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 size_t Socket::send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout)
 {
 	err = 0;
+	data_len = (data_buf ? data_len : 0);
+	ctl_len = (ctl_buf ? ctl_len : 0);
+
+	if (!data_len && !ctl_len)
+		return 0;
+
+	if (!data_len || !ctl_len)
+	{
+		err = EINVAL;
+		return 0;
+	}
 
 	struct iovec io = {0};
 	io.iov_base = const_cast<void*>(data_buf);
@@ -516,13 +552,23 @@ size_t Socket::send_msg(const void* data_buf, size_t data_len, const void* ctl_b
 			err = do_select(true,timeout);
 		}
 	}
-	while (err == 0);
+	while (!err);
 
 	return sent;
 }
 
 size_t Socket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout)
 {
+	err = 0;
+	if (len == 0)
+		return 0;
+
+	if (!buf)
+	{
+		err = EINVAL;
+		return 0;
+	}
+
 	char* cbuf = static_cast<char*>(buf);
 	size_t to_recv = len;
 	err = 0;
@@ -558,7 +604,7 @@ size_t Socket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Ti
 			}
 		}
 	}
-	while (err == 0 && to_recv);
+	while (!err && to_recv);
 
 	return (len - to_recv);
 }
@@ -568,19 +614,30 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 	if (count == 0)
 		return 0;
 
+	if (!buffers)
+		return EINVAL;
+
 	OOBase::StackArrayPtr<struct iovec,8> iovecs(count);
 	if (!iovecs)
 		return ERROR_OUTOFMEMORY;
 
 	struct msghdr msg = {0};
 	msg.msg_iov = iovecs;
-	msg.msg_iovlen = count;
+	msg.msg_iovlen = 0;
 
 	for (size_t i=0;i<count;++i)
 	{
-		msg.msg_iov[i].iov_len = buffers[i]->space();
-		msg.msg_iov[i].iov_base = buffers[i]->wr_ptr();
+		size_t to_read = (buffers[i] ? buffers[i]->space() : 0);
+		if (to_read)
+		{
+			msg.msg_iov[msg.msg_iovlen].iov_len = to_read;
+			msg.msg_iov[msg.msg_iovlen].iov_base = buffers[i]->wr_ptr();
+			++msg.msg_iovlen;
+		}
 	}
+
+	if (msg.msg_iovlen == 0)
+		return 0;
 
 	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock);
 
@@ -600,24 +657,29 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 			// Update buffers...
 			do
 			{
-				if (static_cast<size_t>(recvd) >= msg.msg_iov->iov_len)
+				if (buffers[first_buffer] && buffers[first_buffer]->space())
 				{
-					buffers[first_buffer]->wr_ptr(msg.msg_iov->iov_len);
-					++first_buffer;
-					recvd -= msg.msg_iov->iov_len;
-					++msg.msg_iov;
-					if (--msg.msg_iovlen == 0)
-						break;
+					if (static_cast<size_t>(recvd) >= msg.msg_iov->iov_len)
+					{
+						buffers[first_buffer]->wr_ptr(msg.msg_iov->iov_len);
+						++first_buffer;
+						recvd -= msg.msg_iov->iov_len;
+						++msg.msg_iov;
+						if (--msg.msg_iovlen == 0)
+							break;
+					}
+					else
+					{
+						buffers[first_buffer]->wr_ptr(recvd);
+						msg.msg_iov->iov_len -= recvd;
+						msg.msg_iov->iov_base = static_cast<char*>(msg.msg_iov->iov_base) + recvd;
+						recvd = 0;
+					}
 				}
 				else
-				{
-					buffers[first_buffer]->wr_ptr(recvd);
-					msg.msg_iov->iov_len -= recvd;
-					msg.msg_iov->iov_base = static_cast<char*>(msg.msg_iov->iov_base) + recvd;
-					recvd = 0;
-				}
+					++first_buffer;
 			}
-			while (recvd > 0);
+			while (first_buffer < count && recvd > 0);
 		}
 		else if (recvd == 0)
 			break;
@@ -631,7 +693,7 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 			}
 		}
 	}
-	while (err == 0 && msg.msg_iovlen);
+	while (!err && msg.msg_iovlen);
 
 	return err;
 }
@@ -639,6 +701,17 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 size_t Socket::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout)
 {
 	err = 0;
+	data_len = (data_buf ? data_len : 0);
+	ctl_len = (ctl_buf ? ctl_len : 0);
+
+	if (!data_len && !ctl_len)
+		return 0;
+
+	if (!data_len || !ctl_len)
+	{
+		err = EINVAL;
+		return 0;
+	}
 
 	struct iovec io = {0};
 	io.iov_base = data_buf;
@@ -671,7 +744,7 @@ size_t Socket::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t c
 			err = do_select(false,timeout);
 		}
 	}
-	while (err == 0);
+	while (!err);
 
 	return recvd;
 }

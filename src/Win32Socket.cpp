@@ -198,7 +198,7 @@ void OOBase::Win32::WSAGetAcceptExSockAddrs(SOCKET sListenSocket, void* lpOutput
 		OOBase_CallCriticalFailure("Failed to load address of GetAcceptExSockAddrs");
 	}
 
-	return (*lpfnGetAcceptExSockAddrs)(lpOutputBuffer,dwReceiveDataLength,dwLocalAddressLength,dwRemoteAddressLength,LocalSockaddr,LocalSockaddrLength,RemoteSockaddr,RemoteSockaddrLength);
+	(*lpfnGetAcceptExSockAddrs)(lpOutputBuffer,dwReceiveDataLength,dwLocalAddressLength,dwRemoteAddressLength,LocalSockaddr,LocalSockaddrLength,RemoteSockaddr,RemoteSockaddrLength);
 }
 
 INT OOBase::Win32::WSARecvMsg(SOCKET s, LPWSAMSG lpMsg, LPDWORD lpdwNumberOfBytesRecvd, LPWSAOVERLAPPED lpOverlapped, LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine)
@@ -352,16 +352,6 @@ namespace
 		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
 		size_t send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout);
 
-		int recv_socket(OOBase::socket_t& /*sock*/, const OOBase::Timeout& /*timeout*/)
-		{
-			return ERROR_NOT_SUPPORTED;
-		}
-
-		int send_socket(OOBase::socket_t /*sock*/, DWORD /*pid*/, const OOBase::Timeout& /*timeout*/)
-		{
-			return ERROR_NOT_SUPPORTED;
-		}
-
 		void close();
 					
 	private:
@@ -441,7 +431,14 @@ size_t WinSocket::send(const void* buf, size_t len, int& err, const OOBase::Time
 	if (len == 0)
 		return 0;
 
-	if (len > 0xFFFFFFFF)
+	if (!buf)
+	{
+		err = ERROR_INVALID_PARAMETER;
+		return 0;
+	}
+
+	void* TODO; // Make this loop until all buffers are read...
+	if (len > u_long(-1))
 	{
 		err = ERROR_BUFFER_OVERFLOW;
 		return 0;
@@ -459,40 +456,37 @@ int WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 	if (count == 0)
 		return 0;
 
+	if (!buffers)
+		return ERROR_INVALID_PARAMETER;
+
+	void* TODO; // Make this loop until all buffers are read...
+
+	OOBase::StackArrayPtr<WSABUF,8> wsa_bufs(count);
+	if (!wsa_bufs)
+		return ERROR_OUTOFMEMORY;
+
 	size_t total_len = 0;
 	DWORD actual_count = 0;
 	for (size_t i=0;i<count;++i)
 	{
-		size_t len = buffers[i]->length();
-
-		total_len += len;
-		if (total_len > 0xFFFFFFFF)
-			return ERROR_BUFFER_OVERFLOW;
-
-		if (len > 0)
+		size_t len = (buffers[i] ? buffers[i]->length() : 0);
+		if (len)
 		{
-			if (actual_count == 0xFFFFFFFF)
+			if (len > u_long(-1) || total_len > DWORD(-1) - len)
 				return ERROR_BUFFER_OVERFLOW;
 
-			++actual_count;
+			total_len += len;
+
+			wsa_bufs[actual_count].len = static_cast<u_long>(len);
+			wsa_bufs[actual_count].buf = const_cast<char*>(buffers[i]->rd_ptr());
+
+			if (++actual_count == DWORD(-1))
+				return ERROR_BUFFER_OVERFLOW;
 		}
 	}
 
-	OOBase::StackArrayPtr<WSABUF,8> wsa_bufs(actual_count);
-	if (!wsa_bufs)
-		return ERROR_OUTOFMEMORY;
-
-	DWORD j = 0;
-	for (size_t i=0;i<count;++i)
-	{
-		size_t len = buffers[i]->length();
-		if (len > 0)
-		{
-			wsa_bufs[j].len = static_cast<ULONG>(len);
-			wsa_bufs[j].buf = const_cast<char*>(static_cast<const char*>(buffers[i]->rd_ptr()));
-			++j;
-		}
-	}
+	if (total_len == 0)
+		return 0;
 
 	int err = 0;
 	DWORD dwWritten = send_i(wsa_bufs,actual_count,err,timeout);
@@ -500,6 +494,8 @@ int WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 	// Update buffers...
 	for (size_t idx = 0;dwWritten;++idx)
 	{
+		void* DODGY;
+
 		if (dwWritten >= wsa_bufs[idx].len)
 		{
 			buffers[idx]->rd_ptr(wsa_bufs[idx].len);
@@ -578,7 +574,19 @@ DWORD WinSocket::send_i(WSABUF* wsabuf, DWORD count, int& err, const OOBase::Tim
 size_t WinSocket::send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout)
 {
 	err = 0;
-	if (data_len > 0xFFFFFFFF || ctl_len > 0xFFFFFFFF)
+	data_len = (data_buf ? data_len : 0);
+	ctl_len = (ctl_buf ? ctl_len : 0);
+
+	if (!data_len && !ctl_len)
+		return 0;
+
+	if (!data_len || !ctl_len)
+	{
+		err = ERROR_INVALID_PARAMETER;
+		return 0;
+	}
+
+	if (data_len > u_long(-1) || ctl_len > u_long(-1))
 	{
 		err = ERROR_BUFFER_OVERFLOW;
 		return 0;
@@ -616,7 +624,7 @@ size_t WinSocket::send_msg(const void* data_buf, size_t data_len, const void* ct
 	msg.lpBuffers = &wsabuf;
 	msg.dwBufferCount = 1;
 	msg.Control.buf = const_cast<char*>(static_cast<const char*>(ctl_buf));
-	msg.Control.len = static_cast<ULONG>(ctl_len);
+	msg.Control.len = static_cast<u_long>(ctl_len);
 	msg.dwFlags = 0;
 
 	DWORD dwWritten = 0;
@@ -656,7 +664,14 @@ size_t WinSocket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase:
 	if (len == 0)
 		return 0;
 
-	if (len > 0xFFFFFFFF)
+	if (!buf)
+	{
+		err = ERROR_INVALID_PARAMETER;
+		return 0;
+	}
+
+	void* TODO; // Make this loop until all buffers are read...
+	if (len > DWORD(-1))
 	{
 		err = ERROR_BUFFER_OVERFLOW;
 		return 0;
@@ -674,40 +689,37 @@ int WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 	if (count == 0)
 		return 0;
 
+	if (!buffers)
+		return ERROR_INVALID_PARAMETER;
+
+	void* TODO; // Make this loop until all buffers are read...
+
+	OOBase::StackArrayPtr<WSABUF,8> wsa_bufs(count);
+	if (!wsa_bufs)
+		return ERROR_OUTOFMEMORY;
+
 	size_t total_len = 0;
 	DWORD actual_count = 0;
 	for (size_t i=0;i<count;++i)
 	{
-		size_t len = buffers[i]->space();
-		if (len > 0)
+		size_t len = (buffers[i] ? buffers[i]->space() : 0);
+		if (len)
 		{
-			if (len > 0xFFFFFFFF || total_len > 0xFFFFFFFF - len)
+			if (len > u_long(-1) || total_len > DWORD(-1) - len)
 				return ERROR_BUFFER_OVERFLOW;
 
 			total_len += len;
 
-			if (actual_count == 0xFFFFFFFF)
+			wsa_bufs[actual_count].len = static_cast<u_long>(len);
+			wsa_bufs[actual_count].buf = const_cast<char*>(buffers[i]->wr_ptr());
+
+			if (++actual_count == DWORD(-1))
 				return ERROR_BUFFER_OVERFLOW;
-
-			++actual_count;
 		}
 	}
 
-	OOBase::StackArrayPtr<WSABUF,8> wsa_bufs(actual_count);
-	if (!wsa_bufs)
-		return ERROR_OUTOFMEMORY;
-
-	DWORD j = 0;
-	for (size_t i=0;i<count;++i)
-	{
-		size_t len = buffers[i]->space();
-		if (len > 0)
-		{
-			wsa_bufs[j].len = static_cast<ULONG>(len);
-			wsa_bufs[j].buf = const_cast<char*>(buffers[i]->wr_ptr());
-			++j;
-		}
-	}
+	if (total_len == 0)
+		return 0;
 
 	int err = 0;
 	DWORD dwRead = recv_i(wsa_bufs,actual_count,true,err,timeout);
@@ -715,6 +727,7 @@ int WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 	// Update buffers...
 	for (size_t idx = 0;dwRead;++idx)
 	{
+		void* DODGY;
 		if (dwRead >= wsa_bufs[idx].len)
 		{
 			buffers[idx]->wr_ptr(wsa_bufs[idx].len);
@@ -793,6 +806,25 @@ DWORD WinSocket::recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int& err, const 
 
 size_t WinSocket::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout)
 {
+	err = 0;
+	data_len = (data_buf ? data_len : 0);
+	ctl_len = (ctl_buf ? ctl_len : 0);
+
+	if (!data_len && !ctl_len)
+		return 0;
+
+	if (!data_len || !ctl_len)
+	{
+		err = ERROR_INVALID_PARAMETER;
+		return 0;
+	}
+
+	if (data_len > u_long(-1) || ctl_len > u_long(-1))
+	{
+		err = ERROR_BUFFER_OVERFLOW;
+		return 0;
+	}
+
 	WSAOVERLAPPED ov = {0};
 
 	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,false);

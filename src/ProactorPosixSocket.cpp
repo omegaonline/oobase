@@ -154,14 +154,18 @@ int AsyncSocket::recv(void* param, recv_callback_t callback, OOBase::Buffer* buf
 	if (!buffer)
 		return EINVAL;
 
+	int err = 0;
 	if (bytes)
 	{
-		int err = buffer->space(bytes);
+		err = buffer->space(bytes);
 		if (err)
 			return err;
 	}
 	else if (!buffer->space())
 		return 0;
+
+	if (!callback)
+		return EINVAL;
 
 	RecvItem item = { param, callback, buffer, bytes};
 	item.m_buffer->addref();
@@ -184,8 +188,12 @@ int AsyncSocket::recv(void* param, recv_callback_t callback, OOBase::Buffer* buf
 
 int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buffer)
 {
-	if (!buffer || buffer->length() == 0)
+	size_t bytes = (buffer ? buffer->length() : 0);
+	if (bytes == 0)
 		return 0;
+
+	if (!buffer)
+		return EINVAL;
 
 	SendItem item = { param, callback, 1 };
 	item.m_buffer = buffer;
@@ -209,6 +217,9 @@ int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buf
 
 int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count)
 {
+	if (count == 0)
+		return 0;
+
 	if (!buffers)
 		return EINVAL;
 
@@ -712,7 +723,7 @@ void SocketAcceptor::do_accept()
 	}
 }
 
-OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, void (*callback)(void* param, AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err), const sockaddr* addr, socklen_t addr_len, int& err)
+OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err)
 {
 	// Make sure we have valid inputs
 	if (!callback || !addr || addr_len == 0)
@@ -737,7 +748,7 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, void (*call
 	return pAcceptor;
 }
 
-OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, void (*callback)(void* param, AsyncSocket* pSocket, int err), const char* path, int& err, SECURITY_ATTRIBUTES* psa)
+OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa)
 {
 	// Make sure we have valid inputs
 	if (!callback || !path)
