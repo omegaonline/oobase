@@ -89,15 +89,25 @@ namespace OOBase
 
 		int reset()
 		{
-			if (!m_last_error && m_buffer)
-				m_last_error = m_buffer->reset(MaxAlignment);
+			if (!m_last_error)
+			{
+				if (!m_buffer)
+					m_last_error = EINVAL;
+				else
+					m_last_error = m_buffer->reset(MaxAlignment);
+			}
 			return m_last_error;
 		}
 
 		int compact()
 		{
-			if (!m_last_error && m_buffer)
-				m_last_error = m_buffer->compact(MaxAlignment);
+			if (!m_last_error)
+			{
+				if (!m_buffer)
+					m_last_error = EINVAL;
+				else
+					m_last_error = m_buffer->compact(MaxAlignment);
+			}
 			return m_last_error;
 		}
 
@@ -124,8 +134,14 @@ namespace OOBase
 
 		bool write_endianess()
 		{
-			if (m_last_error != 0 || !m_buffer)
+			if (m_last_error != 0)
 				return false;
+
+			if (!m_buffer)
+			{
+				m_last_error = EINVAL;
+				return false;
+			}
 
 			m_last_error = m_buffer->align_wr_ptr(2);
 			if (m_last_error != 0)
@@ -146,8 +162,14 @@ namespace OOBase
 
 		bool read_endianess()
 		{
-			if (m_last_error != 0 || !m_buffer)
+			if (m_last_error != 0)
 				return false;
+
+			if (!m_buffer)
+			{
+				m_last_error = EINVAL;
+				return false;
+			}
 
 			m_buffer->align_rd_ptr(2);
 			if (m_buffer->length() < 2)
@@ -166,8 +188,14 @@ namespace OOBase
 		template <typename T>
 		bool read(T& val)
 		{
-			if (m_last_error != 0 || !m_buffer)
+			if (m_last_error != 0)
 				return false;
+
+			if (!m_buffer)
+			{
+				m_last_error = EINVAL;
+				return false;
+			}
 
 			m_buffer->align_rd_ptr(alignof<T>::value);
 			if (m_buffer->length() < sizeof(T))
@@ -189,8 +217,14 @@ namespace OOBase
 		 */
 		bool read(bool& val)
 		{
-			if (m_last_error != 0 || !m_buffer)
+			if (m_last_error != 0)
 				return false;
+
+			if (!m_buffer)
+			{
+				m_last_error = EINVAL;
+				return false;
+			}
 
 			if (m_buffer->length() < 1)
 				return error_eof();
@@ -205,8 +239,14 @@ namespace OOBase
 		template <typename S>
 		bool read_string(S& val)
 		{
-			if (m_last_error != 0 || !m_buffer)
+			if (m_last_error != 0)
 				return false;
+
+			if (!m_buffer)
+			{
+				m_last_error = EINVAL;
+				return false;
+			}
 
 			size_t len = 0;
 			if (!read4(len))
@@ -230,8 +270,14 @@ namespace OOBase
 
 		size_t read_bytes(unsigned char* buffer, size_t count)
 		{
-			if (m_last_error != 0 || !m_buffer)
+			if (m_last_error != 0)
 				return 0;
+
+			if (!m_buffer)
+			{
+				m_last_error = EINVAL;
+				return 0;
+			}
 
 			if (count > m_buffer->length())
 				count = m_buffer->length();
@@ -277,8 +323,14 @@ namespace OOBase
 		template <typename T>
 		bool write(const T& val)
 		{
-			if (m_last_error != 0 || !m_buffer)
+			if (m_last_error != 0)
 				return false;
+
+			if (!m_buffer)
+			{
+				m_last_error = EINVAL;
+				return false;
+			}
 
 			m_last_error = m_buffer->align_wr_ptr(alignof<T>::value);
 			if (m_last_error != 0)
@@ -297,8 +349,14 @@ namespace OOBase
 		/// A specialization of write() for type \p const char*.
 		bool write(const char* pszText, size_t len = (size_t)-1)
 		{
-			if (m_last_error != 0 || !m_buffer)
+			if (m_last_error != 0)
 				return false;
+
+			if (!m_buffer)
+			{
+				m_last_error = EINVAL;
+				return false;
+			}
 
 			if (!pszText)
 				len = 0;
@@ -328,8 +386,14 @@ namespace OOBase
 		/// A specialization of write() for type \p bool.
 		bool write(bool val)
 		{
-			if (m_last_error != 0 || !m_buffer)
+			if (m_last_error != 0)
 				return false;
+
+			if (!m_buffer)
+			{
+				m_last_error = EINVAL;
+				return false;
+			}
 
 			m_last_error = m_buffer->space(1);
 			if (m_last_error != 0)
@@ -348,8 +412,14 @@ namespace OOBase
 
 		bool write_bytes(const unsigned char* buffer, size_t count)
 		{
-			if (m_last_error != 0 || !m_buffer)
+			if (m_last_error != 0)
 				return false;
+
+			if (!m_buffer)
+			{
+				m_last_error = EINVAL;
+				return false;
+			}
 
 			if (count)
 			{
@@ -366,8 +436,14 @@ namespace OOBase
 
 		size_t write_buffer(const Buffer* buffer)
 		{
-			if (m_last_error != 0 || !m_buffer)
+			if (m_last_error != 0)
 				return 0;
+
+			if (!m_buffer)
+			{
+				m_last_error = EINVAL;
+				return 0;
+			}
 
 			size_t count = buffer->length();
 			m_last_error = m_buffer->space(count);
