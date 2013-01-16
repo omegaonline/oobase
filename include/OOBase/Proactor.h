@@ -41,41 +41,53 @@ namespace OOBase
 		template <typename T>
 		int recv(T* param, void (T::*callback)(Buffer* buffer, int err), Buffer* buffer, size_t bytes = 0)
 		{
-			ThunkR<T>* thunk = ThunkR<T>::create(param,callback);
+			ThunkR<T>* thunk = static_cast<ThunkR<T>*>(CrtAllocator::allocate(sizeof(ThunkR<T>)));
 			if (!thunk)
 				return ERROR_OUTOFMEMORY;
 			
+			thunk->m_callback = callback;
+			thunk->m_param = param;
+
 			return recv(thunk,&ThunkR<T>::fn,buffer,bytes);
 		}
 
 		template <typename T>
 		int recv_msg(T* param, void (T::*callback)(Buffer* data_buffer, Buffer* ctl_buffer, int err), Buffer* data_buffer, Buffer* ctl_buffer, size_t data_bytes = 0)
 		{
-			ThunkRM<T>* thunk = ThunkRM<T>::create(param,callback);
+			ThunkRM<T>* thunk = static_cast<ThunkRM<T>*>(CrtAllocator::allocate(sizeof(ThunkRM<T>)));
 			if (!thunk)
 				return ERROR_OUTOFMEMORY;
+
+			thunk->m_callback = callback;
+			thunk->m_param = param;
 
 			return recv_msg(thunk,&ThunkRM<T>::fn,data_buffer,ctl_buffer,data_bytes);
 		}
 
 		template <typename T>
-		int send(T* param, void (T::*callback)(int err), Buffer* buffer)
+		int send(T* param, void (T::*callback)(Buffer* buffer, int err), Buffer* buffer)
 		{
-			ThunkS<T>* thunk = ThunkS<T>::create(param,callback);
+			ThunkS<T>* thunk = static_cast<ThunkS<T>*>(CrtAllocator::allocate(sizeof(ThunkS<T>)));
 			if (!thunk)
 				return ERROR_OUTOFMEMORY;
 			
+			thunk->m_callback = callback;
+			thunk->m_param = param;
+
 			return send(thunk,&ThunkS<T>::fn,buffer);
 		}
 
 		template <typename T>
 		int send_v(T* param, void (T::*callback)(int err), Buffer* buffers[], size_t count)
 		{
-			ThunkS<T>* thunk = ThunkS<T>::create(param,callback);
+			ThunkSV<T>* thunk = static_cast<ThunkSV<T>*>(CrtAllocator::allocate(sizeof(ThunkSV<T>)));
 			if (!thunk)
 				return ERROR_OUTOFMEMORY;
 			
-			return send_v(thunk,&ThunkS<T>::fn,buffers,count);
+			thunk->m_callback = callback;
+			thunk->m_param = param;
+
+			return send_v(thunk,&ThunkSV<T>::fn,buffers,count);
 		}
 
 		int recv(Buffer* buffer, size_t bytes = 0);
@@ -87,10 +99,14 @@ namespace OOBase
 		typedef void (*recv_msg_callback_t)(void* param, Buffer* data_buffer, Buffer* ctl_buffer, int err);
 		virtual int recv_msg(void* param, recv_msg_callback_t callback, Buffer* data_buffer, Buffer* ctl_buffer, size_t data_bytes = 0) = 0;
 
-		typedef void (*send_callback_t)(void* param, int err);
+		typedef void (*send_callback_t)(void* param, Buffer* buffer, int err);
 		virtual int send(void* param, send_callback_t callback, Buffer* buffer) = 0;
-		virtual int send_v(void* param, send_callback_t callback, Buffer* buffers[], size_t count) = 0;
-		virtual int send_msg(void* param, send_callback_t callback, Buffer* data_buffer, Buffer* ctl_buffer) = 0;
+
+		typedef void (*send_v_callback_t)(void* param, Buffer* buffers[], size_t count, int err);
+		virtual int send_v(void* param, send_v_callback_t callback, Buffer* buffers[], size_t count) = 0;
+
+		typedef void (*send_msg_callback_t)(void* param, Buffer* data_buffer, Buffer* ctl_buffer, int err);
+		virtual int send_msg(void* param, send_msg_callback_t callback, Buffer* data_buffer, Buffer* ctl_buffer) = 0;
 
 	protected:
 		AsyncSocket() {}
@@ -103,17 +119,6 @@ namespace OOBase
 			T* m_param;
 			void (T::*m_callback)(Buffer* buffer, int err);
 
-			static ThunkR* create(T* param, void (T::*callback)(Buffer*,int))
-			{
-				ThunkR* t = static_cast<ThunkR*>(CrtAllocator::allocate(sizeof(ThunkR)));
-				if (t)
-				{
-					t->m_callback = callback;
-					t->m_param = param;
-				}
-				return t;
-			}
-		
 			static void fn(void* param, Buffer* buffer, int err)
 			{
 				ThunkR thunk = *static_cast<ThunkR*>(param);
@@ -129,17 +134,6 @@ namespace OOBase
 			T* m_param;
 			void (T::*m_callback)(Buffer* data_buffer, Buffer* ctl_buffer, int err);
 
-			static ThunkRM* create(T* param, void (T::*callback)(Buffer*,Buffer*,int))
-			{
-				ThunkRM* t = static_cast<ThunkRM*>(CrtAllocator::allocate(sizeof(ThunkRM)));
-				if (t)
-				{
-					t->m_callback = callback;
-					t->m_param = param;
-				}
-				return t;
-			}
-
 			static void fn(void* param, Buffer* data_buffer, Buffer* ctl_buffer, int err)
 			{
 				ThunkRM thunk = *static_cast<ThunkRM*>(param);
@@ -153,25 +147,29 @@ namespace OOBase
 		struct ThunkS
 		{
 			T* m_param;
-			void (T::*m_callback)(int err);
+			void (T::*m_callback)(Buffer* buffer, int err);
 
-			static ThunkS* create(T* param, void (T::*callback)(int))
-			{
-				ThunkS* t = static_cast<ThunkS*>(CrtAllocator::allocate(sizeof(ThunkS)));
-				if (t)
-				{
-					t->m_callback = callback;
-					t->m_param = param;
-				}
-				return t;
-			}
-		
-			static void fn(void* param, int err)
+			static void fn(void* param, Buffer* buffer, int err)
 			{
 				ThunkS thunk = *static_cast<ThunkS*>(param);
 				CrtAllocator::free(param);
 				
-				(thunk.m_param->*thunk.m_callback)(err);
+				(thunk.m_param->*thunk.m_callback)(buffer,err);
+			}
+		};
+
+		template <typename T>
+		struct ThunkSV
+		{
+			T* m_param;
+			void (T::*m_callback)(Buffer* buffers[], size_t count, int err);
+
+			static void fn(void* param, Buffer* buffers[], size_t count, int err)
+			{
+				ThunkSV thunk = *static_cast<ThunkSV*>(param);
+				CrtAllocator::free(param);
+
+				(thunk.m_param->*thunk.m_callback)(buffers,count,err);
 			}
 		};
 	};

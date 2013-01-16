@@ -42,8 +42,8 @@ namespace
 		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes);
 		int recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer, size_t data_bytes);
 		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
-		int send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count);
-		int send_msg(void* param, send_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
+		int send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count);
+		int send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
 	
 	private:
 		virtual ~AsyncSocket();
@@ -54,6 +54,7 @@ namespace
 		static void on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
 		static void on_recv_msg(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
 		static void on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
+		static void on_send_v(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
 		static void on_send_msg(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
 	};
 }
@@ -245,6 +246,8 @@ int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buf
 	
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
+	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer);
+	buffer->addref();
 	
 	WSABUF wsa_buf;
 	wsa_buf.buf = const_cast<char*>(buffer->rd_ptr());
@@ -274,15 +277,20 @@ void AsyncSocket::on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::det
 {
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	send_callback_t callback = reinterpret_cast<send_callback_t>(pOv->m_extras[1]);
+	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
 
 	pOv->m_pProactor->delete_overlapped(pOv);
-		
+
 	// Call callback
 	if (callback)
-		(*callback)(param,dwErr);
+	{
+		buffer->rd_ptr(dwBytes);
+
+		(*callback)(param,buffer,dwErr);
+	}
 }
 
-int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count)
+int AsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count)
 {
 	if (count == 0)
 		return 0;
@@ -321,12 +329,32 @@ int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* b
 		return 0;
 
 	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
-	int err = m_pProactor->new_overlapped(pOv,&on_send);
+	int err = m_pProactor->new_overlapped(pOv,&on_send_v);
 	if (err != 0)
 		return err;
 
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
+
+	OOBase::Buffer** ov_buffers = static_cast<OOBase::Buffer**>(OOBase::CrtAllocator::allocate((buf_count) * sizeof(OOBase::Buffer*),OOBase::alignof<OOBase::Buffer*>::value));
+	if (!ov_buffers)
+	{
+		m_pProactor->delete_overlapped(pOv);
+		return ERROR_OUTOFMEMORY;
+	}
+
+	size_t j = 0;
+	for (size_t i=0;i<count;++i)
+	{
+		if (buffers[i] && buffers[i]->length())
+		{
+			ov_buffers[j++] = buffers[i];
+			buffers[i]->addref();
+		}
+	}
+
+	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(ov_buffers);
+	pOv->m_extras[3] = buf_count;
 
 	if (WSASend(m_hSocket,wsa_bufs,buf_count,NULL,0,pOv,NULL) == SOCKET_ERROR)
 	{
@@ -343,12 +371,64 @@ int AsyncSocket::send_v(void* param, send_callback_t callback, OOBase::Buffer* b
 	if (!WSAGetOverlappedResult(m_hSocket,pOv,&dwSent,TRUE,&dwFlags))
 		err = WSAGetLastError();
 
-	on_send((HANDLE)m_hSocket,dwSent,err,pOv);
+	on_send_v((HANDLE)m_hSocket,dwSent,err,pOv);
 	
 	return 0;
 }
 
-int AsyncSocket::send_msg(void* param, send_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer)
+void AsyncSocket::on_send_v(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
+{
+	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
+	send_v_callback_t callback = reinterpret_cast<send_v_callback_t>(pOv->m_extras[1]);
+	OOBase::Buffer** buffers = reinterpret_cast<OOBase::Buffer**>(pOv->m_extras[3]);
+	size_t count = pOv->m_extras[3];
+
+	pOv->m_pProactor->delete_overlapped(pOv);
+
+	// Call callback
+	if (callback)
+	{
+		// Update rd_ptrs
+		for (size_t i=0;i<count && dwBytes;++i)
+		{
+			size_t len = buffers[i]->length();
+			if (dwBytes >= len)
+			{
+				buffers[i]->rd_ptr(len);
+				dwBytes -= len;
+			}
+			else
+			{
+				buffers[i]->rd_ptr(dwBytes);
+				dwBytes = 0;
+			}
+		}
+
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+		try
+		{
+#endif
+			(*callback)(param,buffers,count,dwErr);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+		}
+		catch (...)
+		{
+			for (size_t i=0;i<count;++i)
+				buffers[i]->release();
+
+			OOBase::CrtAllocator::free(buffers);
+			throw;
+		}
+#endif
+	}
+
+	for (size_t i=0;i<count;++i)
+		buffers[i]->release();
+
+	OOBase::CrtAllocator::free(buffers);
+}
+
+int AsyncSocket::send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer)
 {
 	size_t data_len = (data_buffer ? data_buffer->length() : 0);
 	size_t ctl_len = (ctl_buffer ? ctl_buffer->length() : 0);
@@ -363,12 +443,16 @@ int AsyncSocket::send_msg(void* param, send_callback_t callback, OOBase::Buffer*
 		return ERROR_BUFFER_OVERFLOW;
 
 	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
-	int err = m_pProactor->new_overlapped(pOv,&on_send);
+	int err = m_pProactor->new_overlapped(pOv,&on_send_msg);
 	if (err != 0)
 		return err;
 
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
+	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(data_buffer);
+	pOv->m_extras[3] = reinterpret_cast<ULONG_PTR>(ctl_buffer);
+	data_buffer->addref();
+	ctl_buffer->addref();
 
 	WSABUF wsa_buf;
 	wsa_buf.buf = const_cast<char*>(data_buffer->rd_ptr());
@@ -396,9 +480,27 @@ int AsyncSocket::send_msg(void* param, send_callback_t callback, OOBase::Buffer*
 	if (!WSAGetOverlappedResult(m_hSocket,pOv,&dwSent,TRUE,&dwFlags))
 		err = WSAGetLastError();
 
-	on_send((HANDLE)m_hSocket,dwSent,err,pOv);
+	on_send_msg((HANDLE)m_hSocket,dwSent,err,pOv);
 
 	return 0;
+}
+
+void AsyncSocket::on_send_msg(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
+{
+	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
+	send_msg_callback_t callback = reinterpret_cast<send_msg_callback_t>(pOv->m_extras[1]);
+	OOBase::Buffer* buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
+	OOBase::Buffer* ctl_buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[3]));
+
+	pOv->m_pProactor->delete_overlapped(pOv);
+
+	// Call callback
+	if (callback)
+	{
+		buffer->rd_ptr(dwBytes);
+
+		(*callback)(param,buffer,ctl_buffer,dwErr);
+	}
 }
 
 namespace

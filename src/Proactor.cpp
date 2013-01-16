@@ -31,12 +31,7 @@ namespace
 		WaitCallback() : OOBase::Future<int>(0)
 		{}
 
-		static void callback_recv(void* param, OOBase::Buffer*, int err)
-		{
-			callback(param,err);
-		}
-
-		static void callback(void* param, int err)
+		static void callback(void* param, OOBase::Buffer*, int err)
 		{
 			static_cast<WaitCallback*>(param)->signal(err);
 		}
@@ -46,7 +41,7 @@ namespace
 int OOBase::AsyncSocket::recv(Buffer* buffer, size_t bytes)
 {
 	WaitCallback wait;
-	int err = recv(&wait,&WaitCallback::callback_recv,buffer,bytes);
+	int err = recv(&wait,&WaitCallback::callback,buffer,bytes);
 	if (err == 0)
 		err = wait.wait(false);
 

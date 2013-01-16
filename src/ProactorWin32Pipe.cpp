@@ -37,8 +37,8 @@ namespace
 		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes);
 		int recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer, size_t data_bytes);
 		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
-		int send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count);
-		int send_msg(void* param, send_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
+		int send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count);
+		int send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
 	
 	private:
 		virtual ~AsyncPipe();
@@ -48,9 +48,9 @@ namespace
 					
 		static void on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
 		static void on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
+		static void on_send_v(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
 		
-		static void translate_error(int& dwErr);
-		static void translate_error(DWORD& dwErr);
+		static int translate_error(DWORD dwErr);
 	};
 }
 
@@ -64,32 +64,22 @@ AsyncPipe::~AsyncPipe()
 	m_pProactor->unbind(m_hPipe);
 }
 
-void AsyncPipe::translate_error(int& dwErr)
-{
-	DWORD e = dwErr;
-	translate_error(e);
-	dwErr = e;
-}
-
-void AsyncPipe::translate_error(DWORD& dwErr)
+int AsyncPipe::translate_error(DWORD dwErr)
 {
 	switch (dwErr)
 	{
 	case ERROR_BROKEN_PIPE:
 	case ERROR_NO_DATA:
-		dwErr = 0;
-		break;
-	
+		return 0;
+
 	case ERROR_BAD_PIPE:
-		dwErr = WSAEBADF;
-		break;
+		return WSAEBADF;
 		
 	case ERROR_PIPE_NOT_CONNECTED:
-		dwErr = WSAENOTCONN;
-		break;
-			
+		return WSAENOTCONN;
+
 	default:
-		break;
+		return dwErr;
 	}
 }
 
@@ -143,12 +133,12 @@ int AsyncPipe::recv_msg(void*, recv_msg_callback_t, OOBase::Buffer*, OOBase::Buf
 
 void AsyncPipe::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
-	OOBase::Buffer* buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
+	OOBase::Buffer* buffer = reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]);
 	
+	buffer->wr_ptr(dwBytes);
+
 	if (dwErr == 0 && pOv->m_extras[3] != 0 && pOv->m_extras[3] != dwBytes)
 	{
-		buffer->wr_ptr(dwBytes);
-
 		pOv->m_extras[3] -= dwBytes;
 
 		DWORD dwRead = 0;
@@ -171,14 +161,7 @@ void AsyncPipe::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detai
 
 		// Call callback
 		if (callback)
-		{
-			// Translate error codes...
-			translate_error(dwErr);
-
-			buffer->wr_ptr(dwBytes);
-			
-			(*callback)(param,buffer,dwErr);
-		}
+			(*callback)(param,buffer,translate_error(dwErr));
 	}
 }
 
@@ -189,7 +172,7 @@ int AsyncPipe::send(void* param, send_callback_t callback, OOBase::Buffer* buffe
 		return 0;
 	
 	if (!buffer)
-		return EINVAL;
+		return ERROR_INVALID_PARAMETER;
 
 	if (bytes > DWORD(-1))
 		return ERROR_BUFFER_OVERFLOW;
@@ -201,6 +184,8 @@ int AsyncPipe::send(void* param, send_callback_t callback, OOBase::Buffer* buffe
 	
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
+	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer);
+	buffer->addref();
 	
 	DWORD dwSent = 0;
 	if (!WriteFile(m_hPipe,buffer->rd_ptr(),static_cast<DWORD>(bytes),&dwSent,pOv))
@@ -213,24 +198,24 @@ int AsyncPipe::send(void* param, send_callback_t callback, OOBase::Buffer* buffe
 	return 0;
 }
 
-void AsyncPipe::on_send(HANDLE /*handle*/, DWORD /*dwBytes*/, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
+void AsyncPipe::on_send(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	send_callback_t callback = reinterpret_cast<send_callback_t>(pOv->m_extras[1]);
-		
+	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
+
 	pOv->m_pProactor->delete_overlapped(pOv);
 	
 	// Call callback
 	if (callback)
 	{
-		// Translate error codes...
-		translate_error(dwErr);
+		buffer->rd_ptr(dwBytes);
 
-		(*callback)(param,dwErr);
+		(*callback)(param,buffer,translate_error(dwErr));
 	}
 }
 
-int AsyncPipe::send_v(void* param, send_callback_t callback, OOBase::Buffer* buffers[], size_t count)
+int AsyncPipe::send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count)
 {
 	// Because scatter-gather just doesn't work on named pipes,
 	// we concatenate the buffers and send as one 'atomic' write
@@ -242,56 +227,141 @@ int AsyncPipe::send_v(void* param, send_callback_t callback, OOBase::Buffer* buf
 		return ERROR_INVALID_PARAMETER;
 
 	// Its more efficient to ask for the total block size up front rather than multiple small reallocs
+	size_t actual_count = 0;
 	size_t total = 0;
 	for (size_t i=0;i<count;++i)
 	{
-		if (buffers[i])
+		size_t len = (buffers[i] ? buffers[i]->length() : 0);
+		if (len)
 		{
-			size_t len = buffers[i]->length();
 			if (len > DWORD(-1) || total > DWORD(-1) - len)
 				return ERROR_BUFFER_OVERFLOW;
-		
+
 			total += len;
+
+			if (++actual_count > ULONG_PTR(-1))
+				return ERROR_BUFFER_OVERFLOW;
 		}
 	}
 	
 	if (total == 0)
 		return 0;
-	
-	OOBase::RefPtr<OOBase::Buffer> buffer = new (std::nothrow) OOBase::Buffer(total);
+
+	OOBase::Buffer* buffer = new (std::nothrow) OOBase::Buffer(total);
 	if (!buffer)
 		return ERROR_OUTOFMEMORY;
 	
 	for (size_t i=0;i<count;++i)
 	{
-		if (buffers[i])
+		size_t len = (buffers[i] ? buffers[i]->length() : 0);
+		if (len)
 		{
-			size_t len = buffers[i]->length();
 			memcpy(buffer->wr_ptr(),buffers[i]->rd_ptr(),len);
 			buffer->wr_ptr(len);
 		}
 	}
 			
 	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
-	int dwErr = m_pProactor->new_overlapped(pOv,&on_send);
+	int dwErr = m_pProactor->new_overlapped(pOv,&on_send_v);
 	if (dwErr != 0)
+	{
+		buffer->release();
 		return dwErr;
+	}
 	
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
+	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer);
+
+	if (callback)
+	{
+		OOBase::Buffer** ov_buffers = static_cast<OOBase::Buffer**>(OOBase::CrtAllocator::allocate((actual_count+1) * sizeof(OOBase::Buffer*),OOBase::alignof<OOBase::Buffer*>::value));
+		if (!ov_buffers)
+		{
+			m_pProactor->delete_overlapped(pOv);
+			buffer->release();
+			return ERROR_OUTOFMEMORY;
+		}
+
+		size_t j = 0;
+		for (size_t i=0;i<count;++i)
+		{
+			if (buffers[i] && buffers[i]->length())
+			{
+				ov_buffers[j++] = buffers[i];
+				buffers[i]->addref();
+			}
+		}
+		ov_buffers[actual_count] = NULL;
+
+		pOv->m_extras[3] = reinterpret_cast<ULONG_PTR>(ov_buffers);
+	}
 
 	DWORD dwSent = 0;
 	if (!WriteFile(m_hPipe,buffer->rd_ptr(),static_cast<DWORD>(total),&dwSent,pOv))
 	{
 		dwErr = GetLastError();
 		if (dwErr != ERROR_IO_PENDING)
-			on_send(m_hPipe,dwSent,dwErr,pOv);
+			on_send_v(m_hPipe,dwSent,dwErr,pOv);
 	}
 
 	return 0;
 }
 
-int AsyncPipe::send_msg(void*, send_callback_t, OOBase::Buffer*, OOBase::Buffer*)
+void AsyncPipe::on_send_v(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
+{
+	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
+	send_v_callback_t callback = reinterpret_cast<send_v_callback_t>(pOv->m_extras[1]);
+	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
+	OOBase::Buffer** buffers = reinterpret_cast<OOBase::Buffer**>(pOv->m_extras[3]);
+
+	pOv->m_pProactor->delete_overlapped(pOv);
+
+	// Call callback
+	if (callback)
+	{
+		// Update rd_ptrs and count buffers
+		size_t count = 0;
+		for (;buffers[count];++count)
+		{
+			size_t len = buffers[count]->length();
+			if (dwBytes >= len)
+			{
+				buffers[count]->rd_ptr(len);
+				dwBytes -= len;
+			}
+			else if (dwBytes)
+			{
+				buffers[count]->rd_ptr(dwBytes);
+				dwBytes = 0;
+			}
+		}
+
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+		try
+		{
+#endif
+			(*callback)(param,buffers,count,translate_error(dwErr));
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+		}
+		catch (...)
+		{
+			for (size_t i=0;i<count;++i)
+				buffers[i]->release();
+
+			OOBase::CrtAllocator::free(buffers);
+			throw;
+		}
+#endif
+
+		for (size_t i=0;i<count;++i)
+			buffers[i]->release();
+
+		OOBase::CrtAllocator::free(buffers);
+	}
+}
+
+int AsyncPipe::send_msg(void*, send_msg_callback_t, OOBase::Buffer*, OOBase::Buffer*)
 {
 	return ERROR_NOT_SUPPORTED;
 }
