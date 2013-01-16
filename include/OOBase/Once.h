@@ -50,7 +50,7 @@ namespace OOBase
 		typedef pthread_once_t once_t;
 		#define ONCE_T_INIT PTHREAD_ONCE_INIT
 #else
-#error Fix Me!
+#error Implement platform native one-time functions
 #endif
 
 		typedef void (*pfn_once)(void);

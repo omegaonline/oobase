@@ -60,7 +60,7 @@ namespace OOBase
 
 		void init(bool as_spin_lock);
 #else
-#error Fix me!
+#error Implement platform native mutex
 #endif
 	};
 
@@ -120,7 +120,7 @@ namespace OOBase
 #elif defined(HAVE_PTHREAD)
 		pthread_rwlock_t m_mutex;
 #else
-#error Fix me!
+#error Implement platform native reader/writer locks
 #endif
 	};
 

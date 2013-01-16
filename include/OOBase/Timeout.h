@@ -74,7 +74,7 @@ namespace OOBase
 #elif defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
 		::timespec m_end;
 #else
-#error Fix me!
+#error Implement platform native time
 #endif
 	};
 }

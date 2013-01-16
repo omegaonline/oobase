@@ -452,6 +452,4 @@ int OOBase::Server::daemonize(const OOBase::LocalString& strPidFile, bool& alrea
 	return 0;
 }
 
-#else
-#error Fix me!
 #endif

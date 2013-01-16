@@ -402,7 +402,7 @@ OOBase::Thread::Thread(bool bAutodelete) :
 #elif defined(HAVE_PTHREAD)
 	m_impl = new (critical) PthreadThread();
 #else
-#error Fix me!
+#error Implement platform native thread wrapper
 #endif
 }
 

@@ -281,8 +281,4 @@ void OOBase::RWMutex::release_read()
 	release();
 }
 
-#else
-
-#error Fix me!
-
 #endif

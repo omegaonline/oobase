@@ -252,7 +252,7 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 	if (!f.is_valid())
 		return ::GetLastError();
 #else
-#error No idea how to open a file!
+#error Implement platform native file handling
 #endif
 
 	static const size_t s_read_block_size = 4096;

@@ -49,8 +49,4 @@ void OOBase::Once::Run(once_t* key, pfn_once fn)
 		OOBase_CallCriticalFailure(err);
 }
 
-#else
-
-#error Fix me!
-
 #endif

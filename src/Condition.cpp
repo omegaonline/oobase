@@ -119,10 +119,6 @@ void OOBase::Condition::broadcast()
 	pthread_cond_broadcast(&m_var);
 }
 
-#else
-
-#error Fix me!
-
 #endif
 
 #if defined(_WIN32)

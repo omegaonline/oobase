@@ -71,7 +71,7 @@ namespace
 
 	class ASLLogger
 	{
-#error Fix me!
+#error Implement ASL logger
 	};
 
 #elif defined(HAVE_SYSLOG_H)
@@ -104,7 +104,7 @@ namespace
 #elif defined(HAVE_SYSLOG_H)
 	typedef SysLogLogger LoggerClass;
 #else
-#error Fix me!
+#error Implement platform native system logger
 #endif
 
 	static LoggerClass s_instance;
@@ -249,11 +249,7 @@ namespace
 
 #endif // _WIN32
 
-#if defined(HAVE_ASL_H)
-
-#error Implementation here!
-
-#elif defined(HAVE_SYSLOG_H)
+#if defined(HAVE_SYSLOG_H)
 
 	void SysLogLogger::init()
 	{
