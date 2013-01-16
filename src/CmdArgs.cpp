@@ -32,7 +32,8 @@ int OOBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, 
 	if (err != 0)
 		return err;
 
-	assert(!strId.empty());
+	if (strId.empty())
+		return EINVAL;
 	
 	Option opt(m_map_opts.get_allocator());
 	opt.m_short_opt = short_opt;
