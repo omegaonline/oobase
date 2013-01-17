@@ -39,12 +39,15 @@ namespace
 		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
 		int send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 		int send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
+		int shutdown(bool bSend, bool bRecv);
 	
 	private:
 		virtual ~AsyncPipe();
 
 		OOBase::detail::ProactorWin32* m_pProactor;
 		OOBase::Win32::SmartHandle     m_hPipe;
+		bool                           m_send_allowed;
+		bool                           m_recv_allowed;
 					
 		static void on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
 		static void on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
@@ -56,7 +59,9 @@ namespace
 
 AsyncPipe::AsyncPipe(OOBase::detail::ProactorWin32* pProactor, HANDLE hPipe) :
 		m_pProactor(pProactor),
-		m_hPipe(hPipe)
+		m_hPipe(hPipe),
+		m_send_allowed(true),
+		m_recv_allowed(true)
 { }
 
 AsyncPipe::~AsyncPipe()
@@ -103,6 +108,9 @@ int AsyncPipe::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, 
 
 	if (bytes > DWORD(-1))
 		return ERROR_BUFFER_OVERFLOW;
+
+	if (!m_recv_allowed)
+		return WSAESHUTDOWN;
 		
 	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 	err = m_pProactor->new_overlapped(pOv,&on_recv);
@@ -177,6 +185,9 @@ int AsyncPipe::send(void* param, send_callback_t callback, OOBase::Buffer* buffe
 	if (bytes > DWORD(-1))
 		return ERROR_BUFFER_OVERFLOW;
 
+	if (!m_send_allowed)
+		return WSAESHUTDOWN;
+
 	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 	int dwErr = m_pProactor->new_overlapped(pOv,&on_send);
 	if (dwErr != 0)
@@ -225,6 +236,9 @@ int AsyncPipe::send_v(void* param, send_v_callback_t callback, OOBase::Buffer* b
 	
 	if (!buffers)
 		return ERROR_INVALID_PARAMETER;
+
+	if (!m_send_allowed)
+		return WSAESHUTDOWN;
 
 	// Its more efficient to ask for the total block size up front rather than multiple small reallocs
 	size_t actual_count = 0;
@@ -366,6 +380,23 @@ int AsyncPipe::send_msg(void*, send_msg_callback_t, OOBase::Buffer*, OOBase::Buf
 	return ERROR_NOT_SUPPORTED;
 }
 
+int AsyncPipe::shutdown(bool bSend, bool bRecv)
+{
+	if (bSend)
+	{
+		// Attempt to flush and disconnect (this may fail if we are not the 'server')
+		::FlushFileBuffers(m_hPipe);
+		::DisconnectNamedPipe(m_hPipe);
+
+		m_send_allowed = false;
+	}
+
+	if (bRecv)
+		m_recv_allowed = false;
+
+	return 0;
+}
+
 /*int AsyncPipe::get_uid(OOBase::AsyncLocalSocket::uid_t& uid)
 {
 	if (!ImpersonateNamedPipeClient(m_hPipe))
@@ -487,7 +518,7 @@ int InternalAcceptor::stop()
 		
 		// Close all the pending handles
 		for (size_t i=0;i<m_stkPending.size();++i)
-			CloseHandle(*m_stkPending.at(i));
+			::CloseHandle(*m_stkPending.at(i));
 	}
 	
 	// Wait for all pending operations to complete

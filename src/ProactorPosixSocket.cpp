@@ -51,6 +51,7 @@ namespace
 		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
 		int send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 		int send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
+		int shutdown(bool bSend, bool bRecv);
 
 	private:
 		struct RecvItem
@@ -361,6 +362,19 @@ int AsyncSocket::send_msg(void* param, send_msg_callback_t callback, OOBase::Buf
 	}
 
 	return (watch ? m_pProactor->watch_fd(m_fd,OOBase::detail::eTXSend) : 0);
+}
+
+int AsyncSocket::shutdown(bool bSend, bool bRecv)
+{
+	int how = -1;
+	if (bSend && bRecv)
+		how = SHUT_RDWR;
+	else if (bSend)
+		how = SHUT_WR;
+	else if (bRecv)
+		how = SHUT_RD;
+
+	return (how != -1 ? ::shutdown(m_fd,how) : 0);
 }
 
 void AsyncSocket::fd_callback(int fd, void* param, unsigned int events)

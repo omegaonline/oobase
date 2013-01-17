@@ -44,12 +44,13 @@ namespace
 		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
 		int send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 		int send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
+		int shutdown(bool bSend, bool bRecv);
 	
 	private:
 		virtual ~AsyncSocket();
 
 		OOBase::detail::ProactorWin32* m_pProactor;
-		SOCKET                            m_hSocket;
+		SOCKET                         m_hSocket;
 					
 		static void on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
 		static void on_recv_msg(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
@@ -501,6 +502,19 @@ void AsyncSocket::on_send_msg(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase:
 
 		(*callback)(param,buffer,ctl_buffer,dwErr);
 	}
+}
+
+int AsyncSocket::shutdown(bool bSend, bool bRecv)
+{
+	int how = -1;
+	if (bSend && bRecv)
+		how = SD_BOTH;
+	else if (bSend)
+		how = SD_SEND;
+	else if (bRecv)
+		how = SD_RECEIVE;
+
+	return (how != -1 ? ::shutdown(m_hSocket,how) : 0);
 }
 
 namespace

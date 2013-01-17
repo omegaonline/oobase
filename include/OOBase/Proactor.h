@@ -90,6 +90,7 @@ namespace OOBase
 			return send_v(thunk,&ThunkSV<T>::fn,buffers,count);
 		}
 
+		// These are blocking calls
 		int recv(Buffer* buffer, size_t bytes = 0);
 		int send(Buffer* buffer);
 
@@ -107,6 +108,8 @@ namespace OOBase
 
 		typedef void (*send_msg_callback_t)(void* param, Buffer* data_buffer, Buffer* ctl_buffer, int err);
 		virtual int send_msg(void* param, send_msg_callback_t callback, Buffer* data_buffer, Buffer* ctl_buffer) = 0;
+
+		virtual int shutdown(bool bSend = true, bool bRecv = true) = 0;
 
 	protected:
 		AsyncSocket() {}
