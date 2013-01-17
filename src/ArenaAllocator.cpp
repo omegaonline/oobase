@@ -49,9 +49,9 @@
 
 #include "../include/OOBase/ArenaAllocator.h"
 
-OOBase::ArenaAllocator::ArenaAllocator(size_t capacity) : m_mspace(NULL)
+OOBase::ArenaAllocator::ArenaAllocator(bool locked) : m_mspace(NULL)
 {
-	m_mspace = create_mspace(capacity,0);
+	m_mspace = create_mspace(0,locked ? 1 : 0);
 	if (!m_mspace)
 		OOBase_CallCriticalFailure("Failed to create dl_malloc mspace");
 }

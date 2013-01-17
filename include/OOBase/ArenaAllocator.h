@@ -29,7 +29,7 @@ namespace OOBase
 	class ArenaAllocator : public AllocatorInstance
 	{
 	public:
-		ArenaAllocator(size_t capacity = 0);
+		ArenaAllocator(bool locked = false);
 		~ArenaAllocator();
 
 		void* allocate(size_t bytes, size_t align);
