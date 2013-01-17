@@ -54,7 +54,8 @@ namespace
 		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
 		size_t send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout);
 
-		void close();
+		int shutdown(bool bSend, bool bRecv);
+		int close();
 					
 	private:
 		OOBase::Win32::SmartHandle m_handle;
@@ -244,15 +245,11 @@ int Pipe::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout&
 	if (!buffers)
 		return ERROR_INVALID_PARAMETER;
 
-	int err = 0;
-
 	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock,false);
 	if (!guard.acquire(timeout))
-	{
-		err = WSAETIMEDOUT;
-		return 0;
-	}
+		return WSAETIMEDOUT;
 
+	int err = 0;
 	for (size_t i=0;i<count && err == 0 ;++i)
 	{
 		if (buffers[i] && buffers[i]->space() > 0)
@@ -360,25 +357,63 @@ size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::Ti
 	return 0;
 }*/
 
-void Pipe::close()
+int Pipe::shutdown(bool bSend, bool bRecv)
 {
+	if (bSend)
+	{
+		// Attempt to flush and disconnect (this may fail if we are not the 'server')
+		::FlushFileBuffers(m_handle);
+		::DisconnectNamedPipe(m_handle);
+
+		m_send_allowed = false;
+
+		// This will halt all send's
+		if (m_send_event.is_valid())
+			::SetEvent(m_send_event);
+
+		// This ensures there are no other sends in progress...
+		OOBase::Guard<OOBase::Mutex> guard(m_send_lock);
+	}
+
+	if (bRecv)
+	{
+		m_recv_allowed = false;
+
+		// This will halt all recv's
+		if (m_recv_event.is_valid())
+			::SetEvent(m_recv_event);
+
+		// This ensures there are no other recvs in progress...
+		OOBase::Guard<OOBase::Mutex> guard(m_recv_lock);
+	}
+
+	return 0;
+}
+
+int Pipe::close()
+{
+	// Attempt to flush and disconnect (this may fail if we are not the 'server')
+	::FlushFileBuffers(m_handle);
+	::DisconnectNamedPipe(m_handle);
+
 	m_send_allowed = false;
 	m_recv_allowed = false;
-	
-	// This will halt all recv's
-	if (m_recv_event.is_valid())
-		SetEvent(m_recv_event);
 
 	// This will halt all send's
 	if (m_send_event.is_valid())
 		SetEvent(m_send_event);
 	
-	// This ensures there are no other sends or recvs in progress...
-	OOBase::Guard<OOBase::Mutex> guard1(m_recv_lock,false);
-	guard1.acquire();
+	// This will halt all recv's
+	if (m_recv_event.is_valid())
+		SetEvent(m_recv_event);
 
-	OOBase::Guard<OOBase::Mutex> guard2(m_send_lock,false);
-	guard2.acquire();
+	// This ensures there are no other sends in progress...
+	OOBase::Guard<OOBase::Mutex> guard1(m_send_lock);
+
+	// This ensures there are no other recvs in progress...
+	OOBase::Guard<OOBase::Mutex> guard2(m_recv_lock);
+
+	return m_handle.close();
 }
 
 int OOBase::Net::accept(HANDLE hPipe, const Timeout& timeout)

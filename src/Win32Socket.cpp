@@ -352,7 +352,8 @@ namespace
 		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
 		size_t send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout);
 
-		void close();
+		int shutdown(bool bSend, bool bRecv);
+		int close();
 					
 	private:
 		SOCKET                     m_socket;
@@ -859,7 +860,7 @@ size_t WinSocket::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_
 	msg.dwBufferCount = 1;
 	msg.Control.buf = static_cast<char*>(ctl_buf);
 	msg.Control.len = static_cast<u_long>(ctl_len);
-	msg.dwFlags = 0;
+	msg.dwFlags = MSG_WAITALL;
 
 	DWORD dwRead = 0;
 	if (timeout.is_infinite())
@@ -892,12 +893,25 @@ size_t WinSocket::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_
 	return dwRead;
 }
 
-void WinSocket::close()
+int WinSocket::shutdown(bool bSend, bool bRecv)
 {
-	// This may not cancel any outstanding recvs
-	void* CHECK_ME;
+	int how = -1;
+	if (bSend && bRecv)
+		how = SD_BOTH;
+	else if (bSend)
+		how = SD_SEND;
+	else if (bRecv)
+		how = SD_RECEIVE;
 
-	::shutdown(m_socket,SD_SEND);
+	return (how != -1 ? ::shutdown(m_socket,how) : 0);
+}
+
+int WinSocket::close()
+{
+	int err = OOBase::Net::close_socket(m_socket);
+	if (!err)
+		m_socket = INVALID_SOCKET;
+	return err;
 }
 
 OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)

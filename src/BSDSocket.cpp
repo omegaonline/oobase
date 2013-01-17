@@ -253,13 +253,13 @@ namespace
 		int recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
 		size_t recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout);
 
-		void close();
+		int shutdown(bool bSend, bool bRecv);
+		int close();
 
 	private:
-		const int  m_sock;
-
-		OOBase::Mutex              m_recv_lock;  // These are mutexes to enforce ordering
-		OOBase::Mutex              m_send_lock;
+		int           m_sock;
+		OOBase::Mutex m_recv_lock;  // These are mutexes to enforce ordering
+		OOBase::Mutex m_send_lock;
 
 		int do_select(bool bWrite, const OOBase::Timeout& timeout);
 	};
@@ -320,7 +320,7 @@ Socket::Socket(int sock) :
 
 Socket::~Socket()
 {
-	OOBase::Net::close_socket(m_sock);
+	close();
 }
 
 int Socket::do_select(bool bWrite, const OOBase::Timeout& timeout)
@@ -342,7 +342,13 @@ int Socket::do_select(bool bWrite, const OOBase::Timeout& timeout)
 	while (count == -1 && errno == EINTR);
 
 	if (count == -1)
+	{
+		// if we close a file handle during a select we get EBADF
+		if (errno == EBADF)
+			return ECONNRESET;
+
 		return errno;
+	}
 
 	if (count == 0)
 		return ETIMEDOUT;
@@ -377,6 +383,12 @@ size_t Socket::send(const void* buf, size_t len, int& err, const OOBase::Timeout
 	size_t to_send = len;
 
 	OOBase::Guard<OOBase::Mutex> guard(m_send_lock);
+
+	if (m_sock == -1)
+	{
+		err = ECONNRESET;
+		return 0;
+	}
 
 	do
 	{
@@ -442,6 +454,9 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 		return 0;
 
 	OOBase::Guard<OOBase::Mutex> guard(m_send_lock);
+
+	if (m_sock == -1)
+		return ECONNRESET;
 
 	size_t first_buffer = 0;
 	int err = 0;
@@ -529,6 +544,12 @@ size_t Socket::send_msg(const void* data_buf, size_t data_len, const void* ctl_b
 
 	OOBase::Guard<OOBase::Mutex> guard(m_send_lock);
 
+	if (m_sock == -1)
+	{
+		err = ECONNRESET;
+		return 0;
+	}
+
 	ssize_t sent = 0;
 	do
 	{
@@ -574,6 +595,12 @@ size_t Socket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Ti
 	err = 0;
 
 	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock);
+
+	if (m_sock == -1)
+	{
+		err = ECONNRESET;
+		return 0;
+	}
 
 	do
 	{
@@ -640,6 +667,9 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 		return 0;
 
 	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock);
+
+	if (m_sock == -1)
+		return ECONNRESET;
 
 	size_t first_buffer = 0;
 	int err = 0;
@@ -725,6 +755,12 @@ size_t Socket::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t c
 
 	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock);
 
+	if (m_sock == -1)
+	{
+		err = ECONNRESET;
+		return 0;
+	}
+
 	ssize_t recvd = 0;
 	do
 	{
@@ -749,9 +785,30 @@ size_t Socket::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t c
 	return recvd;
 }
 
-void Socket::close()
+int Socket::shutdown(bool bSend, bool bRecv)
 {
-	::shutdown(m_sock,SHUT_WR);
+	int how = -1;
+	if (bSend && bRecv)
+		how = SHUT_RDWR;
+	else if (bSend)
+		how = SHUT_WR;
+	else if (bRecv)
+		how = SHUT_RD;
+
+	return (how != -1 ? ::shutdown(m_sock,how) : 0);
+}
+
+int Socket::close()
+{
+	int err = OOBase::Net::close_socket(m_sock);
+	if (!err)
+	{
+		OOBase::Guard<OOBase::Mutex> guard1(m_recv_lock);
+		OOBase::Guard<OOBase::Mutex> guard2(m_send_lock);
+
+		m_sock = -1;
+	}
+	return err;
 }
 
 OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)

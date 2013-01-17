@@ -174,7 +174,8 @@ namespace OOBase
 			return err;
 		}
 
-		virtual void close() = 0;
+		virtual int shutdown(bool bSend = true, bool bRecv = true) = 0;
+		virtual int close() = 0;
 	};
 }
 
