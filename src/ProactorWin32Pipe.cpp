@@ -66,7 +66,7 @@ AsyncPipe::AsyncPipe(OOBase::detail::ProactorWin32* pProactor, HANDLE hPipe) :
 
 AsyncPipe::~AsyncPipe()
 { 
-	m_pProactor->unbind(m_hPipe);
+	m_pProactor->unbind();
 }
 
 int AsyncPipe::translate_error(DWORD dwErr)
@@ -573,7 +573,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 			dwErr = m_pProactor->new_overlapped(pOv,&on_completion);
 			if (dwErr != 0)
 			{
-				m_pProactor->unbind(hPipe);
+				m_pProactor->unbind();
 				break;
 			}
 			
@@ -598,7 +598,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 			
 			if (dwErr != ERROR_PIPE_CONNECTED)
 			{
-				m_pProactor->unbind(hPipe);
+				m_pProactor->unbind();
 				break;
 			}
 			
@@ -647,7 +647,7 @@ bool InternalAcceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase
 	// If we close the pipe with outstanding connects, we get a load of ERROR_BROKEN_PIPE,
 	// just ignore them
 	if (dwErr == ERROR_BROKEN_PIPE)
-		m_pProactor->unbind(hPipe);
+		m_pProactor->unbind();
 	else
 	{
 		// Keep us alive while the callbacks fire
@@ -663,7 +663,7 @@ bool InternalAcceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase
 			if (!pSocket)
 			{
 				dwErr = ERROR_OUTOFMEMORY;
-				m_pProactor->unbind(hPipe);
+				m_pProactor->unbind();
 				CloseHandle(hPipe);
 			}
 		}
@@ -744,7 +744,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::attach(HANDLE hPipe, int& er
 	AsyncPipe* pPipe = new (std::nothrow) AsyncPipe(this,hPipe);
 	if (!pPipe)
 	{
-		unbind(hPipe);
+		unbind();
 		err = ERROR_OUTOFMEMORY;
 	}
 
@@ -809,7 +809,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const char* path, in
 	AsyncSocket* pSocket = new (std::nothrow) AsyncPipe(this,hPipe);
 	if (!pSocket)
 	{
-		unbind(hPipe);
+		unbind();
 		err = ERROR_OUTOFMEMORY;
 	}
 	else

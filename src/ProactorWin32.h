@@ -63,7 +63,7 @@ namespace OOBase
 			void delete_overlapped(Overlapped* pOv);
 									
 			int bind(HANDLE hFile);
-			void unbind(HANDLE hFile);
+			void unbind();
 
 			int run(int& err, const Timeout& timeout);
 

@@ -89,7 +89,7 @@ int OOBase::detail::ProactorWin32::bind(HANDLE hFile)
 	return 0;
 }
 
-void OOBase::detail::ProactorWin32::unbind(HANDLE /*hFile*/)
+void OOBase::detail::ProactorWin32::unbind()
 {
 	Guard<SpinLock> guard(m_lock);
 
@@ -158,7 +158,7 @@ int OOBase::detail::ProactorWin32::run(int& err, const Timeout& timeout)
 
 void OOBase::detail::ProactorWin32::stop()
 {
-	unbind(NULL);
+	unbind();
 }
 
 #endif // _WIN32

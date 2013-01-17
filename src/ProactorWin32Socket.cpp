@@ -68,6 +68,8 @@ AsyncSocket::AsyncSocket(OOBase::detail::ProactorWin32* pProactor, SOCKET hSocke
 AsyncSocket::~AsyncSocket()
 {
 	OOBase::Net::close_socket(m_hSocket);
+
+	m_pProactor->unbind();
 }
 
 int AsyncSocket::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
@@ -732,7 +734,7 @@ int InternalAcceptor::init_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard
 			}
 
 			if (err != 0)
-				m_pProactor->unbind((HANDLE)m_socket);
+				m_pProactor->unbind();
 		}
 	}
 	
@@ -769,7 +771,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 			buf = OOBase::CrtAllocator::allocate((m_addr_len+16)*2);
 			if (!buf)
 			{
-				m_pProactor->unbind((HANDLE)sockNew);
+				m_pProactor->unbind();
 				err = ERROR_OUTOFMEMORY;
 				break;
 			}
@@ -777,7 +779,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 			err = m_pProactor->new_overlapped(pOv,&on_completion);
 			if (err != 0)
 			{
-				m_pProactor->unbind((HANDLE)sockNew);
+				m_pProactor->unbind();
 				OOBase::CrtAllocator::free(buf);
 				break;
 			}
@@ -794,7 +796,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 			err = WSAGetLastError();
 			if (err != ERROR_IO_PENDING)
 			{
-				m_pProactor->unbind((HANDLE)sockNew);
+				m_pProactor->unbind();
 				break;
 			}
 			
@@ -985,7 +987,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const sockaddr* addr
 	::AsyncSocket* pSocket = new (std::nothrow) ::AsyncSocket(this,sock);
 	if (!pSocket)
 	{
-		unbind((HANDLE)sock);
+		unbind();
 		Net::close_socket(sock);
 		err = ERROR_OUTOFMEMORY;
 	}
@@ -1003,7 +1005,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::attach(socket_t sock, int& e
 	::AsyncSocket* pSocket = new (std::nothrow) ::AsyncSocket(this,sock);
 	if (!pSocket)
 	{
-		unbind((HANDLE)sock);
+		unbind();
 		err = ERROR_OUTOFMEMORY;
 	}
 		
