@@ -36,19 +36,22 @@ namespace OOBase
 	{
 		class ProactorWin32 : public Proactor
 		{
+		// Proactor public members
+		public:
+			AsyncSocket* accept(HANDLE hPipe, int& err, const Timeout& timeout);
+
+			AsyncSocket* attach(socket_t sock, int& err);
+			AsyncSocket* attach(HANDLE hPipe, int& err);
+
+			AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout);
+			AsyncSocket* connect(const char* path, int& err, const Timeout& timeout);
+
+			// 'Internal' public members
 		public:
 			ProactorWin32();
 			virtual ~ProactorWin32();
 
 			void stop();
-
-			AsyncSocket* attach(socket_t sock, int& err);
-			AsyncSocket* attach(HANDLE hPipe, int& err);
-
-			AsyncSocket* accept(HANDLE hPipe, int& err, const Timeout& timeout);
-
-			AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout);
-			AsyncSocket* connect(const char* path, int& err, const Timeout& timeout);
 		
 			struct Overlapped : public OVERLAPPED
 			{
@@ -66,6 +69,9 @@ namespace OOBase
 			void unbind();
 
 			int run(int& err, const Timeout& timeout);
+
+			void* allocate(size_t bytes, size_t align);
+			static void free(void* param, void* ptr);
 
 		protected:
 			Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa);

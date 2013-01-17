@@ -68,6 +68,9 @@ namespace OOBase
 
 			void stop();
 
+			void* allocate(size_t bytes, size_t align);
+			static void free(void* param, void* ptr);
+
 		protected:
 			struct TimerItem
 			{

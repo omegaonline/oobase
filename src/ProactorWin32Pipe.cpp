@@ -41,6 +41,9 @@ namespace
 		int send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
 		int shutdown(bool bSend, bool bRecv);
 	
+	protected:
+		void* proactor_allocate(size_t bytes, size_t align, void*& free_param, void (*&free_fn)(void*,void*));
+
 	private:
 		virtual ~AsyncPipe();
 
@@ -289,7 +292,7 @@ int AsyncPipe::send_v(void* param, send_v_callback_t callback, OOBase::Buffer* b
 
 	if (callback)
 	{
-		OOBase::Buffer** ov_buffers = static_cast<OOBase::Buffer**>(OOBase::CrtAllocator::allocate((actual_count+1) * sizeof(OOBase::Buffer*),OOBase::alignof<OOBase::Buffer*>::value));
+		OOBase::Buffer** ov_buffers = static_cast<OOBase::Buffer**>(m_pProactor->allocate((actual_count+1) * sizeof(OOBase::Buffer*),OOBase::alignof<OOBase::Buffer*>::value));
 		if (!ov_buffers)
 		{
 			m_pProactor->delete_overlapped(pOv);
@@ -329,8 +332,6 @@ void AsyncPipe::on_send_v(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOBase:
 	OOBase::RefPtr<OOBase::Buffer> buffer(reinterpret_cast<OOBase::Buffer*>(pOv->m_extras[2]));
 	OOBase::Buffer** buffers = reinterpret_cast<OOBase::Buffer**>(pOv->m_extras[3]);
 
-	pOv->m_pProactor->delete_overlapped(pOv);
-
 	// Call callback
 	if (callback)
 	{
@@ -363,7 +364,7 @@ void AsyncPipe::on_send_v(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOBase:
 			for (size_t i=0;i<count;++i)
 				buffers[i]->release();
 
-			OOBase::CrtAllocator::free(buffers);
+			OOBase::detail::ProactorWin32::free(pOv->m_pProactor,buffers);
 			throw;
 		}
 #endif
@@ -371,8 +372,10 @@ void AsyncPipe::on_send_v(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOBase:
 		for (size_t i=0;i<count;++i)
 			buffers[i]->release();
 
-		OOBase::CrtAllocator::free(buffers);
+		OOBase::detail::ProactorWin32::free(pOv->m_pProactor,buffers);
 	}
+
+	pOv->m_pProactor->delete_overlapped(pOv);
 }
 
 int AsyncPipe::send_msg(void*, send_msg_callback_t, OOBase::Buffer*, OOBase::Buffer*)
@@ -395,6 +398,17 @@ int AsyncPipe::shutdown(bool bSend, bool bRecv)
 		m_recv_allowed = false;
 
 	return 0;
+}
+
+void* AsyncPipe::proactor_allocate(size_t bytes, size_t align, void*& free_param, void (*&free_fn)(void*,void*))
+{
+	void* p = m_pProactor->allocate(bytes,align);
+	if (p)
+	{
+		free_param = m_pProactor;
+		free_fn = &OOBase::detail::ProactorWin32::free;
+	}
+	return p;
 }
 
 /*int AsyncPipe::get_uid(OOBase::AsyncLocalSocket::uid_t& uid)

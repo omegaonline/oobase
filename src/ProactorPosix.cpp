@@ -369,4 +369,14 @@ int OOBase::detail::ProactorPosix::read_control()
 	}
 }
 
+void* OOBase::detail::ProactorPosix::allocate(size_t bytes, size_t align)
+{
+	return OOBase::CrtAllocator::allocate(bytes,align);
+}
+
+void OOBase::detail::ProactorPosix::free(void* /*param*/, void* ptr)
+{
+	OOBase::CrtAllocator::free(ptr);
+}
+
 #endif // defined(HAVE_UNISTD_H)

@@ -53,6 +53,9 @@ namespace
 		int send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
 		int shutdown(bool bSend, bool bRecv);
 
+	protected:
+		void* proactor_allocate(size_t bytes, size_t align, void*& free_param, void (*&free_fn)(void*,void*));
+
 	private:
 		struct RecvItem
 		{
@@ -157,7 +160,7 @@ AsyncSocket::~AsyncSocket()
 					send_item.m_buffers[i]->release();
 			}
 
-			OOBase::CrtAllocator::free(send_item.m_buffers);
+			OOBase::detail::ProactorPosix::free(m_pProactor,send_item.m_buffers);
 		}
 	}
 }
@@ -296,7 +299,7 @@ int AsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Buffer*
 
 	SendItem item = { param, actual_count };
 	item.m_v_callback = callback;
-	item.m_buffers = static_cast<OOBase::Buffer**>(OOBase::CrtAllocator::allocate(actual_count * sizeof(OOBase::Buffer*)));
+	item.m_buffers = static_cast<OOBase::Buffer**>(m_pProactor->allocate(actual_count * sizeof(OOBase::Buffer*),OOBase::alignof<OOBase::Buffer*>::value));
 	if (!item.m_buffers)
 		return ERROR_OUTOFMEMORY;
 
@@ -323,7 +326,7 @@ int AsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Buffer*
 		for (size_t i=0;i<actual_count;++i)
 			item.m_buffers[i]->release();
 
-		OOBase::CrtAllocator::free(item.m_buffers);
+		OOBase::detail::ProactorPosix::free(m_pProactor,item.m_buffers);
 		return err;
 	}
 
@@ -375,6 +378,17 @@ int AsyncSocket::shutdown(bool bSend, bool bRecv)
 		how = SHUT_RD;
 
 	return (how != -1 ? ::shutdown(m_fd,how) : 0);
+}
+
+void* AsyncSocket::proactor_allocate(size_t bytes, size_t align, void*& free_param, void (*&free_fn)(void*,void*))
+{
+	void* p = m_pProactor->allocate(bytes,align);
+	if (p)
+	{
+		free_param = m_pProactor;
+		free_fn = &OOBase::detail::ProactorPosix::free;
+	}
+	return p;
 }
 
 void AsyncSocket::fd_callback(int fd, void* param, unsigned int events)
@@ -470,7 +484,7 @@ void AsyncSocket::fd_callback(int fd, void* param, unsigned int events)
 							send_notify.m_item.m_buffers[i]->release();
 					}
 
-					OOBase::CrtAllocator::free(send_notify.m_item.m_buffers);
+					OOBase::detail::ProactorPosix::free(m_pProactor,send_notify.m_item.m_buffers);
 					throw;
 				}
 #endif
@@ -480,7 +494,7 @@ void AsyncSocket::fd_callback(int fd, void* param, unsigned int events)
 						send_notify.m_item.m_buffers[i]->release();
 				}
 
-				OOBase::CrtAllocator::free(send_notify.m_item.m_buffers);
+				OOBase::detail::ProactorPosix::free(pThis->m_pProactor,send_notify.m_item.m_buffers);
 			}
 		}
 	}
@@ -823,7 +837,7 @@ void AsyncSocket::process_send(OOBase::Queue<SendNotify,OOBase::AllocatorInstanc
 						item.m_buffers[i]->release();
 				}
 
-				OOBase::CrtAllocator::free(item.m_buffers);
+				OOBase::detail::ProactorPosix::free(m_pProactor,item.m_buffers);
 			}
 
 			OOBase_CallCriticalFailure(err);

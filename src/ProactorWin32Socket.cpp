@@ -45,6 +45,9 @@ namespace
 		int send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 		int send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
 		int shutdown(bool bSend, bool bRecv);
+
+	protected:
+		void* proactor_allocate(size_t bytes, size_t align, void*& free_param, void (*&free_fn)(void*,void*));
 	
 	private:
 		virtual ~AsyncSocket();
@@ -339,7 +342,7 @@ int AsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Buffer*
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
 
-	OOBase::Buffer** ov_buffers = static_cast<OOBase::Buffer**>(OOBase::CrtAllocator::allocate((buf_count) * sizeof(OOBase::Buffer*),OOBase::alignof<OOBase::Buffer*>::value));
+	OOBase::Buffer** ov_buffers = static_cast<OOBase::Buffer**>(m_pProactor->allocate((buf_count) * sizeof(OOBase::Buffer*),OOBase::alignof<OOBase::Buffer*>::value));
 	if (!ov_buffers)
 	{
 		m_pProactor->delete_overlapped(pOv);
@@ -386,8 +389,6 @@ void AsyncSocket::on_send_v(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::d
 	OOBase::Buffer** buffers = reinterpret_cast<OOBase::Buffer**>(pOv->m_extras[3]);
 	size_t count = pOv->m_extras[3];
 
-	pOv->m_pProactor->delete_overlapped(pOv);
-
 	// Call callback
 	if (callback)
 	{
@@ -419,7 +420,7 @@ void AsyncSocket::on_send_v(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::d
 			for (size_t i=0;i<count;++i)
 				buffers[i]->release();
 
-			OOBase::CrtAllocator::free(buffers);
+			OOBase::detail::ProactorWin32::free(pOv->m_pProactor,buffers);
 			throw;
 		}
 #endif
@@ -428,7 +429,9 @@ void AsyncSocket::on_send_v(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::d
 	for (size_t i=0;i<count;++i)
 		buffers[i]->release();
 
-	OOBase::CrtAllocator::free(buffers);
+	OOBase::detail::ProactorWin32::free(pOv->m_pProactor,buffers);
+
+	pOv->m_pProactor->delete_overlapped(pOv);
 }
 
 int AsyncSocket::send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer)
@@ -519,6 +522,17 @@ int AsyncSocket::shutdown(bool bSend, bool bRecv)
 	return (how != -1 ? ::shutdown(m_hSocket,how) : 0);
 }
 
+void* AsyncSocket::proactor_allocate(size_t bytes, size_t align, void*& free_param, void (*&free_fn)(void*,void*))
+{
+	void* p = m_pProactor->allocate(bytes,align);
+	if (p)
+	{
+		free_param = m_pProactor;
+		free_fn = &OOBase::detail::ProactorWin32::free;
+	}
+	return p;
+}
+
 namespace
 {
 	class InternalAcceptor
@@ -534,7 +548,7 @@ namespace
 		OOBase::detail::ProactorWin32*                   m_pProactor;
 		OOBase::Condition::Mutex                         m_lock;
 		OOBase::Condition                                m_condition;
-		OOBase::SmartPtr<sockaddr,OOBase::FreeDestructor<OOBase::CrtAllocator> > m_addr;
+		sockaddr_storage                                 m_addr;
 		socklen_t                                        m_addr_len;
 		SOCKET                                           m_socket;
 		size_t                                           m_backlog;
@@ -625,11 +639,7 @@ InternalAcceptor::InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, voi
 
 int InternalAcceptor::bind(const sockaddr* addr, socklen_t addr_len)
 {
-	m_addr = static_cast<sockaddr*>(OOBase::CrtAllocator::allocate(addr_len));
-	if (!m_addr)
-		return ERROR_OUTOFMEMORY;
-	
-	memcpy(m_addr,addr,addr_len);
+	memcpy(&m_addr,addr,addr_len);
 	m_addr_len = addr_len;
 	
 	// Create an event to wait on
@@ -705,12 +715,12 @@ int InternalAcceptor::init_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard
 {
 	// Create a new socket
 	int err = 0;
-	m_socket = OOBase::Net::open_socket(m_addr->sa_family,SOCK_STREAM,0,err);
+	m_socket = OOBase::Net::open_socket(m_addr.ss_family,SOCK_STREAM,0,err);
 	if (err)
 		return err;
 		
 	// Bind to the address
-	if (::bind(m_socket,m_addr,m_addr_len) == SOCKET_ERROR)
+	if (::bind(m_socket,(struct sockaddr*)&m_addr,m_addr_len) == SOCKET_ERROR)
 		err = WSAGetLastError();
 	else
 	{
@@ -757,7 +767,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 	
 	while (m_pending < m_backlog)
 	{
-		sockNew = OOBase::Net::open_socket(m_addr->sa_family,SOCK_STREAM,0,err);
+		sockNew = OOBase::Net::open_socket(m_addr.ss_family,SOCK_STREAM,0,err);
 		if (err)
 			break;
 
@@ -767,8 +777,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 							
 		if (!pOv)
 		{
-			void* TODO; // This looks iffy!!
-			buf = OOBase::CrtAllocator::allocate((m_addr_len+16)*2);
+			buf = m_pProactor->allocate((m_addr_len+16)*2,OOBase::alignof<struct sockaddr>::value);
 			if (!buf)
 			{
 				m_pProactor->unbind();
@@ -780,7 +789,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 			if (err != 0)
 			{
 				m_pProactor->unbind();
-				OOBase::CrtAllocator::free(buf);
+				OOBase::detail::ProactorWin32::free(m_pProactor,buf);
 				break;
 			}
 					
@@ -810,7 +819,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 		}
 
 		// Call the callback
-		if (on_accept(sockNew,false,0,NULL,guard))
+		if (on_accept(sockNew,false,0,buf,guard))
 		{
 			// We have self destructed
 			break;
@@ -821,7 +830,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 		OOBase::Net::close_socket(sockNew);
 	
 	if (buf)
-		OOBase::CrtAllocator::free(buf);
+		OOBase::detail::ProactorWin32::free(m_pProactor,buf);
 	
 	if (pOv)
 		m_pProactor->delete_overlapped(pOv);
@@ -884,7 +893,7 @@ bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void
 	{
 		// Get addresses
 		sockaddr* local_addr = NULL;
-		int local_addr_len = 0;
+		INT local_addr_len = 0;
 		OOBase::Win32::WSAGetAcceptExSockAddrs(m_socket,addr_buf,0,m_addr_len+16,m_addr_len+16,&local_addr,&local_addr_len,&remote_addr,&remote_addr_len);
 			
 		// Wrap the handle
@@ -904,7 +913,7 @@ bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void
 		(*m_callback)(m_param,pSocket,remote_addr,remote_addr_len,dwErr);
 			
 	if (bRemove)
-		OOBase::CrtAllocator::free(addr_buf);
+		OOBase::detail::ProactorWin32::free(m_pProactor,addr_buf);
 	
 	guard.acquire();
 	
