@@ -249,7 +249,7 @@ namespace OOBase
 			}
 
 			size_t len = 0;
-			if (!read4(len))
+			if (!read_dyn_int(len))
 				return false;
 
 			if (len == 0)
@@ -285,34 +285,6 @@ namespace OOBase
 			memcpy(buffer,m_buffer->rd_ptr(),count);
 			m_buffer->rd_ptr(count);
 			return count;
-		}
-
-		/** Templatized socket recv function.
-		 */
-		template <typename S, typename STR>
-		bool recv_string(S& pSocket, STR& str)
-		{
-			size_t mark = m_buffer->mark_rd_ptr();
-
-			m_last_error = pSocket->recv(m_buffer,4);
-			if (m_last_error != 0)
-				return false;
-
-			size_t len = 0;
-			if (!read4(len))
-				return false;
-
-			if (len)
-			{
-				m_last_error = pSocket->recv(m_buffer,len);
-				if (m_last_error != 0)
-					return false;
-			}
-
-			// Now reset rd_ptr and read the string
-			m_buffer->mark_rd_ptr(mark);
-
-			return read_string(str);
 		}
 
 		/** Templatized variable write function.
@@ -363,7 +335,7 @@ namespace OOBase
 			else if (len == (size_t)-1)
 				len = strlen(pszText);
 
-			if (!write4(len))
+			if (!write_dyn_int(len))
 				return false;
 
 			// Then the bytes of the string
@@ -497,64 +469,43 @@ namespace OOBase
 			return false;
 		}
 
-		bool read4(size_t& len)
+		bool read_dyn_int(size_t& len)
 		{
-			// We do this because we haven't got a safe uint32_t type
-			unsigned char len_buf[4] = {0};
-			if (read_bytes(len_buf,4) != 4)
-				return false;
+			len = 0;
+			for (size_t i=0;;i+=7)
+			{
+				unsigned char b = 0;
+				if (!read(b))
+					return false;
 
-			if (m_endianess == OOBASE_BIG_ENDIAN)
-			{
-				len = len_buf[0] << (3*8);
-				len += len_buf[1] << (2*8);
-				len += len_buf[2] << (1*8);
-				len += len_buf[3];
-				return true;
+				size_t v = size_t(b & 0x7F) << i;
+				if (len > size_t(-1) - v)
+					return error_too_big();
+
+				len += v;
+
+				// If hi bit is set, read another byte
+				if (b & 0x80)
+					return true;
 			}
-			else if (m_endianess == OOBASE_LITTLE_ENDIAN)
-			{
-				len = len_buf[3] << (3*8);
-				len += len_buf[2] << (2*8);
-				len += len_buf[1] << (1*8);
-				len += len_buf[0];
-				return true;
-			}
-			else
-				m_last_error = EINVAL;
-			
-			return false;
 		}
 
-		bool write4(size_t len)
+		bool write_dyn_int(size_t len)
 		{
-			if (len > 0xFFFFFFFF)
-				return error_too_big();
+			do
+			{
+				unsigned char b = (len & 0x7F);
+				if (len > 0x7F)
+					b |= 0x80;
 
-			// We do this because we haven't got a safe uint32_t type
-			unsigned char len_buf[4] = {0};
-			if (m_endianess == OOBASE_BIG_ENDIAN)
-			{
-				len_buf[0] = static_cast<unsigned char>(len >> (3*8));
-				len_buf[1] = static_cast<unsigned char>((len & 0x00FF0000) >> (2*8));
-				len_buf[2] = static_cast<unsigned char>((len & 0x0000FF00) >> (1*8));
-				len_buf[3] = static_cast<unsigned char>(len & 0x000000FF);
-			}
-			else if (m_endianess == OOBASE_LITTLE_ENDIAN)
-			{
-				len_buf[3] = static_cast<unsigned char>(len >> (3*8));
-				len_buf[2] = static_cast<unsigned char>((len & 0x00FF0000) >> (2*8));
-				len_buf[1] = static_cast<unsigned char>((len & 0x0000FF00) >> (1*8));
-				len_buf[0] = static_cast<unsigned char>(len & 0x000000FF);
-			}
-			else
-			{
-				m_last_error = EINVAL;
-				return false;
-			}
+				if (!write(b))
+					return false;
 
-			// Write the length first
-			return write_bytes(len_buf,4);
+				len >>= 7;
+			}
+			while (len);
+
+			return true;
 		}
 	};
 }
