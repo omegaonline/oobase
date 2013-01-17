@@ -60,7 +60,7 @@ namespace OOBase
 		class SmartHandle
 		{
 		public:
-			SmartHandle(HANDLE h = INVALID_HANDLE_VALUE) :
+			explicit SmartHandle(HANDLE h = INVALID_HANDLE_VALUE) :
 					m_handle(h)
 			{}
 
@@ -84,10 +84,11 @@ namespace OOBase
 
 			DWORD close()
 			{
-				if (is_valid() && !CloseHandle(detach()))
+				if (!CloseHandle(m_handle))
 					return GetLastError();
-				else
-					return 0;
+
+				m_handle = INVALID_HANDLE_VALUE;
+				return 0;
 			}
 
 			bool is_valid() const

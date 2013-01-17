@@ -51,7 +51,7 @@ namespace OOBase
 		class SmartFD
 		{
 		public:
-			SmartFD(int fd = -1) :
+			explicit SmartFD(int fd = -1) :
 					m_fd(fd)
 			{}
 
