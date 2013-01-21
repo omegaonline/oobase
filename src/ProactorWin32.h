@@ -52,6 +52,7 @@ namespace OOBase
 			virtual ~ProactorWin32();
 
 			void stop();
+			int restart();
 		
 			struct Overlapped : public OVERLAPPED
 			{

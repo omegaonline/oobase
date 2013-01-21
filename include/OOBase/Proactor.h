@@ -221,6 +221,7 @@ namespace OOBase
 		// Returns -1 on error, 0 on timeout, 1 on nothing more to do
 		virtual int run(int& err, const Timeout& timeout = Timeout()) = 0;
 		virtual void stop() = 0;
+		virtual int restart() = 0;
 
 	protected:
 		Proactor() {}

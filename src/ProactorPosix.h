@@ -67,6 +67,7 @@ namespace OOBase
 			int stop_timer(void* param);
 
 			void stop();
+			int restart();
 
 			void* allocate(size_t bytes, size_t align);
 			static void free(void* param, void* ptr);

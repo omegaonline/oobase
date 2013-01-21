@@ -226,9 +226,6 @@ bool OOBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count
 
 int OOBase::detail::ProactorPoll::run(int& err, const Timeout& timeout)
 {
-	// Reset stopped
-	m_stopped = false;
-
 	Guard<SpinLock> guard(m_lock);
 
 	while (!m_stopped && !timeout.has_expired())

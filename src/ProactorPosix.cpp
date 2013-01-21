@@ -222,6 +222,13 @@ void OOBase::detail::ProactorPosix::stop()
 	}
 }
 
+int OOBase::detail::ProactorPosix::restart()
+{
+	Guard<SpinLock> guard(m_lock);
+	m_stopped = false;
+	return 0;
+}
+
 int OOBase::detail::ProactorPosix::bind_fd(int fd, void* param, fd_callback_t callback)
 {
 	Guard<SpinLock> guard(m_lock,false);

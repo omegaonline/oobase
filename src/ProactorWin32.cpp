@@ -94,10 +94,7 @@ void OOBase::detail::ProactorWin32::unbind()
 	Guard<SpinLock> guard(m_lock);
 
 	if (--m_bound == 0)
-	{
 		CloseHandle(m_hPort);
-		m_hPort = NULL;
-	}
 }
 
 int OOBase::detail::ProactorWin32::run(int& err, const Timeout& timeout)
@@ -116,7 +113,7 @@ int OOBase::detail::ProactorWin32::run(int& err, const Timeout& timeout)
 		++m_bound;
 	}
 	
-	do
+	while (m_bound > 0)
 	{
 		guard.release();
 
@@ -150,7 +147,6 @@ int OOBase::detail::ProactorWin32::run(int& err, const Timeout& timeout)
 
 		guard.acquire();
 	}
-	while (m_bound > 0);
 
 	err = 0;
 	return 1;
@@ -159,6 +155,24 @@ int OOBase::detail::ProactorWin32::run(int& err, const Timeout& timeout)
 void OOBase::detail::ProactorWin32::stop()
 {
 	unbind();
+}
+
+int OOBase::detail::ProactorWin32::restart()
+{
+	int err = 0;
+
+	Guard<SpinLock> guard(m_lock);
+
+	if (!m_hPort)
+	{
+		m_hPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE,NULL,0,0);
+		if (!m_hPort)
+			err = GetLastError();
+		else
+			++m_bound;
+	}
+
+	return err;
 }
 
 void* OOBase::detail::ProactorWin32::allocate(size_t bytes, size_t align)
