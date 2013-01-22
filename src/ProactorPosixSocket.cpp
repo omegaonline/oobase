@@ -41,8 +41,7 @@ namespace
 	class AsyncSocket : public OOBase::AsyncSocket
 	{
 	public:
-		AsyncSocket(OOBase::detail::ProactorPosix* pProactor, int fd);
-		virtual ~AsyncSocket();
+		AsyncSocket(OOBase::detail::ProactorPosix* pProactor, int fd, OOBase::AllocatorInstance& allocator);
 
 		int init();
 
@@ -54,9 +53,21 @@ namespace
 		int shutdown(bool bSend, bool bRecv);
 
 	protected:
-		void* proactor_allocate(size_t bytes, size_t align, void*& free_param, void (*&free_fn)(void*,void*));
+		OOBase::AllocatorInstance& get_allocator()
+		{
+			return m_allocator;
+		}
 
 	private:
+		virtual ~AsyncSocket();
+
+		void destroy()
+		{
+			OOBase::AllocatorInstance& allocator = m_allocator;
+			this->~AsyncSocket();
+			allocator.free(this);
+		}
+
 		struct RecvItem
 		{
 			void*           m_param;
@@ -104,6 +115,7 @@ namespace
 		};
 
 		OOBase::detail::ProactorPosix* m_pProactor;
+		OOBase::AllocatorInstance&     m_allocator;
 		int                            m_fd;
 		OOBase::SpinLock               m_lock;
 		OOBase::Queue<RecvItem>        m_recv_queue;
@@ -120,8 +132,9 @@ namespace
 	};
 }
 
-AsyncSocket::AsyncSocket(OOBase::detail::ProactorPosix* pProactor, int fd) :
+AsyncSocket::AsyncSocket(OOBase::detail::ProactorPosix* pProactor, int fd, OOBase::AllocatorInstance& allocator) :
 		m_pProactor(pProactor),
+		m_allocator(allocator),
 		m_fd(fd)
 { }
 
@@ -160,7 +173,7 @@ AsyncSocket::~AsyncSocket()
 					send_item.m_buffers[i]->release();
 			}
 
-			OOBase::detail::ProactorPosix::free(m_pProactor,send_item.m_buffers);
+			m_allocator.free(send_item.m_buffers);
 		}
 	}
 }
@@ -299,7 +312,7 @@ int AsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Buffer*
 
 	SendItem item = { param, actual_count };
 	item.m_v_callback = callback;
-	item.m_buffers = static_cast<OOBase::Buffer**>(m_pProactor->allocate(actual_count * sizeof(OOBase::Buffer*),OOBase::alignof<OOBase::Buffer*>::value));
+	item.m_buffers = static_cast<OOBase::Buffer**>(m_allocator.allocate(actual_count * sizeof(OOBase::Buffer*),OOBase::alignof<OOBase::Buffer*>::value));
 	if (!item.m_buffers)
 		return ERROR_OUTOFMEMORY;
 
@@ -326,7 +339,7 @@ int AsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Buffer*
 		for (size_t i=0;i<actual_count;++i)
 			item.m_buffers[i]->release();
 
-		OOBase::detail::ProactorPosix::free(m_pProactor,item.m_buffers);
+		m_allocator.free(item.m_buffers);
 		return err;
 	}
 
@@ -378,17 +391,6 @@ int AsyncSocket::shutdown(bool bSend, bool bRecv)
 		how = SHUT_RD;
 
 	return (how != -1 ? ::shutdown(m_fd,how) : 0);
-}
-
-void* AsyncSocket::proactor_allocate(size_t bytes, size_t align, void*& free_param, void (*&free_fn)(void*,void*))
-{
-	void* p = m_pProactor->allocate(bytes,align);
-	if (p)
-	{
-		free_param = m_pProactor;
-		free_fn = &OOBase::detail::ProactorPosix::free;
-	}
-	return p;
 }
 
 void AsyncSocket::fd_callback(int fd, void* param, unsigned int events)
@@ -484,7 +486,7 @@ void AsyncSocket::fd_callback(int fd, void* param, unsigned int events)
 							send_notify.m_item.m_buffers[i]->release();
 					}
 
-					OOBase::detail::ProactorPosix::free(m_pProactor,send_notify.m_item.m_buffers);
+					pThis->m_allocator.free(send_notify.m_item.m_buffers);
 					throw;
 				}
 #endif
@@ -494,7 +496,7 @@ void AsyncSocket::fd_callback(int fd, void* param, unsigned int events)
 						send_notify.m_item.m_buffers[i]->release();
 				}
 
-				OOBase::detail::ProactorPosix::free(pThis->m_pProactor,send_notify.m_item.m_buffers);
+				pThis->m_allocator.free(send_notify.m_item.m_buffers);
 			}
 		}
 	}
@@ -837,7 +839,7 @@ void AsyncSocket::process_send(OOBase::Queue<SendNotify,OOBase::AllocatorInstanc
 						item.m_buffers[i]->release();
 				}
 
-				OOBase::detail::ProactorPosix::free(m_pProactor,item.m_buffers);
+				m_allocator.free(item.m_buffers);
 			}
 
 			OOBase_CallCriticalFailure(err);
@@ -850,14 +852,15 @@ namespace
 	class SocketAcceptor : public OOBase::Acceptor
 	{
 	public:
-		SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_callback_t callback);
-		SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_pipe_callback_t callback);
+		SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, OOBase::AllocatorInstance& allocator, void* param, OOBase::Proactor::accept_callback_t callback);
+		SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, OOBase::AllocatorInstance& allocator, void* param, OOBase::Proactor::accept_pipe_callback_t callback);
 		virtual ~SocketAcceptor();
 
 		int bind(const sockaddr* addr, socklen_t addr_len, mode_t mode);
 
 	private:
 		OOBase::detail::ProactorPosix*           m_pProactor;
+		OOBase::AllocatorInstance&               m_allocator;
 		void*                                    m_param;
 		OOBase::Proactor::accept_callback_t      m_callback;
 		OOBase::Proactor::accept_pipe_callback_t m_callback_local;
@@ -868,16 +871,18 @@ namespace
 	};
 }
 
-SocketAcceptor::SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_callback_t callback) :
+SocketAcceptor::SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, OOBase::AllocatorInstance& allocator, void* param, OOBase::Proactor::accept_callback_t callback) :
 		m_pProactor(pProactor),
+		m_allocator(allocator),
 		m_param(param),
 		m_callback(callback),
 		m_callback_local(NULL),
 		m_fd(-1)
 { }
 
-SocketAcceptor::SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_pipe_callback_t callback) :
+SocketAcceptor::SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, OOBase::AllocatorInstance& allocator, void* param, OOBase::Proactor::accept_pipe_callback_t callback) :
 		m_pProactor(pProactor),
+		m_allocator(allocator),
 		m_param(param),
 		m_callback(NULL),
 		m_callback_local(callback),
@@ -978,15 +983,17 @@ void SocketAcceptor::do_accept()
 			if (err == 0)
 			{
 				// Wrap the handle
-				pSocket = new (std::nothrow) ::AsyncSocket(m_pProactor,new_fd);
-				if (!pSocket)
+				void* p = m_allocator.allocate(sizeof(::AsyncSocket),OOBase::alignof<typename ::AsyncSocket>::value);
+				if (!p)
 					err = ENOMEM;
 				else
 				{
+					pSocket = ::new (p) ::AsyncSocket(m_pProactor,new_fd,m_allocator);
+
 					err = pSocket->init();
 					if (err != 0)
 					{
-						delete pSocket;
+						pSocket->release();
 						pSocket = NULL;
 					}
 				}
@@ -1009,7 +1016,7 @@ void SocketAcceptor::do_accept()
 	}
 }
 
-OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err)
+OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err, AllocatorInstance& allocator)
 {
 	// Make sure we have valid inputs
 	if (!callback || !addr || addr_len == 0)
@@ -1018,15 +1025,19 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_call
 		return NULL;
 	}
 
-	SocketAcceptor* pAcceptor = new (std::nothrow) SocketAcceptor(this,param,callback);
-	if (!pAcceptor)
+	SocketAcceptor* pAcceptor = NULL;
+	void* p = allocator.allocate(sizeof(SocketAcceptor),alignof<SocketAcceptor>::value);
+	if (!p)
 		err = ENOMEM;
 	else
 	{
+		pAcceptor = ::new (p) SocketAcceptor(this,allocator,param,callback);
+
 		err = pAcceptor->bind(addr,addr_len,0666);
 		if (err != 0)
 		{
-			delete pAcceptor;
+			pAcceptor->~SocketAcceptor();
+			allocator.free(pAcceptor);
 			pAcceptor = NULL;
 		}
 	}
@@ -1034,7 +1045,7 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_call
 	return pAcceptor;
 }
 
-OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa)
+OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa, AllocatorInstance& allocator)
 {
 	// Make sure we have valid inputs
 	if (!callback || !path)
@@ -1043,11 +1054,14 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_pipe
 		return NULL;
 	}
 
-	SocketAcceptor* pAcceptor = new (std::nothrow) SocketAcceptor(this,param,callback);
-	if (!pAcceptor)
+	SocketAcceptor* pAcceptor = NULL;
+	void* p = allocator.allocate(sizeof(SocketAcceptor),alignof<SocketAcceptor>::value);
+	if (!p)
 		err = ENOMEM;
 	else
 	{
+		pAcceptor = ::new (p) SocketAcceptor(this,allocator,param,callback);
+
 		mode_t mode = 0666;
 		if (psa)
 			mode = psa->mode;
@@ -1060,7 +1074,8 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_pipe
 		err = pAcceptor->bind((sockaddr*)&addr,addr_len,mode);
 		if (err != 0)
 		{
-			delete pAcceptor;
+			pAcceptor->~SocketAcceptor();
+			allocator.free(pAcceptor);
 			pAcceptor = NULL;
 		}
 	}
@@ -1068,7 +1083,7 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_pipe
 	return pAcceptor;
 }
 
-OOBase::AsyncSocket* OOBase::detail::ProactorPosix::connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout)
+OOBase::AsyncSocket* OOBase::detail::ProactorPosix::connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout, AllocatorInstance& allocator)
 {
 	int fd = Net::open_socket(addr->sa_family,SOCK_STREAM,0,err);
 	if (err)
@@ -1080,14 +1095,14 @@ OOBase::AsyncSocket* OOBase::detail::ProactorPosix::connect(const sockaddr* addr
 		return NULL;
 	}
 
-	AsyncSocket* pSocket = attach(fd,err);
+	AsyncSocket* pSocket = attach(fd,err,allocator);
 	if (!pSocket)
 		Net::close_socket(fd);
 
 	return pSocket;
 }
 
-OOBase::AsyncSocket* OOBase::detail::ProactorPosix::connect(const char* path, int& err, const Timeout& timeout)
+OOBase::AsyncSocket* OOBase::detail::ProactorPosix::connect(const char* path, int& err, const Timeout& timeout, AllocatorInstance& allocator)
 {
 	int fd = Net::open_socket(AF_UNIX,SOCK_STREAM,0,err);
 	if (err)
@@ -1104,29 +1119,32 @@ OOBase::AsyncSocket* OOBase::detail::ProactorPosix::connect(const char* path, in
 		return NULL;
 	}
 
-	AsyncSocket* pSocket = attach(fd,err);
+	AsyncSocket* pSocket = attach(fd,err,allocator);
 	if (!pSocket)
 		Net::close_socket(fd);
 
 	return pSocket;
 }
 
-OOBase::AsyncSocket* OOBase::detail::ProactorPosix::attach(socket_t sock, int& err)
+OOBase::AsyncSocket* OOBase::detail::ProactorPosix::attach(socket_t sock, int& err, AllocatorInstance& allocator)
 {
 	// Set non-blocking...
 	err = POSIX::set_non_blocking(sock,true);
 	if (err)
 		return NULL;
 
-	::AsyncSocket* pSocket = new (std::nothrow) ::AsyncSocket(this,sock);
-	if (!pSocket)
+	::AsyncSocket* pSocket = NULL;
+	void* p = allocator.allocate(sizeof(::AsyncSocket),OOBase::alignof<typename ::AsyncSocket>::value);
+	if (!p)
 		err = ENOMEM;
 	else
 	{
+		pSocket = ::new (p) ::AsyncSocket(this,sock,allocator);
+
 		err = pSocket->init();
 		if (err != 0)
 		{
-			delete pSocket;
+			pSocket->release();
 			pSocket = NULL;
 		}
 	}

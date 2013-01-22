@@ -38,13 +38,14 @@ namespace OOBase
 		{
 		// Proactor public members
 		public:
-			AsyncSocket* accept(HANDLE hPipe, int& err, const Timeout& timeout);
+			Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa, AllocatorInstance& allocator);
+			Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err, AllocatorInstance& allocator);
 
-			AsyncSocket* attach(socket_t sock, int& err);
-			AsyncSocket* attach(HANDLE hPipe, int& err);
+			AsyncSocket* attach(socket_t sock, int& err, AllocatorInstance& allocator);
+			AsyncSocket* attach(HANDLE hPipe, int& err, AllocatorInstance& allocator);
 
-			AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout);
-			AsyncSocket* connect(const char* path, int& err, const Timeout& timeout);
+			AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout, AllocatorInstance& allocator);
+			AsyncSocket* connect(const char* path, int& err, const Timeout& timeout, AllocatorInstance& allocator);
 
 			// 'Internal' public members
 		public:
@@ -71,12 +72,9 @@ namespace OOBase
 
 			int run(int& err, const Timeout& timeout);
 
-			void* allocate(size_t bytes, size_t align);
-			static void free(void* param, void* ptr);
-
-		protected:
-			Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa);
-			Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err);
+			void* internal_allocate(size_t bytes, size_t align);
+			void* internal_reallocate(void* ptr, size_t bytes, size_t align);
+			void internal_free(void* ptr);
 
 		private:
 			HANDLE   m_hPort;

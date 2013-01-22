@@ -106,34 +106,32 @@ namespace OOBase
 		template <typename TThunk, typename TP, typename TC>
 		TThunk* thunk_allocate(TP param, TC callback)
 		{
-			void* free_param = NULL;
-			void (*free_fn)(void*,void*) = NULL;
-			TThunk* thunk = static_cast<TThunk*>(proactor_allocate(sizeof(TThunk),alignof<TThunk>::value,free_param,free_fn));
-			if (thunk)
-			{
-				thunk->m_callback = callback;
-				thunk->m_param = param;
-				thunk->m_free_param = free_param;
-				thunk->m_free_fn = free_fn;
-			}
-			return thunk;
+			AllocatorInstance& allocator = get_allocator();
+			void* p = allocator.allocate(sizeof(TThunk),alignof<TThunk>::value);
+			if (!p)
+				return NULL;
+			return ::new (p) TThunk(param,callback,allocator);
 		}
 
-		virtual void* proactor_allocate(size_t bytes, size_t align, void*& free_param, void (*&free_fn)(void*,void*)) = 0;
+		virtual AllocatorInstance& get_allocator() = 0;
 
 	private:
 		template <typename T>
 		struct ThunkR
 		{
+			ThunkR(T* param, void (T::*callback)(Buffer*,int), AllocatorInstance& allocator) :
+				m_param(param),m_callback(callback),m_allocator(allocator)
+			{}
+
 			T* m_param;
-			void (T::*m_callback)(Buffer* buffer, int err);
-			void* m_free_param;
-			void (*m_free_fn)(void*,void*);
+			void (T::*m_callback)(Buffer*,int);
+			AllocatorInstance& m_allocator;
 
 			static void fn(void* param, Buffer* buffer, int err)
 			{
 				ThunkR thunk = *static_cast<ThunkR*>(param);
-				(*thunk.m_free_fn)(thunk.m_free_param,param);
+				static_cast<ThunkR*>(param)->~ThunkR();
+				thunk.m_allocator.free(param);
 				(thunk.m_param->*thunk.m_callback)(buffer,err);
 			}
 		};
@@ -141,15 +139,19 @@ namespace OOBase
 		template <typename T>
 		struct ThunkRM
 		{
+			ThunkRM(T* param, void (T::*callback)(Buffer*,Buffer*,int), AllocatorInstance& allocator) :
+				m_param(param),m_callback(callback),m_allocator(allocator)
+			{}
+
 			T* m_param;
-			void (T::*m_callback)(Buffer* data_buffer, Buffer* ctl_buffer, int err);
-			void* m_free_param;
-			void (*m_free_fn)(void*,void*);
+			void (T::*m_callback)(Buffer*,Buffer*,int);
+			AllocatorInstance& m_allocator;
 
 			static void fn(void* param, Buffer* data_buffer, Buffer* ctl_buffer, int err)
 			{
 				ThunkRM thunk = *static_cast<ThunkRM*>(param);
-				(*thunk.m_free_fn)(thunk.m_free_param,param);
+				static_cast<ThunkRM*>(param)->~ThunkRM();
+				thunk.m_allocator.free(param);
 				(thunk.m_param->*thunk.m_callback)(data_buffer,ctl_buffer,err);
 			}
 		};
@@ -157,15 +159,19 @@ namespace OOBase
 		template <typename T>
 		struct ThunkS
 		{
+			ThunkS(T* param, void (T::*callback)(Buffer*,int), AllocatorInstance& allocator) :
+				m_param(param),m_callback(callback),m_allocator(allocator)
+			{}
+
 			T* m_param;
-			void (T::*m_callback)(Buffer* buffer, int err);
-			void* m_free_param;
-			void (*m_free_fn)(void*,void*);
+			void (T::*m_callback)(Buffer*,int);
+			AllocatorInstance& m_allocator;
 
 			static void fn(void* param, Buffer* buffer, int err)
 			{
 				ThunkS thunk = *static_cast<ThunkS*>(param);
-				(*thunk.m_free_fn)(thunk.m_free_param,param);
+				static_cast<ThunkS*>(param)->~ThunkS();
+				thunk.m_allocator.free(param);
 				(thunk.m_param->*thunk.m_callback)(buffer,err);
 			}
 		};
@@ -173,15 +179,19 @@ namespace OOBase
 		template <typename T>
 		struct ThunkSV
 		{
+			ThunkSV(T* param, void (T::*callback)(Buffer*[],size_t,int), AllocatorInstance& allocator) :
+				m_param(param),m_callback(callback),m_allocator(allocator)
+			{}
+
 			T* m_param;
-			void (T::*m_callback)(Buffer* buffers[], size_t count, int err);
-			void* m_free_param;
-			void (*m_free_fn)(void*,void*);
+			void (T::*m_callback)(Buffer*[],size_t,int);
+			AllocatorInstance& m_allocator;
 
 			static void fn(void* param, Buffer* buffers[], size_t count, int err)
 			{
 				ThunkSV thunk = *static_cast<ThunkSV*>(param);
-				(*thunk.m_free_fn)(thunk.m_free_param,param);
+				static_cast<ThunkSV*>(param)->~ThunkSV();
+				thunk.m_allocator.free(param);
 				(thunk.m_param->*thunk.m_callback)(buffers,count,err);
 			}
 		};
@@ -205,32 +215,92 @@ namespace OOBase
 		static void destroy(Proactor* proactor);
 
 		typedef void (*accept_pipe_callback_t)(void* param, AsyncSocket* pSocket, int err);
-		virtual Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa = NULL) = 0;
+		virtual Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa, AllocatorInstance& allocator) = 0;
+		Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa = NULL)
+		{
+			return accept(param,callback,path,err,psa,get_internal_allocator());
+		}
 
 		typedef void (*accept_callback_t)(void* param, AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err);
-		virtual Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err) = 0;
+		virtual Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err, AllocatorInstance& allocator) = 0;
+		Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err)
+		{
+			return accept(param,callback,addr,addr_len,err,get_internal_allocator());
+		}
 
-		virtual AsyncSocket* attach(socket_t sock, int& err) = 0;
+		virtual AsyncSocket* attach(socket_t sock, int& err, AllocatorInstance& allocator) = 0;
+		AsyncSocket* attach(socket_t sock, int& err)
+		{
+			return attach(sock,err,get_internal_allocator());
+		}
 #if defined(_WIN32)
-		virtual AsyncSocket* attach(HANDLE hPipe, int& err) = 0;
+		virtual AsyncSocket* attach(HANDLE hPipe, int& err, AllocatorInstance& allocator) = 0;
+		AsyncSocket* attach(HANDLE hPipe, int& err)
+		{
+			return attach(hPipe,err,get_internal_allocator());
+		}
 #endif
 
-		virtual AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout = Timeout()) = 0;
-		virtual AsyncSocket* connect(const char* path, int& err, const Timeout& timeout = Timeout()) = 0;
+		virtual AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout, AllocatorInstance& allocator) = 0;
+		AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout = Timeout())
+		{
+			return connect(addr,addr_len,err,timeout,get_internal_allocator());
+		}
+		virtual AsyncSocket* connect(const char* path, int& err, const Timeout& timeout, AllocatorInstance& allocator) = 0;
+		AsyncSocket* connect(const char* path, int& err, const Timeout& timeout = Timeout())
+		{
+			return connect(path,err,timeout,get_internal_allocator());
+		}
 
 		// Returns -1 on error, 0 on timeout, 1 on nothing more to do
 		virtual int run(int& err, const Timeout& timeout = Timeout()) = 0;
 		virtual void stop() = 0;
 		virtual int restart() = 0;
 
+		AllocatorInstance& get_internal_allocator()
+		{
+			return m_allocator;
+		}
+
 	protected:
-		Proactor() {}
+		Proactor() : m_allocator(this) {}
 		virtual ~Proactor() {}
+
+		virtual void* internal_allocate(size_t bytes, size_t align) = 0;
+		virtual void* internal_reallocate(void* ptr, size_t bytes, size_t align) = 0;
+		virtual void internal_free(void* ptr) = 0;
 
 	private:
 		// Don't copy or assign proactors, they're just too big
 		Proactor(const Proactor&);
 		Proactor& operator = (const Proactor&);
+
+		class InternalAllocator : public AllocatorInstance
+		{
+		public:
+			InternalAllocator(Proactor* p) : m_pProactor(p)
+			{}
+
+			void* allocate(size_t bytes, size_t align)
+			{
+				return m_pProactor->internal_allocate(bytes,align);
+			}
+
+			void* reallocate(void* ptr, size_t bytes, size_t align)
+			{
+				return m_pProactor->internal_reallocate(ptr,bytes,align);
+			}
+
+			void free(void* ptr)
+			{
+				m_pProactor->internal_free(ptr);
+			}
+
+			Proactor* m_pProactor;
+		};
+		friend class InternalAllocator;
+
+		InternalAllocator m_allocator;
 	};
 
 	template <typename LibraryType>

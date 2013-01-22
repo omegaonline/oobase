@@ -44,13 +44,13 @@ namespace OOBase
 		{
 		// Proactor public members
 		public:
-			Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa);
-			Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err);
+			Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa, AllocatorInstance& allocator);
+			Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err, AllocatorInstance& allocator);
 
-			AsyncSocket* attach(socket_t sock, int& err);
+			AsyncSocket* attach(socket_t sock, int& err, AllocatorInstance& allocator);
 
-			AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout = Timeout());
-			AsyncSocket* connect(const char* path, int& err, const Timeout& timeout = Timeout());
+			AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout, AllocatorInstance& allocator);
+			AsyncSocket* connect(const char* path, int& err, const Timeout& timeout, AllocatorInstance& allocator);
 
 		// 'Internal' public members
 		public:
@@ -69,8 +69,9 @@ namespace OOBase
 			void stop();
 			int restart();
 
-			void* allocate(size_t bytes, size_t align);
-			static void free(void* param, void* ptr);
+			void* internal_allocate(size_t bytes, size_t align);
+			void* internal_reallocate(void* ptr, size_t bytes, size_t align);
+			void internal_free(void* ptr);
 
 		protected:
 			struct TimerItem
@@ -101,12 +102,12 @@ namespace OOBase
 			virtual int do_unbind_fd(int fd) = 0;
 
 			SpinLock       m_lock;
-			bool                   m_stopped;
-			int                    m_read_fd;
+			bool           m_stopped;
+			int            m_read_fd;
 
 		private:
 			Set<TimerItem> m_timers;
-			int                    m_write_fd;
+			int            m_write_fd;
 
 			int add_timer(void* param, timer_callback_t callback, const Timeout& timeout);
 			int remove_timer(void* param);
