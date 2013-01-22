@@ -485,7 +485,7 @@ namespace OOBase
 				len += v;
 
 				// If hi bit is set, read another byte
-				if (b & 0x80)
+				if (!(b & 0x80))
 					return true;
 			}
 		}
