@@ -43,10 +43,15 @@ namespace OOBase
 		void release()
 		{
 			if (--m_refcount == 0)
-				delete this;
+				destroy();
 		}
 
 	protected:
+		virtual void destroy()
+		{
+			delete this;
+		}
+
 		virtual ~RefCounted()
 		{}
 
