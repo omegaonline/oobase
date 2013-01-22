@@ -464,7 +464,7 @@ namespace OOBase
 #if defined(_WIN32)
 			m_last_error = ERROR_BUFFER_OVERFLOW;
 #else
-			m_last_error = E2BIG;
+			m_last_error = ENOSPC;
 #endif
 			return false;
 		}
