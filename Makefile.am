@@ -76,6 +76,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/ByteSwap.h \
 	include/OOBase/Cache.h \
 	include/OOBase/CDRStream.h \
+	include/OOBase/CDRIO.h \
 	include/OOBase/CmdArgs.h \
 	include/OOBase/Condition.h \
 	include/OOBase/ConfigFile.h \

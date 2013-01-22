@@ -37,6 +37,8 @@ namespace OOBase
 {
 	class AsyncSocket : public RefCounted
 	{
+		friend class CDRIO;
+
 	public:
 		template <typename T>
 		int recv(T* param, void (T::*callback)(Buffer* buffer, int err), Buffer* buffer, size_t bytes = 0)
