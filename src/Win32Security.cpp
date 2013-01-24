@@ -119,12 +119,12 @@ DWORD OOBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile)
 	// Lookup a DC for pszDomain
 	LPBYTE v = NULL;
 	NetGetAnyDCName(NULL,strDomainName,&v);
-	SmartPtr<wchar_t,NetApiDestructor> ptrDCName = reinterpret_cast<wchar_t*>(v);
+	LocalPtr<wchar_t,NetApiDestructor> ptrDCName(reinterpret_cast<wchar_t*>(v));
 
 	// Try to find the user's profile path...
 	v = NULL;
 	NetUserGetInfo(ptrDCName,strUserName,3,&v);
-	SmartPtr<USER_INFO_3,NetApiDestructor> pInfo = reinterpret_cast<USER_INFO_3*>(v);
+	LocalPtr<USER_INFO_3,NetApiDestructor> pInfo(reinterpret_cast<USER_INFO_3*>(v));
 
 	// Load the Users Profile
 	PROFILEINFOW profile_info = {0};
@@ -229,7 +229,7 @@ DWORD OOBase::Win32::EnableUserAccessToDir(const wchar_t* pszPath, const TOKEN_U
 	if (dwRes != ERROR_SUCCESS)
 		return dwRes;
 
-	SmartPtr<void,Win32::LocalAllocDestructor> ptrSD = pSD;
+	LocalPtr<void,Win32::LocalAllocDestructor> ptrSD(pSD);
 
 	EXPLICIT_ACCESSW ea = {0};
 
@@ -246,7 +246,7 @@ DWORD OOBase::Win32::EnableUserAccessToDir(const wchar_t* pszPath, const TOKEN_U
 	if (dwRes != ERROR_SUCCESS)
 		return dwRes;
 
-	SmartPtr<ACL,Win32::LocalAllocDestructor> ptrACLNew = pACLNew;
+	LocalPtr<ACL,Win32::LocalAllocDestructor> ptrACLNew(pACLNew);
 
 	return SetNamedSecurityInfoW(szPath,SE_FILE_OBJECT,DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,NULL,NULL,pACLNew,NULL);
 }

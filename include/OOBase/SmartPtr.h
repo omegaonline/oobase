@@ -532,6 +532,135 @@ namespace OOBase
 			return *this;
 		}
 	};
+
+	namespace detail
+	{
+		template <typename T, typename Destructor>
+		class LocalPtrImpl
+		{
+		public:
+			LocalPtrImpl(T* p = NULL) : m_data(p)
+			{}
+
+			~LocalPtrImpl()
+			{
+				if (m_data)
+					Destructor::destroy(m_data);
+			}
+
+			T* detach()
+			{
+				T* p = m_data;
+				m_data = NULL;
+				return p;
+			}
+
+			operator T*()
+			{
+				return m_data;
+			}
+
+			operator const T*() const
+			{
+				return m_data;
+			}
+
+		protected:
+			T* m_data;
+
+		private:
+			LocalPtrImpl(const LocalPtrImpl&);
+			LocalPtrImpl& operator = (const LocalPtrImpl&);
+		};
+
+		template <typename T>
+		class LocalPtrImpl<T,FreeDestructor<AllocatorInstance> >
+		{
+		public:
+			LocalPtrImpl(AllocatorInstance& allocator, T* p = NULL) : m_data(p), m_allocator(allocator)
+			{}
+
+			~LocalPtrImpl()
+			{
+				if (m_data)
+					m_allocator.free(m_data);
+			}
+
+			T* detach()
+			{
+				T* p = m_data;
+				m_data = NULL;
+				return p;
+			}
+
+			operator T*()
+			{
+				return m_data;
+			}
+
+			operator const T*() const
+			{
+				return m_data;
+			}
+
+		protected:
+			T* m_data;
+
+		private:
+			LocalPtrImpl(const LocalPtrImpl&);
+			LocalPtrImpl& operator = (const LocalPtrImpl&);
+
+			AllocatorInstance& m_allocator;
+		};
+	}
+
+	template <typename T, typename Destructor>
+	class LocalPtr : public detail::LocalPtrImpl<T,Destructor>
+	{
+		typedef detail::LocalPtrImpl<T,Destructor> baseClass;
+
+	public:
+		LocalPtr(T* p = NULL) : baseClass(p)
+		{}
+
+		LocalPtr(AllocatorInstance& allocator, T* p = NULL) : baseClass(allocator,p)
+		{}
+
+		T* operator ->()
+		{
+			return baseClass::m_data;
+		}
+
+		const T* operator ->() const
+		{
+			return baseClass::m_data;
+		}
+	};
+
+	template <typename Destructor>
+	class LocalPtr<void,Destructor> : public detail::LocalPtrImpl<void,Destructor>
+	{
+		typedef detail::LocalPtrImpl<void,Destructor> baseClass;
+
+	public:
+		LocalPtr(void* p = NULL) : baseClass(p)
+		{}
+
+		LocalPtr(AllocatorInstance& allocator, void* p = NULL) : baseClass(allocator,p)
+		{}
+
+		template <typename T2>
+		operator T2*()
+		{
+			return static_cast<T2*>(baseClass::m_data);
+		}
+
+		template <typename T2>
+		operator const T2*() const
+		{
+			return static_cast<T2*>(baseClass::m_data);
+		}
+	};
 }
 
 #endif // OOBASE_SMARTPTR_H_INCLUDED_
