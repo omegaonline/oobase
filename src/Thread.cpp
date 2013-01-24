@@ -451,6 +451,8 @@ void OOBase::Thread::yield()
 {
 #if defined(HAVE_PTHREAD)
 	pthread_yield();
+#elif defined(_WIN32)
+	::Sleep(0);
 #else
 	// Just perform a tiny sleep
 	Thread::sleep(1);
