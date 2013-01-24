@@ -31,7 +31,7 @@ namespace OOBase
 	class CDRIO
 	{
 	public:
-		template <typename T, typename H>
+		template <typename H, typename T>
 		static int recv_with_header_sync(H expected_len, AsyncSocket* pSocket, T* param, void (T::*callback)(CDRStream& stream, int err))
 		{
 			CDRStream stream(expected_len);
@@ -46,7 +46,7 @@ namespace OOBase
 			return pSocket->recv(thunk,&ThunkRHS<T,H>::fn1,stream.buffer(),sizeof(H));
 		}
 
-		template <typename T, typename H>
+		template <typename H, typename T>
 		static int recv_msg_with_header_sync(H expected_len, AsyncSocket* pSocket, T* param, void (T::*callback)(CDRStream& stream, Buffer* ctl_buffer, int err), Buffer* ctl_buffer)
 		{
 			CDRStream stream(expected_len);
@@ -61,13 +61,9 @@ namespace OOBase
 			return pSocket->recv_msg(thunk,&ThunkRMHS<T,H>::fn1,stream.buffer(),ctl_buffer,sizeof(H));
 		}
 
-		template <typename T, typename H>
-		static int send_and_recv_with_header_sync(H expected_len, CDRStream& stream, AsyncSocket* pSocket, T* param, void (T::*callback)(CDRStream& stream, int err))
+		template <typename H, typename T>
+		static int send_and_recv_with_header_sync(CDRStream& stream, AsyncSocket* pSocket, T* param, void (T::*callback)(CDRStream& stream, int err))
 		{
-			int err = stream.buffer()->space(expected_len);
-			if (err)
-				return err;
-
 			ThunkSRHS<T,H>* thunk = pSocket->thunk_allocate<ThunkSRHS<T,H>,T*,void (T::*)(CDRStream&,int)>(param,callback);
 			if (!thunk)
 				return ERROR_OUTOFMEMORY;
@@ -171,17 +167,17 @@ namespace OOBase
 
 			static void fn1(void* param, Buffer* buffer, int err)
 			{
+				CDRStream stream(buffer);
 				ThunkSRHS thunk = *static_cast<ThunkSRHS*>(param);
 				if (!err)
 				{
-					err = buffer->reset();
+					err = stream.reset();
 					if (!err)
 						err = thunk.m_ptrSocket->recv(param,&fn2,buffer,sizeof(H));
 				}
 				if (err)
 				{
 					thunk.m_allocator.free(static_cast<ThunkSRHS*>(param));
-					CDRStream stream(buffer);
 					(thunk.m_param->*thunk.m_callback)(stream,err);
 				}
 			}
