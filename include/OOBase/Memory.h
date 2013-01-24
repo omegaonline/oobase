@@ -266,17 +266,17 @@ namespace OOBase
 			{}
 
 		protected:
-			void* allocate_i(size_t bytes, size_t align)
+			static void* allocate_i(size_t bytes, size_t align)
 			{
 				return Allocator::allocate(bytes,align);
 			}
 
-			void* reallocate_i(void* ptr, size_t bytes, size_t align)
+			static void* reallocate_i(void* ptr, size_t bytes, size_t align)
 			{
 				return Allocator::reallocate(ptr,bytes,align);
 			}
 
-			void free_i(void* ptr)
+			static void free_i(void* ptr)
 			{
 				Allocator::free(ptr);
 			}
