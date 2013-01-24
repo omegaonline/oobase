@@ -131,19 +131,19 @@ int OOBase::detail::strings::grow(size_t inc, StringNodeAllocator*& node)
 	return 0;
 }
 
-int OOBase::printf(TempPtr<char>& ptr, const char* format, ...)
+int OOBase::temp_printf(TempPtr<char>& ptr, const char* format, ...)
 {
 	va_list args;
 	va_start(args,format);
 
-	int err = OOBase::vprintf(ptr,format,args);
+	int err = OOBase::temp_vprintf(ptr,format,args);
 
 	va_end(args);
 
 	return err;
 }
 
-int OOBase::vprintf(TempPtr<char>& ptr, const char* format, va_list args)
+int OOBase::temp_vprintf(TempPtr<char>& ptr, const char* format, va_list args)
 {
 	for (int r = 63;;)
 	{

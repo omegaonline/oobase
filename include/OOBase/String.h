@@ -31,11 +31,11 @@
 namespace OOBase
 {
 #if defined(__GNUC__)
-	int printf(TempPtr<char>& ptr, const char* format, ...) __attribute__((format(printf,2,3)));
+	int temp_printf(TempPtr<char>& ptr, const char* format, ...) __attribute__((format(printf,2,3)));
 #else
-	int printf(TempPtr<char>& ptr, const char* format, ...);
+	int temp_printf(TempPtr<char>& ptr, const char* format, ...);
 #endif
-	int vprintf(TempPtr<char>& ptr, const char* format, va_list args);
+	int temp_vprintf(TempPtr<char>& ptr, const char* format, va_list args);
 
 	namespace detail
 	{
@@ -92,7 +92,7 @@ namespace OOBase
 
 				StackAllocator<128> allocator;
 				TempPtr<char> ptr(allocator);
-				int err = OOBase::vprintf(ptr,format,args);
+				int err = OOBase::temp_vprintf(ptr,format,args);
 
 				va_end(args);
 
@@ -196,7 +196,7 @@ namespace OOBase
 				va_start(args,format);
 
 				TempPtr<char> ptr(*m_node->m_allocator);
-				int err = OOBase::vprintf(ptr,format,args);
+				int err = OOBase::temp_vprintf(ptr,format,args);
 
 				va_end(args);
 

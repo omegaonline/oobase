@@ -182,7 +182,7 @@ namespace
 	{
 		OOBase::StackAllocator<256> allocator;
 		OOBase::TempPtr<char> str(allocator);
-		if (OOBase::printf(str,"Attach the debugger to process id %ld now if you want!",pid) == 0)
+		if (OOBase::temp_printf(str,"Attach the debugger to process id %ld now if you want!",pid) == 0)
 			MessageBoxA(NULL,str,"Break",MB_ICONEXCLAMATION | MB_OK | MB_SERVICE_NOTIFICATION);
 	}
 }

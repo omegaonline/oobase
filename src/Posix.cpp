@@ -164,7 +164,7 @@ int OOBase::POSIX::close_file_descriptors(int* except, size_t ex_count)
 
 		StackAllocator<128> allocator;
 		TempPtr<char> str(allocator);
-		int err = OOBase::printf(str,"/proc/%u/fd/",getpid());
+		int err = OOBase::temp_printf(str,"/proc/%u/fd/",getpid());
 		if (err != 0)
 			return err;
 
