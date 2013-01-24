@@ -34,10 +34,12 @@
 
 namespace
 {
-	class AsyncSocket : public OOBase::AsyncSocket
+	class Win32AsyncSocket : public OOBase::AsyncSocket
 	{
+		friend class OOBase::AllocatorInstance;
+
 	public:
-		AsyncSocket(OOBase::detail::ProactorWin32* pProactor, SOCKET hSocket, OOBase::AllocatorInstance& allocator);
+		Win32AsyncSocket(OOBase::detail::ProactorWin32* pProactor, SOCKET hSocket, OOBase::AllocatorInstance& allocator);
 		
 		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes);
 		int recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer, size_t data_bytes);
@@ -53,13 +55,11 @@ namespace
 		}
 
 	private:
-		virtual ~AsyncSocket();
+		virtual ~Win32AsyncSocket();
 
 		void destroy()
 		{
-			OOBase::AllocatorInstance& allocator = m_allocator;
-			this->~AsyncSocket();
-			allocator.free(this);
+			m_allocator.free(this);
 		}
 
 		OOBase::detail::ProactorWin32* m_pProactor;
@@ -74,20 +74,20 @@ namespace
 	};
 }
 
-AsyncSocket::AsyncSocket(OOBase::detail::ProactorWin32* pProactor, SOCKET hSocket, OOBase::AllocatorInstance& allocator) :
+Win32AsyncSocket::Win32AsyncSocket(OOBase::detail::ProactorWin32* pProactor, SOCKET hSocket, OOBase::AllocatorInstance& allocator) :
 		m_pProactor(pProactor),
 		m_allocator(allocator),
 		m_hSocket(hSocket)
 { }
 
-AsyncSocket::~AsyncSocket()
+Win32AsyncSocket::~Win32AsyncSocket()
 {
 	OOBase::Net::close_socket(m_hSocket);
 
 	m_pProactor->unbind();
 }
 
-int AsyncSocket::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
+int Win32AsyncSocket::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
 {
 	int err = 0;
 	if (bytes)
@@ -142,7 +142,7 @@ int AsyncSocket::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback
 	return 0;
 }
 
-void AsyncSocket::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
+void Win32AsyncSocket::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	recv_callback_t callback = reinterpret_cast<recv_callback_t>(pOv->m_extras[1]);
@@ -159,7 +159,7 @@ void AsyncSocket::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::det
 	}
 }
 
-int AsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer, size_t data_bytes)
+int Win32AsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer, size_t data_bytes)
 {
 	int err = 0;
 	if (data_bytes)
@@ -227,7 +227,7 @@ int AsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buf
 	return 0;
 }
 
-void AsyncSocket::on_recv_msg(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
+void Win32AsyncSocket::on_recv_msg(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	recv_msg_callback_t callback = reinterpret_cast<recv_msg_callback_t>(pOv->m_extras[1]);
@@ -245,7 +245,7 @@ void AsyncSocket::on_recv_msg(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase:
 	}
 }
 
-int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buffer)
+int Win32AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buffer)
 {
 	size_t bytes = (buffer ? buffer->length() : 0);
 	if (bytes == 0)
@@ -291,7 +291,7 @@ int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buf
 	return 0;
 }
 
-void AsyncSocket::on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
+void Win32AsyncSocket::on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	send_callback_t callback = reinterpret_cast<send_callback_t>(pOv->m_extras[1]);
@@ -308,7 +308,7 @@ void AsyncSocket::on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::det
 	}
 }
 
-int AsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count)
+int Win32AsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count)
 {
 	if (count == 0)
 		return 0;
@@ -394,7 +394,7 @@ int AsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Buffer*
 	return 0;
 }
 
-void AsyncSocket::on_send_v(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
+void Win32AsyncSocket::on_send_v(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	send_v_callback_t callback = reinterpret_cast<send_v_callback_t>(pOv->m_extras[1]);
@@ -446,7 +446,7 @@ void AsyncSocket::on_send_v(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::d
 	pOv->m_pProactor->delete_overlapped(pOv);
 }
 
-int AsyncSocket::send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer)
+int Win32AsyncSocket::send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer)
 {
 	size_t data_len = (data_buffer ? data_buffer->length() : 0);
 	size_t ctl_len = (ctl_buffer ? ctl_buffer->length() : 0);
@@ -503,7 +503,7 @@ int AsyncSocket::send_msg(void* param, send_msg_callback_t callback, OOBase::Buf
 	return 0;
 }
 
-void AsyncSocket::on_send_msg(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
+void Win32AsyncSocket::on_send_msg(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	send_msg_callback_t callback = reinterpret_cast<send_msg_callback_t>(pOv->m_extras[1]);
@@ -521,7 +521,7 @@ void AsyncSocket::on_send_msg(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase:
 	}
 }
 
-int AsyncSocket::shutdown(bool bSend, bool bRecv)
+int Win32AsyncSocket::shutdown(bool bSend, bool bRecv)
 {
 	int how = -1;
 	if (bSend && bRecv)
@@ -613,11 +613,9 @@ int SocketAcceptor::stop()
 
 int SocketAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, OOBase::AllocatorInstance& allocator)
 {
-	void* p = allocator.allocate(sizeof(InternalAcceptor),OOBase::alignof<InternalAcceptor>::value);
-	if (!p)
+	m_pAcceptor = allocator.allocate<InternalAcceptor>(pProactor,param,callback,allocator);
+	if (!m_pAcceptor)
 		return ERROR_OUTOFMEMORY;
-	
-	m_pAcceptor = ::new (p) InternalAcceptor(pProactor,param,callback,allocator);
 
 	int err = m_pAcceptor->bind(addr,addr_len);
 	if (err != 0)
@@ -711,9 +709,7 @@ int InternalAcceptor::stop(bool destroy)
 	{
 		guard.release();
 
-		OOBase::AllocatorInstance& allocator = m_allocator;
-		this->~InternalAcceptor();
-		allocator.free(this);
+		m_allocator.free(this);
 	}
 
 	return 0;
@@ -893,7 +889,7 @@ bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void
 	
 	guard.release();
 	
-	::AsyncSocket* pSocket = NULL;
+	Win32AsyncSocket* pSocket = NULL;
 	sockaddr* remote_addr = NULL;
 	int remote_addr_len = 0;
 		
@@ -905,11 +901,10 @@ bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void
 		OOBase::Win32::WSAGetAcceptExSockAddrs(m_socket,addr_buf,0,m_addr_len+16,m_addr_len+16,&local_addr,&local_addr_len,&remote_addr,&remote_addr_len);
 			
 		// Wrap the handle
-		void* p = m_allocator.allocate(sizeof(::AsyncSocket),OOBase::alignof<typename ::AsyncSocket>::value);
-		if (!p)
+		pSocket = m_allocator.allocate<Win32AsyncSocket>(m_pProactor,hSocket,m_allocator);
+		if (!pSocket)
 			dwErr = ERROR_OUTOFMEMORY;
-		else
-			pSocket = ::new (p) ::AsyncSocket(m_pProactor,hSocket,m_allocator);
+
 	}
 	
 	if (dwErr != 0)
@@ -948,9 +943,7 @@ bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void
 	{
 		guard.release();
 
-		OOBase::AllocatorInstance& allocator = m_allocator;
-		this->~InternalAcceptor();
-		allocator.free(this);
+		m_allocator.free(this);
 
 		return true;
 	}
@@ -972,14 +965,11 @@ OOBase::Acceptor* OOBase::detail::ProactorWin32::accept(void* param, accept_call
 		return NULL;
 	}
 	
-	SocketAcceptor* pAcceptor = NULL;
-	void* p = allocator.allocate(sizeof(SocketAcceptor),OOBase::alignof<SocketAcceptor>::value);
-	if (!p)
+	SocketAcceptor* pAcceptor = allocator.allocate<SocketAcceptor>();
+	if (!pAcceptor)
 		err = ERROR_OUTOFMEMORY;
 	else
 	{
-		pAcceptor = ::new (p) SocketAcceptor();
-
 		err = pAcceptor->bind(this,param,callback,addr,addr_len,allocator);
 		if (err != 0)
 		{
@@ -1010,16 +1000,13 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const sockaddr* addr
 		return NULL;
 	}
 	
-	::AsyncSocket* pSocket = NULL;
-	void* p = allocator.allocate(sizeof(::AsyncSocket),OOBase::alignof<typename ::AsyncSocket>::value);
-	if (!p)
+	Win32AsyncSocket* pSocket = allocator.allocate<Win32AsyncSocket>(this,sock,allocator);
+	if (!pSocket)
 	{
 		unbind();
 		Net::close_socket(sock);
 		err = ERROR_OUTOFMEMORY;
 	}
-	else
-		pSocket = ::new (p) ::AsyncSocket(this,sock,allocator);
 		
 	return pSocket;
 }
@@ -1031,15 +1018,12 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::attach(socket_t sock, int& e
 		return NULL;
 
 	// The socket must have been opened as WSA_FLAG_OVERLAPPED!!!
-	::AsyncSocket* pSocket = NULL;
-	void* p = allocator.allocate(sizeof(::AsyncSocket),OOBase::alignof<typename ::AsyncSocket>::value);
-	if (!p)
+	Win32AsyncSocket* pSocket = allocator.allocate<Win32AsyncSocket>(this,sock,allocator);
+	if (!pSocket)
 	{
 		unbind();
 		err = ERROR_OUTOFMEMORY;
 	}
-	else
-		pSocket = ::new (p) ::AsyncSocket(this,sock,allocator);
 
 	return pSocket;
 }

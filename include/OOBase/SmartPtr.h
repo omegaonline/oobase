@@ -160,7 +160,7 @@ namespace OOBase
 		private:
 			static SmartPtrNode* new_node(AllocatorInstance& allocator, T* ptr)
 			{
-				SmartPtrNode* n = static_cast<SmartPtrNode*>(allocator.allocate(sizeof(SmartPtrNode),alignof<SmartPtrNode>::value));
+				SmartPtrNode* n = allocator.allocate<SmartPtrNode>();
 				if (n)
 				{
 					n->m_refcount = 1;

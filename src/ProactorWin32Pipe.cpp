@@ -31,6 +31,8 @@ namespace
 {
 	class AsyncPipe : public OOBase::AsyncSocket
 	{
+		friend class OOBase::AllocatorInstance;
+
 	public:
 		AsyncPipe(OOBase::detail::ProactorWin32* pProactor, HANDLE hPipe, OOBase::AllocatorInstance& allocator);
 		
@@ -52,9 +54,7 @@ namespace
 
 		void destroy()
 		{
-			OOBase::AllocatorInstance& allocator = m_allocator;
-			this->~AsyncPipe();
-			allocator.free(this);
+			m_allocator.free(this);
 		}
 
 		OOBase::detail::ProactorWin32* m_pProactor;
@@ -438,6 +438,8 @@ namespace
 {	
 	class InternalAcceptor
 	{
+		friend class OOBase::AllocatorInstance;
+
 	public:
 		InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback, OOBase::AllocatorInstance& allocator);
 		
@@ -490,11 +492,9 @@ PipeAcceptor::~PipeAcceptor()
 
 int PipeAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback, OOBase::AllocatorInstance& allocator)
 {
-	void* p = allocator.allocate(sizeof(InternalAcceptor),OOBase::alignof<InternalAcceptor>::value);
-	if (!p)
+	m_pAcceptor = allocator.allocate<InternalAcceptor>(pProactor,pipe_name,psa,param,callback,allocator);
+	if (!m_pAcceptor)
 		return ERROR_OUTOFMEMORY;
-	
-	m_pAcceptor = ::new (p) InternalAcceptor(pProactor,pipe_name,psa,param,callback,allocator);
 
 	int err = m_pAcceptor->start();
 	if (err != 0)
@@ -548,9 +548,7 @@ int InternalAcceptor::stop()
 	{
 		guard.release();
 
-		OOBase::AllocatorInstance& allocator = m_allocator;
-		this->~InternalAcceptor();
-		allocator.free(this);
+		m_allocator.free(this);
 	}
 
 	return 0;
@@ -681,15 +679,13 @@ bool InternalAcceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase
 		AsyncPipe* pSocket = NULL;
 		if (dwErr == 0)
 		{
-			void* p = m_allocator.allocate(sizeof(AsyncPipe),OOBase::alignof<AsyncPipe>::value);
-			if (!p)
+			pSocket = m_allocator.allocate<AsyncPipe>(m_pProactor,hPipe,m_allocator);
+			if (!pSocket)
 			{
 				dwErr = ERROR_OUTOFMEMORY;
 				m_pProactor->unbind();
 				CloseHandle(hPipe);
 			}
-			else
-				pSocket = ::new (p) AsyncPipe(m_pProactor,hPipe,m_allocator);
 		}
 	
 		(*m_callback)(m_param,pSocket,dwErr);
@@ -717,9 +713,7 @@ bool InternalAcceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase
 		{
 			guard.release();
 
-			OOBase::AllocatorInstance& allocator = m_allocator;
-			this->~InternalAcceptor();
-			allocator.free(this);
+			m_allocator.free(this);
 
 			return true;
 		}
@@ -740,14 +734,11 @@ OOBase::Acceptor* OOBase::detail::ProactorWin32::accept(void* param, accept_pipe
 		return NULL;
 	}
 	
-	PipeAcceptor* pAcceptor = NULL;
-	void* p = allocator.allocate(sizeof(PipeAcceptor),OOBase::alignof<PipeAcceptor>::value);
-	if (!p)
+	PipeAcceptor* pAcceptor = allocator.allocate<PipeAcceptor>();
+	if (!pAcceptor)
 		err = ERROR_OUTOFMEMORY;
 	else
 	{
-		pAcceptor = ::new (p) PipeAcceptor();
-
 		String strPipe;
 		err = strPipe.assign("\\\\.\\pipe\\");
 		if (err == 0)
@@ -772,15 +763,12 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::attach(HANDLE hPipe, int& er
 	if (err != 0)
 		return NULL;
 
-	AsyncPipe* pPipe = NULL;
-	void* p = allocator.allocate(sizeof(AsyncPipe),OOBase::alignof<AsyncPipe>::value);
-	if (!p)
+	AsyncPipe* pPipe = allocator.allocate<AsyncPipe>(this,hPipe,allocator);
+	if (!pPipe)
 	{
 		unbind();
 		err = ERROR_OUTOFMEMORY;
 	}
-	else
-		pPipe = ::new (p) AsyncPipe(this,hPipe,allocator);
 
 	return pPipe;
 }
@@ -839,16 +827,14 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const char* path, in
 		return NULL;
 
 	// Wrap socket
-	AsyncSocket* pSocket = NULL;
-
-	void* p = allocator.allocate(sizeof(AsyncPipe),OOBase::alignof<AsyncPipe>::value);
-	if (!p)
+	AsyncSocket* pSocket = allocator.allocate<AsyncPipe>(this,hPipe,allocator);
+	if (!pSocket)
 	{
 		unbind();
 		err = ERROR_OUTOFMEMORY;
 	}
 	else
-		pSocket = ::new (p) AsyncPipe(this,hPipe.detach(),allocator);
+		hPipe.detach();
 
 	return pSocket;
 }

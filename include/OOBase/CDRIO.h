@@ -103,8 +103,7 @@ namespace OOBase
 				}
 				if (err)
 				{
-					static_cast<ThunkRHS*>(param)->~ThunkRHS();
-					thunk.m_allocator.free(param);
+					thunk.m_allocator.free(static_cast<ThunkRHS*>(param));
 					(thunk.m_param->*thunk.m_callback)(stream,err);
 				}
 			}
@@ -112,8 +111,7 @@ namespace OOBase
 			static void fn2(void* param, Buffer* buffer, int err)
 			{
 				ThunkRHS thunk = *static_cast<ThunkRHS*>(param);
-				static_cast<ThunkRHS*>(param)->~ThunkRHS();
-				thunk.m_allocator.free(param);
+				thunk.m_allocator.free(static_cast<ThunkRHS*>(param));
 				CDRStream stream(buffer);
 				(thunk.m_param->*thunk.m_callback)(stream,err);
 			}
@@ -145,8 +143,7 @@ namespace OOBase
 				}
 				if (err)
 				{
-					static_cast<ThunkRMHS*>(param)->~ThunkRMHS();
-					thunk.m_allocator.free(param);
+					thunk.m_allocator.free(static_cast<ThunkRMHS*>(param));
 					(thunk.m_param->*thunk.m_callback)(stream,ctl_buffer,err);
 				}
 			}
@@ -154,8 +151,7 @@ namespace OOBase
 			static void fn2(void* param, Buffer* data_buffer, Buffer* ctl_buffer, int err)
 			{
 				ThunkRMHS thunk = *static_cast<ThunkRMHS*>(param);
-				static_cast<ThunkRMHS*>(param)->~ThunkRMHS();
-				thunk.m_allocator.free(param);
+				thunk.m_allocator.free(static_cast<ThunkRMHS*>(param));
 				CDRStream stream(data_buffer);
 				(thunk.m_param->*thunk.m_callback)(stream,ctl_buffer,err);
 			}
@@ -184,8 +180,7 @@ namespace OOBase
 				}
 				if (err)
 				{
-					static_cast<ThunkSRHS*>(param)->~ThunkSRHS();
-					thunk.m_allocator.free(param);
+					thunk.m_allocator.free(static_cast<ThunkSRHS*>(param));
 					CDRStream stream(buffer);
 					(thunk.m_param->*thunk.m_callback)(stream,err);
 				}
@@ -205,8 +200,7 @@ namespace OOBase
 				}
 				if (err)
 				{
-					static_cast<ThunkSRHS*>(param)->~ThunkSRHS();
-					thunk.m_allocator.free(param);
+					thunk.m_allocator.free(static_cast<ThunkSRHS*>(param));
 					(thunk.m_param->*thunk.m_callback)(stream,err);
 				}
 			}
@@ -214,8 +208,7 @@ namespace OOBase
 			static void fn3(void* param, Buffer* buffer, int err)
 			{
 				ThunkSRHS thunk = *static_cast<ThunkSRHS*>(param);
-				static_cast<ThunkSRHS*>(param)->~ThunkSRHS();
-				thunk.m_allocator.free(param);
+				thunk.m_allocator.free(static_cast<ThunkSRHS*>(param));
 				CDRStream stream(buffer);
 				(thunk.m_param->*thunk.m_callback)(stream,err);
 			}

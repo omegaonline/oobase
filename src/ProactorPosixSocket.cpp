@@ -38,10 +38,12 @@
 
 namespace
 {
-	class AsyncSocket : public OOBase::AsyncSocket
+	class PosixAsyncSocket : public OOBase::AsyncSocket
 	{
+		friend class OOBase::AllocatorInstance;
+
 	public:
-		AsyncSocket(OOBase::detail::ProactorPosix* pProactor, int fd, OOBase::AllocatorInstance& allocator);
+		PosixAsyncSocket(OOBase::detail::ProactorPosix* pProactor, int fd, OOBase::AllocatorInstance& allocator);
 
 		int init();
 
@@ -59,13 +61,11 @@ namespace
 		}
 
 	private:
-		virtual ~AsyncSocket();
+		virtual ~PosixAsyncSocket();
 
 		void destroy()
 		{
-			OOBase::AllocatorInstance& allocator = m_allocator;
-			this->~AsyncSocket();
-			allocator.free(this);
+			m_allocator.free(this);
 		}
 
 		struct RecvItem
@@ -132,13 +132,13 @@ namespace
 	};
 }
 
-AsyncSocket::AsyncSocket(OOBase::detail::ProactorPosix* pProactor, int fd, OOBase::AllocatorInstance& allocator) :
+PosixAsyncSocket::PosixAsyncSocket(OOBase::detail::ProactorPosix* pProactor, int fd, OOBase::AllocatorInstance& allocator) :
 		m_pProactor(pProactor),
 		m_allocator(allocator),
 		m_fd(fd)
 { }
 
-AsyncSocket::~AsyncSocket()
+PosixAsyncSocket::~PosixAsyncSocket()
 {
 	m_pProactor->unbind_fd(m_fd);
 
@@ -178,12 +178,12 @@ AsyncSocket::~AsyncSocket()
 	}
 }
 
-int AsyncSocket::init()
+int PosixAsyncSocket::init()
 {
 	return m_pProactor->bind_fd(m_fd,this,&fd_callback);
 }
 
-int AsyncSocket::recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
+int PosixAsyncSocket::recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
 {
 	int err = 0;
 	if (bytes)
@@ -221,7 +221,7 @@ int AsyncSocket::recv(void* param, recv_callback_t callback, OOBase::Buffer* buf
 	return (watch ? m_pProactor->watch_fd(m_fd,OOBase::detail::eTXRecv) : 0);
 }
 
-int AsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer, size_t data_bytes)
+int PosixAsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer, size_t data_bytes)
 {
 	int err = 0;
 	if (data_bytes)
@@ -261,7 +261,7 @@ int AsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buf
 	return (watch ? m_pProactor->watch_fd(m_fd,OOBase::detail::eTXRecv) : 0);
 }
 
-int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buffer)
+int PosixAsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buffer)
 {
 	size_t bytes = (buffer ? buffer->length() : 0);
 	if (bytes == 0)
@@ -291,7 +291,7 @@ int AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buf
 	return (watch ? m_pProactor->watch_fd(m_fd,OOBase::detail::eTXSend) : 0);
 }
 
-int AsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count)
+int PosixAsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count)
 {
 	if (count == 0)
 		return 0;
@@ -346,7 +346,7 @@ int AsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Buffer*
 	return (watch ? m_pProactor->watch_fd(m_fd,OOBase::detail::eTXSend) : 0);
 }
 
-int AsyncSocket::send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer)
+int PosixAsyncSocket::send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer)
 {
 	size_t data_len = (data_buffer ? data_buffer->length() : 0);
 	size_t ctl_len = (ctl_buffer ? ctl_buffer->length() : 0);
@@ -380,7 +380,7 @@ int AsyncSocket::send_msg(void* param, send_msg_callback_t callback, OOBase::Buf
 	return (watch ? m_pProactor->watch_fd(m_fd,OOBase::detail::eTXSend) : 0);
 }
 
-int AsyncSocket::shutdown(bool bSend, bool bRecv)
+int PosixAsyncSocket::shutdown(bool bSend, bool bRecv)
 {
 	int how = -1;
 	if (bSend && bRecv)
@@ -393,9 +393,9 @@ int AsyncSocket::shutdown(bool bSend, bool bRecv)
 	return (how != -1 ? ::shutdown(m_fd,how) : 0);
 }
 
-void AsyncSocket::fd_callback(int fd, void* param, unsigned int events)
+void PosixAsyncSocket::fd_callback(int fd, void* param, unsigned int events)
 {
-	AsyncSocket* pThis = static_cast<AsyncSocket*>(param);
+	PosixAsyncSocket* pThis = static_cast<PosixAsyncSocket*>(param);
 	if (pThis->m_fd == fd)
 	{
 		OOBase::StackAllocator<512> allocator;
@@ -502,7 +502,7 @@ void AsyncSocket::fd_callback(int fd, void* param, unsigned int events)
 	}
 }
 
-int AsyncSocket::process_recv_i(RecvItem* item, bool& watch_again)
+int PosixAsyncSocket::process_recv_i(RecvItem* item, bool& watch_again)
 {
 	// We read again on EOF, as we only return error codes
 	int err = 0;
@@ -543,7 +543,7 @@ int AsyncSocket::process_recv_i(RecvItem* item, bool& watch_again)
 	return err;
 }
 
-int AsyncSocket::process_recv_msg(RecvItem* item, bool& watch_again)
+int PosixAsyncSocket::process_recv_msg(RecvItem* item, bool& watch_again)
 {
 	// We only do a single read
 	struct iovec io = {0};
@@ -582,7 +582,7 @@ int AsyncSocket::process_recv_msg(RecvItem* item, bool& watch_again)
 	return 0;
 }
 
-void AsyncSocket::process_recv(OOBase::Queue<RecvNotify,OOBase::AllocatorInstance>& notify_queue)
+void PosixAsyncSocket::process_recv(OOBase::Queue<RecvNotify,OOBase::AllocatorInstance>& notify_queue)
 {
 	int err = 0;
 	while (!m_recv_queue.empty())
@@ -626,7 +626,7 @@ void AsyncSocket::process_recv(OOBase::Queue<RecvNotify,OOBase::AllocatorInstanc
 	}
 }
 
-int AsyncSocket::process_send_i(SendItem* item, bool& watch_again)
+int PosixAsyncSocket::process_send_i(SendItem* item, bool& watch_again)
 {
 	// Single send
 	int err = 0;
@@ -661,7 +661,7 @@ int AsyncSocket::process_send_i(SendItem* item, bool& watch_again)
 	return err;
 }
 
-int AsyncSocket::process_send_v(SendItem* item, bool& watch_again)
+int PosixAsyncSocket::process_send_v(SendItem* item, bool& watch_again)
 {
 	// Sendv
 
@@ -745,7 +745,7 @@ int AsyncSocket::process_send_v(SendItem* item, bool& watch_again)
 	return err;
 }
 
-int AsyncSocket::process_send_msg(SendItem* item, bool& watch_again)
+int PosixAsyncSocket::process_send_msg(SendItem* item, bool& watch_again)
 {
 	// We only do a single write
 	struct iovec io = {0};
@@ -785,7 +785,7 @@ int AsyncSocket::process_send_msg(SendItem* item, bool& watch_again)
 	return 0;
 }
 
-void AsyncSocket::process_send(OOBase::Queue<SendNotify,OOBase::AllocatorInstance>& notify_queue)
+void PosixAsyncSocket::process_send(OOBase::Queue<SendNotify,OOBase::AllocatorInstance>& notify_queue)
 {
 	int err = 0;
 	while (!m_send_queue.empty())
@@ -959,7 +959,7 @@ void SocketAcceptor::do_accept()
 		}
 		while (new_fd == -1 && errno == EINTR);
 
-		::AsyncSocket* pSocket = NULL;
+		PosixAsyncSocket* pSocket = NULL;
 		int err = 0;
 
 		if (new_fd == -1)
@@ -983,13 +983,11 @@ void SocketAcceptor::do_accept()
 			if (err == 0)
 			{
 				// Wrap the handle
-				void* p = m_allocator.allocate(sizeof(::AsyncSocket),OOBase::alignof<typename ::AsyncSocket>::value);
-				if (!p)
+				pSocket = m_allocator.allocate<PosixAsyncSocket>(m_pProactor,new_fd,m_allocator);
+				if (!pSocket)
 					err = ENOMEM;
 				else
 				{
-					pSocket = ::new (p) ::AsyncSocket(m_pProactor,new_fd,m_allocator);
-
 					err = pSocket->init();
 					if (err != 0)
 					{
@@ -1025,18 +1023,14 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_call
 		return NULL;
 	}
 
-	SocketAcceptor* pAcceptor = NULL;
-	void* p = allocator.allocate(sizeof(SocketAcceptor),alignof<SocketAcceptor>::value);
-	if (!p)
+	SocketAcceptor* pAcceptor = allocator.allocate<SocketAcceptor>(this,allocator,param,callback);
+	if (!pAcceptor)
 		err = ENOMEM;
 	else
 	{
-		pAcceptor = ::new (p) SocketAcceptor(this,allocator,param,callback);
-
 		err = pAcceptor->bind(addr,addr_len,0666);
 		if (err != 0)
 		{
-			pAcceptor->~SocketAcceptor();
 			allocator.free(pAcceptor);
 			pAcceptor = NULL;
 		}
@@ -1054,14 +1048,11 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_pipe
 		return NULL;
 	}
 
-	SocketAcceptor* pAcceptor = NULL;
-	void* p = allocator.allocate(sizeof(SocketAcceptor),alignof<SocketAcceptor>::value);
-	if (!p)
+	SocketAcceptor* pAcceptor = allocator.allocate<SocketAcceptor>(this,allocator,param,callback);
+	if (!pAcceptor)
 		err = ENOMEM;
 	else
 	{
-		pAcceptor = ::new (p) SocketAcceptor(this,allocator,param,callback);
-
 		mode_t mode = 0666;
 		if (psa)
 			mode = psa->mode;
@@ -1074,7 +1065,6 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_pipe
 		err = pAcceptor->bind((sockaddr*)&addr,addr_len,mode);
 		if (err != 0)
 		{
-			pAcceptor->~SocketAcceptor();
 			allocator.free(pAcceptor);
 			pAcceptor = NULL;
 		}
@@ -1133,14 +1123,11 @@ OOBase::AsyncSocket* OOBase::detail::ProactorPosix::attach(socket_t sock, int& e
 	if (err)
 		return NULL;
 
-	::AsyncSocket* pSocket = NULL;
-	void* p = allocator.allocate(sizeof(::AsyncSocket),OOBase::alignof<typename ::AsyncSocket>::value);
-	if (!p)
+	PosixAsyncSocket* pSocket = allocator.allocate<PosixAsyncSocket>(this,sock,allocator);
+	if (!pSocket)
 		err = ENOMEM;
 	else
 	{
-		pSocket = ::new (p) ::AsyncSocket(this,sock,allocator);
-
 		err = pSocket->init();
 		if (err != 0)
 		{

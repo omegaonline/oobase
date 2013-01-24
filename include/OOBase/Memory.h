@@ -134,6 +134,126 @@ namespace OOBase
 		virtual void* allocate(size_t bytes, size_t align) = 0;
 		virtual void* reallocate(void* ptr, size_t bytes, size_t align) = 0;
 		virtual void free(void* ptr) = 0;
+
+		template <typename T>
+		void free(T* p)
+		{
+			p->~T();
+			free(static_cast<void*>(p));
+		}
+
+		template <typename T>
+		T* allocate()
+		{
+			void* p = allocate(sizeof(T),alignof<T>::value);
+			if (!p)
+				return NULL;
+			else
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				try {
+#endif
+					return ::new (p) T();
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				} catch (...) { free(p); throw; }
+#endif
+		}
+
+		template <typename T, typename P1>
+		T* allocate(P1& p1)
+		{
+			void* p = allocate(sizeof(T),alignof<T>::value);
+			if (!p)
+				return NULL;
+			else
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				try {
+#endif
+					return ::new (p) T(p1);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				} catch (...) { free(p); throw; }
+#endif
+		}
+
+		template <typename T, typename P1, typename P2>
+		T* allocate(P1& p1, P2& p2)
+		{
+			void* p = allocate(sizeof(T),alignof<T>::value);
+			if (!p)
+				return NULL;
+			else
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				try
+				{
+#endif
+					return ::new (p) T(p1,p2);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				} catch (...) { free(p); throw; }
+#endif
+		}
+
+		template <typename T, typename P1, typename P2, typename P3>
+		T* allocate(P1& p1, P2& p2, P3& p3)
+		{
+			void* p = allocate(sizeof(T),alignof<T>::value);
+			if (!p)
+				return NULL;
+			else
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				try	{
+#endif
+					return ::new (p) T(p1,p2,p3);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				} catch (...) { free(p); throw; }
+#endif
+		}
+
+		template <typename T, typename P1, typename P2, typename P3, typename P4>
+		T* allocate(P1& p1, P2& p2, P3& p3, P4& p4)
+		{
+			void* p = allocate(sizeof(T),alignof<T>::value);
+			if (!p)
+				return NULL;
+			else
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				try	{
+#endif
+					return ::new (p) T(p1,p2,p3,p4);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				} catch (...) { free(p); throw; }
+#endif
+		}
+
+		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5>
+		T* allocate(P1& p1, P2& p2, P3& p3, P4& p4, P5& p5)
+		{
+			void* p = allocate(sizeof(T),alignof<T>::value);
+			if (!p)
+				return NULL;
+			else
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				try	{
+#endif
+					return ::new (p) T(p1,p2,p3,p4,p5);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				} catch (...) { free(p); throw; }
+#endif
+		}
+
+		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
+		T* allocate(P1& p1, P2& p2, P3& p3, P4& p4, P5& p5, P6& p6)
+		{
+			void* p = allocate(sizeof(T),alignof<T>::value);
+			if (!p)
+				return NULL;
+			else
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				try	{
+#endif
+					return ::new (p) T(p1,p2,p3,p4,p5,p6);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				} catch (...) { free(p); throw; }
+#endif
+		}
 	};
 
 	namespace detail

@@ -109,10 +109,7 @@ namespace OOBase
 		TThunk* thunk_allocate(TP param, TC callback)
 		{
 			AllocatorInstance& allocator = get_allocator();
-			void* p = allocator.allocate(sizeof(TThunk),alignof<TThunk>::value);
-			if (!p)
-				return NULL;
-			return ::new (p) TThunk(param,callback,allocator);
+			return allocator.allocate<TThunk>(param,callback,allocator);
 		}
 
 		virtual AllocatorInstance& get_allocator() = 0;
@@ -132,8 +129,7 @@ namespace OOBase
 			static void fn(void* param, Buffer* buffer, int err)
 			{
 				ThunkR thunk = *static_cast<ThunkR*>(param);
-				static_cast<ThunkR*>(param)->~ThunkR();
-				thunk.m_allocator.free(param);
+				thunk.m_allocator.delete_free(static_cast<ThunkR*>(param));
 				(thunk.m_param->*thunk.m_callback)(buffer,err);
 			}
 		};
@@ -152,8 +148,7 @@ namespace OOBase
 			static void fn(void* param, Buffer* data_buffer, Buffer* ctl_buffer, int err)
 			{
 				ThunkRM thunk = *static_cast<ThunkRM*>(param);
-				static_cast<ThunkRM*>(param)->~ThunkRM();
-				thunk.m_allocator.free(param);
+				thunk.m_allocator.delete_free(static_cast<ThunkRM*>(param));
 				(thunk.m_param->*thunk.m_callback)(data_buffer,ctl_buffer,err);
 			}
 		};
@@ -172,8 +167,7 @@ namespace OOBase
 			static void fn(void* param, Buffer* buffer, int err)
 			{
 				ThunkS thunk = *static_cast<ThunkS*>(param);
-				static_cast<ThunkS*>(param)->~ThunkS();
-				thunk.m_allocator.free(param);
+				thunk.m_allocator.delete_free(static_cast<ThunkS*>(param));
 				(thunk.m_param->*thunk.m_callback)(buffer,err);
 			}
 		};
@@ -192,8 +186,7 @@ namespace OOBase
 			static void fn(void* param, Buffer* buffers[], size_t count, int err)
 			{
 				ThunkSV thunk = *static_cast<ThunkSV*>(param);
-				static_cast<ThunkSV*>(param)->~ThunkSV();
-				thunk.m_allocator.free(param);
+				thunk.m_allocator.delete_free(static_cast<ThunkSV*>(param));
 				(thunk.m_param->*thunk.m_callback)(buffers,count,err);
 			}
 		};
