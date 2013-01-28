@@ -139,7 +139,7 @@ int OOBase::detail::ProactorPoll::do_watch_fd(int fd, unsigned int events)
 	return 0;
 }
 
-bool OOBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count)
+bool OOBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count, int& err)
 {
 	// Check each pollfd in m_poll_fds
 	for (size_t pos = 0; poll_count > 0 && pos < m_poll_fds.size(); ++pos)
@@ -153,6 +153,10 @@ bool OOBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count
 			// Handle the control pipe first
 			if (pfd->fd == m_read_fd)
 			{
+				err = read_control();
+				if (err)
+					return false;
+
 				continue;
 			}
 
@@ -270,7 +274,9 @@ int OOBase::detail::ProactorPoll::run(int& err, const Timeout& timeout)
 			else
 			{
 				// Socket I/O occurred
-				fd_event = update_fds(active_fd,count);
+				fd_event = update_fds(active_fd,count,err);
+				if (err)
+					return -1;
 			}
 		}
 
@@ -291,12 +297,12 @@ int OOBase::detail::ProactorPoll::run(int& err, const Timeout& timeout)
 			}
 
 			guard.acquire();
-		}
 
-		// Always check the control pipe
-		err = read_control();
-		if (err)
-			return -1;
+			// Always check the control pipe if we have done something
+			err = read_control();
+			if (err)
+				return -1;
+		}
 	}
 
     if (err)

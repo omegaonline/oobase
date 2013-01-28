@@ -66,7 +66,7 @@ namespace OOBase
 			int do_unbind_fd(int fd);
 			int do_watch_fd(int fd, unsigned int events);
 
-			bool update_fds(FdEvent& active_fd, int poll_count);
+			bool update_fds(FdEvent& active_fd, int poll_count, int& err);
 		};
 	}
 }

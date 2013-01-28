@@ -43,6 +43,7 @@ namespace OOBase
 				return ERROR_OUTOFMEMORY;
 
 			thunk->m_ptrSocket = pSocket;
+			thunk->m_ptrSocket->addref();
 			return pSocket->recv(thunk,&ThunkRHS<T,H>::fn1,stream.buffer(),sizeof(H));
 		}
 
@@ -58,6 +59,7 @@ namespace OOBase
 				return ERROR_OUTOFMEMORY;
 
 			thunk->m_ptrSocket = pSocket;
+			thunk->m_ptrSocket->addref();
 			return pSocket->recv_msg(thunk,&ThunkRMHS<T,H>::fn1,stream.buffer(),ctl_buffer,sizeof(H));
 		}
 
@@ -69,6 +71,7 @@ namespace OOBase
 				return ERROR_OUTOFMEMORY;
 
 			thunk->m_ptrSocket = pSocket;
+			thunk->m_ptrSocket->addref();
 			return pSocket->send(thunk,&ThunkSRHS<T,H>::fn1,stream.buffer());
 		}
 
