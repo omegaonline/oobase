@@ -33,7 +33,7 @@ namespace OOBase
 		Thread(bool bAutodelete);
 		virtual ~Thread();
 
-		int run(int (*thread_fn)(void*), void* param);
+		virtual int run(int (*thread_fn)(void*), void* param);
 
 		virtual bool join(const Timeout& timeout = Timeout());
 		virtual void abort();
@@ -42,21 +42,16 @@ namespace OOBase
 		static void sleep(unsigned int millisecs);
 		static void yield();
 
-		static Thread* self();
-
 	protected:
-		explicit Thread(bool,bool);
+		explicit Thread(bool bAutodelete,bool);
 
-		virtual int run(Thread* /*pThread*/, bool /*bAutodelete*/, int (* /*thread_fn*/)(void*), void* /*param*/) { assert(false); return false; };
-
-		static size_t s_sentinal;
+		const bool m_bAutodelete;
 
 	private:
 		Thread(const Thread&);
 		Thread& operator = (const Thread&);
 
 		Thread*    m_impl;
-		const bool m_bAutodelete;
 	};
 
 	class ThreadPool
