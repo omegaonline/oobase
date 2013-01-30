@@ -46,6 +46,15 @@ namespace OOBase
 			}
 		}
 
+		CDRStream(AllocatorInstance& allocator, size_t len = 256) :
+				m_endianess(OOBASE_BYTE_ORDER),
+				m_last_error(0)
+		{
+			m_buffer = Buffer::create(allocator,len,MaxAlignment);
+			if (!m_buffer)
+				m_last_error = ERROR_OUTOFMEMORY;
+		}
+
 		CDRStream(Buffer* buffer) :
 				m_buffer(buffer),
 				m_endianess(OOBASE_BYTE_ORDER),
