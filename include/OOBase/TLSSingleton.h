@@ -71,7 +71,7 @@ namespace OOBase
 		{
 			AllocatorInstance* alloc = TLS::detail::swap_allocator();
 
-			Instance* i = alloc->allocate<Instance>();
+			Instance* i = alloc->allocate_new<Instance>();
 			if (!i)
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
@@ -79,12 +79,12 @@ namespace OOBase
 			try
 			{
 #endif
-				i->m_this = alloc->allocate<T>();
+				i->m_this = alloc->allocate_new<T>();
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 			}
 			catch (...)
 			{
-				alloc->free(i);
+				alloc->delete_free(i);
 				throw;
 			}
 #endif
@@ -109,17 +109,17 @@ namespace OOBase
 				try
 				{
 #endif
-					curr->free(i->m_this);
+					curr->delete_free(i->m_this);
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				}
 				catch (...)
 				{
-					curr->free(i);
+					curr->delete_free(i);
 					TLS::detail::swap_allocator(prev);
 					throw;
 				}
 #endif
-				curr->free(i);
+				curr->delete_free(i);
 				TLS::detail::swap_allocator(prev);
 			}
 		}

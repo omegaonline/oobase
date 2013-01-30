@@ -120,7 +120,7 @@ namespace OOBase
 			template <typename T>
 			void alloc_node(T*& n)
 			{
-				n = m_allocator.allocate<T>();
+				n = static_cast<T*>(m_allocator.allocate(sizeof(T),alignof<T>::value));
 				if (!n)
 					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 				n->m_refcount = 1;

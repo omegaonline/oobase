@@ -65,7 +65,7 @@ namespace
 
 		void destroy()
 		{
-			m_allocator.free(this);
+			m_allocator.delete_free(this);
 		}
 
 		struct RecvItem
@@ -983,7 +983,7 @@ void SocketAcceptor::do_accept()
 			if (err == 0)
 			{
 				// Wrap the handle
-				pSocket = m_allocator.allocate<PosixAsyncSocket>(m_pProactor,new_fd,m_allocator);
+				pSocket = m_allocator.allocate_new<PosixAsyncSocket>(m_pProactor,new_fd,m_allocator);
 				if (!pSocket)
 					err = ENOMEM;
 				else
@@ -1023,7 +1023,7 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_call
 		return NULL;
 	}
 
-	SocketAcceptor* pAcceptor = allocator.allocate<SocketAcceptor>(this,allocator,param,callback);
+	SocketAcceptor* pAcceptor = allocator.allocate_new<SocketAcceptor>(this,allocator,param,callback);
 	if (!pAcceptor)
 		err = ENOMEM;
 	else
@@ -1031,7 +1031,7 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_call
 		err = pAcceptor->bind(addr,addr_len,0666);
 		if (err != 0)
 		{
-			allocator.free(pAcceptor);
+			allocator.delete_free(pAcceptor);
 			pAcceptor = NULL;
 		}
 	}
@@ -1048,7 +1048,7 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_pipe
 		return NULL;
 	}
 
-	SocketAcceptor* pAcceptor = allocator.allocate<SocketAcceptor>(this,allocator,param,callback);
+	SocketAcceptor* pAcceptor = allocator.allocate_new<SocketAcceptor>(this,allocator,param,callback);
 	if (!pAcceptor)
 		err = ENOMEM;
 	else
@@ -1065,7 +1065,7 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_pipe
 		err = pAcceptor->bind((sockaddr*)&addr,addr_len,mode);
 		if (err != 0)
 		{
-			allocator.free(pAcceptor);
+			allocator.delete_free(pAcceptor);
 			pAcceptor = NULL;
 		}
 	}
@@ -1123,7 +1123,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorPosix::attach(socket_t sock, int& e
 	if (err)
 		return NULL;
 
-	PosixAsyncSocket* pSocket = allocator.allocate<PosixAsyncSocket>(this,sock,allocator);
+	PosixAsyncSocket* pSocket = allocator.allocate_new<PosixAsyncSocket>(this,sock,allocator);
 	if (!pSocket)
 		err = ENOMEM;
 	else

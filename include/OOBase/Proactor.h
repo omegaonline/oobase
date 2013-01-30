@@ -109,7 +109,7 @@ namespace OOBase
 		TThunk* thunk_allocate(TP param, TC callback)
 		{
 			AllocatorInstance& allocator = get_allocator();
-			return allocator.allocate<TThunk>(param,callback,allocator);
+			return allocator.allocate_new<TThunk>(param,callback,allocator);
 		}
 
 		virtual AllocatorInstance& get_allocator() = 0;

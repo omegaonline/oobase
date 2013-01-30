@@ -54,7 +54,7 @@ namespace
 
 		void destroy()
 		{
-			m_allocator.free(this);
+			m_allocator.delete_free(this);
 		}
 
 		OOBase::detail::ProactorWin32* m_pProactor;
@@ -492,7 +492,7 @@ PipeAcceptor::~PipeAcceptor()
 
 int PipeAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback, OOBase::AllocatorInstance& allocator)
 {
-	m_pAcceptor = allocator.allocate<InternalAcceptor>(pProactor,pipe_name,psa,param,callback,allocator);
+	m_pAcceptor = allocator.allocate_new<InternalAcceptor>(pProactor,pipe_name,psa,param,callback,allocator);
 	if (!m_pAcceptor)
 		return ERROR_OUTOFMEMORY;
 
@@ -548,7 +548,7 @@ int InternalAcceptor::stop()
 	{
 		guard.release();
 
-		m_allocator.free(this);
+		m_allocator.delete_free(this);
 	}
 
 	return 0;
@@ -679,7 +679,7 @@ bool InternalAcceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase
 		AsyncPipe* pSocket = NULL;
 		if (dwErr == 0)
 		{
-			pSocket = m_allocator.allocate<AsyncPipe>(m_pProactor,hPipe,m_allocator);
+			pSocket = m_allocator.allocate_new<AsyncPipe>(m_pProactor,hPipe,m_allocator);
 			if (!pSocket)
 			{
 				dwErr = ERROR_OUTOFMEMORY;
@@ -713,7 +713,7 @@ bool InternalAcceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase
 		{
 			guard.release();
 
-			m_allocator.free(this);
+			m_allocator.delete_free(this);
 
 			return true;
 		}
@@ -734,7 +734,7 @@ OOBase::Acceptor* OOBase::detail::ProactorWin32::accept(void* param, accept_pipe
 		return NULL;
 	}
 	
-	PipeAcceptor* pAcceptor = allocator.allocate<PipeAcceptor>();
+	PipeAcceptor* pAcceptor = allocator.allocate_new<PipeAcceptor>();
 	if (!pAcceptor)
 		err = ERROR_OUTOFMEMORY;
 	else
@@ -763,7 +763,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::attach(HANDLE hPipe, int& er
 	if (err != 0)
 		return NULL;
 
-	AsyncPipe* pPipe = allocator.allocate<AsyncPipe>(this,hPipe,allocator);
+	AsyncPipe* pPipe = allocator.allocate_new<AsyncPipe>(this,hPipe,allocator);
 	if (!pPipe)
 	{
 		unbind();
@@ -827,7 +827,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const char* path, in
 		return NULL;
 
 	// Wrap socket
-	AsyncSocket* pSocket = allocator.allocate<AsyncPipe>(this,hPipe,allocator);
+	AsyncSocket* pSocket = allocator.allocate_new<AsyncPipe>(this,hPipe,allocator);
 	if (!pSocket)
 	{
 		unbind();

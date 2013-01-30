@@ -59,7 +59,7 @@ namespace
 
 		void destroy()
 		{
-			m_allocator.free(this);
+			m_allocator.delete_free(this);
 		}
 
 		OOBase::detail::ProactorWin32* m_pProactor;
@@ -613,7 +613,7 @@ int SocketAcceptor::stop()
 
 int SocketAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, OOBase::AllocatorInstance& allocator)
 {
-	m_pAcceptor = allocator.allocate<InternalAcceptor>(pProactor,param,callback,allocator);
+	m_pAcceptor = allocator.allocate_new<InternalAcceptor>(pProactor,param,callback,allocator);
 	if (!m_pAcceptor)
 		return ERROR_OUTOFMEMORY;
 
@@ -709,7 +709,7 @@ int InternalAcceptor::stop(bool destroy)
 	{
 		guard.release();
 
-		m_allocator.free(this);
+		m_allocator.delete_free(this);
 	}
 
 	return 0;
@@ -901,7 +901,7 @@ bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void
 		OOBase::Win32::WSAGetAcceptExSockAddrs(m_socket,addr_buf,0,m_addr_len+16,m_addr_len+16,&local_addr,&local_addr_len,&remote_addr,&remote_addr_len);
 			
 		// Wrap the handle
-		pSocket = m_allocator.allocate<Win32AsyncSocket>(m_pProactor,hSocket,m_allocator);
+		pSocket = m_allocator.allocate_new<Win32AsyncSocket>(m_pProactor,hSocket,m_allocator);
 		if (!pSocket)
 			dwErr = ERROR_OUTOFMEMORY;
 
@@ -943,7 +943,7 @@ bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void
 	{
 		guard.release();
 
-		m_allocator.free(this);
+		m_allocator.delete_free(this);
 
 		return true;
 	}
@@ -965,7 +965,7 @@ OOBase::Acceptor* OOBase::detail::ProactorWin32::accept(void* param, accept_call
 		return NULL;
 	}
 	
-	SocketAcceptor* pAcceptor = allocator.allocate<SocketAcceptor>();
+	SocketAcceptor* pAcceptor = allocator.allocate_new<SocketAcceptor>();
 	if (!pAcceptor)
 		err = ERROR_OUTOFMEMORY;
 	else
@@ -1000,7 +1000,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const sockaddr* addr
 		return NULL;
 	}
 	
-	Win32AsyncSocket* pSocket = allocator.allocate<Win32AsyncSocket>(this,sock,allocator);
+	Win32AsyncSocket* pSocket = allocator.allocate_new<Win32AsyncSocket>(this,sock,allocator);
 	if (!pSocket)
 	{
 		unbind();
@@ -1018,7 +1018,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::attach(socket_t sock, int& e
 		return NULL;
 
 	// The socket must have been opened as WSA_FLAG_OVERLAPPED!!!
-	Win32AsyncSocket* pSocket = allocator.allocate<Win32AsyncSocket>(this,sock,allocator);
+	Win32AsyncSocket* pSocket = allocator.allocate_new<Win32AsyncSocket>(this,sock,allocator);
 	if (!pSocket)
 	{
 		unbind();

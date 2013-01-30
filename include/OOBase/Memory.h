@@ -136,14 +136,14 @@ namespace OOBase
 		virtual void free(void* ptr) = 0;
 
 		template <typename T>
-		void free(T* p)
+		void delete_free(T* p)
 		{
 			p->~T();
-			free(static_cast<void*>(p));
+			free(p);
 		}
 
 		template <typename T>
-		T* allocate()
+		T* allocate_new()
 		{
 			void* p = allocate(sizeof(T),alignof<T>::value);
 			if (!p)
@@ -159,7 +159,7 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1>
-		T* allocate(P1& p1)
+		T* allocate_new(P1& p1)
 		{
 			void* p = allocate(sizeof(T),alignof<T>::value);
 			if (!p)
@@ -175,7 +175,7 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2>
-		T* allocate(P1& p1, P2& p2)
+		T* allocate_new(P1& p1, P2& p2)
 		{
 			void* p = allocate(sizeof(T),alignof<T>::value);
 			if (!p)
@@ -192,7 +192,7 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2, typename P3>
-		T* allocate(P1& p1, P2& p2, P3& p3)
+		T* allocate_new(P1& p1, P2& p2, P3& p3)
 		{
 			void* p = allocate(sizeof(T),alignof<T>::value);
 			if (!p)
@@ -208,7 +208,7 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2, typename P3, typename P4>
-		T* allocate(P1& p1, P2& p2, P3& p3, P4& p4)
+		T* allocate_new(P1& p1, P2& p2, P3& p3, P4& p4)
 		{
 			void* p = allocate(sizeof(T),alignof<T>::value);
 			if (!p)
@@ -224,7 +224,7 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5>
-		T* allocate(P1& p1, P2& p2, P3& p3, P4& p4, P5& p5)
+		T* allocate_new(P1& p1, P2& p2, P3& p3, P4& p4, P5& p5)
 		{
 			void* p = allocate(sizeof(T),alignof<T>::value);
 			if (!p)
@@ -240,7 +240,7 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
-		T* allocate(P1& p1, P2& p2, P3& p3, P4& p4, P5& p5, P6& p6)
+		T* allocate_new(P1& p1, P2& p2, P3& p3, P4& p4, P5& p5, P6& p6)
 		{
 			void* p = allocate(sizeof(T),alignof<T>::value);
 			if (!p)

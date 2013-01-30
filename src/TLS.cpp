@@ -191,7 +191,7 @@ namespace
 		{
 			OOBase::AllocatorInstance* alloc = new (OOBase::critical) OOBase::ArenaAllocator();
 
-			inst = alloc->allocate<TLSMap>(alloc);
+			inst = alloc->allocate_new<TLSMap>(alloc);
 			if (!inst)
 			{
 				delete alloc;
@@ -224,7 +224,7 @@ namespace
 
 			OOBase::AllocatorInstance* alloc = inst->m_allocator;
 
-			alloc->free(inst);
+			alloc->delete_free(inst);
 
 			delete alloc;
 		}
