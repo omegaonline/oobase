@@ -32,7 +32,7 @@ namespace OOBase
 	class CDRStream
 	{
 	public:
-		static const int MaxAlignment = 8;
+		static const int MaxAlignment = 16;
 
 		CDRStream(size_t len = 256) :
 				m_endianess(OOBASE_BYTE_ORDER),
@@ -40,7 +40,7 @@ namespace OOBase
 		{
 			if (len > 0)
 			{
-				m_buffer = new (std::nothrow) Buffer(len,MaxAlignment);
+				m_buffer = Buffer::create(len,MaxAlignment);
 				if (!m_buffer)
 					m_last_error = ERROR_OUTOFMEMORY;
 			}
@@ -94,7 +94,7 @@ namespace OOBase
 				if (!m_buffer)
 					m_last_error = EINVAL;
 				else
-					m_last_error = m_buffer->reset(MaxAlignment);
+					m_buffer->reset();
 			}
 			return m_last_error;
 		}
@@ -106,7 +106,7 @@ namespace OOBase
 				if (!m_buffer)
 					m_last_error = EINVAL;
 				else
-					m_last_error = m_buffer->compact(MaxAlignment);
+					m_buffer->compact();
 			}
 			return m_last_error;
 		}

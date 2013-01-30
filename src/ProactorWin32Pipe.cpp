@@ -276,7 +276,7 @@ int AsyncPipe::send_v(void* param, send_v_callback_t callback, OOBase::Buffer* b
 	if (total == 0)
 		return 0;
 
-	OOBase::Buffer* buffer = new (std::nothrow) OOBase::Buffer(total);
+	OOBase::Buffer* buffer = OOBase::Buffer::create(total);
 	if (!buffer)
 		return ERROR_OUTOFMEMORY;
 	

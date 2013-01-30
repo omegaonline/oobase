@@ -49,8 +49,15 @@ namespace OOBase
 	class Buffer : public RefCounted
 	{
 	public:
-		/// The constructor allocates the internal buffer to size \p cbSize.
-		Buffer(size_t cbSize = 256, size_t align = 16);
+		/// The factory function allocates the internal buffer to size \p cbSize using allocator \p allocator.
+		static Buffer* create(size_t cbSize = 256, size_t align = 1);
+
+		/// The factory function allocates the internal buffer to size \p cbSize.
+		template <typename Allocator>
+		static Buffer* create(size_t cbSize = 256, size_t align = 1);
+
+		/// The factory function allocates the internal buffer to size \p cbSize using allocator \p allocator.
+		static Buffer* create(AllocatorInstance& allocator, size_t cbSize = 256, size_t align = 1);
 
 		/// Get the current read pointer value.
 		const char* rd_ptr() const;
@@ -74,10 +81,10 @@ namespace OOBase
 		size_t length() const;
 
 		/// Reset the read and write pointers to start().
-		int reset(size_t align = 1);
+		void reset();
 
 		/// Move the read to start() and copy any existing data 'up' with it, setting wr_ptr() correctly.
-		int compact(size_t align = 1);
+		void compact();
 
 		/// Get the amount of space remaining in bytes.
 		size_t space() const;
@@ -97,14 +104,114 @@ namespace OOBase
 		/// Move wr_ptr to mark
 		void mark_wr_ptr(size_t mark);
 
-	private:
-		virtual ~Buffer();
+	protected:
+		virtual char* reallocate(char* data, size_t size, size_t align) = 0;
 
-		size_t  m_capacity; ///< The total allocated bytes for \p m_buffer.
+		Buffer(char* buffer, size_t cbSize, size_t align);
+
 		char*   m_buffer;   ///< The actual underlying buffer.
+
+	private:
+		size_t  m_capacity; ///< The total allocated bytes for \p m_buffer.
+		size_t  m_align;    ///< The alignment of the start of \p m_buffer.
 		char*   m_wr_ptr;   ///< The current write pointer.
 		char*   m_rd_ptr;   ///< The current read pointer.
 	};
+
+	namespace detail
+	{
+		template <typename Allocator>
+		class BufferImpl : public Buffer
+		{
+			friend class Buffer;
+
+		private:
+			BufferImpl(void* buffer, size_t cbSize, size_t align) :
+					Buffer(static_cast<char*>(buffer),cbSize,align)
+			{}
+
+			void destroy()
+			{
+				Allocator::free(m_buffer);
+				this->~Buffer();
+				Allocator::free(this);
+			}
+
+			char* reallocate(char* data, size_t cbSize, size_t align)
+			{
+				return static_cast<char*>(Allocator::reallocate(data,cbSize,align));
+			}
+
+			static Buffer* create(size_t cbSize, size_t align)
+			{
+				Buffer* pBuffer = NULL;
+				void* p = Allocator::allocate(sizeof(BufferImpl),alignof<BufferImpl>::value);
+				if (p)
+				{
+					void* buf = Allocator::allocate(cbSize,align);
+					if (!buf)
+					{
+						Allocator::free(p);
+						return NULL;
+					}
+
+					pBuffer = ::new (p) BufferImpl(buf,cbSize,align);
+				}
+
+				return pBuffer;
+			}
+		};
+
+		template <>
+		class BufferImpl<AllocatorInstance> : public Buffer
+		{
+			friend class Buffer;
+
+		public:
+			BufferImpl(AllocatorInstance& allocator, void* buffer, size_t cbSize, size_t align) :
+					Buffer(static_cast<char*>(buffer),cbSize,align),
+					m_allocator(allocator)
+			{}
+
+		private:
+			void destroy()
+			{
+				m_allocator.free(m_buffer);
+				m_allocator.delete_free(this);
+			}
+
+			char* reallocate(char* data, size_t cbSize, size_t align)
+			{
+				return static_cast<char*>(m_allocator.reallocate(data,cbSize,align));
+			}
+
+			static Buffer* create(AllocatorInstance& allocator, size_t cbSize, size_t align)
+			{
+				Buffer* pBuffer = NULL;
+				void* buf = allocator.allocate(cbSize,align);
+				if (buf)
+				{
+					pBuffer = allocator.allocate_new<BufferImpl>(allocator,buf,cbSize,align);
+					if (!pBuffer)
+						allocator.free(buf);
+				}
+				return pBuffer;
+			}
+
+			AllocatorInstance& m_allocator;
+		};
+	}
+}
+
+template <typename Allocator>
+inline OOBase::Buffer* OOBase::Buffer::create(size_t cbSize, size_t align)
+{
+	return OOBase::detail::BufferImpl<Allocator>::create(cbSize,align);
+}
+
+inline OOBase::Buffer* OOBase::Buffer::create(size_t cbSize, size_t align)
+{
+	return OOBase::detail::BufferImpl<CrtAllocator>::create(cbSize,align);
 }
 
 #endif // OOBASE_BUFFER_H_INCLUDED_

@@ -257,7 +257,7 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 
 	static const size_t s_read_block_size = 4096;
 
-	RefPtr<Buffer> buffer = new (std::nothrow) Buffer(s_read_block_size);
+	RefPtr<Buffer> buffer = Buffer::create<CrtAllocator>(s_read_block_size,1);
 	if (!buffer)
 		return ERROR_OUTOFMEMORY;
 
@@ -292,7 +292,7 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 			return 0;
 
 		// Compact before reading again...
-		buffer->compact(1);
+		buffer->compact();
 
 		// And ensure we have at least s_read_block_size bytes of room
 		err = buffer->space(s_read_block_size);

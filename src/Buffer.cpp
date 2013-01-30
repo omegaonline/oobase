@@ -22,38 +22,22 @@
 #include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Buffer.h"
 
-#include <stddef.h>
-#include <string.h>
-
 #if defined(HAVE_STDINT_H)
 #include <stdint.h>
 #endif
 
-#if defined(HAVE_SYS_TYPES_H)
-#include <sys/types.h>
-#endif
-
-OOBase::Buffer::Buffer(size_t cbSize, size_t align) :
-		m_capacity(0),
-		m_buffer(NULL),
-		m_wr_ptr(NULL),
-		m_rd_ptr(NULL)
+OOBase::Buffer* OOBase::Buffer::create(AllocatorInstance& allocator, size_t cbSize, size_t align)
 {
-	// Make sure we have room to align tiny blocks with big alignment...
-	if (cbSize < align)
-		cbSize += align;
-
-	m_buffer = static_cast<char*>(OOBase::CrtAllocator::allocate(cbSize));
-	if (m_buffer)
-	{
-		m_capacity = cbSize;
-		reset(align);
-	}
+	return detail::BufferImpl<AllocatorInstance>::create(allocator,cbSize,align);
 }
 
-OOBase::Buffer::~Buffer()
+OOBase::Buffer::Buffer(char* buffer, size_t cbSize, size_t align) :
+		m_buffer(buffer),
+		m_capacity(cbSize),
+		m_align(align),
+		m_wr_ptr(buffer),
+		m_rd_ptr(buffer)
 {
-	OOBase::CrtAllocator::free(m_buffer);
 }
 
 const char* OOBase::Buffer::rd_ptr() const
@@ -131,34 +115,24 @@ size_t OOBase::Buffer::length() const
 	return static_cast<size_t>(m_wr_ptr - m_rd_ptr);
 }
 
-int OOBase::Buffer::reset(size_t align)
+void OOBase::Buffer::reset()
 {
-	int err = 0;
 	m_rd_ptr = m_wr_ptr = m_buffer;
-
-	if (align > 1)
-	{
-		err = align_wr_ptr(align);
-		if (err == 0)
-			align_rd_ptr(align);
-	}
-	return err;
 }
 
-int OOBase::Buffer::compact(size_t align)
+void OOBase::Buffer::compact()
 {
 	char* orig_rd = m_rd_ptr;
 	ptrdiff_t len = (m_wr_ptr - m_rd_ptr);
 
-	int err = reset(align);
-	if (err == 0 && len > 0)
+	reset();
+
+	if (len > 0)
 	{
 		// We know there is space...
 		memmove(m_rd_ptr,orig_rd,static_cast<size_t>(len));
 		m_wr_ptr = m_rd_ptr + len;
 	}
-
-	return err;
 }
 
 size_t OOBase::Buffer::space() const
@@ -180,7 +154,7 @@ int OOBase::Buffer::space(size_t cbSpace)
 		size_t rd_pos = (m_rd_ptr - m_buffer);
 		size_t wr_pos = (m_wr_ptr - m_buffer);
 
-		char* new_ptr = static_cast<char*>(OOBase::CrtAllocator::reallocate(m_buffer,cbAbsCapacity));
+		char* new_ptr = reallocate(m_buffer,cbAbsCapacity,m_align);
 		if (!new_ptr)
 			return ERROR_OUTOFMEMORY;
 
