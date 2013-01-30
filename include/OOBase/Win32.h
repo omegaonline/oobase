@@ -84,7 +84,7 @@ namespace OOBase
 
 			DWORD close()
 			{
-				if (!CloseHandle(m_handle))
+				if (is_valid() && !CloseHandle(m_handle))
 					return GetLastError();
 
 				m_handle = INVALID_HANDLE_VALUE;
@@ -98,15 +98,11 @@ namespace OOBase
 
 			HANDLE* operator &()
 			{
+				close();
 				return &m_handle;
 			}
 
 			operator HANDLE() const
-			{
-				return m_handle;
-			}
-
-			operator HANDLE&()
 			{
 				return m_handle;
 			}
@@ -133,10 +129,10 @@ namespace OOBase
 			void release_read();
 
 		private:
-			LONG                       m_nReaders;
-			OOBase::Win32::SmartHandle m_hReaderEvent;
-			OOBase::Win32::SmartHandle m_hEvent;
-			OOBase::Win32::SmartHandle m_hWriterMutex;
+			LONG        m_nReaders;
+			SmartHandle m_hReaderEvent;
+			SmartHandle m_hEvent;
+			SmartHandle m_hWriterMutex;
 		};
 
 		class condition_variable_t

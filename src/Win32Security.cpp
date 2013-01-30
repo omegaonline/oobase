@@ -251,7 +251,7 @@ DWORD OOBase::Win32::EnableUserAccessToDir(const wchar_t* pszPath, const TOKEN_U
 	return SetNamedSecurityInfoW(szPath,SE_FILE_OBJECT,DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,NULL,NULL,pACLNew,NULL);
 }
 
-DWORD OOBase::Win32::RestrictToken(HANDLE& hToken)
+DWORD OOBase::Win32::RestrictToken(HANDLE hToken, HANDLE* hNewToken)
 {
 	HMODULE hKernel32 = GetModuleHandleW(L"Kernel32.dll");
 	if (hKernel32 != NULL)
@@ -259,12 +259,8 @@ DWORD OOBase::Win32::RestrictToken(HANDLE& hToken)
 		if (GetProcAddress(hKernel32,"CreateRestrictedToken"))
 		{
 			// Create a restricted token...
-			HANDLE hNewToken = NULL;
-			if (!CreateRestrictedToken(hToken,DISABLE_MAX_PRIVILEGE /*| SANDBOX_INERT*/,0,NULL,0,NULL,0,NULL,&hNewToken))
+			if (!CreateRestrictedToken(hToken,DISABLE_MAX_PRIVILEGE /*| SANDBOX_INERT*/,0,NULL,0,NULL,0,NULL,hNewToken))
 				return GetLastError();
-
-			CloseHandle(hToken);
-			hToken = hNewToken;
 		}
 		else
 		{
@@ -283,20 +279,15 @@ DWORD OOBase::Win32::RestrictToken(HANDLE& hToken)
 
 				//// Generate the restricted token we will use.
 				DWORD dwRes = ERROR_SUCCESS;
-				HANDLE hNewToken = NULL;
-				if (SaferComputeTokenFromLevel(
+				if (!SaferComputeTokenFromLevel(
 					hAuthzLevel,    // SAFER Level handle
 					hToken,         // Source token
-					&hNewToken,     // Target token
+					hNewToken,     // Target token
 					0,              // No flags
 					NULL))          // Reserved
 				{
-					// Swap the tokens
-					CloseHandle(hToken);
-					hToken = hNewToken;
-				}
-				else
 					dwRes = GetLastError();
+				}
 
 				SaferCloseLevel(hAuthzLevel);
 
@@ -305,7 +296,7 @@ DWORD OOBase::Win32::RestrictToken(HANDLE& hToken)
 		}
 	}
 
-	return ERROR_SUCCESS;
+	return ERROR_INVALID_FUNCTION;
 }
 
 bool OOBase::Win32::MatchSids(ULONG count, PSID_AND_ATTRIBUTES pSids1, PSID_AND_ATTRIBUTES pSids2)

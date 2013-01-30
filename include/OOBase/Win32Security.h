@@ -115,7 +115,7 @@ namespace OOBase
 			OOBase::SmartPtr<void,OOBase::Win32::LocalAllocDestructor> m_psd;
 		};
 
-		DWORD RestrictToken(HANDLE& hToken);
+		DWORD RestrictToken(HANDLE hToken, HANDLE* hNewToken);
 		DWORD SetTokenDefaultDACL(HANDLE hToken);
 		DWORD LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile);
 		DWORD GetNameFromToken(HANDLE hToken, OOBase::TempPtr<wchar_t>& strUserName, OOBase::TempPtr<wchar_t>& strDomainName);
