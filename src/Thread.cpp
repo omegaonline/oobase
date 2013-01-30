@@ -202,7 +202,7 @@ namespace
 	PthreadThread::PthreadThread(bool bAutodelete) :
 			OOBase::Thread(bAutodelete,false),
 			m_thread(pthread_t_def()),
-			m_finished(false,false)
+			m_finished(true,false)
 	{}
 
 	PthreadThread::~PthreadThread()
@@ -212,13 +212,16 @@ namespace
 
 	bool PthreadThread::is_running()
 	{
-		return m_finished.is_set();
+		return !m_finished.is_set();
 	}
 
 	int PthreadThread::run(int (*thread_fn)(void*), void* param)
 	{
-		if (m_finished.is_set())
+		if (!m_finished.is_set())
 			return EINVAL;
+
+		// Mark that we are running
+		m_finished.reset();
 
 		OOBase::Event started(false,false);
 
@@ -231,7 +234,10 @@ namespace
 		// Start the thread
 		int err = pthread_create(&m_thread,NULL,&oobase_thread_fn,&wrap);
 		if (err)
+		{
+			m_finished.set();
 			return err;
+		}
 
 		// Wait for the start event
 		started.wait();
@@ -276,9 +282,6 @@ namespace
 		// Set the event, meaning we have started
 		wrap->m_started->set();
 
-		// Mark that we are running
-		pThis->m_finished.reset();
-
 		// Run the actual thread function
 		int ret = (*thread_fn)(p);
 
@@ -321,8 +324,6 @@ OOBase::Thread::~Thread()
 
 int OOBase::Thread::run(int (*thread_fn)(void*), void* param)
 {
-	assert(!is_running());
-
 	return m_impl->run(thread_fn,param);
 }
 
