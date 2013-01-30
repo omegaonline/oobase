@@ -63,6 +63,26 @@ namespace OOBase
 			return pSocket->recv_msg(thunk,&ThunkRMHS<T,H>::fn1,stream.buffer(),ctl_buffer,sizeof(H));
 		}
 
+		template <typename H>
+		static int send_and_recv_with_header_blocking(CDRStream& stream, AsyncSocket* pSocket)
+		{
+			int err = pSocket->send(stream.buffer());
+			if (!err)
+			{
+				stream.reset();
+				err = pSocket->recv(stream.buffer(),sizeof(H));
+				if (!err)
+				{
+					H msg_len = 0;
+					if (!stream.read(msg_len))
+						err = stream.last_error();
+					else
+						err = pSocket->recv(stream.buffer(),msg_len - sizeof(H));
+				}
+			}
+			return err;
+		}
+
 		template <typename H, typename T>
 		static int send_and_recv_with_header_sync(CDRStream& stream, AsyncSocket* pSocket, T* param, void (T::*callback)(CDRStream& stream, int err))
 		{
