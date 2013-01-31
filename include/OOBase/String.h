@@ -287,9 +287,6 @@ namespace OOBase
 			StringImpl(Allocator& allocator) : baseClass(allocator)
 			{}
 
-			StringImpl(const StringImpl& rhs) : baseClass(rhs)
-			{}
-
 			~StringImpl()
 			{
 				baseClass::node_release(this->m_node);
@@ -500,25 +497,7 @@ namespace OOBase
 		};
 	}
 
-	class String : public detail::StringImpl<CrtAllocator>
-	{
-		typedef detail::StringImpl<CrtAllocator> baseClass;
-
-	public:
-		String() : baseClass()
-		{}
-
-		String(const String& rhs) : baseClass(rhs)
-		{}
-
-		String& operator = (const String& rhs)
-		{
-			if (this != &rhs)
-				baseClass::node_replace(this->m_node,rhs.m_node);
-
-			return *this;
-		}
-	};
+	typedef detail::StringImpl<CrtAllocator> String;
 
 	class LocalString : public detail::StringImpl<AllocatorInstance>
 	{
@@ -527,17 +506,6 @@ namespace OOBase
 	public:
 		LocalString(AllocatorInstance& allocator) : baseClass(allocator)
 		{}
-
-		LocalString(const LocalString& rhs) : baseClass(rhs)
-		{}
-
-		LocalString& operator = (const LocalString& rhs)
-		{
-			if (this != &rhs)
-				baseClass::node_replace(this->m_node,rhs.m_node);
-
-			return *this;
-		}
 	};
 }
 
