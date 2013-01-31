@@ -102,7 +102,7 @@ namespace OOBase
 		Table() : baseClass(), m_sorted(true)
 		{}
 
-		Table(AllocatorInstance& allocator) : baseClass(allocator), m_sorted(true)
+		Table(Allocator& allocator) : baseClass(allocator), m_sorted(true)
 		{}
 
 		template <typename K1, typename V1>

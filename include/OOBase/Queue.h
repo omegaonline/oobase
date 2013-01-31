@@ -37,7 +37,7 @@ namespace OOBase
 			PODQueueBase() : baseClass(), m_data(NULL), m_capacity(0), m_front(0), m_back(0)
 			{}
 
-			PODQueueBase(AllocatorInstance& allocator) : baseClass(allocator), m_data(NULL), m_capacity(0), m_front(0), m_back(0)
+			PODQueueBase(Allocator& allocator) : baseClass(allocator), m_data(NULL), m_capacity(0), m_front(0), m_back(0)
 			{}
 
 		protected:
@@ -63,7 +63,7 @@ namespace OOBase
 			PODQueue() : baseClass()
 			{}
 
-			PODQueue(AllocatorInstance& allocator) : baseClass(allocator)
+			PODQueue(Allocator& allocator) : baseClass(allocator)
 			{}
 
 			void clear()
@@ -134,7 +134,7 @@ namespace OOBase
 			PODQueue() : baseClass()
 			{}
 
-			PODQueue(AllocatorInstance& allocator) : baseClass(allocator)
+			PODQueue(Allocator& allocator) : baseClass(allocator)
 			{}
 
 			void clear()
@@ -171,7 +171,7 @@ namespace OOBase
 		Queue() : baseClass()
 		{}
 
-		Queue(AllocatorInstance& allocator) : baseClass(allocator)
+		Queue(Allocator& allocator) : baseClass(allocator)
 		{}
 		
 		~Queue()

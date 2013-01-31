@@ -188,7 +188,7 @@ namespace OOBase
 		HashTable(const H& h = H()) : baseClass(), m_data(NULL), m_size(0), m_count(0), m_hash(h), m_clone(false)
 		{}
 
-		HashTable(AllocatorInstance& allocator, const H& h = H()) : baseClass(allocator), m_data(NULL), m_size(0), m_count(0), m_hash(h), m_clone(false)
+		HashTable(Allocator& allocator, const H& h = H()) : baseClass(allocator), m_data(NULL), m_size(0), m_count(0), m_hash(h), m_clone(false)
 		{}
 
 		~HashTable()

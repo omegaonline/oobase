@@ -37,7 +37,7 @@ namespace OOBase
 		Set() : baseClass(), m_sorted(true)
 		{}
 
-		Set(AllocatorInstance& allocator) : baseClass(allocator), m_sorted(true)
+		Set(Allocator& allocator) : baseClass(allocator), m_sorted(true)
 		{}
 
 		int insert(const T& value)
