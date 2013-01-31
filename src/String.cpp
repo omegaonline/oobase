@@ -29,51 +29,33 @@
 
 int OOBase::detail::strings::grow(size_t inc, StringNode*& node, void* (*pfnAllocate)(size_t,size_t), void* (*pfnRellocate)(void*,size_t,size_t), void (*pfnFree)(void*))
 {
-	if (node && node->m_refcount == 1)
-	{
-		if (inc > 0)
-		{
-			// It's our buffer to play with... (There is an implicit +1 here)
-			StringNode* new_node = static_cast<StringNode*>((*pfnRellocate)(node,sizeof(StringNode) + node->m_length + inc,alignof<StringNode>::value));
-			if (!new_node)
-				return ERROR_OUTOFMEMORY;
+	size_t our_len = (node ? node->m_length : 0);
 
-			new_node->m_length = node->m_length + inc;
-			new_node->m_data[new_node->m_length] = '\0';
-
-			node = new_node;
-		}
-	}
-	else
-	{
-		size_t our_len = (node ? node->m_length : 0);
-
-		// There is an implicit len+1 here as m_data[1] in struct
-		StringNode* new_node = static_cast<StringNode*>((*pfnAllocate)(sizeof(StringNode) + our_len + inc,alignof<StringNode>::value));
-		if (!new_node)
-			return ERROR_OUTOFMEMORY;
+	// There is an implicit len+1 here as m_data[1] in struct
+	StringNode* new_node = static_cast<StringNode*>((*pfnAllocate)(sizeof(StringNode) + our_len + inc,alignof<StringNode>::value));
+	if (!new_node)
+		return ERROR_OUTOFMEMORY;
 
 #if defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable: 6385)
 #endif
 
-		if (our_len)
-			memcpy(new_node->m_data,node->m_data,our_len);
+	if (our_len)
+		memcpy(new_node->m_data,node->m_data,our_len);
 
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
 
-		new_node->m_refcount = 1;
-		new_node->m_length = our_len + inc;
-		new_node->m_data[new_node->m_length] = '\0';
+	new_node->m_refcount = 1;
+	new_node->m_length = our_len + inc;
+	new_node->m_data[new_node->m_length] = '\0';
 
-		if (node && --node->m_refcount == 0)
-			(*pfnFree)(node);
+	if (node && --node->m_refcount == 0)
+		(*pfnFree)(node);
 
-		node = new_node;
-	}
+	node = new_node;
 
 	return 0;
 }
@@ -83,50 +65,32 @@ int OOBase::detail::strings::grow(size_t inc, StringNodeAllocator*& node)
 	if (!node)
 		return ERROR_OUTOFMEMORY;
 
-	if (node->m_refcount == 1)
-	{
-		if (inc > 0)
-		{
-			// It's our buffer to play with... (There is an implicit +1 here)
-			StringNodeAllocator* new_node = static_cast<StringNodeAllocator*>(node->m_allocator->reallocate(node,sizeof(StringNodeAllocator) + node->m_length + inc,alignof<StringNodeAllocator>::value));
-			if (!new_node)
-				return ERROR_OUTOFMEMORY;
-
-			new_node->m_length += inc;
-			new_node->m_data[new_node->m_length] = '\0';
-
-			node = new_node;
-		}
-	}
-	else
-	{
-		// There is an implicit len+1 here as m_data[1] in struct
-		StringNodeAllocator* new_node = static_cast<StringNodeAllocator*>(node->m_allocator->allocate(sizeof(StringNodeAllocator) + node->m_length + inc,alignof<StringNodeAllocator>::value));
-		if (!new_node)
-			return ERROR_OUTOFMEMORY;
+	// There is an implicit len+1 here as m_data[1] in struct
+	StringNodeAllocator* new_node = static_cast<StringNodeAllocator*>(node->m_allocator->allocate(sizeof(StringNodeAllocator) + node->m_length + inc,alignof<StringNodeAllocator>::value));
+	if (!new_node)
+		return ERROR_OUTOFMEMORY;
 
 #if defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable: 6385)
 #endif
 
-		if (node->m_length)
-			memcpy(new_node->m_data,node->m_data,node->m_length);
+	if (node->m_length)
+		memcpy(new_node->m_data,node->m_data,node->m_length);
 
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
 
-		new_node->m_refcount = 1;
-		new_node->m_length = node->m_length + inc;
-		new_node->m_data[new_node->m_length] = '\0';
-		new_node->m_allocator = node->m_allocator;
+	new_node->m_refcount = 1;
+	new_node->m_length = node->m_length + inc;
+	new_node->m_data[new_node->m_length] = '\0';
+	new_node->m_allocator = node->m_allocator;
 
-		if (node && --node->m_refcount == 0)
-			node->m_allocator->free(node);
+	if (node && --node->m_refcount == 0)
+		node->m_allocator->free(node);
 
-		node = new_node;
-	}
+	node = new_node;
 
 	return 0;
 }

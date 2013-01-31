@@ -45,14 +45,14 @@ namespace OOBase
 
 			struct StringNode
 			{
-				size_t m_refcount;
-				size_t m_length;
-				char   m_data[1];
+				Atomic<size_t> m_refcount;
+				size_t         m_length;
+				char           m_data[1];
 			};
 
 			struct StringNodeAllocator
 			{
-				size_t             m_refcount;
+				Atomic<size_t>     m_refcount;
 				size_t             m_length;
 				AllocatorInstance* m_allocator;
 				char               m_data[1];
