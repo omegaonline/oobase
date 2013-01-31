@@ -83,6 +83,7 @@ namespace OOBase
 		// These are blocking calls
 		int recv(Buffer* buffer, size_t bytes = 0);
 		int send(Buffer* buffer);
+		int send_msg(Buffer* buffer, Buffer* ctl_buffer);
 
 		typedef void (*recv_callback_t)(void* param, Buffer* buffer, int err);
 		virtual int recv(void* param, recv_callback_t callback, Buffer* buffer, size_t bytes = 0) = 0;

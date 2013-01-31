@@ -35,6 +35,11 @@ namespace
 		{
 			static_cast<WaitCallback*>(param)->signal(err);
 		}
+
+		static void callback_msg(void* param, OOBase::Buffer*, OOBase::Buffer*, int err)
+		{
+			static_cast<WaitCallback*>(param)->signal(err);
+		}
 	};
 }
 
@@ -52,6 +57,16 @@ int OOBase::AsyncSocket::send(Buffer* buffer)
 {
 	WaitCallback wait;
 	int err = send(&wait,&WaitCallback::callback,buffer);
+	if (err == 0)
+		err = wait.wait(false);
+
+	return err;
+}
+
+int OOBase::AsyncSocket::send_msg(Buffer* buffer, Buffer* ctl_buffer)
+{
+	WaitCallback wait;
+	int err = send_msg(&wait,&WaitCallback::callback_msg,buffer,ctl_buffer);
 	if (err == 0)
 		err = wait.wait(false);
 
