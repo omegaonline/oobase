@@ -112,6 +112,14 @@ namespace OOBase
 					++m_node->m_refcount;
 			}
 
+			StringBase& operator = (const StringBase& rhs)
+			{
+				if (this != &rhs)
+					node_replace(m_node,rhs.m_node);
+
+				return *this;
+			}
+
 			strings::StringNode* m_node;
 
 			static void node_replace(strings::StringNode*& node, strings::StringNode* repl)
@@ -222,6 +230,14 @@ namespace OOBase
 			{
 				if (m_node)
 					++m_node->m_refcount;
+			}
+
+			StringBase& operator = (const StringBase& rhs)
+			{
+				if (this != &rhs)
+					node_replace(m_node,rhs.m_node);
+
+				return *this;
 			}
 
 			strings::StringNodeAllocator* m_node;
@@ -498,15 +514,7 @@ namespace OOBase
 	}
 
 	typedef detail::StringImpl<CrtAllocator> String;
-
-	class LocalString : public detail::StringImpl<AllocatorInstance>
-	{
-		typedef detail::StringImpl<AllocatorInstance> baseClass;
-
-	public:
-		LocalString(AllocatorInstance& allocator) : baseClass(allocator)
-		{}
-	};
+	typedef detail::StringImpl<AllocatorInstance> LocalString;
 }
 
 #endif // OOBASE_STRING_H_INCLUDED_
