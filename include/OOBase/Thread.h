@@ -43,7 +43,7 @@ namespace OOBase
 		static void yield();
 
 	protected:
-		explicit Thread(bool bAutodelete,bool);
+		Thread(bool bAutodelete,bool);
 
 		const bool m_bAutodelete;
 

@@ -25,7 +25,6 @@
 #include "Memory.h"
 #include "Mutex.h"
 #include "Once.h"
-#include "SmartPtr.h"
 #include "Stack.h"
 
 namespace OOBase

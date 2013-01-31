@@ -60,7 +60,7 @@ namespace OOBase
 		class SmartHandle
 		{
 		public:
-			explicit SmartHandle(HANDLE h = INVALID_HANDLE_VALUE) :
+			SmartHandle(HANDLE h = INVALID_HANDLE_VALUE) :
 					m_handle(h)
 			{}
 
