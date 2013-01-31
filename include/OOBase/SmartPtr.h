@@ -22,24 +22,28 @@
 #ifndef OOBASE_SMARTPTR_H_INCLUDED_
 #define OOBASE_SMARTPTR_H_INCLUDED_
 
-#include "Memory.h"
+#include "RefCount.h"
 
 namespace OOBase
 {
-	template <typename T>
-	class DeleteDestructor
+	class StdDeleteDestructor
 	{
 	public:
+		typedef CrtAllocator Allocator;
+
+		template <typename T>
 		static void destroy(T* ptr)
 		{
 			delete ptr;
 		}
 	};
 
-	template <typename T>
-	class ArrayDeleteDestructor
+	class StdArrayDeleteDestructor
 	{
 	public:
+		typedef CrtAllocator Allocator;
+
+		template <typename T>
 		static void destroy(T* ptr)
 		{
 			delete [] ptr;
@@ -47,301 +51,137 @@ namespace OOBase
 	};
 
 	template <typename A>
+	class DeleteDestructor
+	{
+	public:
+		typedef A Allocator;
+
+		template <typename T>
+		static void destroy(T* ptr)
+		{
+			ptr->~T();
+			A::free(ptr);
+		}
+	};
+
+	template <>
+	class DeleteDestructor<AllocatorInstance>
+	{
+	public:
+		typedef AllocatorInstance Allocator;
+
+		template <typename T>
+		static void destroy(AllocatorInstance& allocator, T* ptr)
+		{
+			allocator.delete_free(ptr);
+		}
+	};
+
+	template <typename A>
 	class FreeDestructor
 	{
 	public:
+		typedef A Allocator;
+
 		static void destroy(void* ptr)
 		{
 			A::free(ptr);
 		}
 	};
 
+	template <>
+	class FreeDestructor<AllocatorInstance>
+	{
+	public:
+		typedef AllocatorInstance Allocator;
+
+		static void destroy(AllocatorInstance& allocator, void* ptr)
+		{
+			allocator.free(ptr);
+		}
+	};
+
 	namespace detail
 	{
-		template <typename Allocator>
-		class SmartPtrAlloc
+		template <typename T, typename Destructor, typename Allocator>
+		class SmartPtrNode : public RefCounted
 		{
-		protected:
-			struct SmartPtrNodeBase
-			{
-				size_t m_refcount; ///< The reference count.
-			};
+		public:
+			T* m_data;
 
-			template <typename T>
-			static void alloc_node(T*& n)
+			static SmartPtrNode* create(T* data)
 			{
-				n = static_cast<T*>(Allocator::allocate(sizeof(T),alignof<T>::value));
-				if (!n)
+				void* p = Allocator::allocate(sizeof(SmartPtrNode),alignof<SmartPtrNode>::value);
+				if (!p)
 					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-				n->m_refcount = 1;
+
+				return ::new (p) SmartPtrNode(data);
 			}
 
-			template <typename T>
-			static void free_node(T*& n)
+		protected:
+			SmartPtrNode(T* p) : m_data(p)
+			{}
+
+			~SmartPtrNode()
 			{
-				Allocator::free(n);
-				n = NULL;
+				Destructor::destroy(m_data);
 			}
 
-			template <typename T>
-			static T* addref_node(T* n)
+			virtual void destroy()
 			{
-				if (n)
-					++n->m_refcount;
-				return n;
+				this->~SmartPtrNode();
+				Allocator::free(this);
 			}
 		};
 
-		template <>
-		class SmartPtrAlloc<AllocatorInstance>
+		template <typename T, typename Destructor>
+		class SmartPtrNode<T,Destructor,AllocatorInstance> : public RefCounted
 		{
-		protected:
-			struct SmartPtrNodeBase
-			{
-				size_t             m_refcount; ///< The reference count.
-				AllocatorInstance* m_node_alloc;
-			};
+		public:
+			T* m_data;
 
+			static SmartPtrNode* create(AllocatorInstance& allocator, T* data)
+			{
+				void* p = allocator.allocate(sizeof(SmartPtrNode),alignof<SmartPtrNode>::value);
+				if (!p)
+					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+
+				return ::new (p) SmartPtrNode(allocator,data);
+			}
+
+		private:
 			AllocatorInstance& m_allocator;
 
-			SmartPtrAlloc(AllocatorInstance& a) : m_allocator(a)
+			SmartPtrNode(AllocatorInstance& allocator, T* p) : m_data(p), m_allocator(allocator)
 			{}
 
-			SmartPtrAlloc(const SmartPtrAlloc& rhs) : m_allocator(rhs.m_allocator)
-			{}
-
-			SmartPtrAlloc& operator = (const SmartPtrAlloc& rhs)
+			~SmartPtrNode()
 			{
-				if (this != &rhs)
-					 m_allocator = rhs.m_allocator;
-				return *this;
+				Destructor::destroy(m_allocator,m_data);
 			}
 
-			template <typename T>
-			void alloc_node(T*& n)
+			virtual void destroy()
 			{
-				n = static_cast<T*>(m_allocator.allocate(sizeof(T),alignof<T>::value));
-				if (!n)
-					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-				n->m_refcount = 1;
-				n->m_node_alloc = &m_allocator;
-			}
-
-			template <typename T>
-			static void free_node(T*& n)
-			{
-				n->m_node_alloc->free(n);
-				n = NULL;
-			}
-
-			template <typename T>
-			static T* addref_node(T* n)
-			{
-				if (n)
-					++n->m_refcount;
-				return n;
-			}
-
-		public:
-			AllocatorInstance& get_allocator()
-			{
-				return m_allocator;
-			}
-		};
-
-		template <typename T, typename Destructor, typename NodeAllocator>
-		class SmartPtrBase : public SmartPtrAlloc<NodeAllocator>
-		{
-			typedef SmartPtrAlloc<NodeAllocator> baseClass;
-
-		protected:
-			struct SmartPtrNode : public baseClass::SmartPtrNodeBase
-			{
-				T*     m_data;
-			};
-
-			SmartPtrNode* m_node;
-
-			SmartPtrBase(T* ptr) : m_node(new_node(ptr))
-			{}
-
-			SmartPtrBase(T* ptr, NodeAllocator& node_allocator) :
-				baseClass(node_allocator),
-				m_node(new_node(ptr))
-			{}
-
-			SmartPtrBase(const SmartPtrBase& rhs) :
-				baseClass(rhs),
-				m_node(baseClass::addref_node(rhs.m_node))
-			{}
-
-			SmartPtrBase& operator = (const SmartPtrBase& rhs)
-			{
-				if (this != &rhs)
-				{
-					release_node(m_node);
-					m_node = baseClass::addref_node(rhs.m_node);
-				}
-				return *this;
-			}
-
-			~SmartPtrBase()
-			{
-				release_node(m_node);
-			}
-
-			static void release_node(SmartPtrNode*& n)
-			{
-				if (n && --n->m_refcount == 0)
-				{
-					Destructor::destroy(n->m_data);
-					baseClass::free_node(n);
-				}
-			}
-
-			void update_node(SmartPtrNode*& n, T* ptr)
-			{
-				if (n)
-					release_node(n);
-
-				n = new_node(ptr);
-			}
-
-		private:
-			SmartPtrNode* new_node(T* ptr)
-			{
-				SmartPtrNode* n = NULL;
-				if (ptr)
-				{
-					baseClass::alloc_node(n);
-					n->m_data = ptr;
-				}
-				return n;
-			}
-		};
-
-		template <typename T, typename NodeAllocator>
-		class SmartPtrBase<T,FreeDestructor<AllocatorInstance>,NodeAllocator> : public SmartPtrAlloc<NodeAllocator>
-		{
-			typedef SmartPtrAlloc<NodeAllocator> baseClass;
-
-		protected:
-			struct SmartPtrNode : public baseClass::SmartPtrNodeBase
-			{
-				T*                 m_data;
-				AllocatorInstance* m_alloc;
-			};
-
-			SmartPtrNode* m_node;
-
-			SmartPtrBase(AllocatorInstance& allocator, T* ptr) :
-				baseClass(),
-				m_node(new_node(allocator,ptr))
-			{}
-
-			SmartPtrBase(AllocatorInstance& allocator, T* ptr, NodeAllocator& node_allocator) :
-				baseClass(node_allocator),
-				m_node(new_node(allocator,ptr))
-			{}
-
-			SmartPtrBase(const SmartPtrBase& rhs) :
-				baseClass(rhs),
-				m_node(baseClass::addref_node(rhs.m_node))
-			{}
-
-			SmartPtrBase& operator = (const SmartPtrBase& rhs)
-			{
-				if (this != &rhs)
-				{
-					release_node(m_node);
-					m_node = baseClass::addref_node(rhs.m_node);
-				}
-				return *this;
-			}
-
-			~SmartPtrBase()
-			{
-				release_node(m_node);
-			}
-
-			static void release_node(SmartPtrNode*& n)
-			{
-				if (n && --n->m_refcount == 0)
-				{
-					n->m_alloc->free(n->m_data);
-					baseClass::free_node(n);
-					n = NULL;
-				}
-			}
-
-			void update_node(SmartPtrNode*& n, T* ptr)
-			{
-				if (n && n->m_data != ptr)
-				{
-					AllocatorInstance* a = n->m_alloc;
-					release_node(n);
-					n = new_node(*a,ptr);
-				}
-			}
-
-		private:
-			SmartPtrNode* new_node(AllocatorInstance& allocator, T* ptr)
-			{
-				SmartPtrNode* n = NULL;
-				baseClass::alloc_node(n);
-				n->m_data = ptr;
-				n->m_alloc = &allocator;
-				return n;
-			}
-
-		public:
-			bool reallocate(size_t count)
-			{
-				T* p = NULL;
-				if (m_node)
-				{
-					p = static_cast<T*>(m_node->m_alloc->reallocate(m_node->m_data,sizeof(T)*count,alignof<T>::value));
-					if (p)
-						update_node(m_node,p);
-				}
-				return (p ? true : false);
+				AllocatorInstance& allocator = m_allocator;
+				this->~SmartPtrNode();
+				allocator.free(this);
 			}
 		};
 
 		template <typename T, typename Destructor, typename Allocator>
-		class SmartPtrImpl : public SmartPtrBase<T,Destructor,Allocator>
+		class SmartPtrImpl
 		{
-			typedef SmartPtrBase<T,Destructor,Allocator> baseClass;
+			typedef SmartPtrNode<T,Destructor,Allocator> nodeType;
 
 		public:
-			SmartPtrImpl(T* ptr = NULL) : baseClass(ptr)
-			{}
-
-			SmartPtrImpl(T* ptr, Allocator& node_allocator) : baseClass(ptr,node_allocator)
-			{}
-
-			SmartPtrImpl(AllocatorInstance& allocator, T* ptr = NULL) : baseClass(allocator,ptr)
-			{}
-
-			SmartPtrImpl(AllocatorInstance& allocator, T* ptr, Allocator& node_allocator) : baseClass(allocator,ptr,node_allocator)
-			{}
-
-			SmartPtrImpl& operator = (T* ptr)
+			SmartPtrImpl(T* ptr) : m_node(NULL)
 			{
-				baseClass::update_node(this->m_node,ptr);
-				return *this;
+				if (ptr)
+					m_node = nodeType::create(ptr);
 			}
 
-			T* detach()
-			{
-				T* v = NULL;
-				if (this->m_node)
-				{
-					v = this->m_node->m_data;
-					this->m_node->m_data = NULL;
-				}
-				return v;
-			}
+			SmartPtrImpl(Allocator& allocator, T* ptr) : m_node(nodeType::create(allocator,ptr))
+			{}
 
 			operator T*()
 			{
@@ -356,48 +196,42 @@ namespace OOBase
 		protected:
 			T* value()
 			{
-				return (this->m_node ? this->m_node->m_data : NULL);
+				return (m_node ? m_node->m_data : NULL);
 			}
 
 			const T* value() const
 			{
-				return (this->m_node ? this->m_node->m_data : NULL);
+				return (m_node ? m_node->m_data : NULL);
 			}
+
+			void assign(T* ptr)
+			{
+				if (ptr)
+					m_node = nodeType::create(ptr);
+				else
+					m_node = NULL;
+			}
+
+		private:
+			RefPtr<nodeType> m_node;
 		};
 	}
 
-	template <typename T, typename Destructor = DeleteDestructor<T>, typename Allocator = CrtAllocator >
-	class SmartPtr : public detail::SmartPtrImpl<T,Destructor,Allocator>
+	template <typename T, typename Destructor = StdDeleteDestructor >
+	class SmartPtr : public detail::SmartPtrImpl<T,Destructor,typename Destructor::Allocator>
 	{
-		typedef detail::SmartPtrImpl<T,Destructor,Allocator> baseClass;
+		typedef detail::SmartPtrImpl<T,Destructor,typename Destructor::Allocator> baseClass;
 
 	public:
 		SmartPtr(T* ptr = NULL) : baseClass(ptr)
 		{}
 
-		SmartPtr(T* ptr, Allocator& node_allocator) : baseClass(ptr,node_allocator)
+		SmartPtr(typename Destructor::Allocator& allocator, T* ptr = NULL) : baseClass(allocator,ptr)
 		{}
 
-		SmartPtr(AllocatorInstance& allocator, T* ptr = NULL) : baseClass(allocator,ptr)
-		{}
-
-		SmartPtr(AllocatorInstance& allocator, T* ptr, Allocator& node_allocator) : baseClass(allocator,ptr,node_allocator)
-		{}
-
-		SmartPtr(const SmartPtr& rhs) : baseClass(rhs)
-		{}
-
-		SmartPtr& operator = (T* ptr)
+		SmartPtr& operator = (T* p)
 		{
-			baseClass::operator=(ptr);
-			return *this;
-		}
-
-		SmartPtr& operator = (const SmartPtr& rhs)
-		{
-			if (this != &rhs)
-				baseClass::operator=(rhs);
-
+			baseClass::assign(p);
 			return *this;
 		}
 
@@ -416,80 +250,21 @@ namespace OOBase
 		}
 	};
 
-	template <typename Destructor, typename Allocator>
-	class SmartPtr<void,Destructor,Allocator> : public detail::SmartPtrImpl<void,Destructor,Allocator>
-	{
-		typedef detail::SmartPtrImpl<void,Destructor,Allocator> baseClass;
-
-	public:
-		SmartPtr(void* ptr = NULL) : baseClass(ptr)
-		{}
-
-		SmartPtr(void* ptr, Allocator& node_allocator) : baseClass(ptr,node_allocator)
-		{}
-
-		SmartPtr(AllocatorInstance& allocator, void* ptr = NULL) : baseClass(allocator,ptr)
-		{}
-
-		SmartPtr(AllocatorInstance& allocator, void* ptr, Allocator& node_allocator) : baseClass(allocator,ptr,node_allocator)
-		{}
-
-		SmartPtr(const SmartPtr& rhs) : baseClass(rhs)
-		{}
-
-		SmartPtr& operator = (void* ptr)
-		{
-			baseClass::operator=(ptr);
-			return *this;
-		}
-
-		SmartPtr& operator = (const SmartPtr& rhs)
-		{
-			if (this != &rhs)
-				baseClass::operator=(rhs);
-
-			return *this;
-		}
-
-		template <typename T2>
-		operator T2*()
-		{
-			return static_cast<T2*>(baseClass::value());
-		}
-
-		template <typename T2>
-		operator const T2*() const
-		{
-			return static_cast<T2*>(baseClass::value());
-		}
-	};
-
 	template <typename Destructor>
-	class SmartPtr<void,Destructor,CrtAllocator> : public detail::SmartPtrImpl<void,Destructor,CrtAllocator>
+	class SmartPtr<void,Destructor> : public detail::SmartPtrImpl<void,Destructor,typename Destructor::Allocator>
 	{
-		typedef detail::SmartPtrImpl<void,Destructor,CrtAllocator> baseClass;
+		typedef detail::SmartPtrImpl<void,Destructor,typename Destructor::Allocator> baseClass;
 
 	public:
 		SmartPtr(void* ptr = NULL) : baseClass(ptr)
 		{}
 
-		SmartPtr(AllocatorInstance& allocator, void* ptr = NULL) : baseClass(allocator,ptr)
+		SmartPtr(typename Destructor::Allocator& allocator, void* ptr = NULL) : baseClass(allocator,ptr)
 		{}
 
-		SmartPtr(const SmartPtr& rhs) : baseClass(rhs)
-		{}
-
-		SmartPtr& operator = (void* ptr)
+		SmartPtr& operator = (void* p)
 		{
-			baseClass::operator=(ptr);
-			return *this;
-		}
-
-		SmartPtr& operator = (const SmartPtr& rhs)
-		{
-			if (this != &rhs)
-				baseClass::operator=(rhs);
-
+			baseClass::assign(p);
 			return *this;
 		}
 
@@ -503,50 +278,17 @@ namespace OOBase
 		operator const T2*() const
 		{
 			return static_cast<T2*>(baseClass::value());
-		}
-	};
-
-	template <typename T>
-	class TempPtr : public SmartPtr<T,FreeDestructor<AllocatorInstance>,AllocatorInstance>
-	{
-		typedef SmartPtr<T,FreeDestructor<AllocatorInstance>,AllocatorInstance> baseClass;
-
-	public:
-		TempPtr(AllocatorInstance& allocator, T* ptr = NULL) : baseClass(allocator,ptr,allocator)
-		{}
-
-		TempPtr(const TempPtr& rhs) : baseClass(rhs)
-		{}
-
-		TempPtr& operator = (T* ptr)
-		{
-			baseClass::operator=(ptr);
-			return *this;
-		}
-
-		TempPtr& operator = (const TempPtr& rhs)
-		{
-			if (this != &rhs)
-				baseClass::operator=(rhs);
-
-			return *this;
 		}
 	};
 
 	namespace detail
 	{
-		template <typename T, typename Destructor>
-		class LocalPtrImpl
+		template <typename T>
+		class LocalPtrBase
 		{
 		public:
-			LocalPtrImpl(T* p = NULL) : m_data(p)
+			LocalPtrBase(T* p) : m_data(p)
 			{}
-
-			~LocalPtrImpl()
-			{
-				if (m_data)
-					Destructor::destroy(m_data);
-			}
 
 			T* detach()
 			{
@@ -569,85 +311,184 @@ namespace OOBase
 			T* m_data;
 
 		private:
-			LocalPtrImpl(const LocalPtrImpl&);
-			LocalPtrImpl& operator = (const LocalPtrImpl&);
+			LocalPtrBase(const LocalPtrBase&);
+			LocalPtrBase& operator = (const LocalPtrBase&);
 		};
 
-		template <typename T>
-		class LocalPtrImpl<T,FreeDestructor<AllocatorInstance> >
+		template <typename T, typename Destructor, typename Allocator>
+		class LocalPtrImpl : public LocalPtrBase<T>
 		{
 		public:
-			LocalPtrImpl(AllocatorInstance& allocator, T* p = NULL) : m_data(p), m_allocator(allocator)
+			LocalPtrImpl(T* p) : LocalPtrBase<T>(p)
 			{}
 
 			~LocalPtrImpl()
 			{
-				if (m_data)
-					m_allocator.free(m_data);
-			}
-
-			T* detach()
-			{
-				T* p = m_data;
-				m_data = NULL;
-				return p;
-			}
-
-			operator T*()
-			{
-				return m_data;
-			}
-
-			operator const T*() const
-			{
-				return m_data;
+				if (LocalPtrBase<T>::m_data)
+					Destructor::destroy(LocalPtrBase<T>::m_data);
 			}
 
 		protected:
-			T* m_data;
+			void assign(T* p)
+			{
+				if (p != LocalPtrBase<T>::m_data)
+				{
+					if (LocalPtrBase<T>::m_data)
+						Destructor::destroy(LocalPtrBase<T>::m_data);
 
-		private:
-			LocalPtrImpl(const LocalPtrImpl&);
-			LocalPtrImpl& operator = (const LocalPtrImpl&);
+					LocalPtrBase<T>::m_data = p;
+				}
+			}
+		};
 
+		template <typename T, typename Destructor>
+		class LocalPtrImpl<T,Destructor,AllocatorInstance> : public LocalPtrBase<T>
+		{
+		public:
+			LocalPtrImpl(AllocatorInstance& allocator, T* p) : LocalPtrBase<T>(p), m_allocator(allocator)
+			{}
+
+			~LocalPtrImpl()
+			{
+				if (LocalPtrBase<T>::m_data)
+					Destructor::destroy(m_allocator,LocalPtrBase<T>::m_data);
+			}
+
+			AllocatorInstance& get_allocator() const
+			{
+				return m_allocator;
+			}
+
+		protected:
 			AllocatorInstance& m_allocator;
+
+			void assign(T* p)
+			{
+				if (p != LocalPtrBase<T>::m_data)
+				{
+					if (LocalPtrBase<T>::m_data)
+						Destructor::destroy(m_allocator,LocalPtrBase<T>::m_data);
+
+					LocalPtrBase<T>::m_data = p;
+				}
+			}
 		};
 	}
 
-	template <typename T, typename Destructor>
-	class LocalPtr : public detail::LocalPtrImpl<T,Destructor>
+	template <typename T, typename Destructor = StdDeleteDestructor >
+	class LocalPtr : public detail::LocalPtrImpl<T,Destructor,typename Destructor::Allocator>
 	{
-		typedef detail::LocalPtrImpl<T,Destructor> baseClass;
+		typedef detail::LocalPtrImpl<T,Destructor,typename Destructor::Allocator> baseClass;
 
 	public:
 		LocalPtr(T* p = NULL) : baseClass(p)
 		{}
 
-		LocalPtr(AllocatorInstance& allocator, T* p = NULL) : baseClass(allocator,p)
+		LocalPtr(typename Destructor::Allocator& allocator, T* p = NULL) : baseClass(allocator,p)
 		{}
+
+		LocalPtr& operator = (T* p)
+		{
+			baseClass::assign(p);
+			return *this;
+		}
 
 		T* operator ->()
 		{
+			assert(baseClass::m_data != NULL);
+
 			return baseClass::m_data;
 		}
 
 		const T* operator ->() const
 		{
+			assert(baseClass::m_data != NULL);
+
 			return baseClass::m_data;
 		}
 	};
 
 	template <typename Destructor>
-	class LocalPtr<void,Destructor> : public detail::LocalPtrImpl<void,Destructor>
+	class LocalPtr<void,Destructor> : public detail::LocalPtrImpl<void,Destructor,typename Destructor::Allocator>
 	{
-		typedef detail::LocalPtrImpl<void,Destructor> baseClass;
+		typedef detail::LocalPtrImpl<void,Destructor,typename Destructor::Allocator> baseClass;
 
 	public:
 		LocalPtr(void* p = NULL) : baseClass(p)
 		{}
 
-		LocalPtr(AllocatorInstance& allocator, void* p = NULL) : baseClass(allocator,p)
+		LocalPtr(typename Destructor::Allocator& allocator, void* p = NULL) : baseClass(allocator,p)
 		{}
+
+		LocalPtr& operator = (void* p)
+		{
+			baseClass::assign(p);
+			return *this;
+		}
+
+		template <typename T2>
+		operator T2*()
+		{
+			return static_cast<T2*>(baseClass::m_data);
+		}
+
+		template <typename T2>
+		operator const T2*() const
+		{
+			return static_cast<T2*>(baseClass::m_data);
+		}
+	};
+
+	template <typename T>
+	class TempPtr : public detail::LocalPtrImpl<T,FreeDestructor<AllocatorInstance>,AllocatorInstance>
+	{
+		typedef detail::LocalPtrImpl<T,FreeDestructor<AllocatorInstance>,AllocatorInstance> baseClass;
+
+	public:
+		TempPtr(AllocatorInstance& allocator, T* ptr = NULL) : baseClass(allocator,ptr)
+		{
+			static_assert(!detail::is_pod<T>::value,"Do not use POD types in TempPtr");
+		}
+
+		TempPtr& operator = (T* p)
+		{
+			baseClass::assign(p);
+			return *this;
+		}
+
+		bool reallocate(size_t count)
+		{
+			T* p = static_cast<T*>(baseClass::m_allocator.reallocate(baseClass::m_data,sizeof(T)*count,alignof<T>::value));
+			if (p)
+				baseClass::m_data = p;
+
+			return (p ? true : false);
+		}
+	};
+
+	template <>
+	class TempPtr<void> : public detail::LocalPtrImpl<void,FreeDestructor<AllocatorInstance>,AllocatorInstance>
+	{
+		typedef detail::LocalPtrImpl<void,FreeDestructor<AllocatorInstance>,AllocatorInstance> baseClass;
+
+	public:
+		TempPtr(AllocatorInstance& allocator, void* ptr = NULL) : baseClass(allocator,ptr)
+		{}
+
+		TempPtr& operator = (void* p)
+		{
+			baseClass::assign(p);
+			return *this;
+		}
+
+		bool reallocate(size_t bytes, size_t align)
+		{
+			void* p = baseClass::m_allocator.reallocate(baseClass::m_data,bytes,align);
+			if (p)
+				baseClass::m_data = p;
+
+			return (p ? true : false);
+		}
 
 		template <typename T2>
 		operator T2*()

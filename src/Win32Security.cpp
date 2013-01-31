@@ -80,7 +80,7 @@ DWORD OOBase::Win32::sec_descript_t::SetEntriesInAcl(ULONG cCountOfExplicitEntri
 DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, TempPtr<wchar_t>& strUserName, TempPtr<wchar_t>& strDomainName)
 {
 	// Find out all about the user associated with hToken
-	TempPtr<TOKEN_USER> ptrUserInfo(strUserName.get_allocator());
+	LocalPtr<TOKEN_USER,FreeDestructor<AllocatorInstance> > ptrUserInfo(strUserName.get_allocator());
 	DWORD dwErr = GetTokenInfo(hToken,TokenUser,ptrUserInfo);
 	if (dwErr)
 		return dwErr;
@@ -148,7 +148,7 @@ DWORD OOBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile)
 DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, TempPtr<void>& pSIDLogon)
 {
 	// Get the logon SID of the Token
-	TempPtr<TOKEN_GROUPS> ptrGroups(pSIDLogon.get_allocator());
+	LocalPtr<TOKEN_GROUPS,FreeDestructor<AllocatorInstance> > ptrGroups(pSIDLogon.get_allocator());
 	DWORD dwErr = GetTokenInfo(hToken,TokenGroups,ptrGroups);
 	if (dwErr)
 		return dwErr;
@@ -163,8 +163,7 @@ DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, TempPtr<void>& pSIDLogon)
 			{
 				DWORD dwLen = GetLengthSid(ptrGroups->Groups[dwIndex].Sid);
 
-				pSIDLogon = pSIDLogon.get_allocator().allocate(dwLen,16);
-				if (!pSIDLogon)
+				if (!pSIDLogon.reallocate(dwLen,16))
 					return ERROR_OUTOFMEMORY;
 
 				if (!CopySid(dwLen,pSIDLogon,ptrGroups->Groups[dwIndex].Sid))
@@ -182,7 +181,7 @@ DWORD OOBase::Win32::SetTokenDefaultDACL(HANDLE hToken)
 {
 	// Get the current Default DACL
 	StackAllocator<256> allocator;
-	TempPtr<TOKEN_DEFAULT_DACL> ptrDef_dacl(allocator);
+	LocalPtr<TOKEN_DEFAULT_DACL,FreeDestructor<AllocatorInstance> > ptrDef_dacl(allocator);
 	DWORD dwErr = GetTokenInfo(hToken,TokenDefaultDacl,ptrDef_dacl);
 	if (dwErr)
 		return dwErr;

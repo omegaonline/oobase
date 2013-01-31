@@ -315,7 +315,7 @@ namespace OOBase
 		{
 			if (count > COUNT)
 			{
-				m_data = m_dynamic = static_cast<T*>(Allocator::allocate(count * sizeof(T)));
+				m_data = m_dynamic = static_cast<T*>(Allocator::allocate(count * sizeof(T),alignof<T>::value));
 				if (!m_data)
 				{
 					m_count = 0;
@@ -356,7 +356,7 @@ namespace OOBase
 		T*          m_data;
 		size_t      m_count;
 
-		SmartPtr<T,FreeDestructor<Allocator> > m_dynamic;
+		LocalPtr<T,FreeDestructor<Allocator> > m_dynamic;
 	};
 }
 

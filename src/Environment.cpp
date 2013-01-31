@@ -56,7 +56,7 @@ namespace
 		return err;
 	}
 
-	bool env_sort(const OOBase::TempPtr<wchar_t>& s1, const OOBase::TempPtr<wchar_t>& s2)
+	bool env_sort(const OOBase::SmartPtr<wchar_t,OOBase::FreeDestructor<OOBase::AllocatorInstance> >& s1, const OOBase::SmartPtr<wchar_t,OOBase::FreeDestructor<OOBase::AllocatorInstance> >& s2)
 	{
 		return (_wcsicmp(s1,s2) < 0);
 	}
@@ -91,19 +91,23 @@ int OOBase::Environment::get_user(HANDLE hToken, env_table_t& tabEnv)
 
 int OOBase::Environment::get_block(const env_table_t& tabEnv, TempPtr<wchar_t>& ptr)
 {
+	typedef SmartPtr<wchar_t,FreeDestructor<AllocatorInstance> > temp_wchar_t;
+
+	AllocatorInstance& allocator = tabEnv.get_allocator();
+
 	// Copy and widen to UNICODE
 	size_t total_size = 0;
-	Table<TempPtr<wchar_t>,TempPtr<wchar_t>,AllocatorInstance> wenv(tabEnv.get_allocator());
+	Table<temp_wchar_t,temp_wchar_t,AllocatorInstance> wenv(allocator);
 	for (size_t i=0;i<tabEnv.size();++i)
 	{
-		TempPtr<wchar_t> key(tabEnv.get_allocator());
-		TempPtr<wchar_t> val(tabEnv.get_allocator());
+		TempPtr<wchar_t> key(allocator);
+		TempPtr<wchar_t> val(allocator);
 
 		int err = Win32::utf8_to_wchar_t(tabEnv.key_at(i)->c_str(),key);
 		if (!err)
 			err = Win32::utf8_to_wchar_t(tabEnv.at(i)->c_str(),val);
 		if (!err)
-			err = wenv.insert(key,val);
+			err = wenv.insert(temp_wchar_t(allocator,key),temp_wchar_t(allocator,val));
 
 		if (err)
 			return err;

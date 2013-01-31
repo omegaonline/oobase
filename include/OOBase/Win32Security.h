@@ -125,7 +125,7 @@ namespace OOBase
 		bool MatchPrivileges(ULONG count, PLUID_AND_ATTRIBUTES Privs1, PLUID_AND_ATTRIBUTES Privs2);
 
 		template <typename T>
-		DWORD GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls, OOBase::TempPtr<T>& info)
+		DWORD GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls, OOBase::LocalPtr<T,FreeDestructor<AllocatorInstance> >& info)
 		{
 			DWORD dwLen = 0;
 			if (GetTokenInformation(hToken,cls,NULL,0,&dwLen))
