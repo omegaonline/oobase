@@ -31,6 +31,21 @@ namespace OOBase
 	class CDRIO
 	{
 	public:
+		template <typename H>
+		static int recv_with_header_blocking(CDRStream& stream, AsyncSocket* pSocket)
+		{
+			int err = pSocket->recv(stream.buffer(),sizeof(H));
+			if (!err)
+			{
+				H msg_len = 0;
+				if (!stream.read(msg_len))
+					err = stream.last_error();
+				else
+					err = pSocket->recv(stream.buffer(),msg_len - sizeof(H));
+			}
+			return err;
+		}
+
 		template <typename H, typename T>
 		static int recv_with_header_sync(H expected_len, AsyncSocket* pSocket, T* param, void (T::*callback)(CDRStream& stream, int err))
 		{
@@ -142,7 +157,7 @@ namespace OOBase
 				}
 				if (err)
 				{
-					thunk.m_allocator.free(static_cast<ThunkRHS*>(param));
+					thunk.m_allocator.delete_free(static_cast<ThunkRHS*>(param));
 					(thunk.m_param->*thunk.m_callback)(stream,err);
 				}
 			}
@@ -150,7 +165,7 @@ namespace OOBase
 			static void fn2(void* param, Buffer* buffer, int err)
 			{
 				ThunkRHS thunk = *static_cast<ThunkRHS*>(param);
-				thunk.m_allocator.free(static_cast<ThunkRHS*>(param));
+				thunk.m_allocator.delete_free(static_cast<ThunkRHS*>(param));
 				CDRStream stream(buffer);
 				(thunk.m_param->*thunk.m_callback)(stream,err);
 			}
@@ -167,6 +182,7 @@ namespace OOBase
 			void (T::*m_callback)(CDRStream&,Buffer*,int);
 			AllocatorInstance&  m_allocator;
 			RefPtr<AsyncSocket> m_ptrSocket;
+			RefPtr<Buffer>      m_ctl_buffer;
 
 			static void fn1(void* param, Buffer* data_buffer, Buffer* ctl_buffer, int err)
 			{
@@ -178,21 +194,25 @@ namespace OOBase
 					if (!stream.read(msg_len))
 						err = stream.last_error();
 					else
-						err = thunk.m_ptrSocket->recv_msg(param,&fn2,data_buffer,ctl_buffer,msg_len - sizeof(H));
+					{
+						static_cast<ThunkRMHS*>(param)->m_ctl_buffer = ctl_buffer;
+						ctl_buffer->addref();
+						err = thunk.m_ptrSocket->recv(param,&fn2,data_buffer,msg_len - sizeof(H));
+					}
 				}
 				if (err)
 				{
-					thunk.m_allocator.free(static_cast<ThunkRMHS*>(param));
+					thunk.m_allocator.delete_free(static_cast<ThunkRMHS*>(param));
 					(thunk.m_param->*thunk.m_callback)(stream,ctl_buffer,err);
 				}
 			}
 
-			static void fn2(void* param, Buffer* data_buffer, Buffer* ctl_buffer, int err)
+			static void fn2(void* param, Buffer* data_buffer, int err)
 			{
 				ThunkRMHS thunk = *static_cast<ThunkRMHS*>(param);
-				thunk.m_allocator.free(static_cast<ThunkRMHS*>(param));
+				thunk.m_allocator.delete_free(static_cast<ThunkRMHS*>(param));
 				CDRStream stream(data_buffer);
-				(thunk.m_param->*thunk.m_callback)(stream,ctl_buffer,err);
+				(thunk.m_param->*thunk.m_callback)(stream,thunk.m_ctl_buffer,err);
 			}
 		};
 
@@ -220,7 +240,7 @@ namespace OOBase
 				}
 				if (err)
 				{
-					thunk.m_allocator.free(static_cast<ThunkSRHS*>(param));
+					thunk.m_allocator.delete_free(static_cast<ThunkSRHS*>(param));
 					(thunk.m_param->*thunk.m_callback)(stream,err);
 				}
 			}
@@ -239,7 +259,7 @@ namespace OOBase
 				}
 				if (err)
 				{
-					thunk.m_allocator.free(static_cast<ThunkSRHS*>(param));
+					thunk.m_allocator.delete_free(static_cast<ThunkSRHS*>(param));
 					(thunk.m_param->*thunk.m_callback)(stream,err);
 				}
 			}
@@ -247,7 +267,7 @@ namespace OOBase
 			static void fn3(void* param, Buffer* buffer, int err)
 			{
 				ThunkSRHS thunk = *static_cast<ThunkSRHS*>(param);
-				thunk.m_allocator.free(static_cast<ThunkSRHS*>(param));
+				thunk.m_allocator.delete_free(static_cast<ThunkSRHS*>(param));
 				CDRStream stream(buffer);
 				(thunk.m_param->*thunk.m_callback)(stream,err);
 			}
