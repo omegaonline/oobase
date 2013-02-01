@@ -40,7 +40,7 @@ namespace OOBase
 				H msg_len = 0;
 				if (!stream.read(msg_len))
 					err = stream.last_error();
-				else
+				else if (msg_len > sizeof(H))
 					err = pSocket->recv(stream.buffer(),msg_len - sizeof(H));
 			}
 			return err;
@@ -91,7 +91,7 @@ namespace OOBase
 					H msg_len = 0;
 					if (!stream.read(msg_len))
 						err = stream.last_error();
-					else
+					else if (msg_len > sizeof(H))
 						err = pSocket->recv(stream.buffer(),msg_len - sizeof(H));
 				}
 			}
@@ -111,7 +111,7 @@ namespace OOBase
 					H msg_len = 0;
 					if (!stream.read(msg_len))
 						err = stream.last_error();
-					else
+					else if (msg_len > sizeof(H))
 						err = pSocket->recv(stream.buffer(),msg_len - sizeof(H));
 				}
 			}
@@ -146,15 +146,20 @@ namespace OOBase
 			static void fn1(void* param, Buffer* buffer, int err)
 			{
 				CDRStream stream(buffer);
+				bool done = false;
 				if (!err)
 				{
 					H msg_len = 0;
 					if (!stream.read(msg_len))
 						err = stream.last_error();
-					else
+					else if (msg_len > sizeof(H))
 						err = static_cast<ThunkRHS*>(param)->m_ptrSocket->recv(param,&fn2,buffer,msg_len - sizeof(H));
+					else
+						done = true;
 				}
 				if (err)
+					done = true;
+				if (done)
 				{
 					ThunkRHS thunk = *static_cast<ThunkRHS*>(param);
 					thunk.m_allocator.delete_free(static_cast<ThunkRHS*>(param));
@@ -187,6 +192,7 @@ namespace OOBase
 			static void fn1(void* param, Buffer* data_buffer, Buffer* ctl_buffer, int err)
 			{
 				CDRStream stream(data_buffer);
+				bool done = false;
 				if (!err)
 				{
 					H msg_len = 0;
@@ -196,10 +202,16 @@ namespace OOBase
 					{
 						static_cast<ThunkRMHS*>(param)->m_ctl_buffer = ctl_buffer;
 						ctl_buffer->addref();
-						err = static_cast<ThunkRMHS*>(param)->m_ptrSocket->recv(param,&fn2,data_buffer,msg_len - sizeof(H));
+
+						if (msg_len > sizeof(H))
+							err = static_cast<ThunkRMHS*>(param)->m_ptrSocket->recv(param,&fn2,data_buffer,msg_len - sizeof(H));
+						else
+							done = true;
 					}
 				}
 				if (err)
+					done = true;
+				if (done)
 				{
 					ThunkRMHS thunk = *static_cast<ThunkRMHS*>(param);
 					thunk.m_allocator.delete_free(static_cast<ThunkRMHS*>(param));
@@ -248,15 +260,20 @@ namespace OOBase
 			static void fn2(void* param, Buffer* buffer, int err)
 			{
 				CDRStream stream(buffer);
+				bool done = false;
 				if (!err)
 				{
 					H msg_len = 0;
 					if (!stream.read(msg_len))
 						err = stream.last_error();
-					else
+					else if (msg_len > sizeof(H))
 						err = static_cast<ThunkSRHS*>(param)->m_ptrSocket->recv(param,&fn3,buffer,msg_len - sizeof(H));
+					else
+						done = true;
 				}
 				if (err)
+					done = true;
+				if (done)
 				{
 					ThunkSRHS thunk = *static_cast<ThunkSRHS*>(param);
 					thunk.m_allocator.delete_free(static_cast<ThunkSRHS*>(param));
