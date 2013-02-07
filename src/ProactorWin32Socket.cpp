@@ -536,7 +536,7 @@ int Win32AsyncSocket::shutdown(bool bSend, bool bRecv)
 
 int Win32AsyncSocket::setsockopt(int level, int option_name, const void* option_value, size_t option_len)
 {
-	return (::setsockopt(m_fd,level,option_name,option_value,option_len) != 0 ? WSAGetLastError() : 0);
+	return (::setsockopt(m_hSocket,level,option_name,static_cast<const char*>(option_value),option_len) != 0 ? WSAGetLastError() : 0);
 }
 
 namespace
