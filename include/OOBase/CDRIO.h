@@ -31,8 +31,8 @@ namespace OOBase
 	class CDRIO
 	{
 	public:
-		template <typename H>
-		static int recv_with_header_blocking(CDRStream& stream, AsyncSocket* pSocket)
+		template <typename H, typename S>
+		static int recv_with_header_blocking(CDRStream& stream, S pSocket)
 		{
 			int err = pSocket->recv(stream.buffer(),sizeof(H));
 			if (!err)
@@ -78,8 +78,8 @@ namespace OOBase
 			return pSocket->recv_msg(thunk,&ThunkRMHS<T,H>::fn1,stream.buffer(),ctl_buffer,sizeof(H));
 		}
 
-		template <typename H>
-		static int send_and_recv_with_header_blocking(CDRStream& stream, AsyncSocket* pSocket)
+		template <typename H, typename S>
+		static int send_and_recv_with_header_blocking(CDRStream& stream, S pSocket)
 		{
 			int err = pSocket->send(stream.buffer());
 			if (!err)
@@ -98,8 +98,8 @@ namespace OOBase
 			return err;
 		}
 
-		template <typename H>
-		static int send_msg_and_recv_with_header_blocking(CDRStream& stream, Buffer* ctl_buffer, AsyncSocket* pSocket)
+		template <typename H, typename S>
+		static int send_msg_and_recv_with_header_blocking(CDRStream& stream, Buffer* ctl_buffer, S pSocket)
 		{
 			int err = pSocket->send_msg(stream.buffer(),ctl_buffer);
 			if (!err)
