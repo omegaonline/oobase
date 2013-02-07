@@ -556,10 +556,22 @@ int PosixAsyncSocket::process_recv_msg(RecvItem* item, bool& watch_again)
 	msg.msg_control = item->m_ctl_buffer->wr_ptr();
 	msg.msg_controllen = item->m_ctl_buffer->space();
 
+#ifdef MSG_CMSG_CLOEXEC
+	msg.msg_flags |= MSG_CMSG_CLOEXEC;
+#endif
+
 	ssize_t r = 0;
 	do
 	{
-		r = ::recvmsg(m_fd,&msg,0);
+		r = ::recvmsg(m_fd,&msg,msg.msg_flags);
+
+#ifdef MSG_CMSG_CLOEXEC
+		if (r < 0 && errno == EINVAL)
+		{
+			msg.msg_flags &= ~MSG_CMSG_CLOEXEC;
+			r = ::recvmsg(m_fd,&msg,msg.msg_flags);
+		}
+#endif
 	}
 	while (r == -1 && errno == EINTR);
 

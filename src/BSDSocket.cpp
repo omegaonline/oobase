@@ -753,6 +753,10 @@ size_t Socket::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t c
 	msg.msg_control = ctl_buf;
 	msg.msg_controllen = ctl_len;
 
+#ifdef MSG_CMSG_CLOEXEC
+	msg.msg_flags |= MSG_CMSG_CLOEXEC;
+#endif
+
 	OOBase::Guard<OOBase::Mutex> guard(m_recv_lock);
 
 	if (m_sock == -1)
@@ -766,7 +770,14 @@ size_t Socket::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t c
 	{
 		do
 		{
-			recvd = ::recvmsg(m_sock,&msg,0);
+			recvd = ::recvmsg(m_sock,&msg,msg.msg_flags);
+#ifdef MSG_CMSG_CLOEXEC
+			if (recvd < 0 && errno == EINVAL)
+			{
+				msg.msg_flags &= ~MSG_CMSG_CLOEXEC;
+				recvd = ::recvmsg(m_sock,&msg,msg.msg_flags);
+			}
+#endif
 		}
 		while (recvd == -1 && errno == EINTR);
 
