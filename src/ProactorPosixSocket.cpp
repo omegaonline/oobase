@@ -874,7 +874,7 @@ namespace
 		SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, OOBase::AllocatorInstance& allocator, void* param, OOBase::Proactor::accept_pipe_callback_t callback);
 		virtual ~SocketAcceptor();
 
-		int bind(const sockaddr* addr, socklen_t addr_len, mode_t mode);
+		int bind(const sockaddr* addr, socklen_t addr_len, SECURITY_ATTRIBUTES* psa);
 
 	private:
 		OOBase::detail::ProactorPosix*           m_pProactor;
@@ -916,7 +916,7 @@ SocketAcceptor::~SocketAcceptor()
 	}
 }
 
-int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len, mode_t mode)
+int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len, SECURITY_ATTRIBUTES* psa)
 {
 	// Create a new socket
 	int err = 0;
@@ -924,10 +924,19 @@ int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len, mode_t mode)
 	if (err)
 		return err;
 
+#if defined(LOCAL_CREDS)
+	if (psa->enable_local_creds)
+	{
+		int val = 1;
+		if (::setsockopt(fd, 0, LOCAL_CREDS, &val, sizeof(val)) != 0)
+			return errno;
+	}
+#endif
+
 	// Apparently, chmod before bind()
 
 	// Bind to the address
-	if (::fchmod(fd,mode) != 0 || ::bind(fd,addr,addr_len) != 0 || ::listen(fd,SOMAXCONN) != 0)
+	if (::fchmod(fd,psa->mode) != 0 || ::bind(fd,addr,addr_len) != 0 || ::listen(fd,SOMAXCONN) != 0)
 		err = errno;
 	else
 	{
@@ -1046,7 +1055,7 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_call
 		err = ENOMEM;
 	else
 	{
-		err = pAcceptor->bind(addr,addr_len,0666);
+		err = pAcceptor->bind(addr,addr_len,NULL);
 		if (err != 0)
 		{
 			allocator.delete_free(pAcceptor);
@@ -1071,16 +1080,20 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_pipe
 		err = ENOMEM;
 	else
 	{
-		mode_t mode = 0666;
-		if (psa)
-			mode = psa->mode;
+		SECURITY_ATTRIBUTES defaults;
+		defaults.mode = 0777;
+#if defined(LOCAL_CREDS)
+		defaults.enable_local_creds = false;
+#endif
+		if (!psa)
+			psa = &defaults;
 
 		// Compose filename
 		sockaddr_un addr = {0};
 		socklen_t addr_len;
 		POSIX::create_unix_socket_address(addr,addr_len,path);
 
-		err = pAcceptor->bind((sockaddr*)&addr,addr_len,mode);
+		err = pAcceptor->bind((sockaddr*)&addr,addr_len,psa);
 		if (err != 0)
 		{
 			allocator.delete_free(pAcceptor);

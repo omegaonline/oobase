@@ -30,6 +30,10 @@
 typedef struct
 {
 	mode_t mode;
+
+#if defined(LOCAL_CREDS)
+	bool enable_local_creds;
+#endif
 } SECURITY_ATTRIBUTES;
 #endif
 
