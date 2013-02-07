@@ -114,7 +114,6 @@ liboobase_la_SOURCES = \
 	src/Win32Socket.h \
 	src/ArenaAllocator.cpp \
 	src/BSDSocket.cpp \
-	src/GetPeerUid.cpp \
 	src/Buffer.cpp \
 	src/CmdArgs.cpp \
 	src/Condition.cpp \

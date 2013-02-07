@@ -1,32 +1,11 @@
 /* Define to 1 if you have the <asl.h> header file. */
 #undef HAVE_ASL_H
 
-/* Define to 1 if you have the `getpeereid' function. */
-#undef HAVE_GETPEEREID
-
-/* Define to 1 if you have the `getpeerucred' function. */
-#undef HAVE_GETPEERUCRED
-
-/* Define to 1 if you have the LOCAL_CREDS socket option */
-#undef HAVE_LOCAL_CREDS
-
 /* Define if you have POSIX threads libraries and header files. */
 #undef HAVE_PTHREAD
 
-/* Define to 1 if you have the SO_PEERCRED socket option */
-#undef HAVE_SO_PEERCRED
-
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
-
-/* Define to 1 if the system has the type `struct cmsgcred'. */
-#undef HAVE_STRUCT_CMSGCRED
-
-/* Define to 1 if the system has the type `struct fcred'. */
-#undef HAVE_STRUCT_FCRED
-
-/* Define to 1 if the system has the type `struct sockcred'. */
-#undef HAVE_STRUCT_SOCKCRED
 
 /* Define to 1 if you have the <syslog.h> header file. */
 #undef HAVE_SYSLOG_H

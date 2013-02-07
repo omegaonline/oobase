@@ -110,15 +110,6 @@ OO_C_BUILTINS
 # Check for the headers we use
 AC_CHECK_HEADERS([stdint.h windows.h asl.h syslog.h sys.types.h unistd.h])
 
-# Check for socket options
-OO_CHECK_SOCKOPT([SO_PEERCRED LOCAL_CREDS])
-
-# Check for specifics of Unix cred passing
-AC_CHECK_FUNCS([getpeereid getpeerucred])
-AC_CHECK_TYPES([struct cmsgcred])
-AC_CHECK_TYPES([struct fcred])
-AC_CHECK_TYPES([struct sockcred])
-
 # Set up libtool correctly
 m4_ifdef([LT_PREREQ],,[AC_MSG_ERROR([Need libtool version 2.2.6 or later])])
 LT_PREREQ([2.2.6])
