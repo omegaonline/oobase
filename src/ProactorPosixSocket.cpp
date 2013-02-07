@@ -924,14 +924,18 @@ int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len, SECURITY_ATTR
 	if (err)
 		return err;
 
-#if defined(LOCAL_CREDS)
-	if (psa->enable_local_creds)
+	if (psa->pass_credentials)
 	{
+#if defined(SO_PASSCRED)
+		int val = 1;
+		if (::setsockopt(fd, 0, SO_PASSCRED, &val, sizeof(val)) != 0)
+			return errno;
+#elif defined(LOCAL_CREDS)
 		int val = 1;
 		if (::setsockopt(fd, 0, LOCAL_CREDS, &val, sizeof(val)) != 0)
 			return errno;
-	}
 #endif
+	}
 
 	// Apparently, chmod before bind()
 
@@ -1082,9 +1086,8 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_pipe
 	{
 		SECURITY_ATTRIBUTES defaults;
 		defaults.mode = 0777;
-#if defined(LOCAL_CREDS)
-		defaults.enable_local_creds = false;
-#endif
+		defaults.pass_credentials = false;
+
 		if (!psa)
 			psa = &defaults;
 
