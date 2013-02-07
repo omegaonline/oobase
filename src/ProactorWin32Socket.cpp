@@ -46,6 +46,7 @@ namespace
 		int send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 		int send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
 		int shutdown(bool bSend, bool bRecv);
+		int setsockopt(int level, int option_name, const void* option_value, size_t option_len);
 
 	protected:
 		OOBase::AllocatorInstance& get_allocator()
@@ -531,6 +532,11 @@ int Win32AsyncSocket::shutdown(bool bSend, bool bRecv)
 		how = SD_RECEIVE;
 
 	return (how != -1 ? ::shutdown(m_hSocket,how) : 0);
+}
+
+int Win32AsyncSocket::setsockopt(int level, int option_name, const void* option_value, size_t option_len)
+{
+	return (::setsockopt(m_fd,level,option_name,option_value,option_len) != 0 ? WSAGetLastError() : 0);
 }
 
 namespace

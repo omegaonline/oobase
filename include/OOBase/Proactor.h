@@ -102,6 +102,8 @@ namespace OOBase
 
 		virtual int shutdown(bool bSend = true, bool bRecv = true) = 0;
 
+		virtual int setsockopt(int level, int option_name, const void* option_value, size_t option_len) = 0;
+
 	protected:
 		AsyncSocket() {}
 		virtual ~AsyncSocket() {}

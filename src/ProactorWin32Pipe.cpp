@@ -42,6 +42,7 @@ namespace
 		int send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 		int send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
 		int shutdown(bool bSend, bool bRecv);
+		int setsockopt(int level, int option_name, const void* option_value, size_t option_len);
 	
 	protected:
 		OOBase::AllocatorInstance& get_allocator()
@@ -410,6 +411,11 @@ int AsyncPipe::shutdown(bool bSend, bool bRecv)
 		m_recv_allowed = false;
 
 	return 0;
+}
+
+int AsyncPipe::setsockopt(int level, int option_name, const void* option_value, size_t option_len)
+{
+	return ERROR_NOT_SUPPORTED;
 }
 
 /*int AsyncPipe::get_uid(OOBase::AsyncLocalSocket::uid_t& uid)
