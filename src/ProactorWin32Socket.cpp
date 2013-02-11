@@ -46,7 +46,7 @@ namespace
 		int send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 		int send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
 		int shutdown(bool bSend, bool bRecv);
-		int setsockopt(int level, int option_name, const void* option_value, size_t option_len);
+		OOBase::socket_t get_handle();
 
 	protected:
 		OOBase::AllocatorInstance& get_allocator()
@@ -534,9 +534,9 @@ int Win32AsyncSocket::shutdown(bool bSend, bool bRecv)
 	return (how != -1 ? ::shutdown(m_hSocket,how) : 0);
 }
 
-int Win32AsyncSocket::setsockopt(int level, int option_name, const void* option_value, size_t option_len)
+OOBase::socket_t Win32AsyncSocket::get_handle()
 {
-	return (::setsockopt(m_hSocket,level,option_name,static_cast<const char*>(option_value),option_len) != 0 ? WSAGetLastError() : 0);
+	return m_hSocket;
 }
 
 namespace

@@ -42,7 +42,7 @@ namespace
 		int send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 		int send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
 		int shutdown(bool bSend, bool bRecv);
-		int setsockopt(int level, int option_name, const void* option_value, size_t option_len);
+		OOBase::socket_t get_handle();
 	
 	protected:
 		OOBase::AllocatorInstance& get_allocator()
@@ -413,32 +413,10 @@ int AsyncPipe::shutdown(bool bSend, bool bRecv)
 	return 0;
 }
 
-int AsyncPipe::setsockopt(int level, int option_name, const void* option_value, size_t option_len)
+OOBase::socket_t AsyncPipe::get_handle()
 {
-	return ERROR_NOT_SUPPORTED;
+	return (OOBase::socket_t)(HANDLE)m_hPipe;
 }
-
-/*int AsyncPipe::get_uid(OOBase::AsyncLocalSocket::uid_t& uid)
-{
-	if (!ImpersonateNamedPipeClient(m_hPipe))
-		return GetLastError();
-
-	OOBase::Win32::SmartHandle ptruid;
-	BOOL bRes = OpenThreadToken(GetCurrentThread(),TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_IMPERSONATE,FALSE,&ptruid);
-	DWORD err = 0;
-	if (!bRes)
-		err = GetLastError();
-
-	if (!RevertToSelf())
-		OOBase_CallCriticalFailure(GetLastError());
-	
-	if (!bRes)
-		return err;
-
-	uid = ptruid.detach();
-	
-	return 0;
-}*/
 
 namespace
 {	
