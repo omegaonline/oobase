@@ -114,7 +114,7 @@ namespace OOBase
 
 		virtual size_t recv(void* buf, size_t len, bool bAll, int& err, const Timeout& timeout = Timeout()) = 0;
 		virtual int recv_v(Buffer* buffers[], size_t count, const Timeout& timeout = Timeout()) = 0;
-		virtual size_t recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t ctl_len, int& err, const Timeout& timeout = Timeout()) = 0;
+		virtual size_t recv_msg(void* data_buf, size_t data_len, Buffer* ctl_buffer, int& err, const Timeout& timeout = Timeout()) = 0;
 
 		template <typename T>
 		int recv(T& val, const Timeout& timeout = Timeout())
@@ -170,6 +170,20 @@ namespace OOBase
 			{
 				size_t len2 = recv(buffer->wr_ptr(),len,true,err,timeout);
 				buffer->wr_ptr(len2);
+			}
+			return err;
+		}
+
+		int recv_msg(Buffer* data_buffer, Buffer* ctl_buffer, size_t data_len, const Timeout& timeout = Timeout())
+		{
+			if (!data_buffer || !ctl_buffer || !data_len)
+				return EINVAL;
+
+			int err = data_buffer->space(data_len);
+			if (err == 0)
+			{
+				size_t len = recv_msg(data_buffer->wr_ptr(),data_len,ctl_buffer,err,timeout);
+				data_buffer->wr_ptr(len);
 			}
 			return err;
 		}

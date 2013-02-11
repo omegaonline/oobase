@@ -346,7 +346,7 @@ namespace
 
 		size_t recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout);
 		int recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
-		size_t recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout);
+		size_t recv_msg(void* data_buf, size_t data_len, OOBase::Buffer* ctl_buffer, int& err, const OOBase::Timeout& timeout);
 		
 		size_t send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout);
 		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
@@ -805,11 +805,11 @@ DWORD WinSocket::recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int& err, const 
 	return dwRead;
 }
 
-size_t WinSocket::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout)
+size_t WinSocket::recv_msg(void* data_buf, size_t data_len, OOBase::Buffer* ctl_buffer, int& err, const OOBase::Timeout& timeout)
 {
 	err = 0;
 	data_len = (data_buf ? data_len : 0);
-	ctl_len = (ctl_buf ? ctl_len : 0);
+	size_t ctl_len = (ctl_buffer ? ctl_buffer->space() : 0);
 
 	if (!data_len && !ctl_len)
 		return 0;
@@ -858,7 +858,7 @@ size_t WinSocket::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_
 	WSAMSG msg = {0};
 	msg.lpBuffers = &wsabuf;
 	msg.dwBufferCount = 1;
-	msg.Control.buf = static_cast<char*>(ctl_buf);
+	msg.Control.buf = ctl_buffer->wr_ptr();
 	msg.Control.len = static_cast<u_long>(ctl_len);
 	msg.dwFlags = MSG_WAITALL;
 
@@ -888,6 +888,8 @@ size_t WinSocket::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_
 		DWORD dwFlags = 0;
 		if (!err && !WSAGetOverlappedResult(m_socket,&ov,&dwRead,TRUE,&dwFlags))
 			err = WSAGetLastError();
+
+		ctl_buffer->wr_ptr(msg.Control.len);
 	}
 
 	return dwRead;

@@ -53,6 +53,16 @@ int OOBase::AsyncSocket::recv(Buffer* buffer, size_t bytes)
 	return err;
 }
 
+int OOBase::AsyncSocket::recv_msg(Buffer* data_buffer, Buffer* ctl_buffer, size_t data_len)
+{
+	WaitCallback wait;
+	int err = recv_msg(&wait,&WaitCallback::callback_msg,data_buffer,ctl_buffer,data_len);
+	if (err == 0)
+		err = wait.wait(false);
+
+	return err;
+}
+
 int OOBase::AsyncSocket::send(Buffer* buffer)
 {
 	WaitCallback wait;

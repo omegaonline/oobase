@@ -48,7 +48,7 @@ namespace
 
 		size_t recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout);
 		int recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
-		size_t recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout);
+		size_t recv_msg(void* data_buf, size_t data_len, OOBase::Buffer* ctl_buffer, int& err, const OOBase::Timeout& timeout);
 		
 		size_t send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout);
 		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
@@ -262,7 +262,7 @@ int Pipe::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout&
 	return err;
 }
 
-size_t Pipe::recv_msg(void*, size_t, void*, size_t, int& err, const OOBase::Timeout& timeout)
+size_t Pipe::recv_msg(void*, size_t, OOBase::Buffer*, int& err, const OOBase::Timeout& timeout)
 {
 	err = ERROR_NOT_SUPPORTED;
 	return 0;

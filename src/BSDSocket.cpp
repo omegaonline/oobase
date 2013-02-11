@@ -251,7 +251,7 @@ namespace
 		size_t send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout);
 		size_t recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout);
 		int recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
-		size_t recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout);
+		size_t recv_msg(void* data_buf, size_t data_len, OOBase::Buffer* ctl_buffer, int& err, const OOBase::Timeout& timeout);
 
 		int shutdown(bool bSend, bool bRecv);
 		int close();
@@ -728,11 +728,11 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 	return err;
 }
 
-size_t Socket::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout)
+size_t Socket::recv_msg(void* data_buf, size_t data_len, OOBase::Buffer* ctl_buffer, int& err, const OOBase::Timeout& timeout)
 {
 	err = 0;
 	data_len = (data_buf ? data_len : 0);
-	ctl_len = (ctl_buf ? ctl_len : 0);
+	size_t ctl_len = (ctl_buffer ? ctl_buffer->space() : 0);
 
 	if (!data_len && !ctl_len)
 		return 0;
@@ -750,7 +750,7 @@ size_t Socket::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t c
 	struct msghdr msg = {0};
 	msg.msg_iov = &io;
 	msg.msg_iovlen = 1;
-	msg.msg_control = ctl_buf;
+	msg.msg_control = ctl_buffer->wr_ptr();
 	msg.msg_controllen = ctl_len;
 
 #ifdef MSG_CMSG_CLOEXEC
@@ -782,7 +782,10 @@ size_t Socket::recv_msg(void* data_buf, size_t data_len, void* ctl_buf, size_t c
 		while (recvd == -1 && errno == EINTR);
 
 		if (recvd >= 0)
+		{
+			err = ctl_buffer->wr_ptr(msg.msg_controllen);
 			break;
+		}
 
 		err = errno;
 		if (err == EAGAIN || err == EWOULDBLOCK)

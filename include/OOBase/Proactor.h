@@ -52,7 +52,7 @@ namespace OOBase
 		}
 
 		template <typename T>
-		int recv_msg(T* param, void (T::*callback)(Buffer* data_buffer, Buffer* ctl_buffer, int err), Buffer* data_buffer, Buffer* ctl_buffer, size_t data_bytes = 0)
+		int recv_msg(T* param, void (T::*callback)(Buffer* data_buffer, Buffer* ctl_buffer, int err), Buffer* data_buffer, Buffer* ctl_buffer, size_t data_bytes)
 		{
 			ThunkRM<T>* thunk = this->thunk_allocate<ThunkRM<T>,T*,void (T::*)(Buffer*,Buffer*,int)>(param,callback);
 			if (!thunk)
@@ -83,6 +83,7 @@ namespace OOBase
 
 		// These are blocking calls
 		int recv(Buffer* buffer, size_t bytes = 0);
+		int recv_msg(Buffer* buffer, Buffer* ctl_buffer, size_t bytes);
 		int send(Buffer* buffer);
 		int send_msg(Buffer* buffer, Buffer* ctl_buffer);
 
@@ -90,7 +91,7 @@ namespace OOBase
 		virtual int recv(void* param, recv_callback_t callback, Buffer* buffer, size_t bytes = 0) = 0;
 
 		typedef void (*recv_msg_callback_t)(void* param, Buffer* data_buffer, Buffer* ctl_buffer, int err);
-		virtual int recv_msg(void* param, recv_msg_callback_t callback, Buffer* data_buffer, Buffer* ctl_buffer, size_t data_bytes = 0) = 0;
+		virtual int recv_msg(void* param, recv_msg_callback_t callback, Buffer* data_buffer, Buffer* ctl_buffer, size_t data_bytes) = 0;
 
 		typedef void (*send_callback_t)(void* param, Buffer* buffer, int err);
 		virtual int send(void* param, send_callback_t callback, Buffer* buffer) = 0;
