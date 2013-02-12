@@ -29,9 +29,9 @@ namespace OOBase
 	namespace detail
 	{
 		template <typename Allocator, typename T>
-		class PODBagBase : public AllocImpl<Allocator>
+		class PODBagBase : public Allocating<Allocator>
 		{
-			typedef AllocImpl<Allocator> baseClass;
+			typedef Allocating<Allocator> baseClass;
 
 		public:
 			PODBagBase() : baseClass(), m_data(NULL), m_size(0), m_capacity(0)
@@ -82,7 +82,7 @@ namespace OOBase
 			{
 				if (this->m_capacity < capacity)
 				{
-					T* new_data = static_cast<T*>(baseClass::allocate_i(capacity*sizeof(T),alignof<T>::value));
+					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignof<T>::value));
 					if (!new_data)
 						return ERROR_OUTOFMEMORY;
 
@@ -98,7 +98,7 @@ namespace OOBase
 						for (;i>0;--i)
 							new_data[i-1].~T();
 
-						baseClass::free_i(new_data);
+						baseClass::free(new_data);
 						throw;
 					}
 
@@ -113,7 +113,7 @@ namespace OOBase
 					}
 #endif
 
-					baseClass::free_i(this->m_data);
+					baseClass::free(this->m_data);
 					this->m_data = new_data;
 					this->m_capacity = capacity;
 				}
@@ -148,7 +148,7 @@ namespace OOBase
 			{
 				if (this->m_capacity < capacity)
 				{
-					T* new_data = static_cast<T*>(baseClass::reallocate_i(this->m_data,capacity*sizeof(T),alignof<T>::value));
+					T* new_data = static_cast<T*>(baseClass::reallocate(this->m_data,capacity*sizeof(T),alignof<T>::value));
 					if (!new_data)
 						return ERROR_OUTOFMEMORY;
 
@@ -238,7 +238,7 @@ namespace OOBase
 			void destroy()
 			{
 				baseClass::clear();
-				this->free_i(this->m_data);
+				this->free(this->m_data);
 			}
 
 			void remove_at_sorted(size_t pos)

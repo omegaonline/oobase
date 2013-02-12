@@ -29,9 +29,9 @@ namespace OOBase
 	namespace detail
 	{
 		template <typename Allocator, typename T>
-		class PODQueueBase : public AllocImpl<Allocator>
+		class PODQueueBase : public Allocating<Allocator>
 		{
-			typedef AllocImpl<Allocator> baseClass;
+			typedef Allocating<Allocator> baseClass;
 
 		public:
 			PODQueueBase() : baseClass(), m_data(NULL), m_capacity(0), m_front(0), m_back(0)
@@ -82,7 +82,7 @@ namespace OOBase
 			int grow()
 			{
 				size_t new_size = (this->m_capacity == 0 ? 8 : this->m_capacity * 2);
-				T* new_data = static_cast<T*>(baseClass::allocate_i(new_size*sizeof(T),alignof<T>::value));
+				T* new_data = static_cast<T*>(baseClass::allocate(new_size*sizeof(T),alignof<T>::value));
 				if (!new_data)
 					return ERROR_OUTOFMEMORY;
 
@@ -100,7 +100,7 @@ namespace OOBase
 					while (new_back)
 						new_data[--new_back].~T();
 
-					baseClass::free_i(new_data);
+					baseClass::free(new_data);
 					throw;
 				}
 
@@ -115,7 +115,7 @@ namespace OOBase
 				}
 #endif
 
-				baseClass::free_i(this->m_data);
+				baseClass::free(this->m_data);
 				this->m_data = new_data;
 				this->m_capacity = new_size;
 				this->m_front = 0;
@@ -151,7 +151,7 @@ namespace OOBase
 			int grow()
 			{
 				size_t new_size = (this->m_capacity == 0 ? 8 : this->m_capacity * 2);
-				T* new_data = static_cast<T*>(baseClass::reallocate_i(this->m_data,new_size*sizeof(T),alignof<T>::value));
+				T* new_data = static_cast<T*>(baseClass::reallocate(this->m_data,new_size*sizeof(T),alignof<T>::value));
 				if (!new_data)
 					return ERROR_OUTOFMEMORY;
 				
@@ -243,7 +243,7 @@ namespace OOBase
 		void destroy()
 		{
 			baseClass::clear();
-			this->free_i(this->m_data);
+			this->free(this->m_data);
 		}
 	};
 }

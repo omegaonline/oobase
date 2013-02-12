@@ -177,9 +177,9 @@ namespace OOBase
 	}
 
 	template <typename K, typename V, typename Allocator = CrtAllocator, typename H = OOBase::Hash<K> >
-	class HashTable : public detail::AllocImpl<Allocator>
+	class HashTable : public Allocating<Allocator>
 	{
-		typedef detail::AllocImpl<Allocator> baseClass;
+		typedef Allocating<Allocator> baseClass;
 		typedef detail::HashTableNode<K,V,detail::is_pod<detail::HashTable::PODCheck<K,V> >::value> Node;
 
 	public:
@@ -362,7 +362,7 @@ namespace OOBase
 			m_clone = false;
 
 			size_t new_size = (m_size == 0 ? 16 : (grow ? m_size * 2 : m_size));
-			Node* new_data = static_cast<Node*>(baseClass::allocate_i(new_size * sizeof(Node),alignof<Node>::value));
+			Node* new_data = static_cast<Node*>(baseClass::allocate(new_size * sizeof(Node),alignof<Node>::value));
 			if (!new_data)
 				return ERROR_OUTOFMEMORY;
 
@@ -411,7 +411,7 @@ namespace OOBase
 				if (data[i].m_in_use == 2)
 					data[i].~Node();
 			}
-			baseClass::free_i(data);
+			baseClass::free(data);
 		}
 
 		size_t find_i(const K& key) const

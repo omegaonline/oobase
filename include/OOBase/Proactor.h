@@ -117,7 +117,7 @@ namespace OOBase
 			return allocator.allocate_new<TThunk>(param,callback,allocator);
 		}
 
-		virtual AllocatorInstance& get_allocator() = 0;
+		virtual AllocatorInstance& get_allocator() const = 0;
 
 	private:
 		template <typename T>

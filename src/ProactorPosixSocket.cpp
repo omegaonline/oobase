@@ -38,9 +38,9 @@
 
 namespace
 {
-	class PosixAsyncSocket : public OOBase::AsyncSocket
+	class PosixAsyncSocket : public OOBase::AsyncSocket, public OOBase::Allocating<OOBase::AllocatorInstance>
 	{
-		friend class OOBase::AllocatorInstance;
+		friend class OOBase::Allocating<OOBase::AllocatorInstance>;
 
 	public:
 		PosixAsyncSocket(OOBase::detail::ProactorPosix* pProactor, int fd, OOBase::AllocatorInstance& allocator);
@@ -56,9 +56,9 @@ namespace
 		OOBase::socket_t get_handle();
 
 	protected:
-		OOBase::AllocatorInstance& get_allocator()
+		OOBase::AllocatorInstance& get_allocator() const
 		{
-			return m_allocator;
+			return OOBase::Allocating<OOBase::AllocatorInstance>::get_allocator();
 		}
 
 	private:
@@ -66,7 +66,7 @@ namespace
 
 		void destroy()
 		{
-			m_allocator.delete_free(this);
+			delete_this(this);
 		}
 
 		struct RecvItem
@@ -115,12 +115,11 @@ namespace
 			struct SendItem m_item;
 		};
 
-		OOBase::detail::ProactorPosix* m_pProactor;
-		OOBase::AllocatorInstance&     m_allocator;
-		int                            m_fd;
-		OOBase::SpinLock               m_lock;
-		OOBase::Queue<RecvItem>        m_recv_queue;
-		OOBase::Queue<SendItem>        m_send_queue;
+		OOBase::detail::ProactorPosix*                    m_pProactor;
+		int                                               m_fd;
+		OOBase::SpinLock                                  m_lock;
+		OOBase::Queue<RecvItem,OOBase::AllocatorInstance> m_recv_queue;
+		OOBase::Queue<SendItem,OOBase::AllocatorInstance> m_send_queue;
 
 		static void fd_callback(int fd, void* param, unsigned int events);
 		void process_recv(OOBase::Queue<RecvNotify,OOBase::AllocatorInstance>& notify_queue);
@@ -134,9 +133,11 @@ namespace
 }
 
 PosixAsyncSocket::PosixAsyncSocket(OOBase::detail::ProactorPosix* pProactor, int fd, OOBase::AllocatorInstance& allocator) :
+		OOBase::Allocating<OOBase::AllocatorInstance>(allocator),
 		m_pProactor(pProactor),
-		m_allocator(allocator),
-		m_fd(fd)
+		m_fd(fd),
+		m_recv_queue(allocator),
+		m_send_queue(allocator)
 { }
 
 PosixAsyncSocket::~PosixAsyncSocket()
@@ -174,7 +175,7 @@ PosixAsyncSocket::~PosixAsyncSocket()
 					send_item.m_buffers[i]->release();
 			}
 
-			m_allocator.free(send_item.m_buffers);
+			free(send_item.m_buffers);
 		}
 	}
 }
@@ -313,7 +314,7 @@ int PosixAsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Bu
 
 	SendItem item = { param, actual_count };
 	item.m_v_callback = callback;
-	item.m_buffers = static_cast<OOBase::Buffer**>(m_allocator.allocate(actual_count * sizeof(OOBase::Buffer*),OOBase::alignof<OOBase::Buffer*>::value));
+	item.m_buffers = static_cast<OOBase::Buffer**>(allocate(actual_count * sizeof(OOBase::Buffer*),OOBase::alignof<OOBase::Buffer*>::value));
 	if (!item.m_buffers)
 		return ERROR_OUTOFMEMORY;
 
@@ -340,7 +341,7 @@ int PosixAsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Bu
 		for (size_t i=0;i<actual_count;++i)
 			item.m_buffers[i]->release();
 
-		m_allocator.free(item.m_buffers);
+		free(item.m_buffers);
 		return err;
 	}
 
@@ -492,7 +493,7 @@ void PosixAsyncSocket::fd_callback(int fd, void* param, unsigned int events)
 							send_notify.m_item.m_buffers[i]->release();
 					}
 
-					pThis->m_allocator.free(send_notify.m_item.m_buffers);
+					pThis->free(send_notify.m_item.m_buffers);
 					throw;
 				}
 #endif
@@ -502,7 +503,7 @@ void PosixAsyncSocket::fd_callback(int fd, void* param, unsigned int events)
 						send_notify.m_item.m_buffers[i]->release();
 				}
 
-				pThis->m_allocator.free(send_notify.m_item.m_buffers);
+				pThis->free(send_notify.m_item.m_buffers);
 			}
 		}
 	}
@@ -857,7 +858,7 @@ void PosixAsyncSocket::process_send(OOBase::Queue<SendNotify,OOBase::AllocatorIn
 						item.m_buffers[i]->release();
 				}
 
-				m_allocator.free(item.m_buffers);
+				free(item.m_buffers);
 			}
 
 			OOBase_CallCriticalFailure(err);
@@ -867,7 +868,7 @@ void PosixAsyncSocket::process_send(OOBase::Queue<SendNotify,OOBase::AllocatorIn
 
 namespace
 {
-	class SocketAcceptor : public OOBase::Acceptor
+	class SocketAcceptor : public OOBase::Acceptor, public OOBase::Allocating<OOBase::AllocatorInstance>
 	{
 	public:
 		SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, OOBase::AllocatorInstance& allocator, void* param, OOBase::Proactor::accept_callback_t callback);
@@ -878,7 +879,6 @@ namespace
 
 	private:
 		OOBase::detail::ProactorPosix*           m_pProactor;
-		OOBase::AllocatorInstance&               m_allocator;
 		void*                                    m_param;
 		OOBase::Proactor::accept_callback_t      m_callback;
 		OOBase::Proactor::accept_pipe_callback_t m_callback_local;
@@ -890,8 +890,8 @@ namespace
 }
 
 SocketAcceptor::SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, OOBase::AllocatorInstance& allocator, void* param, OOBase::Proactor::accept_callback_t callback) :
+		OOBase::Allocating<OOBase::AllocatorInstance>(allocator),
 		m_pProactor(pProactor),
-		m_allocator(allocator),
 		m_param(param),
 		m_callback(callback),
 		m_callback_local(NULL),
@@ -899,8 +899,8 @@ SocketAcceptor::SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, OOBase:
 { }
 
 SocketAcceptor::SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, OOBase::AllocatorInstance& allocator, void* param, OOBase::Proactor::accept_pipe_callback_t callback) :
+		OOBase::Allocating<OOBase::AllocatorInstance>(allocator),
 		m_pProactor(pProactor),
-		m_allocator(allocator),
 		m_param(param),
 		m_callback(NULL),
 		m_callback_local(callback),

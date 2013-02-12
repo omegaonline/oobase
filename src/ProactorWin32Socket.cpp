@@ -33,9 +33,9 @@
 
 namespace
 {
-	class Win32AsyncSocket : public OOBase::AsyncSocket
+	class Win32AsyncSocket : public OOBase::AsyncSocket, public OOBase::Allocating<OOBase::AllocatorInstance>
 	{
-		friend class OOBase::AllocatorInstance;
+		friend class OOBase::Allocating<OOBase::AllocatorInstance>;
 
 	public:
 		Win32AsyncSocket(OOBase::detail::ProactorWin32* pProactor, SOCKET hSocket, OOBase::AllocatorInstance& allocator);
@@ -49,9 +49,9 @@ namespace
 		OOBase::socket_t get_handle();
 
 	protected:
-		OOBase::AllocatorInstance& get_allocator()
+		OOBase::AllocatorInstance& get_allocator() const
 		{
-			return m_allocator;
+			return OOBase::Allocating<OOBase::AllocatorInstance>::get_allocator();
 		}
 
 	private:
@@ -59,11 +59,10 @@ namespace
 
 		void destroy()
 		{
-			m_allocator.delete_free(this);
+			delete_this(this);
 		}
 
 		OOBase::detail::ProactorWin32* m_pProactor;
-		OOBase::AllocatorInstance&     m_allocator;
 		SOCKET                         m_hSocket;
 					
 		static void on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
@@ -75,8 +74,8 @@ namespace
 }
 
 Win32AsyncSocket::Win32AsyncSocket(OOBase::detail::ProactorWin32* pProactor, SOCKET hSocket, OOBase::AllocatorInstance& allocator) :
+		OOBase::Allocating<OOBase::AllocatorInstance>(allocator),
 		m_pProactor(pProactor),
-		m_allocator(allocator),
 		m_hSocket(hSocket)
 { }
 
@@ -541,7 +540,7 @@ OOBase::socket_t Win32AsyncSocket::get_handle()
 
 namespace
 {
-	class InternalAcceptor
+	class InternalAcceptor : public OOBase::Allocating<OOBase::AllocatorInstance>
 	{
 	public:
 		InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_callback_t callback, OOBase::AllocatorInstance& allocator);
@@ -552,7 +551,6 @@ namespace
 		
 	private:
 		OOBase::detail::ProactorWin32*                   m_pProactor;
-		OOBase::AllocatorInstance&                       m_allocator;
 		OOBase::Condition::Mutex                         m_lock;
 		OOBase::Condition                                m_condition;
 		sockaddr_storage                                 m_addr;
@@ -633,8 +631,8 @@ int SocketAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, void* param, 
 }
 
 InternalAcceptor::InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_callback_t callback, OOBase::AllocatorInstance& allocator) :
+		OOBase::Allocating<OOBase::AllocatorInstance>(allocator),
 		m_pProactor(pProactor),
-		m_allocator(allocator),
 		m_addr_len(0),
 		m_socket(INVALID_SOCKET),
 		m_backlog(0),
@@ -714,7 +712,7 @@ int InternalAcceptor::stop(bool destroy)
 	{
 		guard.release();
 
-		m_allocator.delete_free(this);
+		delete_this(this);
 	}
 
 	return 0;
@@ -786,7 +784,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 							
 		if (!pOv)
 		{
-			buf = m_allocator.allocate((m_addr_len+16)*2,OOBase::alignof<struct sockaddr>::value);
+			buf = allocate((m_addr_len+16)*2,OOBase::alignof<struct sockaddr>::value);
 			if (!buf)
 			{
 				m_pProactor->unbind();
@@ -798,7 +796,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 			if (err != 0)
 			{
 				m_pProactor->unbind();
-				m_allocator.free(buf);
+				free(buf);
 				break;
 			}
 					
@@ -839,7 +837,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 		OOBase::Net::close_socket(sockNew);
 	
 	if (buf)
-		m_allocator.free(buf);
+		free(buf);
 	
 	if (pOv)
 		m_pProactor->delete_overlapped(pOv);
@@ -923,7 +921,7 @@ bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void
 		(*m_callback)(m_param,pSocket,remote_addr,remote_addr_len,dwErr);
 			
 	if (bRemove)
-		m_allocator.free(addr_buf);
+		free(addr_buf);
 	
 	guard.acquire();
 	
@@ -948,7 +946,7 @@ bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void
 	{
 		guard.release();
 
-		m_allocator.delete_free(this);
+		delete_this(this);
 
 		return true;
 	}

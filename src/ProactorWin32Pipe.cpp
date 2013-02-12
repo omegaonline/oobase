@@ -29,9 +29,9 @@
 
 namespace
 {
-	class AsyncPipe : public OOBase::AsyncSocket
+	class AsyncPipe : public OOBase::AsyncSocket, public OOBase::Allocating<OOBase::AllocatorInstance>
 	{
-		friend class OOBase::AllocatorInstance;
+		friend class OOBase::Allocating<OOBase::AllocatorInstance>;
 
 	public:
 		AsyncPipe(OOBase::detail::ProactorWin32* pProactor, HANDLE hPipe, OOBase::AllocatorInstance& allocator);
@@ -45,9 +45,9 @@ namespace
 		OOBase::socket_t get_handle();
 	
 	protected:
-		OOBase::AllocatorInstance& get_allocator()
+		OOBase::AllocatorInstance& get_allocator() const
 		{
-			return m_allocator;
+			return OOBase::Allocating<OOBase::AllocatorInstance>::get_allocator();
 		}
 
 	private:
@@ -55,11 +55,10 @@ namespace
 
 		void destroy()
 		{
-			m_allocator.delete_free(this);
+			delete_this(this);
 		}
 
 		OOBase::detail::ProactorWin32* m_pProactor;
-		OOBase::AllocatorInstance&     m_allocator;
 		OOBase::Win32::SmartHandle     m_hPipe;
 		bool                           m_send_allowed;
 		bool                           m_recv_allowed;
@@ -73,8 +72,8 @@ namespace
 }
 
 AsyncPipe::AsyncPipe(OOBase::detail::ProactorWin32* pProactor, HANDLE hPipe, OOBase::AllocatorInstance& allocator) :
+		OOBase::Allocating<OOBase::AllocatorInstance>(allocator),
 		m_pProactor(pProactor),
-		m_allocator(allocator),
 		m_hPipe(hPipe),
 		m_send_allowed(true),
 		m_recv_allowed(true)
@@ -420,31 +419,26 @@ OOBase::socket_t AsyncPipe::get_handle()
 
 namespace
 {	
-	class InternalAcceptor
+	class InternalAcceptor : public OOBase::Allocating<OOBase::AllocatorInstance>
 	{
-		friend class OOBase::AllocatorInstance;
-
 	public:
-		InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback, OOBase::AllocatorInstance& allocator);
+		InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, const OOBase::LocalString& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback, OOBase::AllocatorInstance& allocator);
 		
 		int start();
 		int stop();
 				
 	private:
-		OOBase::detail::ProactorWin32*           m_pProactor;
-		OOBase::AllocatorInstance&               m_allocator;
-		OOBase::Condition::Mutex                 m_lock;
-		OOBase::Condition                        m_condition;
-		OOBase::String                           m_pipe_name;
-		SECURITY_ATTRIBUTES*                     m_psa;
-		size_t                                   m_backlog;
-		size_t                                   m_refcount;
-		OOBase::Stack<HANDLE>                    m_stkPending;
-		void*                                    m_param;
-		OOBase::Proactor::accept_pipe_callback_t m_callback;
+		OOBase::detail::ProactorWin32*                  m_pProactor;
+		OOBase::Condition::Mutex                        m_lock;
+		OOBase::Condition                               m_condition;
+		OOBase::LocalString                             m_pipe_name;
+		SECURITY_ATTRIBUTES*                            m_psa;
+		size_t                                          m_backlog;
+		size_t                                          m_refcount;
+		OOBase::Stack<HANDLE,OOBase::AllocatorInstance> m_stkPending;
+		void*                                           m_param;
+		OOBase::Proactor::accept_pipe_callback_t        m_callback;
 	
-		~InternalAcceptor();
-		
 		static void on_completion(HANDLE hPipe, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
 		bool on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
 		int do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, bool bFirst);
@@ -455,7 +449,7 @@ namespace
 	public:
 		PipeAcceptor();
 		
-		int bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback, OOBase::AllocatorInstance& allocator);
+		int bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::LocalString& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback, OOBase::AllocatorInstance& allocator);
 		
 	private:
 		virtual ~PipeAcceptor();
@@ -474,7 +468,7 @@ PipeAcceptor::~PipeAcceptor()
 		m_pAcceptor->stop();
 }
 
-int PipeAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback, OOBase::AllocatorInstance& allocator)
+int PipeAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::LocalString& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback, OOBase::AllocatorInstance& allocator)
 {
 	m_pAcceptor = allocator.allocate_new<InternalAcceptor>(pProactor,pipe_name,psa,param,callback,allocator);
 	if (!m_pAcceptor)
@@ -490,19 +484,18 @@ int PipeAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::S
 	return err;
 }
 
-InternalAcceptor::InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback, OOBase::AllocatorInstance& allocator) :
+InternalAcceptor::InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, const OOBase::LocalString& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback, OOBase::AllocatorInstance& allocator) :
+		OOBase::Allocating<OOBase::AllocatorInstance>(allocator),
 		m_pProactor(pProactor),
-		m_allocator(allocator),
 		m_pipe_name(pipe_name),
 		m_psa(psa),
 		m_backlog(3),
 		m_refcount(1),
+		m_stkPending(allocator),
 		m_param(param),
 		m_callback(callback)
-{ }
-
-InternalAcceptor::~InternalAcceptor()
-{ }
+{
+}
 
 int InternalAcceptor::start()
 {	
@@ -532,7 +525,7 @@ int InternalAcceptor::stop()
 	{
 		guard.release();
 
-		m_allocator.delete_free(this);
+		delete_this(this);
 	}
 
 	return 0;
@@ -697,7 +690,7 @@ bool InternalAcceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase
 		{
 			guard.release();
 
-			m_allocator.delete_free(this);
+			delete_this(this);
 
 			return true;
 		}
@@ -723,7 +716,7 @@ OOBase::Acceptor* OOBase::detail::ProactorWin32::accept(void* param, accept_pipe
 		err = ERROR_OUTOFMEMORY;
 	else
 	{
-		String strPipe;
+		LocalString strPipe(allocator);
 		err = strPipe.assign("\\\\.\\pipe\\");
 		if (err == 0)
 			err = strPipe.append(path);

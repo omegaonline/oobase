@@ -256,67 +256,75 @@ namespace OOBase
 		}
 	};
 
-	namespace detail
+	template <typename Allocator = CrtAllocator>
+	class Allocating
 	{
-		template <typename Allocator = CrtAllocator>
-		class AllocImpl
+	public:
+		Allocating()
+		{}
+
+	protected:
+		static void* allocate(size_t bytes, size_t align)
 		{
-		public:
-			AllocImpl()
-			{}
+			return Allocator::allocate(bytes,align);
+		}
 
-		protected:
-			static void* allocate_i(size_t bytes, size_t align)
-			{
-				return Allocator::allocate(bytes,align);
-			}
-
-			static void* reallocate_i(void* ptr, size_t bytes, size_t align)
-			{
-				return Allocator::reallocate(ptr,bytes,align);
-			}
-
-			static void free_i(void* ptr)
-			{
-				Allocator::free(ptr);
-			}
-		};
-
-		template <>
-		class AllocImpl<AllocatorInstance>
+		static void* reallocate(void* ptr, size_t bytes, size_t align)
 		{
-		public:
-			AllocImpl(AllocatorInstance& allocator) : m_allocator(allocator)
-			{}
+			return Allocator::reallocate(ptr,bytes,align);
+		}
 
-			AllocatorInstance& get_allocator() const
-			{
-				return m_allocator;
-			}
+		static void free(void* ptr)
+		{
+			Allocator::free(ptr);
+		}
 
-		protected:
-			void* allocate_i(size_t bytes, size_t align)
-			{
-				return m_allocator.allocate(bytes,align);
-			}
+		template <typename T>
+		static void delete_this(T* p)
+		{
+			p->~T();
+			Allocator::free(p);
+		}
+	};
 
-			void* reallocate_i(void* ptr, size_t bytes, size_t align)
-			{
-				return m_allocator.reallocate(ptr,bytes,align);
-			}
+	template <>
+	class Allocating<AllocatorInstance>
+	{
+	public:
+		Allocating(AllocatorInstance& allocator) : m_allocator(allocator)
+		{}
 
-			void free_i(void* ptr)
-			{
-				m_allocator.free(ptr);
-			}
+		AllocatorInstance& get_allocator() const
+		{
+			return m_allocator;
+		}
 
-		private:
-			AllocImpl(const AllocImpl&);
-			AllocImpl& operator = (const AllocImpl&);
+	protected:
+		AllocatorInstance& m_allocator;
 
-			AllocatorInstance& m_allocator;
-		};
-	}
+		void* allocate(size_t bytes, size_t align)
+		{
+			return m_allocator.allocate(bytes,align);
+		}
+
+		void* reallocate(void* ptr, size_t bytes, size_t align)
+		{
+			return m_allocator.reallocate(ptr,bytes,align);
+		}
+
+		void free(void* ptr)
+		{
+			m_allocator.free(ptr);
+		}
+
+		template <typename T>
+		static void delete_this(T* p)
+		{
+			AllocatorInstance& a = p->m_allocator;
+			p->~T();
+			a.free(p);
+		}
+	};
 }
 
 // Call the OOBase::OnCriticalError handler on failure
