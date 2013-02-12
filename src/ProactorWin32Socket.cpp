@@ -353,7 +353,7 @@ int Win32AsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Bu
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
 
-	OOBase::Buffer** ov_buffers = static_cast<OOBase::Buffer**>(m_pProactor->internal_allocate((buf_count) * sizeof(OOBase::Buffer*),OOBase::alignof<OOBase::Buffer*>::value));
+	OOBase::Buffer** ov_buffers = static_cast<OOBase::Buffer**>(m_pProactor->get_internal_allocator().allocate((buf_count) * sizeof(OOBase::Buffer*),OOBase::alignof<OOBase::Buffer*>::value));
 	if (!ov_buffers)
 	{
 		m_pProactor->delete_overlapped(pOv);
@@ -440,7 +440,7 @@ void Win32AsyncSocket::on_send_v(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBa
 	for (size_t i=0;i<count;++i)
 		buffers[i]->release();
 
-	pOv->m_pProactor->internal_free(buffers);
+	pOv->m_pProactor->get_internal_allocator().free(buffers);
 
 	pOv->m_pProactor->delete_overlapped(pOv);
 }

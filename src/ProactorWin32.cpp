@@ -56,7 +56,7 @@ OOBase::detail::ProactorWin32::~ProactorWin32()
 
 int OOBase::detail::ProactorWin32::new_overlapped(Overlapped*& pOv, pfnCompletion_t callback)
 {
-	pOv = static_cast<Overlapped*>(internal_allocate(sizeof(Overlapped),alignof<Overlapped>::value));
+	pOv = static_cast<Overlapped*>(m_allocator.allocate(sizeof(Overlapped),alignof<Overlapped>::value));
 	if (!pOv)
 		return ERROR_OUTOFMEMORY;
 	
@@ -71,7 +71,7 @@ int OOBase::detail::ProactorWin32::new_overlapped(Overlapped*& pOv, pfnCompletio
 void OOBase::detail::ProactorWin32::delete_overlapped(Overlapped* pOv)
 {
 	if (InterlockedDecrement(&pOv->m_refcount) == 0)
-		internal_free(pOv);
+		m_allocator.free(pOv);
 }
 
 int OOBase::detail::ProactorWin32::bind(HANDLE hFile)
@@ -173,21 +173,6 @@ int OOBase::detail::ProactorWin32::restart()
 	}
 
 	return err;
-}
-
-void* OOBase::detail::ProactorWin32::internal_allocate(size_t bytes, size_t align)
-{
-	return OOBase::CrtAllocator::allocate(bytes,align);
-}
-
-void* OOBase::detail::ProactorWin32::internal_reallocate(void* ptr, size_t bytes, size_t align)
-{
-	return OOBase::CrtAllocator::reallocate(ptr,bytes,align);
-}
-
-void OOBase::detail::ProactorWin32::internal_free(void* ptr)
-{
-	OOBase::CrtAllocator::free(ptr);
 }
 
 #endif // _WIN32

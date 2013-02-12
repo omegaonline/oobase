@@ -304,7 +304,7 @@ int AsyncPipe::send_v(void* param, send_v_callback_t callback, OOBase::Buffer* b
 
 	if (callback)
 	{
-		OOBase::Buffer** ov_buffers = static_cast<OOBase::Buffer**>(m_pProactor->internal_allocate((actual_count+1) * sizeof(OOBase::Buffer*),OOBase::alignof<OOBase::Buffer*>::value));
+		OOBase::Buffer** ov_buffers = static_cast<OOBase::Buffer**>(m_pProactor->get_internal_allocator().allocate((actual_count+1) * sizeof(OOBase::Buffer*),OOBase::alignof<OOBase::Buffer*>::value));
 		if (!ov_buffers)
 		{
 			m_pProactor->delete_overlapped(pOv);
@@ -384,7 +384,7 @@ void AsyncPipe::on_send_v(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOBase:
 		for (size_t i=0;i<count;++i)
 			buffers[i]->release();
 
-		pOv->m_pProactor->internal_free(buffers);
+		pOv->m_pProactor->get_internal_allocator().free(buffers);
 	}
 
 	pOv->m_pProactor->delete_overlapped(pOv);

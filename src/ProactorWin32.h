@@ -72,14 +72,35 @@ namespace OOBase
 
 			int run(int& err, const Timeout& timeout);
 
-			void* internal_allocate(size_t bytes, size_t align);
-			void* internal_reallocate(void* ptr, size_t bytes, size_t align);
-			void internal_free(void* ptr);
+			AllocatorInstance& get_internal_allocator()
+			{
+				return m_allocator;
+			}
 
 		private:
 			HANDLE   m_hPort;
 			SpinLock m_lock;
 			size_t   m_bound;
+
+			class InternalAllocator : public AllocatorInstance
+			{
+			public:
+				void* allocate(size_t bytes, size_t align)
+				{
+					return CrtAllocator::allocate(bytes,align);
+				}
+
+				void* reallocate(void* ptr, size_t bytes, size_t align)
+				{
+					return CrtAllocator::reallocate(ptr,bytes,align);
+				}
+
+				void free(void* ptr)
+				{
+					CrtAllocator::free(ptr);
+				}
+			};
+			InternalAllocator m_allocator;
 		};
 	}
 }

@@ -376,19 +376,4 @@ int OOBase::detail::ProactorPosix::read_control()
 	}
 }
 
-void* OOBase::detail::ProactorPosix::internal_allocate(size_t bytes, size_t align)
-{
-	return OOBase::CrtAllocator::allocate(bytes,align);
-}
-
-void* OOBase::detail::ProactorPosix::internal_reallocate(void* ptr, size_t bytes, size_t align)
-{
-	return OOBase::CrtAllocator::reallocate(ptr,bytes,align);
-}
-
-void OOBase::detail::ProactorPosix::internal_free(void* ptr)
-{
-	OOBase::CrtAllocator::free(ptr);
-}
-
 #endif // defined(HAVE_UNISTD_H)

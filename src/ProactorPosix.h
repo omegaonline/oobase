@@ -69,10 +69,6 @@ namespace OOBase
 			void stop();
 			int restart();
 
-			void* internal_allocate(size_t bytes, size_t align);
-			void* internal_reallocate(void* ptr, size_t bytes, size_t align);
-			void internal_free(void* ptr);
-
 		protected:
 			struct TimerItem
 			{
@@ -112,6 +108,31 @@ namespace OOBase
 			int add_timer(void* param, timer_callback_t callback, const Timeout& timeout);
 			int remove_timer(void* param);
 			int watch_fd_i(int fd, unsigned int events, Future<int>* future);
+
+			class InternalAllocator : public AllocatorInstance
+			{
+			public:
+				void* allocate(size_t bytes, size_t align)
+				{
+					return CrtAllocator::allocate(bytes,align);
+				}
+
+				void* reallocate(void* ptr, size_t bytes, size_t align)
+				{
+					return CrtAllocator::reallocate(ptr,bytes,align);
+				}
+
+				void free(void* ptr)
+				{
+					CrtAllocator::free(ptr);
+				}
+			};
+			InternalAllocator m_allocator;
+
+			AllocatorInstance& get_internal_allocator()
+			{
+				return m_allocator;
+			}
 		};
 	}
 }
