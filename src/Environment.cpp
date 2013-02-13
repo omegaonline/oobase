@@ -91,6 +91,9 @@ int OOBase::Environment::get_user(HANDLE hToken, env_table_t& tabEnv)
 
 int OOBase::Environment::get_block(const env_table_t& tabEnv, TempPtr<wchar_t>& ptr)
 {
+	if (tabEnv.empty())
+		return 0;
+
 	typedef SmartPtr<wchar_t,FreeDestructor<AllocatorInstance> > temp_wchar_t;
 
 	AllocatorInstance& allocator = tabEnv.get_allocator();
@@ -298,6 +301,9 @@ int OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tabS
 
 int OOBase::Environment::get_envp(const env_table_t& tabEnv, TempPtr<char*>& ptr)
 {
+	if (tabEnv.empty())
+		return 0;
+
 	// We cheat here and allocate the strings and the array in one block.
 
 	// Count the size needed
