@@ -44,41 +44,51 @@ namespace OOBase
 		template <typename T>
 		int recv(T* param, void (T::*callback)(Buffer* buffer, int err), Buffer* buffer, size_t bytes = 0)
 		{
-			ThunkR<T>* thunk = this->thunk_allocate<ThunkR<T>,T*,void (T::*)(Buffer*,int)>(param,callback);
+			Thunk<T>* thunk = this->thunk_allocate<Thunk<T>,T*,void (T::*)(Buffer*,int)>(param,callback);
 			if (!thunk)
 				return ERROR_OUTOFMEMORY;
 			
-			return recv(thunk,&ThunkR<T>::fn,buffer,bytes);
+			return recv(thunk,&Thunk<T>::fn,buffer,bytes);
 		}
 
 		template <typename T>
 		int recv_msg(T* param, void (T::*callback)(Buffer* data_buffer, Buffer* ctl_buffer, int err), Buffer* data_buffer, Buffer* ctl_buffer, size_t data_bytes)
 		{
-			ThunkRM<T>* thunk = this->thunk_allocate<ThunkRM<T>,T*,void (T::*)(Buffer*,Buffer*,int)>(param,callback);
+			ThunkM<T>* thunk = this->thunk_allocate<ThunkM<T>,T*,void (T::*)(Buffer*,Buffer*,int)>(param,callback);
 			if (!thunk)
 				return ERROR_OUTOFMEMORY;
 
-			return recv_msg(thunk,&ThunkRM<T>::fn,data_buffer,ctl_buffer,data_bytes);
+			return recv_msg(thunk,&ThunkM<T>::fn,data_buffer,ctl_buffer,data_bytes);
 		}
 
 		template <typename T>
 		int send(T* param, void (T::*callback)(Buffer* buffer, int err), Buffer* buffer)
 		{
-			ThunkS<T>* thunk = this->thunk_allocate<ThunkS<T>,T*,void (T::*)(Buffer*,int)>(param,callback);
+			Thunk<T>* thunk = this->thunk_allocate<Thunk<T>,T*,void (T::*)(Buffer*,int)>(param,callback);
 			if (!thunk)
 				return ERROR_OUTOFMEMORY;
 			
-			return send(thunk,&ThunkS<T>::fn,buffer);
+			return send(thunk,&Thunk<T>::fn,buffer);
 		}
 
 		template <typename T>
 		int send_v(T* param, void (T::*callback)(Buffer* buffers[], size_t count, int err), Buffer* buffers[], size_t count)
 		{
-			ThunkSV<T>* thunk = this->thunk_allocate<ThunkSV<T>,T*,void (T::*)(Buffer*[],size_t, int)>(param,callback);
+			ThunkV<T>* thunk = this->thunk_allocate<ThunkV<T>,T*,void (T::*)(Buffer*[],size_t, int)>(param,callback);
+			if (!thunk)
+				return ERROR_OUTOFMEMORY;
+
+			return send_v(thunk,&ThunkV<T>::fn,buffers,count);
+		}
+
+		template <typename T>
+		int send_msg(T* param, void (T::*callback)(Buffer* data_buffer, Buffer* ctl_buffer, int err), Buffer* data_buffer, Buffer* ctl_buffer)
+		{
+			ThunkM<T>* thunk = this->thunk_allocate<ThunkM<T>,T*,void (T::*)(Buffer*,Buffer*,int)>(param,callback);
 			if (!thunk)
 				return ERROR_OUTOFMEMORY;
 			
-			return send_v(thunk,&ThunkSV<T>::fn,buffers,count);
+			return send_msg(thunk,&ThunkM<T>::fn,data_buffer,ctl_buffer);
 		}
 
 		// These are blocking calls
@@ -121,9 +131,9 @@ namespace OOBase
 
 	private:
 		template <typename T>
-		struct ThunkR
+		struct Thunk
 		{
-			ThunkR(T* param, void (T::*callback)(Buffer*,int), AllocatorInstance& allocator) :
+			Thunk(T* param, void (T::*callback)(Buffer*,int), AllocatorInstance& allocator) :
 				m_param(param),m_callback(callback),m_allocator(allocator)
 			{}
 
@@ -133,16 +143,16 @@ namespace OOBase
 
 			static void fn(void* param, Buffer* buffer, int err)
 			{
-				ThunkR thunk = *static_cast<ThunkR*>(param);
-				thunk.m_allocator.delete_free(static_cast<ThunkR*>(param));
+				Thunk thunk = *static_cast<Thunk*>(param);
+				thunk.m_allocator.delete_free(static_cast<Thunk*>(param));
 				(thunk.m_param->*thunk.m_callback)(buffer,err);
 			}
 		};
 		
 		template <typename T>
-		struct ThunkRM
+		struct ThunkM
 		{
-			ThunkRM(T* param, void (T::*callback)(Buffer*,Buffer*,int), AllocatorInstance& allocator) :
+			ThunkM(T* param, void (T::*callback)(Buffer*,Buffer*,int), AllocatorInstance& allocator) :
 				m_param(param),m_callback(callback),m_allocator(allocator)
 			{}
 
@@ -152,35 +162,16 @@ namespace OOBase
 
 			static void fn(void* param, Buffer* data_buffer, Buffer* ctl_buffer, int err)
 			{
-				ThunkRM thunk = *static_cast<ThunkRM*>(param);
-				thunk.m_allocator.delete_free(static_cast<ThunkRM*>(param));
+				ThunkM thunk = *static_cast<ThunkM*>(param);
+				thunk.m_allocator.delete_free(static_cast<ThunkM*>(param));
 				(thunk.m_param->*thunk.m_callback)(data_buffer,ctl_buffer,err);
 			}
 		};
 
 		template <typename T>
-		struct ThunkS
+		struct ThunkV
 		{
-			ThunkS(T* param, void (T::*callback)(Buffer*,int), AllocatorInstance& allocator) :
-				m_param(param),m_callback(callback),m_allocator(allocator)
-			{}
-
-			T* m_param;
-			void (T::*m_callback)(Buffer*,int);
-			AllocatorInstance& m_allocator;
-
-			static void fn(void* param, Buffer* buffer, int err)
-			{
-				ThunkS thunk = *static_cast<ThunkS*>(param);
-				thunk.m_allocator.delete_free(static_cast<ThunkS*>(param));
-				(thunk.m_param->*thunk.m_callback)(buffer,err);
-			}
-		};
-
-		template <typename T>
-		struct ThunkSV
-		{
-			ThunkSV(T* param, void (T::*callback)(Buffer*[],size_t,int), AllocatorInstance& allocator) :
+			ThunkV(T* param, void (T::*callback)(Buffer*[],size_t,int), AllocatorInstance& allocator) :
 				m_param(param),m_callback(callback),m_allocator(allocator)
 			{}
 
@@ -190,8 +181,8 @@ namespace OOBase
 
 			static void fn(void* param, Buffer* buffers[], size_t count, int err)
 			{
-				ThunkSV thunk = *static_cast<ThunkSV*>(param);
-				thunk.m_allocator.delete_free(static_cast<ThunkSV*>(param));
+				ThunkV thunk = *static_cast<ThunkV*>(param);
+				thunk.m_allocator.delete_free(static_cast<ThunkV*>(param));
 				(thunk.m_param->*thunk.m_callback)(buffers,count,err);
 			}
 		};
