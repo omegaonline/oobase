@@ -101,6 +101,8 @@ int OOBase::detail::ProactorPosix::init()
 	m_read_fd = pipe_ends[0];
 	m_write_fd = pipe_ends[1];
 
+	int err = POSIX::set_non_blocking(pipe_ends[0],true);
+
 	return 0;
 #else
 	if (::pipe(pipe_ends) != 0)
@@ -112,6 +114,7 @@ int OOBase::detail::ProactorPosix::init()
 		err = POSIX::set_close_on_exec(pipe_ends[0],true);
 	if (!err)
 		err = POSIX::set_close_on_exec(pipe_ends[1],true);
+#endif
 
 	if (!err)
 	{
@@ -125,7 +128,6 @@ int OOBase::detail::ProactorPosix::init()
 	}
 
 	return err;
-#endif
 }
 
 bool OOBase::detail::ProactorPosix::check_timers(TimerItem& active_timer, Timeout& timeout)
