@@ -237,12 +237,13 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 		error_pos->col = 1;
 	}
 
+	OOBase::StackAllocator<512> allocator;
+
 #if defined(HAVE_UNISTD_H)
 	POSIX::SmartFD f(POSIX::open(filename,O_RDONLY));
 	if (!f.is_valid())
 		return errno;
 #elif defined(_WIN32)
-	OOBase::StackAllocator<256> allocator;
 	TempPtr<wchar_t> wname(allocator);
 	int err2 = Win32::utf8_to_wchar_t(filename,wname);
 	if (err2)
@@ -255,9 +256,9 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 #error Implement platform native file handling
 #endif
 
-	static const size_t s_read_block_size = 4096;
+	static const size_t s_read_block_size = 400;
 
-	RefPtr<Buffer> buffer = Buffer::create<CrtAllocator>(s_read_block_size,1);
+	RefPtr<Buffer> buffer = Buffer::create(allocator,s_read_block_size,1);
 	if (!buffer)
 		return ERROR_OUTOFMEMORY;
 
