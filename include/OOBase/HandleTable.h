@@ -26,10 +26,23 @@
 
 namespace OOBase
 {
-	template <typename ID, typename V, typename Allocator = CrtAllocator>
-	class HandleTable : public HashTable<ID,V,Allocator>
+	namespace detail
 	{
-		typedef HashTable<ID,V,Allocator> baseClass;
+		// Numerically increasing values do not need a complex hash
+		template <typename T>
+		struct HandleHash
+		{
+			static size_t hash(T v)
+			{
+				return v;
+			}
+		};
+	}
+
+	template <typename ID, typename V, typename Allocator = CrtAllocator>
+	class HandleTable : public HashTable<ID,V,Allocator,detail::HandleHash<ID> >
+	{
+		typedef HashTable<ID,V,Allocator,detail::HandleHash<ID> > baseClass;
 		
 	public:
 		HandleTable(ID start) : baseClass(),
