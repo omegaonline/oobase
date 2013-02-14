@@ -93,7 +93,17 @@ int OOBase::detail::ProactorPosix::init()
 {
 	// Create the control pipe
 	int pipe_ends[2] = { -1, -1 };
-	if (pipe(pipe_ends) != 0)
+
+#if defined(HAVE_PIPE2)
+	if (::pipe2(pipe_ends,O_CLOEXEC) != 0)
+		return errno;
+
+	m_read_fd = pipe_ends[0];
+	m_write_fd = pipe_ends[1];
+
+	return 0;
+#else
+	if (::pipe(pipe_ends) != 0)
 		return errno;
 
 	// Set non-blocking and close-on-exec
@@ -115,6 +125,7 @@ int OOBase::detail::ProactorPosix::init()
 	}
 
 	return err;
+#endif
 }
 
 bool OOBase::detail::ProactorPosix::check_timers(TimerItem& active_timer, Timeout& timeout)

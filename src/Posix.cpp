@@ -31,12 +31,29 @@
 
 int OOBase::POSIX::open(const char *pathname, int flags, mode_t mode)
 {
+#if defined(O_CLOEXEC)
+	flags |= O_CLOEXEC;
+#endif
+
 	int fd = -1;
 	do
 	{
 		fd = ::open(pathname,flags,mode);
 	}
 	while (fd == -1 && errno == EINTR);
+
+#if !defined(O_CLOEXEC)
+	if (fd != -1)
+	{
+		int err = POSIX::set_close_on_exec(fd,true);
+		if (err)
+		{
+			POSIX::close(fd);
+			fd = -1;
+			return err;
+		}
+	}
+#endif
 
 	return fd;
 }
