@@ -109,7 +109,7 @@ int OOBase::temp_printf(TempPtr<char>& ptr, const char* format, ...)
 
 int OOBase::temp_vprintf(TempPtr<char>& ptr, const char* format, va_list args)
 {
-	for (int r = 63;;)
+	for (int r = 30;;)
 	{
 		size_t len = static_cast<size_t>(r) + 2;
 		if (!ptr.reallocate(len))
