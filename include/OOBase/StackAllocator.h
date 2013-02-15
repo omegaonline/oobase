@@ -26,6 +26,21 @@
 
 namespace OOBase
 {
+	namespace detail
+	{
+		template <bool B, typename T, typename F>
+		struct if_t
+		{
+			typedef T value;
+		};
+
+		template <typename T, typename F>
+		struct if_t<false,T,F>
+		{
+			typedef F value;
+		};
+	}
+
 	template <size_t SIZE, typename Allocator = ThreadLocalAllocator>
 	class StackAllocator : public AllocatorInstance
 	{
@@ -142,7 +157,7 @@ namespace OOBase
 		}
 
 	private:
-		typedef unsigned short index_t;
+		typedef typename detail::if_t<SIZE < 128,unsigned char,unsigned short>::value index_t;
 
 		struct free_block_t
 		{
