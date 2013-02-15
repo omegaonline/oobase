@@ -266,7 +266,14 @@ namespace OOBase
 			else
 			{
 				// Add to head of free list
-				block->m_next = (m_free ? static_cast<index_t>(m_free - m_start) : s_hibit_mask);
+				if (m_free)
+				{
+					block->m_next = static_cast<index_t>(m_free - m_start);
+					reinterpret_cast<free_block_t*>(m_free)->m_prev = static_cast<index_t>(p - m_start);
+				}
+				else
+					block->m_next = s_hibit_mask;
+
 				block->m_prev = s_hibit_mask;
 				m_free = p;
 			}
