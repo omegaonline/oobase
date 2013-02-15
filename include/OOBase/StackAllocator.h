@@ -32,11 +32,11 @@ namespace OOBase
 	public:
 		StackAllocator() : m_free(align_up(m_start,alignof<index_t>::value))
 		{
-			static_assert(sizeof(m_start) < s_hibit_mask,"SIZE too big");
+			static_assert(sizeof(m_start) < s_null_ptr,"SIZE too big");
 
 			reinterpret_cast<free_block_t*>(m_free)->m_size = sizeof(m_start);
-			reinterpret_cast<free_block_t*>(m_free)->m_next = s_hibit_mask;
-			reinterpret_cast<free_block_t*>(m_free)->m_prev = s_hibit_mask;
+			reinterpret_cast<free_block_t*>(m_free)->m_next = s_null_ptr;
+			reinterpret_cast<free_block_t*>(m_free)->m_prev = s_null_ptr;
 		}
 
 		void* allocate(size_t bytes, size_t align)
@@ -176,13 +176,23 @@ namespace OOBase
 
 		char* get_next(char* p)
 		{
-			return (reinterpret_cast<free_block_t*>(p)->m_next == s_hibit_mask ? NULL : m_start + reinterpret_cast<free_block_t*>(p)->m_next);
+			return (reinterpret_cast<free_block_t*>(p)->m_next == s_null_ptr ? NULL : m_start + (reinterpret_cast<free_block_t*>(p)->m_next) * sizeof(index_t));
 		}
 
-		char* get_adjacent(char* p)
+		char* get_adjacent(char* p) const
 		{
 			char* n = p + get_size(p);
 			return (n < m_start + sizeof(m_start) ? n : NULL);
+		}
+
+		index_t index_of(char* p) const
+		{
+			return static_cast<index_t>((p - m_start) / sizeof(index_t));
+		}
+
+		free_block_t* from_index(index_t idx)
+		{
+			return reinterpret_cast<free_block_t*>(m_start + (idx * sizeof(index_t)));
 		}
 
 		void split_block(char* p, char* split)
@@ -191,15 +201,15 @@ namespace OOBase
 			free_block_t* new_block = reinterpret_cast<free_block_t*>(split);
 
 			new_block->m_size = orig_block->m_size - static_cast<index_t>(split - p);
-			new_block->m_next = static_cast<index_t>(p - m_start);
+			new_block->m_next = index_of(p);
 			new_block->m_prev = orig_block->m_prev;
 
 			orig_block->m_size = static_cast<index_t>(split - p);
 
-			if (orig_block->m_prev != s_hibit_mask)
-				reinterpret_cast<free_block_t*>(m_start + orig_block->m_prev)->m_next = static_cast<index_t>(split - m_start);
+			if (orig_block->m_prev != s_null_ptr)
+				from_index(orig_block->m_prev)->m_next = index_of(split);
 
-			orig_block->m_prev = static_cast<index_t>(split - m_start);
+			orig_block->m_prev = index_of(split);
 
 			if (m_free == p)
 				m_free = split;
@@ -228,11 +238,11 @@ namespace OOBase
 		{
 			free_block_t* alloc = reinterpret_cast<free_block_t*>(p);
 
-			if (alloc->m_prev != s_hibit_mask)
-				reinterpret_cast<free_block_t*>(m_start + alloc->m_prev)->m_next = alloc->m_next;
+			if (alloc->m_prev != s_null_ptr)
+				from_index(alloc->m_prev)->m_next = alloc->m_next;
 
-			if (alloc->m_next != s_hibit_mask)
-				reinterpret_cast<free_block_t*>(m_start + alloc->m_next)->m_prev = alloc->m_prev;
+			if (alloc->m_next != s_null_ptr)
+				from_index(alloc->m_next)->m_prev = alloc->m_prev;
 
 			if (m_free == p)
 				m_free = get_next(p);
@@ -254,11 +264,11 @@ namespace OOBase
 				block->m_next = adjacent_block->m_next;
 				block->m_prev = adjacent_block->m_prev;
 
-				if (block->m_prev != s_hibit_mask)
-					reinterpret_cast<free_block_t*>(m_start + block->m_prev)->m_next = static_cast<index_t>(p - m_start);
+				if (block->m_prev != s_null_ptr)
+					from_index(block->m_prev)->m_next = index_of(p);
 
-				if (block->m_next != s_hibit_mask)
-					reinterpret_cast<free_block_t*>(m_start + block->m_next)->m_prev = static_cast<index_t>(p - m_start);
+				if (block->m_next != s_null_ptr)
+					from_index(block->m_next)->m_prev = index_of(p);
 
 				if (m_free == adjacent)
 					m_free = p;
@@ -268,13 +278,13 @@ namespace OOBase
 				// Add to head of free list
 				if (m_free)
 				{
-					block->m_next = static_cast<index_t>(m_free - m_start);
-					reinterpret_cast<free_block_t*>(m_free)->m_prev = static_cast<index_t>(p - m_start);
+					block->m_next = index_of(m_free);
+					reinterpret_cast<free_block_t*>(m_free)->m_prev = index_of(p);
 				}
 				else
-					block->m_next = s_hibit_mask;
+					block->m_next = s_null_ptr;
 
-				block->m_prev = s_hibit_mask;
+				block->m_prev = s_null_ptr;
 				m_free = p;
 			}
 
@@ -282,13 +292,13 @@ namespace OOBase
 			if (next && get_adjacent(next) == p)
 			{
 				free_block_t* next_block = reinterpret_cast<free_block_t*>(next);
-				if (next_block->m_prev == p - m_start)
+				if (next_block->m_prev == index_of(p))
 				{
 					next_block->m_size += block->m_size;
 					next_block->m_prev = block->m_prev;
 
-					if (next_block->m_prev != s_hibit_mask)
-						reinterpret_cast<free_block_t*>(m_start + next_block->m_prev)->m_next = static_cast<index_t>(next - m_start);
+					if (next_block->m_prev != s_null_ptr)
+						from_index(next_block->m_prev)->m_next = index_of(next);
 
 					if (m_free == p)
 						m_free = next;
@@ -298,6 +308,7 @@ namespace OOBase
 		}
 
 		static const index_t s_hibit_mask = 1 << (sizeof(index_t)*8 - 1);
+		static const index_t s_null_ptr = index_t(-1);
 
 		char  m_start[((SIZE / sizeof(index_t))+(SIZE % sizeof(index_t) ? 1 : 0)) * sizeof(index_t)];
 		char* m_free;
