@@ -26,21 +26,6 @@
 
 namespace OOBase
 {
-	namespace detail
-	{
-		template <bool B, typename T, typename F>
-		struct if_t
-		{
-			typedef T value;
-		};
-
-		template <typename T, typename F>
-		struct if_t<false,T,F>
-		{
-			typedef F value;
-		};
-	}
-
 	template <size_t SIZE, typename Allocator = ThreadLocalAllocator>
 	class StackAllocator : public AllocatorInstance
 	{
@@ -49,7 +34,7 @@ namespace OOBase
 		{
 			static_assert(sizeof(m_start) < s_null_ptr,"SIZE too big");
 
-			reinterpret_cast<free_block_t*>(m_free)->m_size = sizeof(m_start);
+			reinterpret_cast<free_block_t*>(m_free)->m_size = sizeof(m_start) / sizeof(index_t);
 			reinterpret_cast<free_block_t*>(m_free)->m_next = s_null_ptr;
 			reinterpret_cast<free_block_t*>(m_free)->m_prev = s_null_ptr;
 		}
@@ -128,7 +113,7 @@ namespace OOBase
 					if (alloc_end <= free_end - sizeof(free_block_t))
 						split_block(adjacent,alloc_end);
 
-					reinterpret_cast<free_block_t*>(tag)->m_size += get_size(adjacent);
+					reinterpret_cast<free_block_t*>(tag)->m_size += reinterpret_cast<free_block_t*>(adjacent)->m_size;
 					alloc_tag(adjacent);
 
 					return ptr;
@@ -157,7 +142,7 @@ namespace OOBase
 		}
 
 	private:
-		typedef typename detail::if_t<SIZE < 128,unsigned char,unsigned short>::value index_t;
+		typedef unsigned short index_t;
 
 		struct free_block_t
 		{
@@ -186,7 +171,7 @@ namespace OOBase
 
 		static index_t get_size(char* p)
 		{
-			return *reinterpret_cast<index_t*>(p) & ~s_hibit_mask;
+			return (*reinterpret_cast<index_t*>(p) & ~s_in_use_mask) * sizeof(index_t);
 		}
 
 		char* get_next(char* p)
@@ -215,11 +200,11 @@ namespace OOBase
 			free_block_t* orig_block = reinterpret_cast<free_block_t*>(p);
 			free_block_t* new_block = reinterpret_cast<free_block_t*>(split);
 
-			new_block->m_size = orig_block->m_size - static_cast<index_t>(split - p);
+			new_block->m_size = orig_block->m_size - (static_cast<index_t>(split - p) / sizeof(index_t));
 			new_block->m_next = index_of(p);
 			new_block->m_prev = orig_block->m_prev;
 
-			orig_block->m_size = static_cast<index_t>(split - p);
+			orig_block->m_size = (static_cast<index_t>(split - p) / sizeof(index_t));
 
 			if (orig_block->m_prev != s_null_ptr)
 				from_index(orig_block->m_prev)->m_next = index_of(split);
@@ -232,7 +217,7 @@ namespace OOBase
 
 		static bool is_free(char* p)
 		{
-			return *reinterpret_cast<index_t*>(p) & s_hibit_mask ? false : true;
+			return *reinterpret_cast<index_t*>(p) & s_in_use_mask ? false : true;
 		}
 
 		static char* get_tag(void* ptr)
@@ -262,13 +247,13 @@ namespace OOBase
 			if (m_free == p)
 				m_free = get_next(p);
 
-			alloc->m_size |= s_hibit_mask;
+			alloc->m_size |= s_in_use_mask;
 		}
 
 		void free_tag(char* p)
 		{
 			free_block_t* block = reinterpret_cast<free_block_t*>(p);
-			block->m_size &= ~s_hibit_mask;
+			block->m_size &= ~s_in_use_mask;
 
 			char* adjacent = get_adjacent(p);
 			if (adjacent && is_free(adjacent))
@@ -322,7 +307,7 @@ namespace OOBase
 			}
 		}
 
-		static const index_t s_hibit_mask = 1 << (sizeof(index_t)*8 - 1);
+		static const index_t s_in_use_mask = 1 << (sizeof(index_t)*8 - 1);
 		static const index_t s_null_ptr = index_t(-1);
 
 		char  m_start[((SIZE / sizeof(index_t))+(SIZE % sizeof(index_t) ? 1 : 0)) * sizeof(index_t)];
