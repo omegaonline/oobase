@@ -126,6 +126,7 @@ liboobase_la_SOURCES = \
 	src/Mutex.cpp \
 	src/Once.cpp \
 	src/Posix.cpp \
+	src/ScratchAllocator.cpp \
 	src/Server.cpp \
 	src/String.cpp \
 	src/Thread.cpp \

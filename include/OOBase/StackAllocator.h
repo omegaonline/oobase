@@ -22,128 +22,28 @@
 #ifndef OOBASE_STACK_ALLOCATOR_H_INCLUDED_
 #define OOBASE_STACK_ALLOCATOR_H_INCLUDED_
 
-#include "Memory.h"
+#include "SmartPtr.h"
+
+//#define OOBASE_STACK_ALLOC_CHECK 1
 
 namespace OOBase
 {
-	template <size_t SIZE, typename Allocator = ThreadLocalAllocator>
-	class StackAllocator : public AllocatorInstance
+	class ScratchAllocator : public AllocatorInstance
 	{
 	public:
-		StackAllocator() : m_free(align_up(m_start,alignof<index_t>::value))
-		{
-			static_assert(sizeof(m_start) < s_null_ptr,"SIZE too big");
+		ScratchAllocator(char* start, size_t len);
+		virtual ~ScratchAllocator();
 
-			reinterpret_cast<free_block_t*>(m_free)->m_size = sizeof(m_start) / sizeof(index_t);
-			reinterpret_cast<free_block_t*>(m_free)->m_next = s_null_ptr;
-			reinterpret_cast<free_block_t*>(m_free)->m_prev = s_null_ptr;
-		}
+		void* allocate(size_t bytes, size_t align);
+		void* reallocate(void* ptr, size_t bytes, size_t align);
+		void free(void* ptr);
 
-		void* allocate(size_t bytes, size_t align)
-		{
-			if (!bytes)
-				return NULL;
-
-			// Find the extent of the adjacent allocation
-			char* free_start = m_free;
-			char* free_end = NULL;
-			char* alloc_start = NULL;
-			char* alloc_end = NULL;
-
-			while (free_start)
-			{
-				alloc_start = align_up(free_start + sizeof(index_t),correct_align(align)) - sizeof(index_t);
-
-				// Ensure we have space for a pre block if needed
-				if (alloc_start != free_start && static_cast<size_t>(alloc_start - free_start) < sizeof(free_block_t))
-					alloc_start = align_up(free_start + sizeof(free_block_t) + sizeof(index_t),correct_align(align)) - sizeof(index_t);
-
-				alloc_end = align_up(alloc_start + min_alloc(bytes),alignof<index_t>::value);
-
-				free_end = free_start + get_size(free_start);
-				if (alloc_end <= free_end)
-					break;
-
-				free_start = get_next(free_start);
-			}
-
-			// If we have no space, use the Allocator
-			if (!free_start)
-				return Allocator::allocate(bytes,align);
-
-			if (alloc_end <= free_end - sizeof(free_block_t))
-				split_block(free_start,alloc_end);
-
-			if (alloc_start != free_start)
-				split_block(free_start,alloc_start);
-
-			alloc_tag(alloc_start);
-			return alloc_start + sizeof(index_t);
-		}
-
-		void* reallocate(void* ptr, size_t bytes, size_t align)
-		{
-			if (!ptr)
-				return allocate(bytes,align);
-
-			if (ptr < m_start + sizeof(index_t) || ptr >= m_start + sizeof(m_start))
-				return Allocator::reallocate(ptr,bytes);
-
-			char* tag = get_tag(ptr);
-			if (get_size(tag) >= bytes)
-			{
-				// We don't shrink blocks
-				return ptr;
-			}
-
-			// Check the adjacent block
-			char* adjacent = get_adjacent(tag);
-			if (adjacent && is_free(adjacent))
-			{
-				char* alloc_end = align_up(tag + min_alloc(bytes),alignof<index_t>::value);
-
-				if (static_cast<size_t>(alloc_end - adjacent) < sizeof(free_block_t))
-					alloc_end = align_up(alloc_end + (sizeof(free_block_t) - static_cast<size_t>(alloc_end - adjacent)),alignof<index_t>::value);
-
-				char* free_end = adjacent + get_size(adjacent);
-
-				if (alloc_end <= free_end)
-				{
-					// Merge with adjacent
-					if (alloc_end <= free_end - sizeof(free_block_t))
-						split_block(adjacent,alloc_end);
-
-					reinterpret_cast<free_block_t*>(tag)->m_size += reinterpret_cast<free_block_t*>(adjacent)->m_size;
-					alloc_tag(adjacent);
-
-					return ptr;
-				}
-			}
-
-			// Just do an allocate, copy and free
-			void* ptr_new = allocate(bytes,align);
-			if (ptr_new)
-			{
-				memcpy(ptr_new,ptr,get_size(tag));
-				free_tag(tag);
-			}
-			return ptr_new;
-		}
-
-		void free(void* ptr)
-		{
-			if (!ptr)
-				return;
-
-			if (ptr < m_start + sizeof(index_t) || ptr >= m_start + sizeof(m_start))
-				Allocator::free(ptr);
-			else
-				free_tag(get_tag(ptr));
-		}
-
-	private:
+	protected:
 		typedef unsigned short index_t;
 
+		bool is_our_ptr(void* p) const;
+
+	private:
 		struct free_block_t
 		{
 			index_t m_size;
@@ -151,189 +51,82 @@ namespace OOBase
 			index_t m_prev;
 		};
 
-		static char* align_up(char* p, size_t align)
-		{
-			size_t o = (reinterpret_cast<size_t>(p) % align);
-			if (o)
-				p += align - o;
-			return p;
-		}
-
-		static size_t correct_align(size_t align)
-		{
-			return (align < alignof<index_t>::value ? alignof<index_t>::value : align);
-		}
-
-		static size_t min_alloc(size_t bytes)
-		{
-			return (bytes + sizeof(index_t) < sizeof(free_block_t) ? sizeof(free_block_t) : bytes + sizeof(index_t));
-		}
-
-		static index_t get_size(char* p)
-		{
-			return (*reinterpret_cast<index_t*>(p) & ~s_in_use_mask) * sizeof(index_t);
-		}
-
-		char* get_next(char* p)
-		{
-			return (reinterpret_cast<free_block_t*>(p)->m_next == s_null_ptr ? NULL : m_start + (reinterpret_cast<free_block_t*>(p)->m_next) * sizeof(index_t));
-		}
-
-		char* get_adjacent(char* p) const
-		{
-			char* n = p + get_size(p);
-			return (n < m_start + sizeof(m_start) ? n : NULL);
-		}
-
-		index_t index_of(char* p) const
-		{
-			return static_cast<index_t>((p - m_start) / sizeof(index_t));
-		}
-
-		free_block_t* from_index(index_t idx)
-		{
-			return reinterpret_cast<free_block_t*>(m_start + (idx * sizeof(index_t)));
-		}
-
-		void split_block(char* p, char* split)
-		{
-			free_block_t* orig_block = reinterpret_cast<free_block_t*>(p);
-			free_block_t* new_block = reinterpret_cast<free_block_t*>(split);
-
-			new_block->m_size = orig_block->m_size - (static_cast<index_t>(split - p) / sizeof(index_t));
-			new_block->m_next = index_of(p);
-			new_block->m_prev = orig_block->m_prev;
-
-			orig_block->m_size = (static_cast<index_t>(split - p) / sizeof(index_t));
-
-			if (orig_block->m_prev != s_null_ptr)
-				from_index(orig_block->m_prev)->m_next = index_of(split);
-
-			orig_block->m_prev = index_of(split);
-
-			if (m_free == p)
-				m_free = split;
-		}
-
-		static bool is_free(char* p)
-		{
-			return *reinterpret_cast<index_t*>(p) & s_in_use_mask ? false : true;
-		}
-
-		static char* get_tag(void* ptr)
-		{
-			// Check alignment...
-			if (reinterpret_cast<ptrdiff_t>(ptr) & (alignof<index_t>::value - 1))
-				OOBase_CallCriticalFailure("Invalid pointer to reallocate");
-
-			// Check the tag block
-			char* tag = static_cast<char*>(ptr) - sizeof(index_t);
-			if (is_free(tag))
-				OOBase_CallCriticalFailure("Double free");
-
-			return tag;
-		}
-
-		void alloc_tag(char* p)
-		{
-			free_block_t* alloc = reinterpret_cast<free_block_t*>(p);
-
-			if (alloc->m_prev != s_null_ptr)
-				from_index(alloc->m_prev)->m_next = alloc->m_next;
-
-			if (alloc->m_next != s_null_ptr)
-				from_index(alloc->m_next)->m_prev = alloc->m_prev;
-
-			if (m_free == p)
-			{
-				if (alloc->m_prev != s_null_ptr)
-					m_free = m_start + (alloc->m_prev * sizeof(index_t));
-				else
-					m_free = get_next(p);
-			}
-
-			alloc->m_size |= s_in_use_mask;
-		}
-
-		void free_tag(char* p)
-		{
-			free_block_t* block = reinterpret_cast<free_block_t*>(p);
-			block->m_size &= ~s_in_use_mask;
-
-			char* adjacent = get_adjacent(p);
-			if (adjacent && is_free(adjacent))
-			{
-				// Merge with adjacent
-				free_block_t* adjacent_block = reinterpret_cast<free_block_t*>(adjacent);
-				block->m_size += adjacent_block->m_size;
-				block->m_next = adjacent_block->m_next;
-				block->m_prev = adjacent_block->m_prev;
-
-				if (block->m_prev != s_null_ptr)
-					from_index(block->m_prev)->m_next = index_of(p);
-
-				if (block->m_next != s_null_ptr)
-					from_index(block->m_next)->m_prev = index_of(p);
-
-				if (m_free == adjacent)
-					m_free = p;
-			}
-			else
-			{
-				// Insert into free list maintaining order
-				char* insert = NULL;
-				for (char* f = m_free;f && f > p;f = get_next(f))
-					insert = f;
-
-				if (insert)
-				{
-					block->m_prev = index_of(insert);
-					block->m_next = reinterpret_cast<free_block_t*>(insert)->m_next;
-					reinterpret_cast<free_block_t*>(insert)->m_next = index_of(p);
-
-					if (block->m_next != s_null_ptr)
-						from_index(block->m_next)->m_prev = index_of(p);
-				}
-				else
-				{
-					if (m_free)
-					{
-						block->m_next = index_of(m_free);
-						reinterpret_cast<free_block_t*>(m_free)->m_prev = index_of(p);
-					}
-					else
-						block->m_next = s_null_ptr;
-
-					block->m_prev = s_null_ptr;
-					m_free = p;
-				}
-			}
-
-			// Merge with next if adjacent to p
-			char* next = get_next(p);
-			if (next && get_adjacent(next) == p)
-			{
-				free_block_t* next_block = reinterpret_cast<free_block_t*>(next);
-				if (next_block->m_prev == index_of(p))
-				{
-					next_block->m_size += block->m_size;
-					next_block->m_prev = block->m_prev;
-
-					if (next_block->m_prev != s_null_ptr)
-						from_index(next_block->m_prev)->m_next = index_of(next);
-
-					if (m_free == p)
-						m_free = next;
-
-				}
-			}
-		}
+		static char* align_up(char* p, size_t align);
+		static size_t correct_align(size_t align);
+		static size_t min_alloc(size_t bytes);
+		static index_t get_size(char* p);
+		char* get_next(char* p);
+		char* get_adjacent(char* p) const;
+		index_t index_of(char* p) const;
+		free_block_t* from_index(index_t idx);
+		void split_block(char* p, char* split);
+		static bool is_free(char* p);
+		static char* get_tag(void* ptr);
+		void alloc_tag(char* p);
+		void free_tag(char* p);
 
 		static const index_t s_in_use_mask = 1 << (sizeof(index_t)*8 - 1);
 		static const index_t s_null_ptr = index_t(-1);
 
-		char  m_start[((SIZE / sizeof(index_t))+(SIZE % sizeof(index_t) ? 1 : 0)) * sizeof(index_t)];
+		char* m_start;
+		char* m_end;
 		char* m_free;
+
+#if defined(OOBASE_STACK_ALLOC_CHECK) && OOBASE_STACK_ALLOC_CHECK
+		char* get_prev(char* p);
+		void check();
+#endif
+	};
+
+	template <size_t SIZE, typename Allocator = ThreadLocalAllocator>
+	class StackAllocator : public ScratchAllocator, public Allocating<Allocator>
+	{
+		typedef Allocating<Allocator> baseClass;
+
+	public:
+		StackAllocator() : ScratchAllocator(m_buffer,sizeof(m_buffer)), baseClass()
+		{
+			static_assert(sizeof(m_buffer) < index_t(-1),"SIZE too big");
+		}
+
+		StackAllocator(AllocatorInstance& allocator) : ScratchAllocator(m_buffer,sizeof(m_buffer)), baseClass(allocator)
+		{
+			static_assert(sizeof(m_buffer) < index_t(-1),"SIZE too big");
+		}
+
+		void* allocate(size_t bytes, size_t align)
+		{
+			void* p = ScratchAllocator::allocate(bytes,align);
+			if (p)
+				return p;
+
+			return baseClass::allocate(bytes,align);
+		}
+
+		void* reallocate(void* ptr, size_t bytes, size_t align)
+		{
+			if (!ptr)
+				return allocate(bytes,align);
+
+			if (!is_our_ptr(ptr))
+				return baseClass::reallocate(ptr,bytes,align);
+
+			return ScratchAllocator::reallocate(ptr,bytes,align);
+		}
+
+		void free(void* ptr)
+		{
+			if (!ptr)
+				return;
+
+			if (!is_our_ptr(ptr))
+				baseClass::free(ptr);
+			else
+				ScratchAllocator::free(ptr);
+		}
+
+	private:
+		char m_buffer[((SIZE / sizeof(index_t))+(SIZE % sizeof(index_t) ? 1 : 0)) * sizeof(index_t)];
 	};
 
 	template <typename T, size_t COUNT = 256/sizeof(T), typename Allocator = ThreadLocalAllocator>
