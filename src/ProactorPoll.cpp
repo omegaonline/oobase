@@ -36,7 +36,7 @@
 
 OOBase::Proactor* OOBase::Proactor::create(int& err)
 {
-	detail::ProactorPoll* proactor = new (std::nothrow) detail::ProactorPoll();
+	detail::ProactorPoll* proactor = OOBase::CrtAllocator::allocate_new<detail::ProactorPoll>();
 	if (!proactor)
 		err = ERROR_OUTOFMEMORY;
 	else
@@ -44,7 +44,7 @@ OOBase::Proactor* OOBase::Proactor::create(int& err)
 		err = proactor->init();
 		if (err)
 		{
-			delete proactor;
+			OOBase::CrtAllocator::delete_free(proactor);
 			proactor = NULL;
 		}
 	}
@@ -56,11 +56,14 @@ void OOBase::Proactor::destroy(Proactor* proactor)
 	if (proactor)
 	{
 		proactor->stop();
-		delete proactor;
+		OOBase::CrtAllocator::delete_free(static_cast<detail::ProactorPoll*>(proactor));
 	}
 }
 
-OOBase::detail::ProactorPoll::ProactorPoll() : ProactorPosix()
+OOBase::detail::ProactorPoll::ProactorPoll() :
+		ProactorPosix(),
+		m_poll_fds(m_allocator),
+		m_items(m_allocator)
 {
 }
 

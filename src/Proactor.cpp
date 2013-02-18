@@ -82,35 +82,3 @@ int OOBase::AsyncSocket::send_msg(Buffer* buffer, Buffer* ctl_buffer)
 
 	return err;
 }
-
-OOBase::Acceptor* OOBase::Proactor::accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa)
-{
-	return accept(param,callback,path,err,psa,get_internal_allocator());
-}
-
-OOBase::Acceptor* OOBase::Proactor::accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err)
-{
-	return accept(param,callback,addr,addr_len,err,get_internal_allocator());
-}
-
-OOBase::AsyncSocket* OOBase::Proactor::attach(socket_t sock, int& err)
-{
-	return attach(sock,err,get_internal_allocator());
-}
-
-#if defined(_WIN32)
-OOBase::AsyncSocket* OOBase::Proactor::attach(HANDLE hPipe, int& err)
-{
-	return attach(hPipe,err,get_internal_allocator());
-}
-#endif
-
-OOBase::AsyncSocket* OOBase::Proactor::connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout)
-{
-	return connect(addr,addr_len,err,timeout,get_internal_allocator());
-}
-
-OOBase::AsyncSocket* OOBase::Proactor::connect(const char* path, int& err, const Timeout& timeout)
-{
-	return connect(path,err,timeout,get_internal_allocator());
-}

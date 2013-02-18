@@ -255,7 +255,9 @@ namespace
 	{
 		OOBase::Win32::rwmutex_t** mtx = reinterpret_cast<OOBase::Win32::rwmutex_t**>(SRWLock);
 
-		*mtx = new (OOBase::critical) OOBase::Win32::rwmutex_t();
+		*mtx = OOBase::CrtAllocator::allocate_new<OOBase::Win32::rwmutex_t>();
+		if (!*mtx)
+			OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 	}
 
 	void Win32Thunk::impl_AcquireSRWLockShared(SRWLOCK* SRWLock)
@@ -292,7 +294,9 @@ namespace
 	{
 		OOBase::Win32::condition_variable_t** var = reinterpret_cast<OOBase::Win32::condition_variable_t**>(ConditionVariable);
 
-		*var = new (OOBase::critical) OOBase::Win32::condition_variable_t();
+		*var = OOBase::CrtAllocator::allocate_new<OOBase::Win32::condition_variable_t>();
+		if (!*var)
+			OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 	}
 
 	void Win32Thunk::impl_WakeConditionVariable(CONDITION_VARIABLE* ConditionVariable)
@@ -353,7 +357,7 @@ void OOBase::Win32::ReleaseSRWLockExclusive(SRWLOCK* SRWLock)
 void OOBase::Win32::DeleteSRWLock(SRWLOCK* SRWLock)
 {
 	if (Win32Thunk::instance().m_InitializeSRWLock == Win32Thunk::impl_InitializeSRWLock)
-		delete *reinterpret_cast<rwmutex_t**>(SRWLock);
+		OOBase::CrtAllocator::delete_free(*reinterpret_cast<rwmutex_t**>(SRWLock));
 }
 
 OOBase::Win32::rwmutex_t::rwmutex_t() :
@@ -519,7 +523,7 @@ void OOBase::Win32::WakeAllConditionVariable(CONDITION_VARIABLE* ConditionVariab
 void OOBase::Win32::DeleteConditionVariable(CONDITION_VARIABLE* ConditionVariable)
 {
 	if (Win32Thunk::instance().m_InitializeConditionVariable == Win32Thunk::impl_InitializeConditionVariable)
-		delete *reinterpret_cast<condition_variable_t**>(ConditionVariable);
+		OOBase::CrtAllocator::delete_free(*reinterpret_cast<condition_variable_t**>(ConditionVariable));
 }
 
 BOOL OOBase::Win32::BindIoCompletionCallback(HANDLE FileHandle, LPOVERLAPPED_COMPLETION_ROUTINE Function, ULONG Flags)

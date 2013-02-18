@@ -79,6 +79,7 @@ namespace
 OOBase::detail::ProactorPosix::ProactorPosix() :
 		m_stopped(false),
 		m_read_fd(-1),
+		m_timers(m_allocator),
 		m_write_fd(-1)
 {
 }

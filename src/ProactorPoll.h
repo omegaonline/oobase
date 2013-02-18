@@ -59,8 +59,8 @@ namespace OOBase
 				unsigned int m_events;
 			};
 
-			Bag<pollfd>                   m_poll_fds;
-			OOBase::HashTable<int,FdItem> m_items;
+			Bag<pollfd,AllocatorInstance>                   m_poll_fds;
+			OOBase::HashTable<int,FdItem,AllocatorInstance> m_items;
 
 			int do_bind_fd(int fd, void* param, fd_callback_t callback);
 			int do_unbind_fd(int fd);

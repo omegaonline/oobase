@@ -38,14 +38,14 @@ namespace OOBase
 		{
 		// Proactor public members
 		public:
-			Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa, AllocatorInstance& allocator);
-			Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err, AllocatorInstance& allocator);
+			Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa);
+			Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err);
 
-			AsyncSocket* attach(socket_t sock, int& err, AllocatorInstance& allocator);
-			AsyncSocket* attach(HANDLE hPipe, int& err, AllocatorInstance& allocator);
+			AsyncSocket* attach(socket_t sock, int& err);
+			AsyncSocket* attach(HANDLE hPipe, int& err);
 
-			AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout, AllocatorInstance& allocator);
-			AsyncSocket* connect(const char* path, int& err, const Timeout& timeout, AllocatorInstance& allocator);
+			AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout);
+			AsyncSocket* connect(const char* path, int& err, const Timeout& timeout);
 
 			// 'Internal' public members
 		public:
@@ -82,25 +82,7 @@ namespace OOBase
 			SpinLock m_lock;
 			size_t   m_bound;
 
-			class InternalAllocator : public AllocatorInstance
-			{
-			public:
-				void* allocate(size_t bytes, size_t align)
-				{
-					return CrtAllocator::allocate(bytes,align);
-				}
-
-				void* reallocate(void* ptr, size_t bytes, size_t align)
-				{
-					return CrtAllocator::reallocate(ptr,bytes,align);
-				}
-
-				void free(void* ptr)
-				{
-					CrtAllocator::free(ptr);
-				}
-			};
-			InternalAllocator m_allocator;
+			LockedAllocator<4096> m_allocator;
 		};
 	}
 }

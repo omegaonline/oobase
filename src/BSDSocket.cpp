@@ -240,11 +240,11 @@ int OOBase::Net::accept(socket_t accept_sock, socket_t& new_sock, const Timeout&
 
 namespace
 {
-	class Socket : public OOBase::Socket
+	class BSDSocket : public OOBase::Socket
 	{
 	public:
-		Socket(OOBase::socket_t sock);
-		virtual ~Socket();
+		BSDSocket(OOBase::socket_t sock);
+		virtual ~BSDSocket();
 
 		size_t send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout);
 		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
@@ -262,6 +262,11 @@ namespace
 		OOBase::Mutex m_send_lock;
 
 		int do_select(bool bWrite, const OOBase::Timeout& timeout);
+
+		void destroy()
+		{
+			OOBase::CrtAllocator::delete_free(this);
+		}
 	};
 
 	int connect_i(const char* address, const char* port, int& err, const OOBase::Timeout& timeout)
@@ -313,17 +318,17 @@ namespace
 	}
 }
 
-Socket::Socket(int sock) :
+BSDSocket::BSDSocket(int sock) :
 		m_sock(sock)
 {
 }
 
-Socket::~Socket()
+BSDSocket::~BSDSocket()
 {
 	close();
 }
 
-int Socket::do_select(bool bWrite, const OOBase::Timeout& timeout)
+int BSDSocket::do_select(bool bWrite, const OOBase::Timeout& timeout)
 {
 	fd_set fds,efds;
 	int count = 0;
@@ -367,7 +372,7 @@ int Socket::do_select(bool bWrite, const OOBase::Timeout& timeout)
 	return 0;
 }
 
-size_t Socket::send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout)
+size_t BSDSocket::send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout)
 {
 	err = 0;
 	if (len == 0)
@@ -423,7 +428,7 @@ size_t Socket::send(const void* buf, size_t len, int& err, const OOBase::Timeout
 	return (len - to_send);
 }
 
-int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout)
+int BSDSocket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout)
 {
 	if (count == 0)
 		return 0;
@@ -517,7 +522,7 @@ int Socket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 	return err;
 }
 
-size_t Socket::send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout)
+size_t BSDSocket::send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout)
 {
 	err = 0;
 	data_len = (data_buf ? data_len : 0);
@@ -578,7 +583,7 @@ size_t Socket::send_msg(const void* data_buf, size_t data_len, const void* ctl_b
 	return sent;
 }
 
-size_t Socket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout)
+size_t BSDSocket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout)
 {
 	err = 0;
 	if (len == 0)
@@ -636,7 +641,7 @@ size_t Socket::recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Ti
 	return (len - to_recv);
 }
 
-int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout)
+int BSDSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout)
 {
 	if (count == 0)
 		return 0;
@@ -728,7 +733,7 @@ int Socket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeou
 	return err;
 }
 
-size_t Socket::recv_msg(void* data_buf, size_t data_len, OOBase::Buffer* ctl_buffer, int& err, const OOBase::Timeout& timeout)
+size_t BSDSocket::recv_msg(void* data_buf, size_t data_len, OOBase::Buffer* ctl_buffer, int& err, const OOBase::Timeout& timeout)
 {
 	err = 0;
 	data_len = (data_buf ? data_len : 0);
@@ -799,7 +804,7 @@ size_t Socket::recv_msg(void* data_buf, size_t data_len, OOBase::Buffer* ctl_buf
 	return recvd;
 }
 
-int Socket::shutdown(bool bSend, bool bRecv)
+int BSDSocket::shutdown(bool bSend, bool bRecv)
 {
 	int how = -1;
 	if (bSend && bRecv)
@@ -812,7 +817,7 @@ int Socket::shutdown(bool bSend, bool bRecv)
 	return (how != -1 ? ::shutdown(m_sock,how) : 0);
 }
 
-int Socket::close()
+int BSDSocket::close()
 {
 	int err = OOBase::Net::close_socket(m_sock);
 	if (!err)
@@ -831,7 +836,7 @@ OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)
 	if (err)
 		return NULL;
 
-	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock);
+	OOBase::Socket* pSocket = OOBase::CrtAllocator::allocate_new<BSDSocket>(sock);
 	if (!pSocket)
 		err = ENOMEM;
 
@@ -844,7 +849,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, i
 	if (sock == -1)
 		return NULL;
 
-	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock);
+	OOBase::Socket* pSocket = OOBase::CrtAllocator::allocate_new<BSDSocket>(sock);
 	if (!pSocket)
 	{
 		err = ENOMEM;
@@ -888,7 +893,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* path, int& err, const Timeou
 		return NULL;
 	}
 
-	OOBase::Socket* pSocket = new (std::nothrow) ::Socket(sock);
+	OOBase::Socket* pSocket = OOBase::CrtAllocator::allocate_new<BSDSocket>(sock);
 	if (!pSocket)
 	{
 		err = ENOMEM;

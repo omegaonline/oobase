@@ -78,7 +78,7 @@ namespace
 		{
 			ULONG ret = --m_refcount;
 			if (!ret)
-				delete this;
+				OOBase::CrtAllocator::delete_free(this);
 			return ret;
 		}
 
@@ -131,7 +131,7 @@ namespace
 		try
 		{
 #endif
-			MyMessageFilter* pFilter = new (std::nothrow) MyMessageFilter();
+			MyMessageFilter* pFilter = OOBase::CrtAllocator::allocate_new<MyMessageFilter>();
 			if (pFilter)
 			{
 				IMessageFilter* pPrev = 0;

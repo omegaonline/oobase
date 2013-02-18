@@ -302,13 +302,18 @@ OOBase::Thread::Thread(bool bAutodelete) :
 		m_bAutodelete(bAutodelete),
 		m_impl(NULL)
 {
+	void* TODO; // Make this ref counted
+
+
 #if defined(_WIN32)
-		m_impl = new (critical) Win32Thread(bAutodelete);
+		m_impl = OOBase::CrtAllocator::allocate_new<Win32Thread>(bAutodelete);
 #elif defined(HAVE_PTHREAD)
-		m_impl = new (critical) PthreadThread(bAutodelete);
+		m_impl = OOBase::CrtAllocator::allocate_new<PthreadThread>(bAutodelete);
 #else
 #error Implement platform native thread wrapper
 #endif
+		if (!m_impl)
+			OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 }
 
 OOBase::Thread::Thread(bool bAutodelete, bool) :
@@ -319,7 +324,7 @@ OOBase::Thread::Thread(bool bAutodelete, bool) :
 
 OOBase::Thread::~Thread()
 {
-	delete m_impl;
+	OOBase::CrtAllocator::delete_free(m_impl);
 }
 
 int OOBase::Thread::run(int (*thread_fn)(void*), void* param)
@@ -390,7 +395,7 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 {
 	for (size_t i=0;i<threads;++i)
 	{
-		Thread* pThread = new (std::nothrow) Thread(false);
+		Thread* pThread = CrtAllocator::allocate_new<Thread>(false);
 		if (!pThread)
 			return ERROR_OUTOFMEMORY;
 
@@ -402,7 +407,7 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 			Thread** ppThread = m_threads.at(j);
 			if (!*ppThread || !(*ppThread)->is_running())
 			{
-				delete *ppThread;
+				CrtAllocator::delete_free(*ppThread);
 				if (!bAdd)
 				{
 					*ppThread = pThread;
@@ -450,7 +455,7 @@ void OOBase::ThreadPool::join()
 			if (!m_threads.empty() && pThread == *m_threads.at(m_threads.size()-1))
 			{
 				m_threads.pop();
-				delete pThread;
+				CrtAllocator::delete_free(pThread);
 			}
 		}
 		else
@@ -470,7 +475,7 @@ void OOBase::ThreadPool::abort()
 
 		if (pThread)
 			pThread->abort();
-		delete pThread;
+		CrtAllocator::delete_free(pThread);
 	}
 }
 

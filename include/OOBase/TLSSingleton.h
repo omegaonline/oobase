@@ -75,16 +75,20 @@ namespace OOBase
 			if (!i)
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
+			void* t = alloc->allocate(sizeof(T),alignof<T>::value);
+			if (!t)
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 			try
 			{
 #endif
-				i->m_this = alloc->allocate_new<T>();
+				i->m_this = ::new (t) T();
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 			}
 			catch (...)
 			{
-				alloc->delete_free(i);
+				alloc->free(t);
 				throw;
 			}
 #endif
@@ -109,17 +113,17 @@ namespace OOBase
 				try
 				{
 #endif
-					curr->delete_free(i->m_this);
+					i->m_this->~T();
+					curr->free(i->m_this);
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				}
 				catch (...)
 				{
-					curr->delete_free(i);
-					TLS::detail::swap_allocator(prev);
-					throw;
+					OOBase_CallCriticalFailure("Exception in TLSSingleton destructor");
 				}
 #endif
-				curr->delete_free(i);
+				i->m_this->~T();
+				curr->free(i);
 				TLS::detail::swap_allocator(prev);
 			}
 		}

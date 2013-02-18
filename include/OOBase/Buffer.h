@@ -161,7 +161,20 @@ namespace OOBase
 						return NULL;
 					}
 
-					pBuffer = ::new (p) BufferImpl(buf,cbSize,align);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+					try
+					{
+#endif
+						pBuffer = ::new (p) BufferImpl(buf,cbSize,align);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+					}
+					catch (...)
+					{
+						baseClass::free(buf);
+						baseClass::free(p);
+						throw;
+					}
+#endif
 				}
 				return pBuffer;
 			}
@@ -179,7 +192,20 @@ namespace OOBase
 						return NULL;
 					}
 
-					pBuffer = ::new (p) BufferImpl(allocator,buf,cbSize,align);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+					try
+					{
+#endif
+						pBuffer = ::new (p) BufferImpl(allocator,buf,cbSize,align);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+					}
+					catch (...)
+					{
+						allocator.free(buf);
+						allocator.free(p);
+						throw;
+					}
+#endif
 				}
 				return pBuffer;
 			}

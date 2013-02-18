@@ -364,6 +364,11 @@ namespace
 
 		DWORD send_i(WSABUF* wsabuf, DWORD count, int& err, const OOBase::Timeout& timeout);
 		DWORD recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int& err, const OOBase::Timeout& timeout);
+
+		void destroy()
+		{
+			OOBase::CrtAllocator::delete_free(this);
+		}
 	};
 
 	SOCKET connect_i(const char* address, const char* port, int& err, const OOBase::Timeout& timeout)
@@ -918,7 +923,7 @@ int WinSocket::close()
 
 OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)
 {
-	OOBase::Socket* pSocket = new (std::nothrow) WinSocket(sock);
+	OOBase::Socket* pSocket = OOBase::CrtAllocator::allocate_new<WinSocket>(sock);
 	if (!pSocket)
 		err = ERROR_OUTOFMEMORY;
 
@@ -934,7 +939,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, i
 	if (sock == INVALID_SOCKET)
 		return NULL;
 
-	OOBase::Socket* pSocket = new (std::nothrow) WinSocket(sock);
+	OOBase::Socket* pSocket = OOBase::CrtAllocator::allocate_new<WinSocket>(sock);
 	if (!pSocket)
 	{
 		err = ERROR_OUTOFMEMORY;

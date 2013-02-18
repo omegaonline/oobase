@@ -44,13 +44,13 @@ namespace OOBase
 		{
 		// Proactor public members
 		public:
-			Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa, AllocatorInstance& allocator);
-			Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err, AllocatorInstance& allocator);
+			Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa);
+			Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err);
 
-			AsyncSocket* attach(socket_t sock, int& err, AllocatorInstance& allocator);
+			AsyncSocket* attach(socket_t sock, int& err);
 
-			AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout, AllocatorInstance& allocator);
-			AsyncSocket* connect(const char* path, int& err, const Timeout& timeout, AllocatorInstance& allocator);
+			AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout);
+			AsyncSocket* connect(const char* path, int& err, const Timeout& timeout);
 
 		// 'Internal' public members
 		public:
@@ -69,12 +69,17 @@ namespace OOBase
 			void stop();
 			int restart();
 
+			AllocatorInstance& get_internal_allocator()
+			{
+				return m_allocator;
+			}
+
 		protected:
 			struct TimerItem
 			{
 				void*            m_param;
 				timer_callback_t m_callback;
-				Timeout  m_timeout;
+				Timeout          m_timeout;
 
 				bool operator < (const TimerItem& rhs) const
 				{
@@ -97,42 +102,18 @@ namespace OOBase
 			virtual int do_watch_fd(int fd, unsigned int events) = 0;
 			virtual int do_unbind_fd(int fd) = 0;
 
-			SpinLock       m_lock;
-			bool           m_stopped;
-			int            m_read_fd;
+			SpinLock              m_lock;
+			LockedAllocator<4096> m_allocator;
+			bool                  m_stopped;
+			int                   m_read_fd;
 
 		private:
-			Set<TimerItem> m_timers;
-			int            m_write_fd;
+			Set<TimerItem,AllocatorInstance> m_timers;
+			int                              m_write_fd;
 
 			int add_timer(void* param, timer_callback_t callback, const Timeout& timeout);
 			int remove_timer(void* param);
 			int watch_fd_i(int fd, unsigned int events, Future<int>* future);
-
-			class InternalAllocator : public AllocatorInstance
-			{
-			public:
-				void* allocate(size_t bytes, size_t align)
-				{
-					return CrtAllocator::allocate(bytes,align);
-				}
-
-				void* reallocate(void* ptr, size_t bytes, size_t align)
-				{
-					return CrtAllocator::reallocate(ptr,bytes,align);
-				}
-
-				void free(void* ptr)
-				{
-					CrtAllocator::free(ptr);
-				}
-			};
-			InternalAllocator m_allocator;
-
-			AllocatorInstance& get_internal_allocator()
-			{
-				return m_allocator;
-			}
 		};
 	}
 }

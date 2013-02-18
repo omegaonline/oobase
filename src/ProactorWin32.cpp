@@ -28,7 +28,7 @@
 
 OOBase::Proactor* OOBase::Proactor::create(int& err)
 {
-	detail::ProactorWin32* proactor = new (std::nothrow) detail::ProactorWin32();
+	detail::ProactorWin32* proactor = OOBase::CrtAllocator::allocate_new<detail::ProactorWin32>();
 	if (!proactor)
 		err = ERROR_OUTOFMEMORY;
 	return proactor;
@@ -39,7 +39,7 @@ void OOBase::Proactor::destroy(Proactor* proactor)
 	if (proactor)
 	{
 		proactor->stop();
-		delete proactor;
+		OOBase::CrtAllocator::delete_free(static_cast<detail::ProactorWin32*>(proactor));
 	}
 }
 

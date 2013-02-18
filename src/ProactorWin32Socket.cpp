@@ -33,12 +33,11 @@
 
 namespace
 {
-	class Win32AsyncSocket : public OOBase::AsyncSocket, public OOBase::Allocating<OOBase::AllocatorInstance>
+	class Win32AsyncSocket : public OOBase::AsyncSocket
 	{
-		friend class OOBase::Allocating<OOBase::AllocatorInstance>;
-
 	public:
-		Win32AsyncSocket(OOBase::detail::ProactorWin32* pProactor, SOCKET hSocket, OOBase::AllocatorInstance& allocator);
+		Win32AsyncSocket(OOBase::detail::ProactorWin32* pProactor, SOCKET hSocket);
+		virtual ~Win32AsyncSocket();
 		
 		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes);
 		int recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer, size_t data_bytes);
@@ -49,17 +48,15 @@ namespace
 		OOBase::socket_t get_handle();
 
 	protected:
-		OOBase::AllocatorInstance& get_allocator() const
+		OOBase::AllocatorInstance& get_internal_allocator() const
 		{
-			return OOBase::Allocating<OOBase::AllocatorInstance>::get_allocator();
+			return m_pProactor->get_internal_allocator();
 		}
 
 	private:
-		virtual ~Win32AsyncSocket();
-
 		void destroy()
 		{
-			delete_this(this);
+			OOBase::CrtAllocator::delete_free(this);
 		}
 
 		OOBase::detail::ProactorWin32* m_pProactor;
@@ -73,8 +70,7 @@ namespace
 	};
 }
 
-Win32AsyncSocket::Win32AsyncSocket(OOBase::detail::ProactorWin32* pProactor, SOCKET hSocket, OOBase::AllocatorInstance& allocator) :
-		OOBase::Allocating<OOBase::AllocatorInstance>(allocator),
+Win32AsyncSocket::Win32AsyncSocket(OOBase::detail::ProactorWin32* pProactor, SOCKET hSocket) :
 		m_pProactor(pProactor),
 		m_hSocket(hSocket)
 { }
@@ -540,10 +536,10 @@ OOBase::socket_t Win32AsyncSocket::get_handle()
 
 namespace
 {
-	class InternalAcceptor : public OOBase::Allocating<OOBase::AllocatorInstance>
+	class InternalAcceptor
 	{
 	public:
-		InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_callback_t callback, OOBase::AllocatorInstance& allocator);
+		InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_callback_t callback);
 		
 		int listen(size_t backlog);
 		int stop(bool destroy);
@@ -576,13 +572,17 @@ namespace
 	{
 	public:
 		SocketAcceptor();
+		virtual ~SocketAcceptor();
 		
 		int listen(size_t backlog);
 		int stop();
-		int bind(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, OOBase::AllocatorInstance& allocator);
+		int bind(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_callback_t callback, const sockaddr* addr, socklen_t addr_len);
 	
 	private:
-		virtual ~SocketAcceptor();
+		void destroy()
+		{
+			OOBase::CrtAllocator::delete_free(this);
+		}
 
 		InternalAcceptor* m_pAcceptor;
 	};
@@ -614,9 +614,9 @@ int SocketAcceptor::stop()
 	return m_pAcceptor->stop(false);
 }
 
-int SocketAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, OOBase::AllocatorInstance& allocator)
+int SocketAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_callback_t callback, const sockaddr* addr, socklen_t addr_len)
 {
-	m_pAcceptor = allocator.allocate_new<InternalAcceptor>(pProactor,param,callback,allocator);
+	m_pAcceptor = OOBase::CrtAllocator::allocate_new<InternalAcceptor>(pProactor,param,callback);
 	if (!m_pAcceptor)
 		return ERROR_OUTOFMEMORY;
 
@@ -630,8 +630,7 @@ int SocketAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, void* param, 
 	return err;
 }
 
-InternalAcceptor::InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_callback_t callback, OOBase::AllocatorInstance& allocator) :
-		OOBase::Allocating<OOBase::AllocatorInstance>(allocator),
+InternalAcceptor::InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_callback_t callback) :
 		m_pProactor(pProactor),
 		m_addr_len(0),
 		m_socket(INVALID_SOCKET),
@@ -712,7 +711,7 @@ int InternalAcceptor::stop(bool destroy)
 	{
 		guard.release();
 
-		delete_this(this);
+		OOBase::CrtAllocator::delete_free(this);
 	}
 
 	return 0;
@@ -784,7 +783,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 							
 		if (!pOv)
 		{
-			buf = allocate((m_addr_len+16)*2,OOBase::alignof<struct sockaddr>::value);
+			buf = m_pProactor->get_internal_allocator().allocate((m_addr_len+16)*2,OOBase::alignof<struct sockaddr>::value);
 			if (!buf)
 			{
 				m_pProactor->unbind();
@@ -837,7 +836,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 		OOBase::Net::close_socket(sockNew);
 	
 	if (buf)
-		free(buf);
+		m_pProactor->get_internal_allocator().free(buf);
 	
 	if (pOv)
 		m_pProactor->delete_overlapped(pOv);
@@ -904,7 +903,7 @@ bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void
 		OOBase::Win32::WSAGetAcceptExSockAddrs(m_socket,addr_buf,0,m_addr_len+16,m_addr_len+16,&local_addr,&local_addr_len,&remote_addr,&remote_addr_len);
 			
 		// Wrap the handle
-		pSocket = m_allocator.allocate_new<Win32AsyncSocket>(m_pProactor,hSocket,m_allocator);
+		pSocket = OOBase::CrtAllocator::allocate_new<Win32AsyncSocket>(m_pProactor,hSocket);
 		if (!pSocket)
 			dwErr = ERROR_OUTOFMEMORY;
 
@@ -946,7 +945,7 @@ bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void
 	{
 		guard.release();
 
-		delete_this(this);
+		OOBase::CrtAllocator::delete_free(this);
 
 		return true;
 	}
@@ -957,7 +956,7 @@ bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void
 	return false;
 }
 
-OOBase::Acceptor* OOBase::detail::ProactorWin32::accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err, OOBase::AllocatorInstance& allocator)
+OOBase::Acceptor* OOBase::detail::ProactorWin32::accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err)
 {
 	Win32::WSAStartup();
 	
@@ -968,12 +967,12 @@ OOBase::Acceptor* OOBase::detail::ProactorWin32::accept(void* param, accept_call
 		return NULL;
 	}
 	
-	SocketAcceptor* pAcceptor = allocator.allocate_new<SocketAcceptor>();
+	SocketAcceptor* pAcceptor = OOBase::CrtAllocator::allocate_new<SocketAcceptor>();
 	if (!pAcceptor)
 		err = ERROR_OUTOFMEMORY;
 	else
 	{
-		err = pAcceptor->bind(this,param,callback,addr,addr_len,allocator);
+		err = pAcceptor->bind(this,param,callback,addr,addr_len);
 		if (err != 0)
 		{
 			pAcceptor->release();
@@ -984,7 +983,7 @@ OOBase::Acceptor* OOBase::detail::ProactorWin32::accept(void* param, accept_call
 	return pAcceptor;
 }
 
-OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout, OOBase::AllocatorInstance& allocator)
+OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout)
 {
 	SOCKET sock = Net::open_socket(addr->sa_family,SOCK_STREAM,0,err);
 	if (err)
@@ -1003,7 +1002,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const sockaddr* addr
 		return NULL;
 	}
 	
-	Win32AsyncSocket* pSocket = allocator.allocate_new<Win32AsyncSocket>(this,sock,allocator);
+	Win32AsyncSocket* pSocket = OOBase::CrtAllocator::allocate_new<Win32AsyncSocket>(this,sock);
 	if (!pSocket)
 	{
 		unbind();
@@ -1014,14 +1013,14 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const sockaddr* addr
 	return pSocket;
 }
 
-OOBase::AsyncSocket* OOBase::detail::ProactorWin32::attach(socket_t sock, int& err, OOBase::AllocatorInstance& allocator)
+OOBase::AsyncSocket* OOBase::detail::ProactorWin32::attach(socket_t sock, int& err)
 {
 	err = bind((HANDLE)sock);
 	if (err != 0)
 		return NULL;
 
 	// The socket must have been opened as WSA_FLAG_OVERLAPPED!!!
-	Win32AsyncSocket* pSocket = allocator.allocate_new<Win32AsyncSocket>(this,sock,allocator);
+	Win32AsyncSocket* pSocket = OOBase::CrtAllocator::allocate_new<Win32AsyncSocket>(this,sock);
 	if (!pSocket)
 	{
 		unbind();

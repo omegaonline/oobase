@@ -123,11 +123,11 @@ namespace OOBase
 		template <typename TThunk, typename TP, typename TC>
 		TThunk* thunk_allocate(TP param, TC callback)
 		{
-			AllocatorInstance& allocator = get_allocator();
+			AllocatorInstance& allocator = get_internal_allocator();
 			return allocator.allocate_new<TThunk>(param,callback,allocator);
 		}
 
-		virtual AllocatorInstance& get_allocator() const = 0;
+		virtual AllocatorInstance& get_internal_allocator() const = 0;
 
 	private:
 		template <typename T>
@@ -206,24 +206,18 @@ namespace OOBase
 		static void destroy(Proactor* proactor);
 
 		typedef void (*accept_pipe_callback_t)(void* param, AsyncSocket* pSocket, int err);
-		virtual Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa, AllocatorInstance& allocator) = 0;
-		Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa = NULL);
+		virtual Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa) = 0;
 
 		typedef void (*accept_callback_t)(void* param, AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err);
-		virtual Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err, AllocatorInstance& allocator) = 0;
-		Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err);
+		virtual Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err) = 0;
 
-		virtual AsyncSocket* attach(socket_t sock, int& err, AllocatorInstance& allocator) = 0;
-		AsyncSocket* attach(socket_t sock, int& err);
+		virtual AsyncSocket* attach(socket_t sock, int& err) = 0;
 #if defined(_WIN32)
-		virtual AsyncSocket* attach(HANDLE hPipe, int& err, AllocatorInstance& allocator) = 0;
-		AsyncSocket* attach(HANDLE hPipe, int& err);
+		virtual AsyncSocket* attach(HANDLE hPipe, int& err) = 0;
 #endif
 
-		virtual AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout, AllocatorInstance& allocator) = 0;
-		AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout = Timeout());
-		virtual AsyncSocket* connect(const char* path, int& err, const Timeout& timeout, AllocatorInstance& allocator) = 0;
-		AsyncSocket* connect(const char* path, int& err, const Timeout& timeout = Timeout());
+		virtual AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout) = 0;
+		virtual AsyncSocket* connect(const char* path, int& err, const Timeout& timeout) = 0;
 
 		// Returns -1 on error, 0 on timeout, 1 on nothing more to do
 		virtual int run(int& err, const Timeout& timeout = Timeout()) = 0;
@@ -233,8 +227,6 @@ namespace OOBase
 	protected:
 		Proactor() {}
 		virtual ~Proactor() {}
-
-		virtual AllocatorInstance& get_internal_allocator() = 0;
 
 	private:
 		// Don't copy or assign proactors, they're just too big

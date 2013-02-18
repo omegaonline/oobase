@@ -59,23 +59,50 @@ namespace OOBase
 
 		static void init()
 		{
-			T* i = new (critical) T();
+			void* t = OOBase::CrtAllocator::allocate(sizeof(T),alignof<T>::value);
+			if (!t)
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
-			int err = DLLDestructor<DLL>::add_destructor(&destroy,i);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+			try
+			{
+#endif
+				::new (t) T();
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+			}
+			catch (...)
+			{
+				OOBase::CrtAllocator::free(t);
+				throw;
+			}
+#endif
+			int err = DLLDestructor<DLL>::add_destructor(&destroy,t);
 			if (err)
 			{
-				delete i;
+				destroy(t);
 				OOBase_CallCriticalFailure(err);
 			}
 			
-			s_instance = i;
+			s_instance = static_cast<T*>(t);
 		}
 
 		static void destroy(void* i)
 		{
 			if (i == s_instance)
 			{
-				delete static_cast<T*>(i);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				try
+				{
+#endif
+					static_cast<T*>(i)->~T();
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				}
+				catch (...)
+				{
+					OOBase_CallCriticalFailure("Exception in Singleton destructor");
+				}
+#endif
+				OOBase::CrtAllocator::free(i);
 				s_instance = NULL;
 			}
 		}

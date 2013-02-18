@@ -68,6 +68,11 @@ namespace
 		
 		size_t recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout);
 		size_t send_i(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout);
+
+		void destroy()
+		{
+			OOBase::CrtAllocator::delete_free(this);
+		}
 	};
 }
 
@@ -464,7 +469,7 @@ int OOBase::Net::accept(HANDLE hPipe, const Timeout& timeout)
 
 OOBase::Socket* OOBase::Socket::attach(HANDLE hPipe, int& err)
 {
-	OOBase::Socket* pSocket = new (std::nothrow) Pipe(hPipe);
+	OOBase::Socket* pSocket = OOBase::CrtAllocator::allocate_new<Pipe>(hPipe);
 	if (!pSocket)
 		err = ERROR_OUTOFMEMORY;
 
@@ -525,7 +530,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* path, int& err, const Timeou
 		}
 	}
 	
-	OOBase::Socket* pPipe = new (std::nothrow) Pipe(hPipe);
+	OOBase::Socket* pPipe = OOBase::CrtAllocator::allocate_new<Pipe>((HANDLE)hPipe);
 	if (!pPipe)
 		err = ERROR_OUTOFMEMORY;
 	else

@@ -226,6 +226,67 @@ namespace OOBase
 		bool   m_acquired;
 		MUTEX& m_mutex;
 	};
+
+	template <size_t SIZE, typename Allocator = CrtAllocator>
+	class LockedAllocator : public ScratchAllocator, public Allocating<Allocator>
+	{
+		typedef Allocating<Allocator> baseClass;
+
+	public:
+		LockedAllocator() : ScratchAllocator(m_buffer,sizeof(m_buffer)), baseClass()
+		{
+			static_assert(sizeof(m_buffer) < index_t(-1),"SIZE too big");
+		}
+
+		LockedAllocator(AllocatorInstance& allocator) : ScratchAllocator(m_buffer,sizeof(m_buffer)), baseClass(allocator)
+		{
+			static_assert(sizeof(m_buffer) < index_t(-1),"SIZE too big");
+		}
+
+		void* allocate(size_t bytes, size_t align)
+		{
+			Guard<SpinLock> guard(m_lock);
+
+			void* p = ScratchAllocator::allocate(bytes,align);
+			if (p)
+				return p;
+
+			guard.release();
+
+			return baseClass::allocate(bytes,align);
+		}
+
+		void* reallocate(void* ptr, size_t bytes, size_t align)
+		{
+			if (!ptr)
+				return allocate(bytes,align);
+
+			if (!is_our_ptr(ptr))
+				return baseClass::reallocate(ptr,bytes,align);
+
+			Guard<SpinLock> guard(m_lock);
+
+			return ScratchAllocator::reallocate(ptr,bytes,align);
+		}
+
+		void free(void* ptr)
+		{
+			if (!ptr)
+				return;
+
+			if (!is_our_ptr(ptr))
+				baseClass::free(ptr);
+			else
+			{
+				Guard<SpinLock> guard(m_lock);
+				ScratchAllocator::free(ptr);
+			}
+		}
+
+	private:
+		SpinLock m_lock;
+		char     m_buffer[((SIZE / sizeof(index_t))+(SIZE % sizeof(index_t) ? 1 : 0)) * sizeof(index_t)];
+	};
 }
 
 #endif // OOBASE_MUTEX_H_INCLUDED_
