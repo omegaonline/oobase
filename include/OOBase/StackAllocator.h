@@ -245,7 +245,12 @@ namespace OOBase
 				from_index(alloc->m_next)->m_prev = alloc->m_prev;
 
 			if (m_free == p)
-				m_free = get_next(p);
+			{
+				if (alloc->m_prev != s_null_ptr)
+					m_free = m_start + (alloc->m_prev * sizeof(index_t));
+				else
+					m_free = get_next(p);
+			}
 
 			alloc->m_size |= s_in_use_mask;
 		}
@@ -275,19 +280,36 @@ namespace OOBase
 			}
 			else
 			{
-				// Add to head of free list
-				if (m_free)
+				// Insert into free list maintaining order
+				char* insert = NULL;
+				for (char* f = m_free;f && f > p;f = get_next(f))
+					insert = f;
+
+				if (insert)
 				{
-					block->m_next = index_of(m_free);
-					reinterpret_cast<free_block_t*>(m_free)->m_prev = index_of(p);
+					block->m_prev = index_of(insert);
+					block->m_next = reinterpret_cast<free_block_t*>(insert)->m_next;
+					reinterpret_cast<free_block_t*>(insert)->m_next = index_of(p);
+
+					if (block->m_next != s_null_ptr)
+						from_index(block->m_next)->m_prev = index_of(p);
 				}
 				else
-					block->m_next = s_null_ptr;
+				{
+					if (m_free)
+					{
+						block->m_next = index_of(m_free);
+						reinterpret_cast<free_block_t*>(m_free)->m_prev = index_of(p);
+					}
+					else
+						block->m_next = s_null_ptr;
 
-				block->m_prev = s_null_ptr;
-				m_free = p;
+					block->m_prev = s_null_ptr;
+					m_free = p;
+				}
 			}
 
+			// Merge with next if adjacent to p
 			char* next = get_next(p);
 			if (next && get_adjacent(next) == p)
 			{
