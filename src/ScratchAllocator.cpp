@@ -37,6 +37,8 @@ OOBase::ScratchAllocator::ScratchAllocator(char* start, size_t len) :
 
 OOBase::ScratchAllocator::~ScratchAllocator()
 {
+	check();
+
 	assert(m_free && m_free == m_start && is_free(m_start) && get_size(m_start) == (m_end - m_start));
 }
 
@@ -94,7 +96,7 @@ void* OOBase::ScratchAllocator::reallocate(void* ptr, size_t bytes, size_t align
 		return allocate(bytes,align);
 
 	char* tag = get_tag(ptr);
-	if (get_size(tag) >= bytes)
+	if (get_size(tag) >= bytes + sizeof(index_t))
 	{
 		// We don't shrink blocks
 		return ptr;
@@ -128,7 +130,7 @@ void* OOBase::ScratchAllocator::reallocate(void* ptr, size_t bytes, size_t align
 	void* ptr_new = ScratchAllocator::allocate(bytes,align);
 	if (ptr_new)
 	{
-		memcpy(ptr_new,ptr,get_size(tag));
+		memcpy(ptr_new,ptr,get_size(tag) - sizeof(index_t));
 		free_tag(tag);
 	}
 	return ptr_new;
