@@ -974,8 +974,15 @@ void SocketAcceptor::do_accept()
 		{
 			addr_len = sizeof(addr);
 
-#if defined(_GNU_SOURCE)
-			new_fd = ::accept4(m_fd,(sockaddr*)&addr,&addr_len,SOCK_NONBLOCK | SOCK_CLOEXEC);
+#if defined (HAVE_ACCEPT4)
+			new_fd = ::accept4(m_fd,(sockaddr*)&addr,&addr_len,0
+#if defined(SOCK_NONBLOCK)
+					| SOCK_NONBLOCK
+#endif
+#if defined(SOCK_CLOEXEC)
+					| SOCK_CLOEXEC
+#endif
+					);
 #else
 			new_fd = ::accept(m_fd,(sockaddr*)&addr,&addr_len);
 #endif
@@ -998,10 +1005,15 @@ void SocketAcceptor::do_accept()
 		}
 		else
 		{
-#if !defined(_GNU_SOURCE)
-			err = OOBase::POSIX::set_close_on_exec(new_fd,true);
+#if !defined(SOCK_CLOEXEC)
 			if (err == 0)
 				err = OOBase::POSIX::set_non_blocking(new_fd,true);
+#endif
+#if !defined(SOCK_NONBLOCK)
+			if (err == 0)
+				err = OOBase::POSIX::set_close_on_exec(new_fd,true);
+#endif
+
 #endif
 			if (err == 0)
 			{

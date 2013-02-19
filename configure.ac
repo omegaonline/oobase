@@ -109,7 +109,7 @@ OO_C_BUILTINS
 
 # Check for the headers we use
 AC_CHECK_HEADERS([stdint.h windows.h asl.h syslog.h sys.types.h unistd.h])
-AC_CHECK_FUNCS([pipe2])
+AC_CHECK_FUNCS([pipe2 accept4])
 
 # Set up libtool correctly
 m4_ifdef([LT_PREREQ],,[AC_MSG_ERROR([Need libtool version 2.2.6 or later])])

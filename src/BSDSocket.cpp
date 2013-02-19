@@ -36,20 +36,30 @@
 
 OOBase::socket_t OOBase::Net::open_socket(int family, int type, int protocol, int& err)
 {
+	socket_t sock = ::socket(family,type
 #if defined(SOCK_NONBLOCK)
-	socket_t sock = ::socket(family,type | SOCK_NONBLOCK,protocol);
-#else
-	socket_t sock = ::socket(family,type,protocol);
+			| SOCK_NONBLOCK
 #endif
+#if defined(SOCK_CLOEXEC)
+			| SOCK_CLOEXEC
+#endif
+			,protocol);
 
 	if (sock == -1)
 		err = errno;
 	else
 		err = 0;
 
-
 #if !defined(SOCK_NONBLOCK)
 	if ((err = OOBase::POSIX::set_non_blocking(sock,true)) != 0)
+	{
+		OOBase::Net::close_socket(sock);
+		sock = -1;
+	}
+#endif
+
+#if !defined(SOCK_CLOEXEC)
+	if ((err = OOBase::POSIX::set_close_on_exec(sock,true)) != 0)
 	{
 		OOBase::Net::close_socket(sock);
 		sock = -1;

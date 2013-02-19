@@ -1,3 +1,6 @@
+/* Define to 1 if you have the `accept4' function. */
+#undef HAVE_ACCEPT4
+
 /* Define to 1 if you have the <asl.h> header file. */
 #undef HAVE_ASL_H
 
