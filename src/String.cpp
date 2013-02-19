@@ -111,20 +111,21 @@ int OOBase::temp_vprintf(TempPtr<char>& ptr, const char* format, va_list args)
 {
 	for (int r = 30;;)
 	{
-		size_t len = static_cast<size_t>(r) + 2;
+		size_t len = static_cast<size_t>(r) + 1;
 		if (!ptr.reallocate(len))
 			return ERROR_OUTOFMEMORY;
 
 		va_list args_copy;
 		va_copy(args_copy,args);
 
-		r = vsnprintf_s(ptr,len,format,args_copy);
+		r = ::vsnprintf(ptr,len,format,args_copy);
 
 		va_end(args_copy);
 
-		if (r == -1)
-			return errno;
-		else if (static_cast<size_t>(r) < len)
+		if (r > -1 && static_cast<size_t>(r) < len)
 			return 0;
+
+		if (r < 0)
+			r = len * 2;
 	}
 }
