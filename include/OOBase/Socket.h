@@ -112,6 +112,17 @@ namespace OOBase
 			return err;
 		}
 
+		int send_msg(Buffer* data_buffer, Buffer* ctl_buffer, const Timeout& timeout = Timeout())
+		{
+			if (!data_buffer || !ctl_buffer)
+				return EINVAL;
+
+			int err = 0;
+			size_t len = send_msg(data_buffer->rd_ptr(),data_buffer->length(),ctl_buffer->rd_ptr(),ctl_buffer->length(),err,timeout);
+			data_buffer->rd_ptr(len);
+			return err;
+		}
+
 		virtual size_t recv(void* buf, size_t len, bool bAll, int& err, const Timeout& timeout = Timeout()) = 0;
 		virtual int recv_v(Buffer* buffers[], size_t count, const Timeout& timeout = Timeout()) = 0;
 		virtual size_t recv_msg(void* data_buf, size_t data_len, Buffer* ctl_buffer, int& err, const Timeout& timeout = Timeout()) = 0;
