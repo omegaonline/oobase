@@ -265,6 +265,7 @@ namespace
 
 		int shutdown(bool bSend, bool bRecv);
 		int close();
+		int get_handle() const;
 
 	private:
 		int           m_sock;
@@ -336,6 +337,11 @@ BSDSocket::BSDSocket(int sock) :
 BSDSocket::~BSDSocket()
 {
 	close();
+}
+
+int BSDSocket::get_handle() const
+{
+	return m_sock;
 }
 
 int BSDSocket::do_select(bool bWrite, const OOBase::Timeout& timeout)

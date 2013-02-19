@@ -52,7 +52,7 @@ namespace
 		int send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count);
 		int send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
 		int shutdown(bool bSend, bool bRecv);
-		OOBase::socket_t get_handle();
+		OOBase::socket_t get_handle() const;
 
 	protected:
 		OOBase::AllocatorInstance& get_internal_allocator() const
@@ -389,7 +389,7 @@ int PosixAsyncSocket::shutdown(bool bSend, bool bRecv)
 	return (how != -1 ? ::shutdown(m_fd,how) : 0);
 }
 
-OOBase::socket_t PosixAsyncSocket::get_handle()
+OOBase::socket_t PosixAsyncSocket::get_handle() const
 {
 	return m_fd;
 }

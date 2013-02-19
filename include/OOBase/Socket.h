@@ -201,6 +201,8 @@ namespace OOBase
 
 		virtual int shutdown(bool bSend = true, bool bRecv = true) = 0;
 		virtual int close() = 0;
+
+		virtual socket_t get_handle() const = 0;
 	};
 }
 

@@ -354,6 +354,7 @@ namespace
 
 		int shutdown(bool bSend, bool bRecv);
 		int close();
+		OOBase::socket_t get_handle() const;
 					
 	private:
 		SOCKET                     m_socket;
@@ -429,6 +430,11 @@ WinSocket::WinSocket(SOCKET sock) :
 WinSocket::~WinSocket()
 {
 	OOBase::Net::close_socket(m_socket);
+}
+
+OOBase::socket_t WinSocket::get_handle() const
+{
+	return m_socket;
 }
 
 size_t WinSocket::send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout)

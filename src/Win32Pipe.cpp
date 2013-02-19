@@ -56,6 +56,7 @@ namespace
 
 		int shutdown(bool bSend, bool bRecv);
 		int close();
+		OOBase::socket_t get_handle() const;
 					
 	private:
 		OOBase::Win32::SmartHandle m_handle;
@@ -85,6 +86,12 @@ Pipe::Pipe(HANDLE handle) :
 
 Pipe::~Pipe()
 {
+}
+
+
+OOBase::socket_t Pipe::get_handle() const
+{
+	return (OOBase::socket_t)(HANDLE)m_handle;
 }
 
 size_t Pipe::send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout)
