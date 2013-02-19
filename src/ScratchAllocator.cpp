@@ -125,7 +125,7 @@ void* OOBase::ScratchAllocator::reallocate(void* ptr, size_t bytes, size_t align
 	}
 
 	// Just do an allocate, copy and free
-	void* ptr_new = allocate(bytes,align);
+	void* ptr_new = ScratchAllocator::allocate(bytes,align);
 	if (ptr_new)
 	{
 		memcpy(ptr_new,ptr,get_size(tag));
