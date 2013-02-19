@@ -869,13 +869,14 @@ namespace
 		SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_pipe_callback_t callback);
 		virtual ~SocketAcceptor();
 
-		int bind(const sockaddr* addr, socklen_t addr_len, SECURITY_ATTRIBUTES* psa);
+		int bind(const sockaddr* addr, socklen_t addr_len, SECURITY_ATTRIBUTES& sa);
 
 	private:
 		OOBase::detail::ProactorPosix*           m_pProactor;
 		void*                                    m_param;
 		OOBase::Proactor::accept_callback_t      m_callback;
 		OOBase::Proactor::accept_pipe_callback_t m_callback_local;
+		SECURITY_ATTRIBUTES                      m_sa;
 		int                                      m_fd;
 
 		static void fd_callback(int fd, void* param, unsigned int events);
@@ -908,7 +909,7 @@ SocketAcceptor::~SocketAcceptor()
 	}
 }
 
-int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len, SECURITY_ATTRIBUTES* psa)
+int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len, SECURITY_ATTRIBUTES& sa)
 {
 	// Create a new socket
 	int err = 0;
@@ -916,35 +917,40 @@ int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len, SECURITY_ATTR
 	if (err)
 		return err;
 
-	if (psa->pass_credentials)
-	{
-#if defined(SO_PASSCRED)
-		int val = 1;
-		if (::setsockopt(fd, 0, SO_PASSCRED, &val, sizeof(val)) != 0)
-			return errno;
-#elif defined(LOCAL_CREDS)
-		int val = 1;
-		if (::setsockopt(fd, 0, LOCAL_CREDS, &val, sizeof(val)) != 0)
-			return errno;
-#endif
-	}
+	m_sa = sa;
 
 	// Apparently, chmod before bind()
 
 	// Bind to the address
-	if (::fchmod(fd,psa->mode) != 0 || ::bind(fd,addr,addr_len) != 0 || ::listen(fd,SOMAXCONN) != 0)
+	if (::fchmod(fd,m_sa.mode) != 0 || ::bind(fd,addr,addr_len) != 0 || ::listen(fd,SOMAXCONN) != 0)
 		err = errno;
 	else
 	{
-		err = m_pProactor->bind_fd(fd,this,&fd_callback);
+		if (m_sa.pass_credentials)
+		{
+#if defined(SO_PASSCRED)
+			int val = 1;
+			if (::setsockopt(fd, SOL_SOCKET, SO_PASSCRED, &val, sizeof(val)) != 0)
+				err = errno;
+#elif defined(LOCAL_CREDS)
+			int val = 1;
+			if (::setsockopt(fd, SOL_SOCKET, LOCAL_CREDS, &val, sizeof(val)) != 0)
+				err = errno;
+#endif
+		}
+
 		if (!err)
 		{
-			m_fd = fd;
-			err = m_pProactor->watch_fd(fd,OOBase::detail::eTXRecv);
-			if (err)
+			err = m_pProactor->bind_fd(fd,this,&fd_callback);
+			if (!err)
 			{
-				m_pProactor->unbind_fd(m_fd);
-				m_fd = -1;
+				m_fd = fd;
+				err = m_pProactor->watch_fd(fd,OOBase::detail::eTXRecv);
+				if (err)
+				{
+					m_pProactor->unbind_fd(m_fd);
+					m_fd = -1;
+				}
 			}
 		}
 	}
@@ -1014,7 +1020,19 @@ void SocketAcceptor::do_accept()
 				err = OOBase::POSIX::set_close_on_exec(new_fd,true);
 #endif
 
+			if (m_sa.pass_credentials)
+			{
+#if defined(SO_PASSCRED)
+				int val = 1;
+				if (::setsockopt(new_fd, SOL_SOCKET, SO_PASSCRED, &val, sizeof(val)) != 0)
+					err = errno;
+#elif defined(LOCAL_CREDS)
+				int val = 1;
+				if (::setsockopt(fd, SOL_SOCKET, LOCAL_CREDS, &val, sizeof(val)) != 0)
+					err = errno;
 #endif
+			}
+
 			if (err == 0)
 			{
 				// Wrap the handle
@@ -1063,7 +1081,11 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_call
 		err = ENOMEM;
 	else
 	{
-		err = pAcceptor->bind(addr,addr_len,NULL);
+		SECURITY_ATTRIBUTES defaults;
+		defaults.mode = 0777;
+		defaults.pass_credentials = false;
+
+		err = pAcceptor->bind(addr,addr_len,defaults);
 		if (err != 0)
 		{
 			OOBase::CrtAllocator::delete_free(pAcceptor);
@@ -1092,15 +1114,12 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_pipe
 		defaults.mode = 0777;
 		defaults.pass_credentials = false;
 
-		if (!psa)
-			psa = &defaults;
-
 		// Compose filename
 		sockaddr_un addr = {0};
 		socklen_t addr_len;
 		POSIX::create_unix_socket_address(addr,addr_len,path);
 
-		err = pAcceptor->bind((sockaddr*)&addr,addr_len,psa);
+		err = pAcceptor->bind((sockaddr*)&addr,addr_len,psa ? *psa : defaults);
 		if (err != 0)
 		{
 			OOBase::CrtAllocator::delete_free(pAcceptor);
