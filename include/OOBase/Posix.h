@@ -111,6 +111,8 @@ namespace OOBase
 			int m_fd;
 		};
 
+		int socketpair(int type, SmartFD fds[2]);
+
 		class pw_info
 		{
 		public:

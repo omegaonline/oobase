@@ -29,6 +29,38 @@
 #include <dirent.h>
 #include <sys/wait.h>
 
+#include "BSDSocket.h"
+
+int OOBase::POSIX::socketpair(int type, SmartFD fds[2])
+{
+	int fd[2] = {-1, -1};
+
+#if defined(SOCK_CLOEXEC)
+	if (::socketpair(PF_UNIX,type | SOCK_CLOEXEC,0,fd) != 0)
+#else
+	if (::socketpair(PF_UNIX,type,0,fd) != 0)
+#endif
+	{
+		return errno;
+	}
+
+#if !defined(SOCK_CLOEXEC)
+	int err = set_close_on_exec(fd[0],true);
+	if (!err)
+		err = set_close_on_exec(fd[1],true);
+	if (err)
+	{
+		POSIX::close(fd[0]);
+		POSIX::close(fd[1]);
+		return err;
+	}
+#endif
+
+	fds[0] = fd[0];
+	fds[1] = fd[1];
+	return 0;
+}
+
 int OOBase::POSIX::open(const char *pathname, int flags, mode_t mode)
 {
 #if defined(O_CLOEXEC)
@@ -133,7 +165,7 @@ int OOBase::POSIX::set_close_on_exec(int sock, bool set)
 		return errno;
 
 	int new_flags = (set ? flags | FD_CLOEXEC : flags & ~FD_CLOEXEC);
-	if (new_flags != flags && fcntl(sock,F_GETFD,new_flags) == -1)
+	if (new_flags != flags && fcntl(sock,F_SETFD,new_flags) == -1)
 		return errno;
 
 	return 0;
