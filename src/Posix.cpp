@@ -109,8 +109,8 @@ int OOBase::POSIX::set_non_blocking(int sock, bool set)
 	if (flags == -1)
 		return errno;
 
-	flags = (set ? flags | O_NONBLOCK : flags & ~O_NONBLOCK);
-	if (fcntl(sock,F_SETFL,flags) == -1)
+	int new_flags = (set ? flags | O_NONBLOCK : flags & ~O_NONBLOCK);
+	if (new_flags != flags && fcntl(sock,F_SETFL,new_flags) == -1)
 		return errno;
 
 	return 0;
@@ -132,8 +132,8 @@ int OOBase::POSIX::set_close_on_exec(int sock, bool set)
 	if (flags == -1)
 		return errno;
 
-	flags = (set ? flags | FD_CLOEXEC : flags & ~FD_CLOEXEC);
-	if (fcntl(sock,F_GETFD,flags) == -1)
+	int new_flags = (set ? flags | FD_CLOEXEC : flags & ~FD_CLOEXEC);
+	if (new_flags != flags && fcntl(sock,F_GETFD,new_flags) == -1)
 		return errno;
 
 	return 0;
