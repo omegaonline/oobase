@@ -116,8 +116,11 @@ namespace OOBase
 		template <typename T>
 		static void delete_free(T* p)
 		{
-			p->~T();
-			Derived::free(p);
+			if (p)
+			{
+				p->~T();
+				Derived::free(p);
+			}
 		}
 
 		template <typename T>
@@ -258,8 +261,11 @@ namespace OOBase
 		template <typename T>
 		void delete_free(T* p)
 		{
-			p->~T();
-			static_cast<Derived*>(this)->free(p);
+			if (p)
+			{
+				p->~T();
+				static_cast<Derived*>(this)->free(p);
+			}
 		}
 
 		template <typename T>
