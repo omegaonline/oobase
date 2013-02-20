@@ -45,11 +45,11 @@ namespace OOBase
 		typedef HashTable<ID,V,Allocator,detail::HandleHash<ID> > baseClass;
 		
 	public:
-		HandleTable(ID start) : baseClass(),
+		HandleTable(ID start = 1) : baseClass(),
 				m_next(start)
 		{}
 
-		HandleTable(Allocator& allocator, ID start) : baseClass(allocator),
+		HandleTable(Allocator& allocator, ID start = 1) : baseClass(allocator),
 				m_next(start)
 		{}
 			
@@ -61,7 +61,7 @@ namespace OOBase
 			return baseClass::insert(id,value);
 		}
 			
-		int insert(const V& value, ID& handle, ID min, ID max)
+		int insert(const V& value, ID& handle, ID min = 1, ID max = ID(-1))
 		{
 			ID next = m_next;
 			if (next < min)
