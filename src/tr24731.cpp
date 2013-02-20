@@ -61,7 +61,7 @@ int vsnprintf_s(char* s, size_t n, const char* format, va_list arg)
 	}
 
 	s[0] = '\0';
-	int r = vsnprintf(s,n-1,format,arg);
+	int r = vsnprintf(s,n,format,arg);
 
 	// MSVCRT returns -1 when truncating
 	if (r == -1)

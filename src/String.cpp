@@ -118,14 +118,14 @@ int OOBase::temp_vprintf(TempPtr<char>& ptr, const char* format, va_list args)
 		va_list args_copy;
 		va_copy(args_copy,args);
 
-		r = ::vsnprintf(ptr,len,format,args_copy);
+		r = vsnprintf_s(ptr,len,format,args_copy);
 
 		va_end(args_copy);
 
-		if (r > -1 && static_cast<size_t>(r) < len)
-			return 0;
+		if (r == -1)
+			return errno;
 
-		if (r < 0)
-			r = len * 2;
+		if (static_cast<size_t>(r) < len)
+			return 0;
 	}
 }
