@@ -35,7 +35,7 @@ namespace OOBase
 		Stack() : baseClass()
 		{}
 
-		Stack(Allocator& allocator) : baseClass(allocator)
+		Stack(AllocatorInstance& allocator) : baseClass(allocator)
 		{}
 			
 		int push(const T& value)

@@ -180,7 +180,7 @@ namespace OOBase
 					m_node = nodeType::create(ptr);
 			}
 
-			SmartPtrImpl(Allocator& allocator, T* ptr) : m_node(nodeType::create(allocator,ptr))
+			SmartPtrImpl(AllocatorInstance& allocator, T* ptr) : m_node(nodeType::create(allocator,ptr))
 			{}
 
 			operator T*()
@@ -226,7 +226,7 @@ namespace OOBase
 		SmartPtr(T* ptr = NULL) : baseClass(ptr)
 		{}
 
-		SmartPtr(typename Destructor::Allocator& allocator, T* ptr = NULL) : baseClass(allocator,ptr)
+		SmartPtr(AllocatorInstance& allocator, T* ptr = NULL) : baseClass(allocator,ptr)
 		{}
 
 		SmartPtr& operator = (T* p)
@@ -259,7 +259,7 @@ namespace OOBase
 		SmartPtr(void* ptr = NULL) : baseClass(ptr)
 		{}
 
-		SmartPtr(typename Destructor::Allocator& allocator, void* ptr = NULL) : baseClass(allocator,ptr)
+		SmartPtr(AllocatorInstance& allocator, void* ptr = NULL) : baseClass(allocator,ptr)
 		{}
 
 		SmartPtr& operator = (void* p)
@@ -384,7 +384,7 @@ namespace OOBase
 		LocalPtr(T* p = NULL) : baseClass(p)
 		{}
 
-		LocalPtr(typename Destructor::Allocator& allocator, T* p = NULL) : baseClass(allocator,p)
+		LocalPtr(AllocatorInstance& allocator, T* p = NULL) : baseClass(allocator,p)
 		{}
 
 		LocalPtr& operator = (T* p)
@@ -417,7 +417,7 @@ namespace OOBase
 		LocalPtr(void* p = NULL) : baseClass(p)
 		{}
 
-		LocalPtr(typename Destructor::Allocator& allocator, void* p = NULL) : baseClass(allocator,p)
+		LocalPtr(AllocatorInstance& allocator, void* p = NULL) : baseClass(allocator,p)
 		{}
 
 		LocalPtr& operator = (void* p)

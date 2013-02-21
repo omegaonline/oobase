@@ -37,7 +37,7 @@ namespace OOBase
 			PODBagBase() : baseClass(), m_data(NULL), m_size(0), m_capacity(0)
 			{}
 
-			PODBagBase(Allocator& allocator) : baseClass(allocator), m_data(NULL), m_size(0), m_capacity(0)
+			PODBagBase(AllocatorInstance& allocator) : baseClass(allocator), m_data(NULL), m_size(0), m_capacity(0)
 			{}
 
 		protected:
@@ -62,7 +62,7 @@ namespace OOBase
 			PODBag() : baseClass()
 			{}
 
-			PODBag(Allocator& allocator) : baseClass(allocator)
+			PODBag(AllocatorInstance& allocator) : baseClass(allocator)
 			{}
 
 			void clear()
@@ -130,7 +130,7 @@ namespace OOBase
 			PODBag() : baseClass()
 			{}
 
-			PODBag(Allocator& allocator) : baseClass(allocator)
+			PODBag(AllocatorInstance& allocator) : baseClass(allocator)
 			{}
 
 			void clear()
@@ -168,7 +168,7 @@ namespace OOBase
 			BagImpl() : baseClass()
 			{}
 
-			BagImpl(Allocator& allocator) : baseClass(allocator)
+			BagImpl(AllocatorInstance& allocator) : baseClass(allocator)
 			{}
 
 			~BagImpl()
@@ -263,7 +263,7 @@ namespace OOBase
 		Bag() : baseClass()
 		{}
 
-		Bag(Allocator& allocator) : baseClass(allocator)
+		Bag(AllocatorInstance& allocator) : baseClass(allocator)
 		{}
 
 		int add(const T& value)

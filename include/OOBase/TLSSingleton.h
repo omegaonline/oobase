@@ -75,6 +75,7 @@ namespace OOBase
 			if (!i)
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
+			// We do this long-hand so singleton class can friend us
 			void* t = alloc->allocate(sizeof(T),alignof<T>::value);
 			if (!t)
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
@@ -109,6 +110,7 @@ namespace OOBase
 				AllocatorInstance* curr = i->m_allocator;
 				AllocatorInstance* prev = TLS::detail::swap_allocator(curr);
 
+				// We do this long-hand so singleton class can friend us
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try
 				{

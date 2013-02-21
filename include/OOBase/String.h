@@ -300,7 +300,7 @@ namespace OOBase
 			StringImpl() : baseClass()
 			{}
 
-			StringImpl(Allocator& allocator) : baseClass(allocator)
+			StringImpl(AllocatorInstance& allocator) : baseClass(allocator)
 			{}
 
 			~StringImpl()

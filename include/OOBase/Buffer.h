@@ -216,12 +216,12 @@ namespace OOBase
 template <typename Allocator>
 inline OOBase::Buffer* OOBase::Buffer::create(size_t cbSize, size_t align)
 {
-	return OOBase::detail::BufferImpl<Allocator>::create(cbSize,align);
+	return detail::BufferImpl<Allocator>::create(cbSize,align);
 }
 
 inline OOBase::Buffer* OOBase::Buffer::create(size_t cbSize, size_t align)
 {
-	return OOBase::detail::BufferImpl<CrtAllocator>::create(cbSize,align);
+	return detail::BufferImpl<CrtAllocator>::create(cbSize,align);
 }
 
 #endif // OOBASE_BUFFER_H_INCLUDED_

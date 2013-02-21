@@ -59,6 +59,7 @@ namespace OOBase
 
 		static void init()
 		{
+			// We do this long-hand so singleton class can friend us
 			void* t = OOBase::CrtAllocator::allocate(sizeof(T),alignof<T>::value);
 			if (!t)
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
@@ -90,6 +91,7 @@ namespace OOBase
 		{
 			if (i == s_instance)
 			{
+				// We do this long-hand so singleton class can friend us
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try
 				{
