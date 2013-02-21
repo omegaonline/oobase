@@ -36,8 +36,8 @@
 
 OOBase::Proactor* OOBase::Proactor::create(int& err)
 {
-	detail::ProactorPoll* proactor = OOBase::CrtAllocator::allocate_new<detail::ProactorPoll>();
-	if (!proactor)
+	detail::ProactorPoll* proactor = NULL;
+	if (!OOBase::CrtAllocator::allocate_new(proactor))
 		err = ERROR_OUTOFMEMORY;
 	else
 	{

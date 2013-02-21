@@ -852,8 +852,8 @@ OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)
 	if (err)
 		return NULL;
 
-	OOBase::Socket* pSocket = OOBase::CrtAllocator::allocate_new<BSDSocket>(sock);
-	if (!pSocket)
+	BSDSocket* pSocket = NULL;
+	if (!OOBase::CrtAllocator::allocate_new(pSocket,sock))
 		err = ENOMEM;
 
 	return pSocket;
@@ -865,8 +865,8 @@ OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, i
 	if (sock == -1)
 		return NULL;
 
-	OOBase::Socket* pSocket = OOBase::CrtAllocator::allocate_new<BSDSocket>(sock);
-	if (!pSocket)
+	BSDSocket* pSocket = NULL;
+	if (!OOBase::CrtAllocator::allocate_new(pSocket,sock))
 	{
 		err = ENOMEM;
 		OOBase::Net::close_socket(sock);
@@ -909,8 +909,8 @@ OOBase::Socket* OOBase::Socket::connect(const char* path, int& err, const Timeou
 		return NULL;
 	}
 
-	OOBase::Socket* pSocket = OOBase::CrtAllocator::allocate_new<BSDSocket>(sock);
-	if (!pSocket)
+	BSDSocket* pSocket = NULL;
+	if (!OOBase::CrtAllocator::allocate_new(pSocket,sock))
 	{
 		err = ENOMEM;
 		OOBase::Net::close_socket(sock);

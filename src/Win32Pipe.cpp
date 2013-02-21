@@ -476,8 +476,8 @@ int OOBase::Net::accept(HANDLE hPipe, const Timeout& timeout)
 
 OOBase::Socket* OOBase::Socket::attach(HANDLE hPipe, int& err)
 {
-	OOBase::Socket* pSocket = OOBase::CrtAllocator::allocate_new<Pipe>(hPipe);
-	if (!pSocket)
+	Pipe* pSocket = NULL;
+	if (!OOBase::CrtAllocator::allocate_new(pSocket,hPipe))
 		err = ERROR_OUTOFMEMORY;
 
 	return pSocket;
@@ -537,8 +537,8 @@ OOBase::Socket* OOBase::Socket::connect(const char* path, int& err, const Timeou
 		}
 	}
 	
-	OOBase::Socket* pPipe = OOBase::CrtAllocator::allocate_new<Pipe>((HANDLE)hPipe);
-	if (!pPipe)
+	Pipe* pPipe = NULL;
+	if (!OOBase::CrtAllocator::allocate_new(pPipe,(HANDLE)hPipe))
 		err = ERROR_OUTOFMEMORY;
 	else
 		hPipe.detach();

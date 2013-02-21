@@ -306,14 +306,18 @@ OOBase::Thread::Thread(bool bAutodelete) :
 
 
 #if defined(_WIN32)
-		m_impl = OOBase::CrtAllocator::allocate_new<Win32Thread>(bAutodelete);
+	Win32Thread* t;
+	if (OOBase::CrtAllocator::allocate_new(t,bAutodelete))
+		m_impl = t;
 #elif defined(HAVE_PTHREAD)
-		m_impl = OOBase::CrtAllocator::allocate_new<PthreadThread>(bAutodelete);
+	PthreadThread* t;
+	if (OOBase::CrtAllocator::allocate_new(t,bAutodelete))
+		m_impl = t;
 #else
 #error Implement platform native thread wrapper
 #endif
-		if (!m_impl)
-			OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+	if (!m_impl)
+		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 }
 
 OOBase::Thread::Thread(bool bAutodelete, bool) :
@@ -395,8 +399,8 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 {
 	for (size_t i=0;i<threads;++i)
 	{
-		Thread* pThread = CrtAllocator::allocate_new<Thread>(false);
-		if (!pThread)
+		Thread* pThread = NULL;
+		if (!CrtAllocator::allocate_new(pThread,false))
 			return ERROR_OUTOFMEMORY;
 
 		Guard<SpinLock> guard(m_lock);

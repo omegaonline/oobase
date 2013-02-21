@@ -470,8 +470,7 @@ PipeAcceptor::~PipeAcceptor()
 
 int PipeAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::LocalString& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback)
 {
-	m_pAcceptor = OOBase::CrtAllocator::allocate_new<InternalAcceptor>(pProactor,pipe_name,psa,param,callback);
-	if (!m_pAcceptor)
+	if (!OOBase::CrtAllocator::allocate_new<InternalAcceptor>(m_pAcceptor,pProactor,pipe_name,psa,param,callback))
 		return ERROR_OUTOFMEMORY;
 
 	int err = m_pAcceptor->start();
@@ -654,8 +653,7 @@ bool InternalAcceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase
 		AsyncPipe* pSocket = NULL;
 		if (dwErr == 0)
 		{
-			pSocket = OOBase::CrtAllocator::allocate_new<AsyncPipe>(m_pProactor,hPipe);
-			if (!pSocket)
+			if (!OOBase::CrtAllocator::allocate_new(pSocket,m_pProactor,hPipe))
 			{
 				dwErr = ERROR_OUTOFMEMORY;
 				m_pProactor->unbind();
@@ -709,8 +707,8 @@ OOBase::Acceptor* OOBase::detail::ProactorWin32::accept(void* param, accept_pipe
 		return NULL;
 	}
 	
-	PipeAcceptor* pAcceptor = OOBase::CrtAllocator::allocate_new<PipeAcceptor>();
-	if (!pAcceptor)
+	PipeAcceptor* pAcceptor = NULL;
+	if (!OOBase::CrtAllocator::allocate_new(pAcceptor))
 		err = ERROR_OUTOFMEMORY;
 	else
 	{
@@ -739,8 +737,8 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::attach(HANDLE hPipe, int& er
 	if (err != 0)
 		return NULL;
 
-	AsyncPipe* pPipe = OOBase::CrtAllocator::allocate_new<AsyncPipe>(this,hPipe);
-	if (!pPipe)
+	AsyncPipe* pPipe = NULL;
+	if (!OOBase::CrtAllocator::allocate_new(pPipe,this,hPipe))
 	{
 		unbind();
 		err = ERROR_OUTOFMEMORY;
@@ -804,8 +802,8 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const char* path, in
 		return NULL;
 
 	// Wrap socket
-	AsyncSocket* pSocket = OOBase::CrtAllocator::allocate_new<AsyncPipe>(this,(HANDLE)hPipe);
-	if (!pSocket)
+	AsyncPipe* pSocket = NULL;
+	if (!OOBase::CrtAllocator::allocate_new(pSocket,this,(HANDLE)hPipe))
 	{
 		unbind();
 		err = ERROR_OUTOFMEMORY;

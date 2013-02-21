@@ -44,8 +44,8 @@ namespace OOBase
 		template <typename T>
 		int recv(T* param, void (T::*callback)(Buffer* buffer, int err), Buffer* buffer, size_t bytes = 0)
 		{
-			Thunk<T>* thunk = this->thunk_allocate<Thunk<T>,T*,void (T::*)(Buffer*,int)>(param,callback);
-			if (!thunk)
+			Thunk<T>* thunk = NULL;
+			if (!thunk_allocate(thunk,param,callback))
 				return ERROR_OUTOFMEMORY;
 			
 			return recv(thunk,&Thunk<T>::fn,buffer,bytes);
@@ -54,8 +54,8 @@ namespace OOBase
 		template <typename T>
 		int recv_msg(T* param, void (T::*callback)(Buffer* data_buffer, Buffer* ctl_buffer, int err), Buffer* data_buffer, Buffer* ctl_buffer, size_t data_bytes)
 		{
-			ThunkM<T>* thunk = this->thunk_allocate<ThunkM<T>,T*,void (T::*)(Buffer*,Buffer*,int)>(param,callback);
-			if (!thunk)
+			ThunkM<T>* thunk = NULL;
+			if (!thunk_allocate(thunk,param,callback))
 				return ERROR_OUTOFMEMORY;
 
 			return recv_msg(thunk,&ThunkM<T>::fn,data_buffer,ctl_buffer,data_bytes);
@@ -64,8 +64,8 @@ namespace OOBase
 		template <typename T>
 		int send(T* param, void (T::*callback)(Buffer* buffer, int err), Buffer* buffer)
 		{
-			Thunk<T>* thunk = this->thunk_allocate<Thunk<T>,T*,void (T::*)(Buffer*,int)>(param,callback);
-			if (!thunk)
+			Thunk<T>* thunk = NULL;
+			if (!thunk_allocate(thunk,param,callback))
 				return ERROR_OUTOFMEMORY;
 			
 			return send(thunk,&Thunk<T>::fn,buffer);
@@ -74,8 +74,8 @@ namespace OOBase
 		template <typename T>
 		int send_v(T* param, void (T::*callback)(Buffer* buffers[], size_t count, int err), Buffer* buffers[], size_t count)
 		{
-			ThunkV<T>* thunk = this->thunk_allocate<ThunkV<T>,T*,void (T::*)(Buffer*[],size_t, int)>(param,callback);
-			if (!thunk)
+			ThunkV<T>* thunk = NULL;
+			if (!thunk_allocate(thunk,param,callback))
 				return ERROR_OUTOFMEMORY;
 
 			return send_v(thunk,&ThunkV<T>::fn,buffers,count);
@@ -84,8 +84,8 @@ namespace OOBase
 		template <typename T>
 		int send_msg(T* param, void (T::*callback)(Buffer* data_buffer, Buffer* ctl_buffer, int err), Buffer* data_buffer, Buffer* ctl_buffer)
 		{
-			ThunkM<T>* thunk = this->thunk_allocate<ThunkM<T>,T*,void (T::*)(Buffer*,Buffer*,int)>(param,callback);
-			if (!thunk)
+			ThunkM<T>* thunk = NULL;
+			if (!thunk_allocate(thunk,param,callback))
 				return ERROR_OUTOFMEMORY;
 			
 			return send_msg(thunk,&ThunkM<T>::fn,data_buffer,ctl_buffer);
@@ -121,10 +121,12 @@ namespace OOBase
 		virtual ~AsyncSocket() {}
 
 		template <typename TThunk, typename TP, typename TC>
-		TThunk* thunk_allocate(TP param, TC callback)
+		bool thunk_allocate(TThunk* t, TP param, TC callback)
 		{
+			t = NULL;
 			AllocatorInstance& allocator = get_internal_allocator();
-			return allocator.allocate_new<TThunk>(param,callback,allocator);
+			allocator.allocate_new(t,param,callback,&allocator);
+			return (t != NULL);
 		}
 
 		virtual AllocatorInstance& get_internal_allocator() const = 0;
@@ -133,8 +135,8 @@ namespace OOBase
 		template <typename T>
 		struct Thunk
 		{
-			Thunk(T* param, void (T::*callback)(Buffer*,int), AllocatorInstance& allocator) :
-				m_param(param),m_callback(callback),m_allocator(allocator)
+			Thunk(T* param, void (T::*callback)(Buffer*,int), AllocatorInstance* allocator) :
+				m_param(param),m_callback(callback),m_allocator(*allocator)
 			{}
 
 			T* m_param;
@@ -152,8 +154,8 @@ namespace OOBase
 		template <typename T>
 		struct ThunkM
 		{
-			ThunkM(T* param, void (T::*callback)(Buffer*,Buffer*,int), AllocatorInstance& allocator) :
-				m_param(param),m_callback(callback),m_allocator(allocator)
+			ThunkM(T* param, void (T::*callback)(Buffer*,Buffer*,int), AllocatorInstance* allocator) :
+				m_param(param),m_callback(callback),m_allocator(*allocator)
 			{}
 
 			T* m_param;
@@ -171,8 +173,8 @@ namespace OOBase
 		template <typename T>
 		struct ThunkV
 		{
-			ThunkV(T* param, void (T::*callback)(Buffer*[],size_t,int), AllocatorInstance& allocator) :
-				m_param(param),m_callback(callback),m_allocator(allocator)
+			ThunkV(T* param, void (T::*callback)(Buffer*[],size_t,int), AllocatorInstance* allocator) :
+				m_param(param),m_callback(callback),m_allocator(*allocator)
 			{}
 
 			T* m_param;

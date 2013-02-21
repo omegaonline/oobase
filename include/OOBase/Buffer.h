@@ -123,20 +123,46 @@ namespace OOBase
 		template <typename Allocator>
 		class BufferImpl : public Buffer, public Allocating<Allocator>
 		{
-			friend class Buffer;
 			typedef Allocating<Allocator> baseClass;
 
-		private:
+		public:
 			BufferImpl(void* buffer, size_t cbSize, size_t align) :
 					Buffer(static_cast<char*>(buffer),cbSize,align),
 					baseClass()
 			{}
 
-			BufferImpl(AllocatorInstance& allocator, void* buffer, size_t cbSize, size_t align) :
+			BufferImpl(AllocatorInstance* allocator, void* buffer, size_t cbSize, size_t align) :
 					Buffer(static_cast<char*>(buffer),cbSize,align),
-					baseClass(allocator)
+					baseClass(*allocator)
 			{}
 
+			static Buffer* create(size_t cbSize, size_t align)
+			{
+				void* buf = baseClass::allocate(cbSize,align);
+				if (!buf)
+					return NULL;
+
+				BufferImpl* buffer = NULL;
+				if (!baseClass::allocate_new(buffer,buf,cbSize,align))
+					baseClass::free(buf);
+
+				return buffer;
+			}
+
+			static Buffer* create(AllocatorInstance& allocator, size_t cbSize, size_t align)
+			{
+				void* buf = allocator.allocate(cbSize,align);
+				if (!buf)
+					return NULL;
+
+				BufferImpl* buffer = NULL;
+				if (!allocator.allocate_new(buffer,&allocator,buf,cbSize,align))
+					allocator.free(buf);
+
+				return buffer;
+			}
+
+		private:
 			void destroy()
 			{
 				baseClass::free(m_buffer);
@@ -146,68 +172,6 @@ namespace OOBase
 			char* reallocate(char* data, size_t size, size_t align)
 			{
 				return static_cast<char*>(baseClass::reallocate(data,size,align));
-			}
-
-			static Buffer* create(size_t cbSize, size_t align)
-			{
-				Buffer* pBuffer = NULL;
-				void* p = baseClass::allocate(sizeof(BufferImpl),alignof<BufferImpl>::value);
-				if (p)
-				{
-					void* buf = baseClass::allocate(cbSize,align);
-					if (!buf)
-					{
-						baseClass::free(p);
-						return NULL;
-					}
-
-#if defined(OOBASE_HAVE_EXCEPTIONS)
-					try
-					{
-#endif
-						pBuffer = ::new (p) BufferImpl(buf,cbSize,align);
-#if defined(OOBASE_HAVE_EXCEPTIONS)
-					}
-					catch (...)
-					{
-						baseClass::free(buf);
-						baseClass::free(p);
-						throw;
-					}
-#endif
-				}
-				return pBuffer;
-			}
-
-			static Buffer* create(AllocatorInstance& allocator, size_t cbSize, size_t align)
-			{
-				Buffer* pBuffer = NULL;
-				void* p = allocator.allocate(sizeof(BufferImpl),alignof<BufferImpl>::value);
-				if (p)
-				{
-					void* buf = allocator.allocate(cbSize,align);
-					if (!buf)
-					{
-						allocator.free(p);
-						return NULL;
-					}
-
-#if defined(OOBASE_HAVE_EXCEPTIONS)
-					try
-					{
-#endif
-						pBuffer = ::new (p) BufferImpl(allocator,buf,cbSize,align);
-#if defined(OOBASE_HAVE_EXCEPTIONS)
-					}
-					catch (...)
-					{
-						allocator.free(buf);
-						allocator.free(p);
-						throw;
-					}
-#endif
-				}
-				return pBuffer;
 			}
 		};
 	}

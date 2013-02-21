@@ -189,12 +189,11 @@ namespace
 		TLSMap* inst = TLS_GLOBAL::instance().Get();
 		if (!inst && create)
 		{
-			OOBase::AllocatorInstance* alloc = OOBase::CrtAllocator::allocate_new<OOBase::ArenaAllocator>();
-			if (!alloc)
+			OOBase::ArenaAllocator* alloc = NULL;
+			if (!OOBase::CrtAllocator::allocate_new(alloc))
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
-			inst = alloc->allocate_new<TLSMap>(alloc);
-			if (!inst)
+			if (!alloc->allocate_new(inst,alloc))
 			{
 				OOBase::CrtAllocator::delete_free(alloc);
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);

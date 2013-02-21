@@ -28,8 +28,8 @@
 
 OOBase::Proactor* OOBase::Proactor::create(int& err)
 {
-	detail::ProactorWin32* proactor = OOBase::CrtAllocator::allocate_new<detail::ProactorWin32>();
-	if (!proactor)
+	detail::ProactorWin32* proactor = NULL;
+	if (!OOBase::CrtAllocator::allocate_new(proactor))
 		err = ERROR_OUTOFMEMORY;
 	return proactor;
 }

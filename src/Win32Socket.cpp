@@ -929,8 +929,8 @@ int WinSocket::close()
 
 OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)
 {
-	OOBase::Socket* pSocket = OOBase::CrtAllocator::allocate_new<WinSocket>(sock);
-	if (!pSocket)
+	WinSocket* pSocket = NULL;
+	if (!OOBase::CrtAllocator::allocate_new(pSocket,sock))
 		err = ERROR_OUTOFMEMORY;
 
 	return pSocket;
@@ -945,8 +945,8 @@ OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, i
 	if (sock == INVALID_SOCKET)
 		return NULL;
 
-	OOBase::Socket* pSocket = OOBase::CrtAllocator::allocate_new<WinSocket>(sock);
-	if (!pSocket)
+	WinSocket* pSocket = NULL;
+	if (!OOBase::CrtAllocator::allocate_new(pSocket,sock))
 	{
 		err = ERROR_OUTOFMEMORY;
 		OOBase::Net::close_socket(sock);

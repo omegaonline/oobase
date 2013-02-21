@@ -53,8 +53,8 @@ namespace OOBase
 			if (stream.last_error())
 				return stream.last_error();
 
-			ThunkRHS<T,H>* thunk = pSocket->thunk_allocate<ThunkRHS<T,H>,T*,void (T::*)(CDRStream&,int)>(param,callback);
-			if (!thunk)
+			ThunkRHS<T,H>* thunk = NULL;
+			if (!pSocket->thunk_allocate(thunk,param,callback))
 				return ERROR_OUTOFMEMORY;
 
 			thunk->m_ptrSocket = pSocket;
@@ -69,8 +69,8 @@ namespace OOBase
 			if (stream.last_error())
 				return stream.last_error();
 
-			ThunkRMHS<T,H>* thunk = pSocket->thunk_allocate<ThunkRMHS<T,H>,T*,void (T::*)(CDRStream&,Buffer*,int)>(param,callback);
-			if (!thunk)
+			ThunkRMHS<T,H>* thunk = NULL;
+			if (!pSocket->thunk_allocate(thunk,param,callback))
 				return ERROR_OUTOFMEMORY;
 
 			thunk->m_ptrSocket = pSocket;
@@ -162,8 +162,8 @@ namespace OOBase
 		template <typename H, typename T>
 		static int send_and_recv_with_header_sync(CDRStream& stream, AsyncSocket* pSocket, T* param, void (T::*callback)(CDRStream& stream, int err))
 		{
-			ThunkSRHS<T,H>* thunk = pSocket->thunk_allocate<ThunkSRHS<T,H>,T*,void (T::*)(CDRStream&,int)>(param,callback);
-			if (!thunk)
+			ThunkSRHS<T,H>* thunk = NULL;
+			if (!pSocket->thunk_allocate(thunk,param,callback))
 				return ERROR_OUTOFMEMORY;
 
 			thunk->m_ptrSocket = pSocket;
@@ -175,8 +175,8 @@ namespace OOBase
 		template <typename T, typename H>
 		struct ThunkRHS
 		{
-			ThunkRHS(T* param, void (T::*callback)(CDRStream&,int), AllocatorInstance& allocator) :
-				m_param(param),m_callback(callback),m_allocator(allocator)
+			ThunkRHS(T* param, void (T::*callback)(CDRStream&,int), AllocatorInstance* allocator) :
+				m_param(param),m_callback(callback),m_allocator(*allocator)
 			{}
 
 			T* m_param;
@@ -220,8 +220,8 @@ namespace OOBase
 		template <typename T, typename H>
 		struct ThunkRMHS
 		{
-			ThunkRMHS(T* param, void (T::*callback)(CDRStream&,Buffer*,int), AllocatorInstance& allocator) :
-				m_param(param),m_callback(callback),m_allocator(allocator)
+			ThunkRMHS(T* param, void (T::*callback)(CDRStream&,Buffer*,int), AllocatorInstance* allocator) :
+				m_param(param),m_callback(callback),m_allocator(*allocator)
 			{}
 
 			T* m_param;
@@ -272,8 +272,8 @@ namespace OOBase
 		template <typename T, typename H>
 		struct ThunkSRHS
 		{
-			ThunkSRHS(T* param, void (T::*callback)(CDRStream&,int), AllocatorInstance& allocator) :
-				m_param(param),m_callback(callback),m_allocator(allocator)
+			ThunkSRHS(T* param, void (T::*callback)(CDRStream&,int), AllocatorInstance* allocator) :
+				m_param(param),m_callback(callback),m_allocator(*allocator)
 			{}
 
 			T* m_param;

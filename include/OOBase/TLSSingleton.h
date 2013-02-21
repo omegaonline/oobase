@@ -71,8 +71,8 @@ namespace OOBase
 		{
 			AllocatorInstance* alloc = TLS::detail::swap_allocator();
 
-			Instance* i = alloc->allocate_new<Instance>();
-			if (!i)
+			Instance* i = NULL;
+			if (!alloc->allocate_new(i))
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
 			// We do this long-hand so singleton class can friend us
@@ -124,8 +124,8 @@ namespace OOBase
 					OOBase_CallCriticalFailure("Exception in TLSSingleton destructor");
 				}
 #endif
-				i->m_this->~T();
-				curr->free(i);
+				curr->delete_free(i);
+
 				TLS::detail::swap_allocator(prev);
 			}
 		}
