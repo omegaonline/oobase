@@ -121,7 +121,7 @@ namespace OOBase
 		virtual ~AsyncSocket() {}
 
 		template <typename TThunk, typename TP, typename TC>
-		bool thunk_allocate(TThunk* t, TP param, TC callback)
+		bool thunk_allocate(TThunk*& t, TP param, TC callback)
 		{
 			t = NULL;
 			AllocatorInstance& allocator = get_internal_allocator();
