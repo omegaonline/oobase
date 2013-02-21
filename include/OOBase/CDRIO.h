@@ -331,6 +331,134 @@ namespace OOBase
 			}
 		};
 	};
+
+	template <typename H, typename Allocator = CrtAllocator>
+	class AsyncResponseDispatcher : public Allocating<Allocator>
+	{
+		typedef Allocating<Allocator> baseClass;
+	public:
+		AsyncResponseDispatcher() : baseClass()
+		{}
+
+		AsyncResponseDispatcher(AllocatorInstance& instance) : baseClass(instance)
+		{}
+
+		template <typename T>
+		int add_response(T* pThis, bool (T::*callback)(OOBase::CDRStream&), H& handle)
+		{
+			Delegate0<T>* d = NULL;
+			if (!baseClass::allocate_new(d,pThis,callback))
+				return ERROR_OUTOFMEMORY;
+
+			int err = add_response(d,handle);
+			if (err)
+				baseClass::delete_free(d);
+			return err;
+		}
+
+		template <typename T, typename P1>
+		int add_response(T* pThis, bool (T::*callback)(OOBase::CDRStream&, P1 p1), P1 p1, H& handle)
+		{
+			Delegate1<T,P1>* d = NULL;
+			if (!baseClass::allocate_new(d,pThis,callback,p1))
+				return ERROR_OUTOFMEMORY;
+
+			int err = add_response(d,handle);
+			if (err)
+				baseClass::delete_free(d);
+			return err;
+		}
+
+		void drop_response(H handle)
+		{
+			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+
+			DelegateV* resp = NULL;
+			if (m_response_table.remove(handle,&resp) && resp)
+				resp->destroy(this);
+		}
+
+		bool handle_response(OOBase::CDRStream& stream)
+		{
+			H handle = 0;
+			if (!stream.read(handle))
+				return false;
+
+			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+
+			DelegateV* resp;
+			if (!m_response_table.remove(handle,&resp) || !resp)
+				return false;
+
+			guard.release();
+
+			bool ret = resp->call(stream);
+
+			resp->destroy(this);
+
+			return ret;
+		}
+
+	private:
+		struct DelegateV
+		{
+			virtual bool call(OOBase::CDRStream& stream) = 0;
+			virtual void destroy(Allocating<Allocator>* alloc) = 0;
+		};
+
+		template <typename T>
+		struct Delegate0 : public DelegateV
+		{
+			typedef bool (T::*callback_t)(OOBase::CDRStream&);
+			T* m_this;
+			callback_t m_callback;
+
+			Delegate0(T* pThis, callback_t callback) : m_this(pThis), m_callback(callback)
+			{}
+
+			bool call(OOBase::CDRStream& stream)
+			{
+				return (m_this->*m_callback)(stream);
+			}
+
+			void destroy(Allocating<Allocator>* alloc)
+			{
+				alloc->delete_free(this);
+			}
+		};
+
+		template <typename T, typename P1>
+		struct Delegate1 : public DelegateV
+		{
+			typedef bool (T::*callback_t)(OOBase::CDRStream&, P1 p1);
+			T* m_this;
+			callback_t m_callback;
+			P1 m_p1;
+
+			Delegate1(T* pThis, callback_t callback, P1 p1) : m_this(pThis), m_callback(callback), m_p1(p1)
+			{}
+
+			bool call(OOBase::CDRStream& stream)
+			{
+				return (m_this->*m_callback)(stream,m_p1);
+			}
+
+			void destroy(Allocating<Allocator>* alloc)
+			{
+				alloc->delete_free(this);
+			}
+		};
+
+		OOBase::SpinLock                    m_lock;
+		HandleTable<H,DelegateV*,Allocator> m_response_table;
+
+		int add_response(DelegateV* delegate, H& handle)
+		{
+			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+
+			return m_response_table.insert(delegate,handle);
+		}
+	};
 }
 
 #endif // OOBASE_CDR_IO_H_INCLUDED_
