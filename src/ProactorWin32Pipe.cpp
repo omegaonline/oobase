@@ -32,7 +32,7 @@ namespace
 	class AsyncPipe : public OOBase::AsyncSocket
 	{
 	public:
-		AsyncPipe(OOBase::detail::ProactorWin32* pProactor, HANDLE hPipe);
+		explicit AsyncPipe(OOBase::detail::ProactorWin32* pProactor, HANDLE hPipe);
 		virtual ~AsyncPipe();
 		
 		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes);
@@ -803,7 +803,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const char* path, in
 
 	// Wrap socket
 	AsyncPipe* pSocket = NULL;
-	if (!OOBase::CrtAllocator::allocate_new(pSocket,this,(HANDLE)hPipe))
+	if (!OOBase::CrtAllocator::allocate_new(pSocket,this,hPipe))
 	{
 		unbind();
 		err = ERROR_OUTOFMEMORY;

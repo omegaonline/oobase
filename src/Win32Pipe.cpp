@@ -43,7 +43,7 @@ namespace
 	class Pipe : public OOBase::Socket
 	{
 	public:
-		Pipe(HANDLE handle);
+		explicit Pipe(HANDLE handle);
 		virtual ~Pipe();
 
 		size_t recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout);
@@ -538,7 +538,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* path, int& err, const Timeou
 	}
 	
 	Pipe* pPipe = NULL;
-	if (!OOBase::CrtAllocator::allocate_new(pPipe,(HANDLE)hPipe))
+	if (!OOBase::CrtAllocator::allocate_new(pPipe,hPipe))
 		err = ERROR_OUTOFMEMORY;
 	else
 		hPipe.detach();

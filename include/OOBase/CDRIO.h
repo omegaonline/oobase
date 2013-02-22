@@ -175,8 +175,8 @@ namespace OOBase
 		template <typename T, typename H>
 		struct ThunkRHS
 		{
-			ThunkRHS(T* param, void (T::*callback)(CDRStream&,int), AllocatorInstance* allocator) :
-				m_param(param),m_callback(callback),m_allocator(*allocator)
+			ThunkRHS(T* param, void (T::*callback)(CDRStream&,int), AllocatorInstance& allocator) :
+				m_param(param),m_callback(callback),m_allocator(allocator)
 			{}
 
 			T* m_param;
@@ -220,8 +220,8 @@ namespace OOBase
 		template <typename T, typename H>
 		struct ThunkRMHS
 		{
-			ThunkRMHS(T* param, void (T::*callback)(CDRStream&,Buffer*,int), AllocatorInstance* allocator) :
-				m_param(param),m_callback(callback),m_allocator(*allocator)
+			ThunkRMHS(T* param, void (T::*callback)(CDRStream&,Buffer*,int), AllocatorInstance& allocator) :
+				m_param(param),m_callback(callback),m_allocator(allocator)
 			{}
 
 			T* m_param;
@@ -272,8 +272,8 @@ namespace OOBase
 		template <typename T, typename H>
 		struct ThunkSRHS
 		{
-			ThunkSRHS(T* param, void (T::*callback)(CDRStream&,int), AllocatorInstance* allocator) :
-				m_param(param),m_callback(callback),m_allocator(*allocator)
+			ThunkSRHS(T* param, void (T::*callback)(CDRStream&,int), AllocatorInstance& allocator) :
+				m_param(param),m_callback(callback),m_allocator(allocator)
 			{}
 
 			T* m_param;
@@ -331,6 +331,21 @@ namespace OOBase
 			}
 		};
 	};
+
+	namespace detail
+	{
+		template <typename T>
+		struct non_ref
+		{
+			typedef T value;
+		};
+
+		template <typename T>
+		struct non_ref<T&>
+		{
+			typedef T value;
+		};
+	}
 
 	template <typename H, typename Allocator = CrtAllocator>
 	class AsyncResponseDispatcher : public Allocating<Allocator>
@@ -403,7 +418,13 @@ namespace OOBase
 		struct DelegateV
 		{
 			virtual bool call(OOBase::CDRStream& stream) = 0;
-			virtual void destroy(Allocating<Allocator>* alloc) = 0;
+
+			void destroy(Allocating<Allocator>* alloc)
+			{
+				alloc->delete_free(this);
+			}
+
+			virtual ~DelegateV() {}
 		};
 
 		template <typename T>
@@ -420,11 +441,6 @@ namespace OOBase
 			{
 				return (m_this->*m_callback)(stream);
 			}
-
-			void destroy(Allocating<Allocator>* alloc)
-			{
-				alloc->delete_free(this);
-			}
 		};
 
 		template <typename T, typename P1>
@@ -433,7 +449,7 @@ namespace OOBase
 			typedef bool (T::*callback_t)(OOBase::CDRStream&, P1 p1);
 			T* m_this;
 			callback_t m_callback;
-			P1 m_p1;
+			typename detail::non_ref<P1>::value m_p1;
 
 			Delegate1(T* pThis, callback_t callback, P1 p1) : m_this(pThis), m_callback(callback), m_p1(p1)
 			{}
@@ -443,9 +459,7 @@ namespace OOBase
 				return (m_this->*m_callback)(stream,m_p1);
 			}
 
-			void destroy(Allocating<Allocator>* alloc)
 			{
-				alloc->delete_free(this);
 			}
 		};
 

@@ -400,7 +400,8 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 	for (size_t i=0;i<threads;++i)
 	{
 		Thread* pThread = NULL;
-		if (!CrtAllocator::allocate_new(pThread,false))
+		bool f = false;
+		if (!CrtAllocator::allocate_new(pThread,f))
 			return ERROR_OUTOFMEMORY;
 
 		Guard<SpinLock> guard(m_lock);

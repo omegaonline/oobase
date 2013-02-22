@@ -125,7 +125,7 @@ namespace OOBase
 		{
 			t = NULL;
 			AllocatorInstance& allocator = get_internal_allocator();
-			allocator.allocate_new(t,param,callback,&allocator);
+			allocator.allocate_new(t,param,callback,allocator);
 			return (t != NULL);
 		}
 
@@ -135,8 +135,8 @@ namespace OOBase
 		template <typename T>
 		struct Thunk
 		{
-			Thunk(T* param, void (T::*callback)(Buffer*,int), AllocatorInstance* allocator) :
-				m_param(param),m_callback(callback),m_allocator(*allocator)
+			Thunk(T* param, void (T::*callback)(Buffer*,int), AllocatorInstance& allocator) :
+				m_param(param),m_callback(callback),m_allocator(allocator)
 			{}
 
 			T* m_param;
@@ -154,8 +154,8 @@ namespace OOBase
 		template <typename T>
 		struct ThunkM
 		{
-			ThunkM(T* param, void (T::*callback)(Buffer*,Buffer*,int), AllocatorInstance* allocator) :
-				m_param(param),m_callback(callback),m_allocator(*allocator)
+			ThunkM(T* param, void (T::*callback)(Buffer*,Buffer*,int), AllocatorInstance& allocator) :
+				m_param(param),m_callback(callback),m_allocator(allocator)
 			{}
 
 			T* m_param;
@@ -173,8 +173,8 @@ namespace OOBase
 		template <typename T>
 		struct ThunkV
 		{
-			ThunkV(T* param, void (T::*callback)(Buffer*[],size_t,int), AllocatorInstance* allocator) :
-				m_param(param),m_callback(callback),m_allocator(*allocator)
+			ThunkV(T* param, void (T::*callback)(Buffer*[],size_t,int), AllocatorInstance& allocator) :
+				m_param(param),m_callback(callback),m_allocator(allocator)
 			{}
 
 			T* m_param;

@@ -131,9 +131,9 @@ namespace OOBase
 					baseClass()
 			{}
 
-			BufferImpl(AllocatorInstance* allocator, void* buffer, size_t cbSize, size_t align) :
+			BufferImpl(AllocatorInstance& allocator, void* buffer, size_t cbSize, size_t align) :
 					Buffer(static_cast<char*>(buffer),cbSize,align),
-					baseClass(*allocator)
+					baseClass(allocator)
 			{}
 
 			static Buffer* create(size_t cbSize, size_t align)
@@ -156,7 +156,7 @@ namespace OOBase
 					return NULL;
 
 				BufferImpl* buffer = NULL;
-				if (!allocator.allocate_new(buffer,&allocator,buf,cbSize,align))
+				if (!allocator.allocate_new(buffer,allocator,buf,cbSize,align))
 					allocator.free(buf);
 
 				return buffer;
