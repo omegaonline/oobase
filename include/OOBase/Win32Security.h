@@ -111,21 +111,21 @@ namespace OOBase
 			}
 
 		private:
-			OOBase::SmartPtr<ACL,OOBase::Win32::LocalAllocDestructor>  m_pACL;
-			OOBase::SmartPtr<void,OOBase::Win32::LocalAllocDestructor> m_psd;
+			SmartPtr<ACL,Win32::LocalAllocDestructor>  m_pACL;
+			SmartPtr<void,Win32::LocalAllocDestructor> m_psd;
 		};
 
 		DWORD RestrictToken(HANDLE hToken, HANDLE* hNewToken);
 		DWORD SetTokenDefaultDACL(HANDLE hToken);
 		DWORD LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile);
-		DWORD GetNameFromToken(HANDLE hToken, OOBase::TempPtr<wchar_t>& strUserName, OOBase::TempPtr<wchar_t>& strDomainName);
-		DWORD GetLogonSID(HANDLE hToken, OOBase::TempPtr<void>& pSIDLogon);
+		DWORD GetNameFromToken(HANDLE hToken, TempPtr<wchar_t>& strUserName, TempPtr<wchar_t>& strDomainName);
+		DWORD GetLogonSID(HANDLE hToken, TempPtr<void>& pSIDLogon);
 		DWORD EnableUserAccessToDir(const wchar_t* pszPath, const TOKEN_USER* pUser);
 		bool MatchSids(ULONG count, PSID_AND_ATTRIBUTES pSids1, PSID_AND_ATTRIBUTES pSids2);
 		bool MatchPrivileges(ULONG count, PLUID_AND_ATTRIBUTES Privs1, PLUID_AND_ATTRIBUTES Privs2);
 
 		template <typename T>
-		DWORD GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls, OOBase::LocalPtr<T,FreeDestructor<AllocatorInstance> >& info)
+		DWORD GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls, LocalPtr<T,FreeDestructor<AllocatorInstance> >& info)
 		{
 			DWORD dwLen = 0;
 			if (GetTokenInformation(hToken,cls,NULL,0,&dwLen))
