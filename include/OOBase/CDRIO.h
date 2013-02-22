@@ -371,11 +371,24 @@ namespace OOBase
 			return err;
 		}
 
-		template <typename T, typename P1>
-		int add_response(T* pThis, bool (T::*callback)(OOBase::CDRStream&, P1 p1), P1 p1, H& handle)
+		template <typename T, typename P1, typename PP1>
+		int add_response(T* pThis, bool (T::*callback)(OOBase::CDRStream&, P1 p1), PP1 p1, H& handle)
 		{
-			Delegate1<T,P1>* d = NULL;
+			Delegate1<T,P1,PP1>* d = NULL;
 			if (!baseClass::allocate_new(d,pThis,callback,p1))
+				return ERROR_OUTOFMEMORY;
+
+			int err = add_response(d,handle);
+			if (err)
+				baseClass::delete_free(d);
+			return err;
+		}
+
+		template <typename T, typename P1, typename P2, typename PP1, typename PP2>
+		int add_response(T* pThis, bool (T::*callback)(OOBase::CDRStream&, P1 p1, P2 p2), PP1 p1, PP2 p2, H& handle)
+		{
+			Delegate2<T,P1,P2,PP1,PP2>* d = NULL;
+			if (!baseClass::allocate_new(d,pThis,callback,p1,p2))
 				return ERROR_OUTOFMEMORY;
 
 			int err = add_response(d,handle);
@@ -443,7 +456,7 @@ namespace OOBase
 			}
 		};
 
-		template <typename T, typename P1>
+		template <typename T, typename P1, typename PP1>
 		struct Delegate1 : public DelegateV
 		{
 			typedef bool (T::*callback_t)(OOBase::CDRStream&, P1 p1);
@@ -451,15 +464,30 @@ namespace OOBase
 			callback_t m_callback;
 			typename detail::non_ref<P1>::value m_p1;
 
-			Delegate1(T* pThis, callback_t callback, P1 p1) : m_this(pThis), m_callback(callback), m_p1(p1)
+			Delegate1(T* pThis, callback_t callback, PP1 p1) : m_this(pThis), m_callback(callback), m_p1(p1)
 			{}
 
 			bool call(OOBase::CDRStream& stream)
 			{
 				return (m_this->*m_callback)(stream,m_p1);
 			}
+		};
 
+		template <typename T, typename P1, typename P2, typename PP1, typename PP2>
+		struct Delegate2 : public DelegateV
+		{
+			typedef bool (T::*callback_t)(OOBase::CDRStream&, P1 p1, P2 p2);
+			T* m_this;
+			callback_t m_callback;
+			typename detail::non_ref<P1>::value m_p1;
+			typename detail::non_ref<P2>::value m_p2;
+
+			Delegate2(T* pThis, callback_t callback, PP1 p1, PP2 p2) : m_this(pThis), m_callback(callback), m_p1(p1), m_p2(p2)
+			{}
+
+			bool call(OOBase::CDRStream& stream)
 			{
+				return (m_this->*m_callback)(stream,m_p1,m_p2);
 			}
 		};
 
