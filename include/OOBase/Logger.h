@@ -77,6 +77,7 @@ namespace OOBase
 #define LOG_WARNING(expr) OOBase::Logger::filenum_t(OOBase::Logger::Warning,__FILE__,__LINE__).log expr
 #define LOG_ERROR(expr) OOBase::Logger::filenum_t(OOBase::Logger::Error,__FILE__,__LINE__).log expr
 #define LOG_ERROR_RETURN(expr,ret_val) return (LOG_ERROR(expr),ret_val)
+#define LOG_WARNING_RETURN(expr,ret_val) return (LOG_WARNING(expr),ret_val)
 #endif
 
 #endif // OOBASE_LOGGER_H_INCLUDED_
