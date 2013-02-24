@@ -139,6 +139,20 @@ namespace OOBase
 				m_param(param),m_callback(callback),m_allocator(allocator)
 			{}
 
+			Thunk(const Thunk& rhs) : m_param(rhs.m_param), m_callback(rhs.m_callback), m_allocator(rhs.m_allocator)
+			{}
+
+			Thunk& operator = (const Thunk& rhs)
+			{
+				if (this != &rhs)
+				{
+					m_param = rhs.m_param;
+					m_callback = rhs.m_callback;
+					m_allocator = rhs.m_allocator;
+				}
+				return *this;
+			}
+
 			T* m_param;
 			void (T::*m_callback)(Buffer*,int);
 			AllocatorInstance& m_allocator;
@@ -158,6 +172,20 @@ namespace OOBase
 				m_param(param),m_callback(callback),m_allocator(allocator)
 			{}
 
+			ThunkM(const ThunkM& rhs) : m_param(rhs.m_param), m_callback(rhs.m_callback), m_allocator(rhs.m_allocator)
+			{}
+
+			ThunkM& operator = (const ThunkM& rhs)
+			{
+				if (this != &rhs)
+				{
+					m_param = rhs.m_param;
+					m_callback = rhs.m_callback;
+					m_allocator = rhs.m_allocator;
+				}
+				return *this;
+			}
+
 			T* m_param;
 			void (T::*m_callback)(Buffer*,Buffer*,int);
 			AllocatorInstance& m_allocator;
@@ -176,6 +204,20 @@ namespace OOBase
 			ThunkV(T* param, void (T::*callback)(Buffer*[],size_t,int), AllocatorInstance& allocator) :
 				m_param(param),m_callback(callback),m_allocator(allocator)
 			{}
+
+			ThunkV(const ThunkV& rhs) : m_param(rhs.m_param), m_callback(rhs.m_callback), m_allocator(rhs.m_allocator)
+			{}
+
+			ThunkV& operator = (const ThunkV& rhs)
+			{
+				if (this != &rhs)
+				{
+					m_param = rhs.m_param;
+					m_callback = rhs.m_callback;
+					m_allocator = rhs.m_allocator;
+				}
+				return *this;
+			}
 
 			T* m_param;
 			void (T::*m_callback)(Buffer*[],size_t,int);

@@ -173,11 +173,26 @@ namespace OOBase
 
 	private:
 		template <typename T, typename H>
-		struct ThunkRHS : public NonCopyable
+		struct ThunkRHS
 		{
 			ThunkRHS(T* param, void (T::*callback)(CDRStream&,int), AllocatorInstance& allocator) :
 				m_param(param),m_callback(callback),m_allocator(allocator)
 			{}
+
+			ThunkRHS(const ThunkRHS& rhs) : m_param(rhs.m_param), m_callback(rhs.m_callback), m_allocator(rhs.m_allocator), m_ptrSocket(rhs.m_ptrSocket)
+			{}
+
+			ThunkRHS& operator = (const ThunkRHS& rhs)
+			{
+				if (this != &rhs)
+				{
+					m_param = rhs.m_param;
+					m_callback = rhs.m_callback;
+					m_allocator = rhs.m_allocator;
+					m_ptrSocket = rhs.m_ptrSocket;
+				}
+				return *this;
+			}
 
 			T* m_param;
 			void (T::*m_callback)(CDRStream&,int);
@@ -218,11 +233,27 @@ namespace OOBase
 		};
 
 		template <typename T, typename H>
-		struct ThunkRMHS : public NonCopyable
+		struct ThunkRMHS
 		{
 			ThunkRMHS(T* param, void (T::*callback)(CDRStream&,Buffer*,int), AllocatorInstance& allocator) :
 				m_param(param),m_callback(callback),m_allocator(allocator)
 			{}
+
+			ThunkRMHS(const ThunkRMHS& rhs) : m_param(rhs.m_param), m_callback(rhs.m_callback), m_allocator(rhs.m_allocator), m_ptrSocket(rhs.m_ptrSocket), m_ctl_buffer(rhs.m_ctl_buffer)
+			{}
+
+			ThunkRMHS& operator = (const ThunkRMHS& rhs)
+			{
+				if (this != &rhs)
+				{
+					m_param = rhs.m_param;
+					m_callback = rhs.m_callback;
+					m_allocator = rhs.m_allocator;
+					m_ptrSocket = rhs.m_ptrSocket;
+					m_ctl_buffer = rhs.m_ctl_buffer;
+				}
+				return *this;
+			}
 
 			T* m_param;
 			void (T::*m_callback)(CDRStream&,Buffer*,int);
@@ -270,11 +301,26 @@ namespace OOBase
 		};
 
 		template <typename T, typename H>
-		struct ThunkSRHS : public NonCopyable
+		struct ThunkSRHS
 		{
 			ThunkSRHS(T* param, void (T::*callback)(CDRStream&,int), AllocatorInstance& allocator) :
 				m_param(param),m_callback(callback),m_allocator(allocator)
 			{}
+
+			ThunkSRHS(const ThunkSRHS& rhs) : m_param(rhs.m_param), m_callback(rhs.m_callback), m_allocator(rhs.m_allocator), m_ptrSocket(rhs.m_ptrSocket)
+			{}
+
+			ThunkSRHS& operator = (const ThunkSRHS& rhs)
+			{
+				if (this != &rhs)
+				{
+					m_param = rhs.m_param;
+					m_callback = rhs.m_callback;
+					m_allocator = rhs.m_allocator;
+					m_ptrSocket = rhs.m_ptrSocket;
+				}
+				return *this;
+			}
 
 			T* m_param;
 			void (T::*m_callback)(CDRStream&,int);
@@ -450,6 +496,19 @@ namespace OOBase
 			Delegate0(T* pThis, callback_t callback) : m_this(pThis), m_callback(callback)
 			{}
 
+			Delegate0(const Delegate0& rhs) : m_this(rhs.m_this), m_callback(rhs.m_callback)
+			{}
+
+			Delegate0& operator = (const Delegate0& rhs)
+			{
+				if (this != &rhs)
+				{
+					m_this = rhs.m_this;
+					m_callback = rhs.m_callback;
+				}
+				return *this;
+			}
+
 			bool call(OOBase::CDRStream& stream)
 			{
 				return (m_this->*m_callback)(stream);
@@ -466,6 +525,20 @@ namespace OOBase
 
 			Delegate1(T* pThis, callback_t callback, PP1 p1) : m_this(pThis), m_callback(callback), m_p1(p1)
 			{}
+
+			Delegate1(const Delegate1& rhs) : m_this(rhs.m_this), m_callback(rhs.m_callback), m_p1(rhs.m_p1)
+			{}
+
+			Delegate1& operator = (const Delegate1& rhs)
+			{
+				if (this != &rhs)
+				{
+					m_this = rhs.m_this;
+					m_callback = rhs.m_callback;
+					m_p1 = rhs.m_p1;
+				}
+				return *this;
+			}
 
 			bool call(OOBase::CDRStream& stream)
 			{
@@ -484,6 +557,21 @@ namespace OOBase
 
 			Delegate2(T* pThis, callback_t callback, PP1 p1, PP2 p2) : m_this(pThis), m_callback(callback), m_p1(p1), m_p2(p2)
 			{}
+
+			Delegate2(const Delegate2& rhs) : m_this(rhs.m_this), m_callback(rhs.m_callback), m_p1(rhs.m_p1), m_p2(rhs.m_p2)
+			{}
+
+			Delegate2& operator = (const Delegate2& rhs)
+			{
+				if (this != &rhs)
+				{
+					m_this = rhs.m_this;
+					m_callback = rhs.m_callback;
+					m_p1 = rhs.m_p1;
+					m_p2 = rhs.m_p2;
+				}
+				return *this;
+			}
 
 			bool call(OOBase::CDRStream& stream)
 			{
