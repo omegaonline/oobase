@@ -174,15 +174,6 @@
     <ClInclude Include="..\include\OOBase\Win32.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BSDSocket.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Win32Impl.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Win32Socket.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\OOBase\CmdArgs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -197,9 +188,6 @@
     </ClInclude>
     <ClInclude Include="..\include\OOBase\Set.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="tr24731.h">
-      <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\OOBase\Timeout.h">
       <Filter>Header Files</Filter>
@@ -219,9 +207,6 @@
     <ClInclude Include="..\include\OOBase\StackAllocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ProactorWin32.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\OOBase\ArenaAllocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -232,6 +217,21 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\OOBase\CDRIO.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BSDSocket.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ProactorWin32.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tr24731.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Win32Impl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Win32Socket.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
