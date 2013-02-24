@@ -27,7 +27,7 @@
 #define va_copy(a,b) ((a) = (b))
 #endif
 
-int OOBase::detail::strings::grow(size_t inc, StringNode*& node, void* (*pfnAllocate)(size_t,size_t), void* (*pfnRellocate)(void*,size_t,size_t), void (*pfnFree)(void*))
+int OOBase::detail::strings::grow(size_t inc, StringNode*& node, void* (*pfnAllocate)(size_t,size_t), void (*pfnFree)(void*))
 {
 	size_t our_len = (node ? node->m_length : 0);
 

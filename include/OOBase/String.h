@@ -58,7 +58,7 @@ namespace OOBase
 				char               m_data[1];
 			};
 
-			int grow(size_t inc, StringNode*& node, void* (*pfnAllocate)(size_t,size_t), void* (*pfnRellocate)(void*,size_t,size_t), void (*pfnFree)(void*));
+			int grow(size_t inc, StringNode*& node, void* (*pfnAllocate)(size_t,size_t), void (*pfnFree)(void*));
 			int grow(size_t inc, StringNodeAllocator*& node);
 		}
 
@@ -141,7 +141,7 @@ namespace OOBase
 
 			int grow(size_t inc)
 			{
-				return strings::grow(inc,m_node,&Allocator::allocate,&Allocator::reallocate,&Allocator::free);
+				return strings::grow(inc,m_node,&Allocator::allocate,&Allocator::free);
 			}
 
 			int clone(size_t len)

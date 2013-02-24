@@ -30,7 +30,7 @@ OOBase::ScratchAllocator::ScratchAllocator(char* start, size_t len) :
 		m_end(start + (len >= index_t(-1) ? index_t(-1) : len)),
 		m_free(m_start)
 {
-	reinterpret_cast<free_block_t*>(m_free)->m_size = (m_end - m_start) / sizeof(index_t);
+	reinterpret_cast<free_block_t*>(m_free)->m_size = static_cast<index_t>((m_end - m_start) / sizeof(index_t));
 	reinterpret_cast<free_block_t*>(m_free)->m_next = s_null_ptr;
 	reinterpret_cast<free_block_t*>(m_free)->m_prev = s_null_ptr;
 }

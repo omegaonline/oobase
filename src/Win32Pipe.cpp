@@ -274,7 +274,7 @@ int Pipe::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout&
 	return err;
 }
 
-size_t Pipe::recv_msg(void*, size_t, OOBase::Buffer*, int& err, const OOBase::Timeout& timeout)
+size_t Pipe::recv_msg(void*, size_t, OOBase::Buffer*, int& err, const OOBase::Timeout&)
 {
 	err = ERROR_NOT_SUPPORTED;
 	return 0;

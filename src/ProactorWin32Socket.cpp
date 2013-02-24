@@ -137,7 +137,7 @@ int Win32AsyncSocket::recv(void* param, OOBase::AsyncSocket::recv_callback_t cal
 	return 0;
 }
 
-void Win32AsyncSocket::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
+void Win32AsyncSocket::on_recv(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	recv_callback_t callback = reinterpret_cast<recv_callback_t>(pOv->m_extras[1]);
@@ -222,7 +222,7 @@ int Win32AsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, OOBase
 	return 0;
 }
 
-void Win32AsyncSocket::on_recv_msg(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
+void Win32AsyncSocket::on_recv_msg(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	recv_msg_callback_t callback = reinterpret_cast<recv_msg_callback_t>(pOv->m_extras[1]);
@@ -286,7 +286,7 @@ int Win32AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer
 	return 0;
 }
 
-void Win32AsyncSocket::on_send(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
+void Win32AsyncSocket::on_send(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	send_callback_t callback = reinterpret_cast<send_callback_t>(pOv->m_extras[1]);
@@ -389,7 +389,7 @@ int Win32AsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Bu
 	return 0;
 }
 
-void Win32AsyncSocket::on_send_v(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
+void Win32AsyncSocket::on_send_v(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	send_v_callback_t callback = reinterpret_cast<send_v_callback_t>(pOv->m_extras[1]);
@@ -498,7 +498,7 @@ int Win32AsyncSocket::send_msg(void* param, send_msg_callback_t callback, OOBase
 	return 0;
 }
 
-void Win32AsyncSocket::on_send_msg(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
+void Win32AsyncSocket::on_send_msg(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
 	void* param = reinterpret_cast<void*>(pOv->m_extras[0]);
 	send_msg_callback_t callback = reinterpret_cast<send_msg_callback_t>(pOv->m_extras[1]);
@@ -795,6 +795,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard)
 			{
 				m_pProactor->unbind();
 				free(buf);
+				buf = NULL;
 				break;
 			}
 					

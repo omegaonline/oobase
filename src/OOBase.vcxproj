@@ -167,7 +167,6 @@
     <ClCompile Include="DLL.cpp" />
     <ClCompile Include="Environment.cpp" />
     <ClCompile Include="Error.cpp" />
-    <ClCompile Include="GetPeerUid.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Memory.cpp" />
     <ClCompile Include="Mutex.cpp" />
@@ -176,6 +175,7 @@
     <ClCompile Include="ProactorWin32.cpp" />
     <ClCompile Include="ProactorWin32Pipe.cpp" />
     <ClCompile Include="ProactorWin32Socket.cpp" />
+    <ClCompile Include="ScratchAllocator.cpp" />
     <ClCompile Include="Server.cpp" />
     <ClCompile Include="String.cpp" />
     <ClCompile Include="Thread.cpp" />
@@ -195,6 +195,7 @@
     <ClInclude Include="..\include\OOBase\Bag.h" />
     <ClInclude Include="..\include\OOBase\BoundedQueue.h" />
     <ClInclude Include="..\include\OOBase\Cache.h" />
+    <ClInclude Include="..\include\OOBase\CDRIO.h" />
     <ClInclude Include="..\include\OOBase\CmdArgs.h" />
     <ClInclude Include="..\include\OOBase\ConfigFile.h" />
     <ClInclude Include="..\include\OOBase\Environment.h" />
@@ -233,8 +234,6 @@
     <ClInclude Include="..\include\OOBase\TLSSingleton.h" />
     <ClInclude Include="..\include\OOBase\utf8.h" />
     <ClInclude Include="..\include\OOBase\Win32.h" />
-    <ClInclude Include="ProactorPoll.h" />
-    <ClInclude Include="ProactorPosix.h" />
     <ClInclude Include="ProactorWin32.h" />
     <ClInclude Include="tr24731.h" />
     <ClInclude Include="Win32Impl.h" />

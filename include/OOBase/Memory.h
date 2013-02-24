@@ -459,6 +459,10 @@ namespace OOBase
 
 	protected:
 		AllocatorInstance& m_allocator;
+
+	private:
+		Allocating(const Allocating&);
+		Allocating& operator = (const Allocating&);
 	};
 }
 

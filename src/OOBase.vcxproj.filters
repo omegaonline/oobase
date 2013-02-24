@@ -64,9 +64,6 @@
     <ClCompile Include="ConfigFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GetPeerUid.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Proactor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -86,6 +83,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Win32Security.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ScratchAllocator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -219,12 +219,6 @@
     <ClInclude Include="..\include\OOBase\StackAllocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ProactorPoll.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ProactorPosix.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="ProactorWin32.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -235,6 +229,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\OOBase\Win32Security.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\OOBase\CDRIO.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
