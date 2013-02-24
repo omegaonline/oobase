@@ -41,7 +41,7 @@ namespace OOBase
 
 namespace
 {
-	class TLSMap
+	class TLSMap : public OOBase::NonCopyable
 	{
 	public:
 		TLSMap(OOBase::AllocatorInstance* allocator) : m_allocator(allocator), m_mapVals(*allocator)
@@ -62,10 +62,6 @@ namespace
 
 		// Special internal thread-local variables
 		char m_error_buffer[512];
-
-	private:
-		TLSMap(const TLSMap&);
-		TLSMap& operator = (const TLSMap&);
 	};
 }
 

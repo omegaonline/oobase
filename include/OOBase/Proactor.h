@@ -200,7 +200,7 @@ namespace OOBase
 		virtual ~Acceptor() {}
 	};
 
-	class Proactor
+	class Proactor : public NonCopyable
 	{
 	public:
 		// Factory creation functions
@@ -229,15 +229,10 @@ namespace OOBase
 	protected:
 		Proactor() {}
 		virtual ~Proactor() {}
-
-	private:
-		// Don't copy or assign proactors, they're just too big
-		Proactor(const Proactor&);
-		Proactor& operator = (const Proactor&);
 	};
 
 	template <typename LibraryType>
-	class Singleton<Proactor,LibraryType>
+	class Singleton<Proactor,LibraryType> : public NonCopyable
 	{
 	public:
 		static Proactor* instance_ptr()
@@ -260,8 +255,6 @@ namespace OOBase
 	private:
 		// Prevent creation
 		Singleton();
-		Singleton(const Singleton&);
-		Singleton& operator = (const Singleton&);
 		~Singleton();
 
 		static Proactor* s_instance;

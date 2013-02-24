@@ -30,7 +30,7 @@
 
 namespace OOBase
 {
-	class DLL
+	class DLL : public NonCopyable
 	{
 	public:
 		DLL();
@@ -41,9 +41,6 @@ namespace OOBase
 		void* symbol(const char* sym_name);
 
 	private:
-		DLL(const DLL&);
-		DLL& operator = (const DLL&);
-
 		/** \var m_module
 		 *  The platform specific DLL/SO variable.
 		 */

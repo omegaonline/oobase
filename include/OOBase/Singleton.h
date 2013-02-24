@@ -28,7 +28,7 @@
 namespace OOBase
 {
 	template <typename T, typename DLL>
-	class Singleton
+	class Singleton : public NonCopyable
 	{
 	public:
 		static T* instance_ptr()
@@ -51,8 +51,6 @@ namespace OOBase
 	private:
 		// Prevent creation
 		Singleton();
-		Singleton(const Singleton&);
-		Singleton& operator = (const Singleton&);
 		~Singleton();
 
 		static T* s_instance;

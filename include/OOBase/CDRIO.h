@@ -173,7 +173,7 @@ namespace OOBase
 
 	private:
 		template <typename T, typename H>
-		struct ThunkRHS
+		struct ThunkRHS : public NonCopyable
 		{
 			ThunkRHS(T* param, void (T::*callback)(CDRStream&,int), AllocatorInstance& allocator) :
 				m_param(param),m_callback(callback),m_allocator(allocator)
@@ -218,7 +218,7 @@ namespace OOBase
 		};
 
 		template <typename T, typename H>
-		struct ThunkRMHS
+		struct ThunkRMHS : public NonCopyable
 		{
 			ThunkRMHS(T* param, void (T::*callback)(CDRStream&,Buffer*,int), AllocatorInstance& allocator) :
 				m_param(param),m_callback(callback),m_allocator(allocator)
@@ -270,7 +270,7 @@ namespace OOBase
 		};
 
 		template <typename T, typename H>
-		struct ThunkSRHS
+		struct ThunkSRHS : public NonCopyable
 		{
 			ThunkSRHS(T* param, void (T::*callback)(CDRStream&,int), AllocatorInstance& allocator) :
 				m_param(param),m_callback(callback),m_allocator(allocator)
@@ -432,9 +432,9 @@ namespace OOBase
 		{
 			virtual bool call(OOBase::CDRStream& stream) = 0;
 
-			void destroy(Allocating<Allocator>* alloc)
+			void destroy(Allocating<Allocator>* allocator)
 			{
-				alloc->delete_free(this);
+				allocator->delete_free(this);
 			}
 
 			virtual ~DelegateV() {}

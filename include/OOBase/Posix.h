@@ -48,7 +48,7 @@ namespace OOBase
 		int random_bytes(void* buffer, size_t len);
 		int random_chars(char* buffer, size_t len);
 
-		class SmartFD
+		class SmartFD : public NonCopyable
 		{
 		public:
 			SmartFD(int fd = -1) :
@@ -105,15 +105,12 @@ namespace OOBase
 			}
 
 		private:
-			SmartFD(const SmartFD&);
-			SmartFD& operator = (const SmartFD&);
-
 			int m_fd;
 		};
 
 		int socketpair(int type, SmartFD fds[2]);
 
-		class pw_info
+		class pw_info : public NonCopyable
 		{
 		public:
 			pw_info(AllocatorInstance& allocator, uid_t uid);
@@ -130,9 +127,6 @@ namespace OOBase
 			}
 
 		private:
-			pw_info(const pw_info&);
-			pw_info& operator = (const pw_info&);
-
 			static const size_t get_size();
 
 			struct passwd*    m_pwd;

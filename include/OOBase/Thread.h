@@ -27,7 +27,7 @@
 
 namespace OOBase
 {
-	class Thread
+	class Thread : public NonCopyable
 	{
 	public:
 		Thread(bool bAutodelete);
@@ -48,9 +48,6 @@ namespace OOBase
 		const bool m_bAutodelete;
 
 	private:
-		Thread(const Thread&);
-		Thread& operator = (const Thread&);
-
 		Thread*    m_impl;
 	};
 

@@ -26,7 +26,7 @@
 
 namespace OOBase
 {
-	class Condition
+	class Condition : public NonCopyable
 	{
 	public:
 		/** \typedef Mutex
@@ -50,9 +50,6 @@ namespace OOBase
 		void broadcast();
 
 	private:
-		Condition(const Condition&);
-		Condition& operator = (const Condition&);
-
 		/** \var m_var
 		 *  The platform specific condition variable.
 		 */
@@ -67,7 +64,7 @@ namespace OOBase
 #endif
 	};
 
-	class Event
+	class Event : public NonCopyable
 	{
 	public:
 		Event(bool bSet = false, bool bAutoReset = true);
@@ -79,9 +76,6 @@ namespace OOBase
 		void reset();
 
 	private:
-		Event(const Event&);
-		Event& operator = (const Event&);
-
 		/** \var m_var
 		 *  The platform specific event variable.
 		 *  We use an OOBase::Condition for non Win32 platforms
@@ -97,7 +91,7 @@ namespace OOBase
 	};
 
 	template <typename T>
-	class Future
+	class Future : public NonCopyable
 	{
 	public:
 		Future() : m_complete(false)
@@ -151,9 +145,6 @@ namespace OOBase
 		}
 
 	private:
-		Future(const Future&);
-		Future& operator = (const Future&);
-
 		Condition        m_condition;
 		Condition::Mutex m_lock;
 		bool             m_complete;

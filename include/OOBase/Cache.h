@@ -93,12 +93,6 @@ namespace OOBase
 		}
 
 	private:
-		// Do not allow copy constructors or assignment
-		// as memory allocation will occur...
-		// and you probably don't want to be copying these around
-		Cache(const Cache&);
-		Cache& operator = (const Cache&);
-
 		struct CacheEntry
 		{
 			K        m_key;

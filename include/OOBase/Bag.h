@@ -29,7 +29,7 @@ namespace OOBase
 	namespace detail
 	{
 		template <typename Allocator, typename T>
-		class PODBagBase : public Allocating<Allocator>
+		class PODBagBase : public Allocating<Allocator>, public NonCopyable
 		{
 			typedef Allocating<Allocator> baseClass;
 
@@ -44,13 +44,6 @@ namespace OOBase
 			T*     m_data;
 			size_t m_size;
 			size_t m_capacity;
-
-		private:
-			// Do not allow copy constructors or assignment
-			// as memory allocation will occur...
-			// and you probably don't want to be copying these around
-			PODBagBase(const PODBagBase&);
-			PODBagBase& operator = (const PODBagBase&);
 		};
 
 		template <typename Allocator, typename T, bool POD = false>

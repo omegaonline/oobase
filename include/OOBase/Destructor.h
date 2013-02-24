@@ -30,7 +30,7 @@
 namespace OOBase
 {
 	template <typename DLL>
-	class DLLDestructor
+	class DLLDestructor : public NonCopyable
 	{
 	public:
 		typedef void (*pfn_destructor)(void*);
@@ -61,9 +61,7 @@ namespace OOBase
 
 	private:
 		DLLDestructor() {}
-		DLLDestructor(const DLLDestructor&);
-		DLLDestructor& operator = (const DLLDestructor&);
-
+		
 		struct Node
 		{
 			Node(pfn_destructor pfn, void* p) : m_pfn(pfn), m_param(p)

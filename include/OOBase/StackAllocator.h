@@ -130,7 +130,7 @@ namespace OOBase
 	};
 
 	template <typename T, size_t COUNT = 256/sizeof(T), typename Allocator = ThreadLocalAllocator>
-	class StackArrayPtr
+	class StackArrayPtr : public NonCopyable
 	{
 	public:
 		StackArrayPtr() : m_data(m_static), m_count(COUNT)
@@ -181,10 +181,6 @@ namespace OOBase
 		}
 
 	private:
-		// No copying or assignment - these are stack allocated
-		StackArrayPtr(const StackArrayPtr&);
-		StackArrayPtr& operator = (const StackArrayPtr&);
-
 		T           m_static[COUNT];
 		T*          m_data;
 		size_t      m_count;

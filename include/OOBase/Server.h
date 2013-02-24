@@ -31,7 +31,7 @@
 
 namespace OOBase
 {
-	class Server
+	class Server : public NonCopyable
 	{
 	public:
 		Server();

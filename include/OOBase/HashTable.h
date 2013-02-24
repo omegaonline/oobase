@@ -177,7 +177,7 @@ namespace OOBase
 	}
 
 	template <typename K, typename V, typename Allocator = CrtAllocator, typename H = OOBase::Hash<K> >
-	class HashTable : public Allocating<Allocator>
+	class HashTable : public Allocating<Allocator>, public NonCopyable
 	{
 		typedef Allocating<Allocator> baseClass;
 		typedef detail::HashTableNode<K,V,detail::is_pod<detail::HashTable::PODCheck<K,V> >::value> Node;
@@ -344,12 +344,6 @@ namespace OOBase
 		}
 
 	private:
-		// Do not allow copy constructors or assignment
-		// as memory allocation will occur...
-		// and you probably don't want to be copying these around
-		HashTable(const HashTable&);
-		HashTable& operator = (const HashTable&);
-
 		Node*    m_data;
 		size_t   m_size;
 		size_t   m_count;

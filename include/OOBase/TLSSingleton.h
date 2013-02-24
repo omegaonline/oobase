@@ -40,7 +40,7 @@ namespace OOBase
 	}
 
 	template <typename T, typename DLL>
-	class TLSSingleton
+	class TLSSingleton : public NonCopyable
 	{
 	public:
 		static T* instance()
@@ -55,8 +55,6 @@ namespace OOBase
 	private:
 		// Prevent creation
 		TLSSingleton();
-		TLSSingleton(const TLSSingleton&);
-		TLSSingleton& operator = (const TLSSingleton&);
 		~TLSSingleton();
 
 		static size_t s_sentinal;

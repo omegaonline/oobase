@@ -284,7 +284,7 @@ namespace OOBase
 	namespace detail
 	{
 		template <typename T>
-		class LocalPtrBase
+		class LocalPtrBase : public NonCopyable
 		{
 		public:
 			LocalPtrBase(T* p) : m_data(p)
@@ -309,10 +309,6 @@ namespace OOBase
 
 		protected:
 			T* m_data;
-
-		private:
-			LocalPtrBase(const LocalPtrBase&);
-			LocalPtrBase& operator = (const LocalPtrBase&);
 		};
 
 		template <typename T, typename Destructor, typename Allocator>

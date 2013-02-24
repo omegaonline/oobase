@@ -57,7 +57,7 @@ namespace OOBase
 			}
 		};
 
-		class SmartHandle
+		class SmartHandle : public NonCopyable
 		{
 		public:
 			SmartHandle(HANDLE h = INVALID_HANDLE_VALUE) :
@@ -108,9 +108,6 @@ namespace OOBase
 			}
 
 		private:
-			SmartHandle(const SmartHandle&);
-			SmartHandle& operator = (const SmartHandle&);
-
 			HANDLE m_handle;
 		};	
 

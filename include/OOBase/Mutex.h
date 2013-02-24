@@ -28,7 +28,7 @@
 namespace OOBase
 {
 	/// A recursive mutex that can be acquired with a timeout
-	class Mutex
+	class Mutex : public NonCopyable
 	{
 	public:
 		Mutex();
@@ -43,10 +43,6 @@ namespace OOBase
 #endif
 
 	private:
-		// No copying
-		Mutex(const Mutex&);
-		Mutex& operator = (const Mutex&);
-
 		/** \var m_mutex
 		 *  The platform specific mutex variable.
 		 */
@@ -66,7 +62,7 @@ namespace OOBase
 
 #if defined(_WIN32) || defined(DOXYGEN)
 	/// A non-recursive mutex that spins in user-mode before acquiring the kernel mutex
-	class SpinLock
+	class SpinLock : public NonCopyable
 	{
 	public:
 		SpinLock(unsigned int max_spin = 401);
@@ -77,10 +73,6 @@ namespace OOBase
 		void release();
 
 	private:
-		// No copying
-		SpinLock(const SpinLock&);
-		SpinLock& operator = (const SpinLock&);
-
 		CRITICAL_SECTION m_cs;
 	};
 #else
@@ -94,7 +86,7 @@ namespace OOBase
 	};
 #endif
 
-	class RWMutex
+	class RWMutex : public NonCopyable
 	{
 	public:
 		RWMutex();
@@ -111,10 +103,6 @@ namespace OOBase
 		void release_read();
 
 	private:
-		// No copying
-		RWMutex(const RWMutex&);
-		RWMutex& operator = (const RWMutex&);
-
 #if defined(_WIN32)
 		SRWLOCK          m_lock;
 #elif defined(HAVE_PTHREAD)
@@ -125,7 +113,7 @@ namespace OOBase
 	};
 
 	template <typename MUTEX>
-	class Guard
+	class Guard : public NonCopyable
 	{
 	public:
 		Guard(MUTEX& mutex, bool acq = true) :
@@ -171,15 +159,12 @@ namespace OOBase
 		}
 
 	private:
-		Guard(const Guard&);
-		Guard& operator = (const Guard&);
-
 		bool   m_acquired;
 		MUTEX& m_mutex;
 	};
 
 	template <typename MUTEX>
-	class ReadGuard
+	class ReadGuard : public NonCopyable
 	{
 	public:
 		ReadGuard(MUTEX& mutex, bool acq = true) :
@@ -220,9 +205,6 @@ namespace OOBase
 		}
 
 	private:
-		ReadGuard(const ReadGuard&);
-		ReadGuard& operator = (const ReadGuard&);
-
 		bool   m_acquired;
 		MUTEX& m_mutex;
 	};

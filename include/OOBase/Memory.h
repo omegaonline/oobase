@@ -109,6 +109,16 @@ namespace OOBase
 #endif
 	}
 
+	struct NonCopyable
+	{
+	protected:
+		NonCopyable() {}
+
+	private:
+		NonCopyable(const NonCopyable&);
+		NonCopyable& operator = (const NonCopyable&);
+	};
+
 	template <typename Derived>
 	class AllocateNewStatic
 	{
@@ -429,6 +439,16 @@ namespace OOBase
 		Allocating(AllocatorInstance& allocator) : m_allocator(allocator)
 		{}
 
+		Allocating(const Allocating& rhs) : m_allocator(rhs.m_allocator)
+		{}
+
+		Allocating& operator = (const Allocating& rhs)
+		{
+			if (&rhs != this)
+				 m_allocator = rhs.m_allocator;
+			return *this;
+		}
+
 		AllocatorInstance& get_allocator() const
 		{
 			return m_allocator;
@@ -459,10 +479,6 @@ namespace OOBase
 
 	protected:
 		AllocatorInstance& m_allocator;
-
-	private:
-		Allocating(const Allocating&);
-		Allocating& operator = (const Allocating&);
 	};
 }
 
