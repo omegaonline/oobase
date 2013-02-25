@@ -356,7 +356,7 @@ namespace OOBase
 			m_clone = false;
 
 			size_t new_size = (m_size == 0 ? 16 : (grow ? m_size * 2 : m_size));
-			Node* new_data = static_cast<Node*>(baseClass::allocate(new_size * sizeof(Node),alignof<Node>::value));
+			Node* new_data = static_cast<Node*>(baseClass::allocate(new_size * sizeof(Node),alignment_of<Node>::value));
 			if (!new_data)
 				return ERROR_OUTOFMEMORY;
 

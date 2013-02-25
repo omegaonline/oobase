@@ -55,7 +55,7 @@ namespace OOBase
 	extern const critical_t critical;
 
 	template <typename T>
-	struct alignof
+	struct alignment_of
 	{
 #if defined(HAVE__ALIGNOF)
 		static const size_t value = ALIGNOF(T);
@@ -137,7 +137,7 @@ namespace OOBase
 		static bool allocate_new(T*& t)
 		{
 			t = NULL;
-			void* p = Derived::allocate(sizeof(T),alignof<T>::value);
+			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
 			if (p)
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try {
@@ -162,7 +162,7 @@ namespace OOBase
 		static bool allocate_new(T*& t, P1& p1)
 		{
 			t = NULL;
-			void* p = Derived::allocate(sizeof(T),alignof<T>::value);
+			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
 			if (p)
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try {
@@ -178,7 +178,7 @@ namespace OOBase
 		static bool allocate_new(T*& t, P1& p1, P2& p2)
 		{
 			t = NULL;
-			void* p = Derived::allocate(sizeof(T),alignof<T>::value);
+			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
 			if (p)
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try
@@ -195,7 +195,7 @@ namespace OOBase
 		static bool allocate_new(T*& t, P1& p1, P2& p2, P3& p3)
 		{
 			t = NULL;
-			void* p = Derived::allocate(sizeof(T),alignof<T>::value);
+			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
 			if (p)
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try	{
@@ -211,7 +211,7 @@ namespace OOBase
 		static bool allocate_new(T*& t, P1& p1, P2& p2, P3& p3, P4& p4)
 		{
 			t = NULL;
-			void* p = Derived::allocate(sizeof(T),alignof<T>::value);
+			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
 			if (p)
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try	{
@@ -227,7 +227,7 @@ namespace OOBase
 		static bool allocate_new(T*& t, P1& p1, P2& p2, P3& p3, P4& p4, P5& p5)
 		{
 			t = NULL;
-			void* p = Derived::allocate(sizeof(T),alignof<T>::value);
+			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
 			if (p)
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try	{
@@ -243,7 +243,7 @@ namespace OOBase
 		static bool allocate_new(T*& t, P1& p1, P2& p2, P3& p3, P4& p4, P5& p5, P6& p6)
 		{
 			t = NULL;
-			void* p = Derived::allocate(sizeof(T),alignof<T>::value);
+			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
 			if (p)
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try	{
@@ -291,7 +291,7 @@ namespace OOBase
 		bool allocate_new(T*& t)
 		{
 			t = NULL;
-			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignof<T>::value);
+			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);
 			if (p)
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try {
@@ -316,7 +316,7 @@ namespace OOBase
 		bool allocate_new(T*& t, P1& p1)
 		{
 			t = NULL;
-			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignof<T>::value);
+			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);
 			if (p)
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try {
@@ -332,7 +332,7 @@ namespace OOBase
 		bool allocate_new(T*& t, P1& p1, P2& p2)
 		{
 			t = NULL;
-			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignof<T>::value);
+			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);
 			if (p)
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try
@@ -349,7 +349,7 @@ namespace OOBase
 		bool allocate_new(T*& t, P1& p1, P2& p2, P3& p3)
 		{
 			t = NULL;
-			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignof<T>::value);
+			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);
 			if (p)
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try	{
@@ -365,7 +365,7 @@ namespace OOBase
 		bool allocate_new(T*& t, P1& p1, P2& p2, P3& p3, P4& p4)
 		{
 			t = NULL;
-			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignof<T>::value);
+			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);
 			if (p)
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try	{
@@ -381,7 +381,7 @@ namespace OOBase
 		bool allocate_new(T*& t, P1& p1, P2& p2, P3& p3, P4& p4, P5& p5)
 		{
 			t = NULL;
-			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignof<T>::value);
+			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);
 			if (p)
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try	{
@@ -397,7 +397,7 @@ namespace OOBase
 		bool allocate_new(T*& t, P1& p1, P2& p2, P3& p3, P4& p4, P5& p5, P6& p6)
 		{
 			t = NULL;
-			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignof<T>::value);
+			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);
 			if (p)
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try	{

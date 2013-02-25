@@ -206,7 +206,7 @@ namespace OOBase
 				return false;
 			}
 
-			m_buffer->align_rd_ptr(alignof<T>::value);
+			m_buffer->align_rd_ptr(alignment_of<T>::value);
 			if (m_buffer->length() < sizeof(T))
 				return error_eof();
 
@@ -313,7 +313,7 @@ namespace OOBase
 				return false;
 			}
 
-			m_last_error = m_buffer->align_wr_ptr(alignof<T>::value);
+			m_last_error = m_buffer->align_wr_ptr(alignment_of<T>::value);
 			if (m_last_error != 0)
 				return false;
 

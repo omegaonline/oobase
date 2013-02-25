@@ -216,7 +216,7 @@ namespace OOBase
 		protected:
 			StringBase(AllocatorInstance& allocator) : m_node(NULL)
 			{
-				m_node = static_cast<strings::StringNodeAllocator*>(allocator.allocate(sizeof(strings::StringNodeAllocator),alignof<strings::StringNodeAllocator>::value));
+				m_node = static_cast<strings::StringNodeAllocator*>(allocator.allocate(sizeof(strings::StringNodeAllocator),alignment_of<strings::StringNodeAllocator>::value));
 				if (m_node)
 				{
 					m_node->m_refcount = 1;

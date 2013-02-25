@@ -111,7 +111,7 @@ namespace OOBase
 
 			static SmartPtrNode* create(T* data)
 			{
-				void* p = Allocator::allocate(sizeof(SmartPtrNode),alignof<SmartPtrNode>::value);
+				void* p = Allocator::allocate(sizeof(SmartPtrNode),alignment_of<SmartPtrNode>::value);
 				if (!p)
 					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
@@ -142,7 +142,7 @@ namespace OOBase
 
 			static SmartPtrNode* create(AllocatorInstance& allocator, T* data)
 			{
-				void* p = allocator.allocate(sizeof(SmartPtrNode),alignof<SmartPtrNode>::value);
+				void* p = allocator.allocate(sizeof(SmartPtrNode),alignment_of<SmartPtrNode>::value);
 				if (!p)
 					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
@@ -443,7 +443,7 @@ namespace OOBase
 	public:
 		TempPtr(AllocatorInstance& allocator, T* ptr = NULL) : baseClass(allocator,ptr)
 		{
-			static_assert(!detail::is_pod<T>::value,"Do not use POD types in TempPtr");
+			static_assert(detail::is_pod<T>::value,"Do not use non-POD types in TempPtr");
 		}
 
 		TempPtr& operator = (T* p)
@@ -454,7 +454,7 @@ namespace OOBase
 
 		bool reallocate(size_t count)
 		{
-			T* p = static_cast<T*>(baseClass::m_allocator.reallocate(baseClass::m_data,sizeof(T)*count,alignof<T>::value));
+			T* p = static_cast<T*>(baseClass::m_allocator.reallocate(baseClass::m_data,sizeof(T)*count,alignment_of<T>::value));
 			if (p)
 				baseClass::m_data = p;
 

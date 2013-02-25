@@ -75,7 +75,7 @@ namespace OOBase
 			{
 				if (this->m_capacity < capacity)
 				{
-					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignof<T>::value));
+					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
 						return ERROR_OUTOFMEMORY;
 
@@ -141,7 +141,7 @@ namespace OOBase
 			{
 				if (this->m_capacity < capacity)
 				{
-					T* new_data = static_cast<T*>(baseClass::reallocate(this->m_data,capacity*sizeof(T),alignof<T>::value));
+					T* new_data = static_cast<T*>(baseClass::reallocate(this->m_data,capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
 						return ERROR_OUTOFMEMORY;
 

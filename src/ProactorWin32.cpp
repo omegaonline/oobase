@@ -56,7 +56,7 @@ OOBase::detail::ProactorWin32::~ProactorWin32()
 
 int OOBase::detail::ProactorWin32::new_overlapped(Overlapped*& pOv, pfnCompletion_t callback)
 {
-	pOv = static_cast<Overlapped*>(m_allocator.allocate(sizeof(Overlapped),alignof<Overlapped>::value));
+	pOv = static_cast<Overlapped*>(m_allocator.allocate(sizeof(Overlapped),alignment_of<Overlapped>::value));
 	if (!pOv)
 		return ERROR_OUTOFMEMORY;
 	

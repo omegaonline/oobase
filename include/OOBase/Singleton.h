@@ -58,7 +58,7 @@ namespace OOBase
 		static void init()
 		{
 			// We do this long-hand so singleton class can friend us
-			void* t = OOBase::CrtAllocator::allocate(sizeof(T),alignof<T>::value);
+			void* t = OOBase::CrtAllocator::allocate(sizeof(T),alignment_of<T>::value);
 			if (!t)
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 

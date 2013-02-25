@@ -308,7 +308,7 @@ int PosixAsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Bu
 
 	SendItem item = { param, actual_count };
 	item.m_v_callback = callback;
-	item.m_buffers = static_cast<OOBase::Buffer**>(m_pProactor->get_internal_allocator().allocate(actual_count * sizeof(OOBase::Buffer*),OOBase::alignof<OOBase::Buffer*>::value));
+	item.m_buffers = static_cast<OOBase::Buffer**>(m_pProactor->get_internal_allocator().allocate(actual_count * sizeof(OOBase::Buffer*),OOBase::alignment_of<OOBase::Buffer*>::value));
 	if (!item.m_buffers)
 		return ERROR_OUTOFMEMORY;
 

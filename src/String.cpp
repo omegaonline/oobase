@@ -32,7 +32,7 @@ int OOBase::detail::strings::grow(size_t inc, StringNode*& node, void* (*pfnAllo
 	size_t our_len = (node ? node->m_length : 0);
 
 	// There is an implicit len+1 here as m_data[1] in struct
-	StringNode* new_node = static_cast<StringNode*>((*pfnAllocate)(sizeof(StringNode) + our_len + inc,alignof<StringNode>::value));
+	StringNode* new_node = static_cast<StringNode*>((*pfnAllocate)(sizeof(StringNode) + our_len + inc,alignment_of<StringNode>::value));
 	if (!new_node)
 		return ERROR_OUTOFMEMORY;
 
@@ -66,7 +66,7 @@ int OOBase::detail::strings::grow(size_t inc, StringNodeAllocator*& node)
 		return ERROR_OUTOFMEMORY;
 
 	// There is an implicit len+1 here as m_data[1] in struct
-	StringNodeAllocator* new_node = static_cast<StringNodeAllocator*>(node->m_allocator->allocate(sizeof(StringNodeAllocator) + node->m_length + inc,alignof<StringNodeAllocator>::value));
+	StringNodeAllocator* new_node = static_cast<StringNodeAllocator*>(node->m_allocator->allocate(sizeof(StringNodeAllocator) + node->m_length + inc,alignment_of<StringNodeAllocator>::value));
 	if (!new_node)
 		return ERROR_OUTOFMEMORY;
 

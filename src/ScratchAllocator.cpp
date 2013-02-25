@@ -26,7 +26,7 @@
 #endif
 
 OOBase::ScratchAllocator::ScratchAllocator(char* start, size_t len) :
-		m_start(align_up(start,alignof<index_t>::value)),
+		m_start(align_up(start,alignment_of<index_t>::value)),
 		m_end(start + (len >= index_t(-1) ? index_t(-1) : len)),
 		m_free(m_start)
 {
@@ -61,7 +61,7 @@ void* OOBase::ScratchAllocator::allocate(size_t bytes, size_t align)
 		if (alloc_start != free_start && static_cast<size_t>(alloc_start - free_start) < sizeof(free_block_t))
 			alloc_start = align_up(free_start + sizeof(free_block_t) + sizeof(index_t),correct_align(align)) - sizeof(index_t);
 
-		alloc_end = align_up(alloc_start + min_alloc(bytes),alignof<index_t>::value);
+		alloc_end = align_up(alloc_start + min_alloc(bytes),alignment_of<index_t>::value);
 
 		free_end = free_start + get_size(free_start);
 		if (alloc_end <= free_end)
@@ -106,10 +106,10 @@ void* OOBase::ScratchAllocator::reallocate(void* ptr, size_t bytes, size_t align
 	char* adjacent = get_adjacent(tag);
 	if (adjacent && is_free(adjacent))
 	{
-		char* alloc_end = align_up(tag + min_alloc(bytes),alignof<index_t>::value);
+		char* alloc_end = align_up(tag + min_alloc(bytes),alignment_of<index_t>::value);
 
 		if (static_cast<size_t>(alloc_end - adjacent) < sizeof(free_block_t))
-			alloc_end = align_up(alloc_end + (sizeof(free_block_t) - static_cast<size_t>(alloc_end - adjacent)),alignof<index_t>::value);
+			alloc_end = align_up(alloc_end + (sizeof(free_block_t) - static_cast<size_t>(alloc_end - adjacent)),alignment_of<index_t>::value);
 
 		char* free_end = adjacent + get_size(adjacent);
 
@@ -157,7 +157,7 @@ char* OOBase::ScratchAllocator::align_up(char* p, size_t align)
 
 size_t OOBase::ScratchAllocator::correct_align(size_t align)
 {
-	return (align < alignof<index_t>::value ? alignof<index_t>::value : align);
+	return (align < alignment_of<index_t>::value ? alignment_of<index_t>::value : align);
 }
 
 size_t OOBase::ScratchAllocator::min_alloc(size_t bytes)
@@ -219,7 +219,7 @@ bool OOBase::ScratchAllocator::is_free(char* p)
 char* OOBase::ScratchAllocator::get_tag(void* ptr)
 {
 	// Check alignment...
-	if (reinterpret_cast<ptrdiff_t>(ptr) & (alignof<index_t>::value - 1))
+	if (reinterpret_cast<ptrdiff_t>(ptr) & (alignment_of<index_t>::value - 1))
 		OOBase_CallCriticalFailure("Invalid pointer to reallocate");
 
 	// Check the tag block

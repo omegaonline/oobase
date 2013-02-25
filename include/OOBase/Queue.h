@@ -75,7 +75,7 @@ namespace OOBase
 			int grow()
 			{
 				size_t new_size = (this->m_capacity == 0 ? 8 : this->m_capacity * 2);
-				T* new_data = static_cast<T*>(baseClass::allocate(new_size*sizeof(T),alignof<T>::value));
+				T* new_data = static_cast<T*>(baseClass::allocate(new_size*sizeof(T),alignment_of<T>::value));
 				if (!new_data)
 					return ERROR_OUTOFMEMORY;
 
@@ -144,7 +144,7 @@ namespace OOBase
 			int grow()
 			{
 				size_t new_size = (this->m_capacity == 0 ? 8 : this->m_capacity * 2);
-				T* new_data = static_cast<T*>(baseClass::reallocate(this->m_data,new_size*sizeof(T),alignof<T>::value));
+				T* new_data = static_cast<T*>(baseClass::reallocate(this->m_data,new_size*sizeof(T),alignment_of<T>::value));
 				if (!new_data)
 					return ERROR_OUTOFMEMORY;
 				

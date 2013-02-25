@@ -148,7 +148,7 @@ namespace OOBase
 		{
 			if (count > COUNT)
 			{
-				m_data = m_dynamic = static_cast<T*>(Allocator::allocate(count * sizeof(T),alignof<T>::value));
+				m_data = m_dynamic = static_cast<T*>(Allocator::allocate(count * sizeof(T),alignment_of<T>::value));
 				if (!m_data)
 				{
 					m_count = 0;
