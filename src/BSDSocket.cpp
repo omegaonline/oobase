@@ -34,6 +34,14 @@
 #include <netdb.h>
 #include <sys/un.h>
 
+#if !defined(MSG_NOSIGNAL)
+#if (defined(__APPLE__) || defined(__MACH__))
+#define MSG_NOSIGNAL SO_NOSIGPIPE
+#else
+#define MSG_NOSIGNAL 0
+#endif
+#endif
+
 OOBase::socket_t OOBase::Net::open_socket(int family, int type, int protocol, int& err)
 {
 	socket_t sock = ::socket(family,type

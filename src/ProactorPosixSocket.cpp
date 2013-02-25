@@ -33,7 +33,11 @@
 #include <string.h>
 
 #if !defined(MSG_NOSIGNAL)
+#if (defined(__APPLE__) || defined(__MACH__))
+#define MSG_NOSIGNAL SO_NOSIGPIPE
+#else
 #define MSG_NOSIGNAL 0
+#endif
 #endif
 
 namespace
