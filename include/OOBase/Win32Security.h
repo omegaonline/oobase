@@ -30,6 +30,7 @@
 #include <userenv.h>
 #include <lm.h>
 #include <aclapi.h>
+#include <sddl.h>
 
 #if defined(__MINGW32__)
 
@@ -143,6 +144,33 @@ namespace OOBase
 				return ERROR_SUCCESS;
 
 			return GetLastError();
+		}
+
+		template <typename S>
+		DWORD SIDToString(PSID sid, S& strSID)
+		{
+			char* pszSID = NULL;
+			if (!ConvertSidToStringSidA(sid,&pszSID))
+				return GetLastError();
+
+			int err = strSID.assign(pszSID);
+			LocalFree(pszSID);
+			return err;
+		}
+
+		template <typename S>
+		DWORD SIDToString(const S& strSID, TempPtr<void>& pSID)
+		{
+			PSID pSID2 = NULL;
+			if (!ConvertStringSidToSidA(strSID.c_str(),&pSID2))
+				return GetLastError();
+
+			DWORD dwLen = GetLengthSid(pSID2);
+			int err = pSID.reallocate(dwLen,16);
+			if (!err)
+				memcpy(pSID,pSID2,dwLen);
+			LocalFree(pSID2);
+			return err;
 		}
 	}
 }
