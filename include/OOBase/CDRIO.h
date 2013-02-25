@@ -443,6 +443,19 @@ namespace OOBase
 			return err;
 		}
 
+		template <typename T, typename P1, typename P2, typename P3, typename PP1, typename PP2, typename PP3>
+		int add_response(T* pThis, bool (T::*callback)(OOBase::CDRStream&, P1 p1, P2 p2, P3 p3), PP1 p1, PP2 p2, PP3 p3, H& handle)
+		{
+			Delegate3<T,P1,P2,P3,PP1,PP2,PP3>* d = NULL;
+			if (!baseClass::allocate_new(d,pThis,callback,p1,p2,p3))
+				return ERROR_OUTOFMEMORY;
+
+			int err = add_response(d,handle);
+			if (err)
+				baseClass::delete_free(d);
+			return err;
+		}
+
 		void drop_response(H handle)
 		{
 			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
@@ -576,6 +589,41 @@ namespace OOBase
 			bool call(OOBase::CDRStream& stream)
 			{
 				return (m_this->*m_callback)(stream,m_p1,m_p2);
+			}
+		};
+
+		template <typename T, typename P1, typename P2, typename P3, typename PP1, typename PP2, typename PP3>
+		struct Delegate3 : public DelegateV
+		{
+			typedef bool (T::*callback_t)(OOBase::CDRStream&, P1 p1, P2 p2, P3 p3);
+			T* m_this;
+			callback_t m_callback;
+			typename detail::non_ref<P1>::value m_p1;
+			typename detail::non_ref<P2>::value m_p2;
+			typename detail::non_ref<P3>::value m_p3;
+
+			Delegate3(T* pThis, callback_t callback, PP1 p1, PP2 p2, PP3 p3) : m_this(pThis), m_callback(callback), m_p1(p1), m_p2(p2), m_p3(p3)
+			{}
+
+			Delegate3(const Delegate3& rhs) : m_this(rhs.m_this), m_callback(rhs.m_callback), m_p1(rhs.m_p1), m_p2(rhs.m_p2), m_p3(rhs.m_p3)
+			{}
+
+			Delegate3& operator = (const Delegate3& rhs)
+			{
+				if (this != &rhs)
+				{
+					m_this = rhs.m_this;
+					m_callback = rhs.m_callback;
+					m_p1 = rhs.m_p1;
+					m_p2 = rhs.m_p2;
+					m_p3 = rhs.m_p3;
+				}
+				return *this;
+			}
+
+			bool call(OOBase::CDRStream& stream)
+			{
+				return (m_this->*m_callback)(stream,m_p1,m_p2,m_p3);
 			}
 		};
 
