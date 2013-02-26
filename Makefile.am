@@ -69,6 +69,7 @@ liboobase_la_SOURCES = \
 	include/config-base.h \
 	include/config-msvc.h \
 	include/OOBase/ArenaAllocator.h \
+	include/OOBase/AsyncResponse.h \
 	include/OOBase/Atomic.h \
 	include/OOBase/Bag.h \
 	include/OOBase/BoundedQueue.h \
