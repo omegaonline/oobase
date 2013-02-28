@@ -52,6 +52,28 @@ namespace OOBase
 		AsyncResponseDispatcher(AllocatorInstance& instance) : baseClass(instance)
 		{}
 
+		~AsyncResponseDispatcher()
+		{
+			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+
+			DelegateV* resp = NULL;
+			H handle;
+			while (m_response_table.pop(&handle,&resp))
+			{
+				if (resp)
+				{
+					guard.release();
+
+					OOBase::CDRStream stream(static_cast<OOBase::Buffer*>(NULL));
+					resp->call(stream);
+
+					resp->destroy(this);
+
+					guard.acquire();
+				}
+			}
+		}
+
 		template <typename T>
 		int add_response(T* pThis, bool (T::*callback)(OOBase::CDRStream&), H& handle)
 		{
@@ -110,7 +132,14 @@ namespace OOBase
 
 			DelegateV* resp = NULL;
 			if (m_response_table.remove(handle,&resp) && resp)
+			{
+				guard.release();
+
+				OOBase::CDRStream stream(static_cast<OOBase::Buffer*>(NULL));
+				resp->call(stream);
+
 				resp->destroy(this);
+			}
 		}
 
 		bool handle_response(OOBase::CDRStream& stream)
