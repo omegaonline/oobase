@@ -96,6 +96,11 @@ namespace OOBase
 			return m_buffer;
 		}
 
+		size_t length() const
+		{
+			return (m_buffer ? m_buffer->length() : 0);
+		}
+
 		int reset()
 		{
 			if (!m_last_error)
