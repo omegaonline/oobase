@@ -24,7 +24,7 @@
 
 #include "./ProactorPosix.h"
 
-#if defined(HAVE_UNISTD_H) && !defined(_WIN32)
+#if defined(HAVE_UNISTD_H)
 
 #include "../include/OOBase/HashTable.h"
 
@@ -71,6 +71,6 @@ namespace OOBase
 	}
 }
 
-#endif // defined(HAVE_UNISTD_H) && !defined(_WIN32)
+#endif // defined(HAVE_UNISTD_H)
 
 #endif // OOSVRBASE_PROACTOR_POLL_H_INCLUDED_

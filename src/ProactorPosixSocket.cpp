@@ -24,7 +24,7 @@
 #include "../include/OOBase/Queue.h"
 #include "../include/OOBase/StackAllocator.h"
 
-#if defined(HAVE_UNISTD_H) && !defined(_WIN32)
+#if defined(HAVE_UNISTD_H)
 
 #include "ProactorPosix.h"
 #include "BSDSocket.h"

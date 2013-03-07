@@ -24,7 +24,7 @@
 
 #include "../include/OOBase/Proactor.h"
 
-#if defined(HAVE_UNISTD_H) && !defined(_WIN32)
+#if defined(HAVE_UNISTD_H)
 
 #include "../include/OOBase/Condition.h"
 #include "../include/OOBase/Set.h"

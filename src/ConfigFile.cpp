@@ -239,11 +239,7 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 
 	OOBase::StackAllocator<512> allocator;
 
-#if defined(HAVE_UNISTD_H)
-	POSIX::SmartFD f(POSIX::open(filename,O_RDONLY));
-	if (!f.is_valid())
-		return errno;
-#elif defined(_WIN32)
+#if defined(_WIN32)
 	TempPtr<wchar_t> wname(allocator);
 	int err2 = Win32::utf8_to_wchar_t(filename,wname);
 	if (err2)
@@ -252,6 +248,10 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 	Win32::SmartHandle f(::CreateFileW(wname,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL));
 	if (!f.is_valid())
 		return ::GetLastError();
+#elif defined(HAVE_UNISTD_H)
+	POSIX::SmartFD f(POSIX::open(filename,O_RDONLY));
+	if (!f.is_valid())
+		return errno;
 #else
 #error Implement platform native file handling
 #endif
@@ -265,12 +265,12 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 	String strSection;
 	for (;;)
 	{
-#if defined(HAVE_UNISTD_H)
-		ssize_t r = POSIX::read(f,buffer->wr_ptr(),buffer->space());
-#elif defined(_WIN32)
+#if defined(_WIN32)
 		DWORD r = 0;
 		if (!::ReadFile(f,buffer->wr_ptr(),static_cast<DWORD>(buffer->space()),&r,NULL))
 			return GetLastError();
+#elif defined(HAVE_UNISTD_H)
+		ssize_t r = POSIX::read(f,buffer->wr_ptr(),buffer->space());
 #endif
 
 		if (r == 0)
