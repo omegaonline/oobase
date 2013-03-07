@@ -26,6 +26,7 @@
 #include "../include/OOBase/Stack.h"
 #include "../include/OOBase/String.h"
 #include "../include/OOBase/Condition.h"
+#include "../include/OOBase/Win32Security.h"
 
 namespace
 {
@@ -428,7 +429,9 @@ namespace
 		OOBase::Condition::Mutex                 m_lock;
 		OOBase::Condition                        m_condition;
 		OOBase::LocalString                      m_pipe_name;
-		SECURITY_ATTRIBUTES*                     m_psa;
+		bool                                     m_null_sa;
+		SECURITY_ATTRIBUTES                      m_sa;
+		OOBase::Win32::sec_descript_t            m_sd;
 		size_t                                   m_backlog;
 		size_t                                   m_refcount;
 		OOBase::Stack<HANDLE>                    m_stkPending;
@@ -486,12 +489,18 @@ int PipeAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::L
 InternalAcceptor::InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, const OOBase::LocalString& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback) :
 		m_pProactor(pProactor),
 		m_pipe_name(pipe_name),
-		m_psa(psa),
+		m_null_sa(psa == NULL),
+		m_sd(psa ? psa->lpSecurityDescriptor : NULL),
 		m_backlog(3),
 		m_refcount(1),
 		m_param(param),
 		m_callback(callback)
 {
+	if (psa)
+	{
+		m_sa = *psa;
+		m_sa.lpSecurityDescriptor = m_sd.descriptor();
+	}
 }
 
 int InternalAcceptor::start()
@@ -515,7 +524,7 @@ int InternalAcceptor::stop()
 	}
 	
 	// Wait for all pending operations to complete
-	while (!m_stkPending.empty() && m_backlog == 0)
+	while (!m_stkPending.empty())
 		m_condition.wait(m_lock);
 		
 	if (--m_refcount == 0)
@@ -550,7 +559,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 		OOBase::Win32::SmartHandle hPipe(CreateNamedPipeW(wname,dwFlags,
 												PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
 												PIPE_UNLIMITED_INSTANCES,
-												0,0,0,m_psa));
+												0,0,0,m_null_sa ? NULL : &m_sa));
 
 		if (!hPipe.is_valid())
 		{
