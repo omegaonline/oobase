@@ -277,7 +277,7 @@ namespace OOBase
 		template <typename T2>
 		operator const T2*() const
 		{
-			return static_cast<T2*>(baseClass::value());
+			return static_cast<const T2*>(baseClass::value());
 		}
 	};
 
