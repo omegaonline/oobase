@@ -58,7 +58,7 @@ endif
 if WIN32
 liboobase_la_CFLAGS = $(AM_CFLAGS)
 liboobase_la_CXXFLAGS = $(AM_CXXFLAGS)
-liboobase_la_LIBADD = -lws2_32 -lnetapi32 -luserenv
+liboobase_la_LIBADD = -lws2_32 -lnetapi32 -luserenv -lshlwapi
 else
 liboobase_la_CFLAGS = $(LTDLINCL) $(AM_CFLAGS)
 liboobase_la_CXXFLAGS = $(LTDLINCL) $(AM_CXXFLAGS)

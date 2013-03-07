@@ -163,34 +163,7 @@ namespace OOBase
 			return err;
 		}
 
-		template <typename S>
-		DWORD StringToSID(const S& strSID, TempPtr<void>& pSID)
-		{
-			PSID pSID2 = NULL;
-			if (!ConvertStringSidToSidA(strSID.c_str(),&pSID2))
-				return GetLastError();
-
-			DWORD dwLen = GetLengthSid(pSID2);
-			int err = pSID.reallocate(dwLen,16);
-			if (!err)
-				memcpy(pSID,pSID2,dwLen);
-			LocalFree(pSID2);
-			return err;
-		}
-
-		DWORD StringToSID(const char* pszSID, TempPtr<void>& pSID)
-		{
-			PSID pSID2 = NULL;
-			if (!ConvertStringSidToSidA(pszSID,&pSID2))
-				return GetLastError();
-
-			DWORD dwLen = GetLengthSid(pSID2);
-			int err = pSID.reallocate(dwLen,16);
-			if (!err)
-				memcpy(pSID,pSID2,dwLen);
-			LocalFree(pSID2);
-			return err;
-		}
+		DWORD StringToSID(const char* pszSID, SmartPtr<void,LocalAllocDestructor>& pSID);
 	}
 }
 

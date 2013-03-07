@@ -403,4 +403,14 @@ bool OOBase::Win32::MatchPrivileges(ULONG count, PLUID_AND_ATTRIBUTES Privs1, PL
 	return true;
 }
 
+DWORD OOBase::Win32::StringToSID(const char* pszSID, SmartPtr<void,LocalAllocDestructor>& pSID)
+{
+	PSID pSID2 = NULL;
+	if (!ConvertStringSidToSidA(pszSID,&pSID2))
+		return GetLastError();
+
+	pSID = pSID2;
+	return 0;
+}
+
 #endif // _WIN32
