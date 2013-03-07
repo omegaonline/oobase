@@ -42,33 +42,93 @@ namespace
 	};
 }
 
-OOBase::Win32::sec_descript_t::sec_descript_t()
+OOBase::Win32::sec_descript_t::sec_descript_t(PSECURITY_DESCRIPTOR pSD)
 {
-	// Create a new security descriptor
-	m_psd = (PSECURITY_DESCRIPTOR)LocalAlloc(LPTR,SECURITY_DESCRIPTOR_MIN_LENGTH);
-	if (!m_psd)
-		OOBase_CallCriticalFailure(GetLastError());
+	if (pSD)
+		copy(pSD);
+}
 
-	// Initialize a security descriptor.
-	if (!InitializeSecurityDescriptor((PSECURITY_DESCRIPTOR)m_psd,SECURITY_DESCRIPTOR_REVISION))
-		OOBase_CallCriticalFailure(GetLastError());
+OOBase::Win32::sec_descript_t::sec_descript_t(const sec_descript_t& rhs)
+{
+	copy(const_cast<PSECURITY_DESCRIPTOR>(static_cast<const void*>(rhs.m_psd)));
+}
+
+OOBase::Win32::sec_descript_t& OOBase::Win32::sec_descript_t::operator = (const sec_descript_t& rhs)
+{
+	if (this != &rhs)
+		copy(const_cast<PSECURITY_DESCRIPTOR>(static_cast<const void*>(rhs.m_psd)));
+
+	return *this;
 }
 
 OOBase::Win32::sec_descript_t::~sec_descript_t()
 {
 }
 
+void OOBase::Win32::sec_descript_t::copy(PSECURITY_DESCRIPTOR other)
+{
+	if (!other)
+		return;
+
+	if (!IsValidSecurityDescriptor(other))
+		OOBase_CallCriticalFailure("Invalid SECURITY_DESCRIPTOR");
+
+	DWORD dwLen = GetSecurityDescriptorLength(other);
+	SmartPtr<void,Win32::LocalAllocDestructor> ours = LocalAlloc(LPTR,dwLen);
+	if (!ours)
+		OOBase_CallCriticalFailure(GetLastError());
+
+	SECURITY_DESCRIPTOR_CONTROL control = 0;
+	DWORD dwRevision = 0;
+	if (!GetSecurityDescriptorControl(other,&control,&dwRevision))
+		OOBase_CallCriticalFailure(GetLastError());
+
+	if (control & SE_SELF_RELATIVE)
+	{
+		memcpy(ours,other,dwLen);
+		m_psd = ours;
+	}
+	else
+	{
+		if (MakeSelfRelativeSD(other,ours,&dwLen))
+			m_psd = ours;
+		else if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+		{
+			ours = LocalAlloc(LPTR,dwLen);
+			if (!ours)
+				OOBase_CallCriticalFailure(GetLastError());
+
+			if (!MakeSelfRelativeSD(other,ours,&dwLen))
+				OOBase_CallCriticalFailure(GetLastError());
+
+			m_psd = ours;
+		}
+		else
+			OOBase_CallCriticalFailure(GetLastError());
+	}
+}
+
 DWORD OOBase::Win32::sec_descript_t::SetEntriesInAcl(ULONG cCountOfExplicitEntries, PEXPLICIT_ACCESSW pListOfExplicitEntries, PACL OldAcl)
 {
-	if (m_pACL)
-		m_pACL = NULL;
+	if (!m_psd)
+	{
+		// Create a new security descriptor
+		m_psd = (PSECURITY_DESCRIPTOR)LocalAlloc(LPTR,SECURITY_DESCRIPTOR_MIN_LENGTH);
+		if (!m_psd)
+			OOBase_CallCriticalFailure(GetLastError());
 
-	PACL pACL;
-	DWORD dwErr = ::SetEntriesInAclW(cCountOfExplicitEntries,pListOfExplicitEntries,OldAcl,&pACL);
+		// Initialize a security descriptor.
+		if (!InitializeSecurityDescriptor((PSECURITY_DESCRIPTOR)m_psd,SECURITY_DESCRIPTOR_REVISION))
+			OOBase_CallCriticalFailure(GetLastError());
+	}
+
+	PACL pACL = NULL;
+	DWORD dwErr = ::SetEntriesInAclW(cCountOfExplicitEntries,pListOfExplicitEntries,m_pACL,&pACL);
 	if (dwErr)
 		return dwErr;
 
-	m_pACL = pACL;
+	if (pACL != m_pACL)
+		m_pACL = pACL;
 
 	// Add the ACL to the SD
 	if (!SetSecurityDescriptorDacl((PSECURITY_DESCRIPTOR)m_psd,TRUE,m_pACL,FALSE))

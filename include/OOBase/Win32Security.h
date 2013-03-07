@@ -101,12 +101,15 @@ namespace OOBase
 		class sec_descript_t
 		{
 		public:
-			sec_descript_t();
+			sec_descript_t(PSECURITY_DESCRIPTOR pSD = NULL);
+			sec_descript_t(const sec_descript_t& rhs);
+			sec_descript_t& operator = (const sec_descript_t& rhs);
+
 			~sec_descript_t();
 
 			DWORD SetEntriesInAcl(ULONG cCountOfExplicitEntries, PEXPLICIT_ACCESSW pListOfExplicitEntries, PACL OldAcl);
 
-			void* descriptor()
+			PSECURITY_DESCRIPTOR descriptor()
 			{
 				return m_psd;
 			}
@@ -114,6 +117,8 @@ namespace OOBase
 		private:
 			SmartPtr<ACL,Win32::LocalAllocDestructor>  m_pACL;
 			SmartPtr<void,Win32::LocalAllocDestructor> m_psd;
+
+			void copy(PSECURITY_DESCRIPTOR other);
 		};
 
 		DWORD RestrictToken(HANDLE hToken, HANDLE* hNewToken);
