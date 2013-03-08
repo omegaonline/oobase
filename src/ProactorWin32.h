@@ -48,7 +48,7 @@ namespace OOBase
 			AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout);
 			AsyncSocket* connect(const char* path, int& err, const Timeout& timeout);
 
-			Acceptor* wait_for_object(HANDLE hObject, void* param, wait_object_callback_t callback, int& err, ULONG dwMilliseconds);
+			Acceptor* wait_for_object(void* param, wait_object_callback_t callback, HANDLE hObject, int& err, ULONG dwMilliseconds);
 
 			// 'Internal' public members
 		public:

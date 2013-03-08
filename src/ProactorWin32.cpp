@@ -335,7 +335,7 @@ void InternalWaitAcceptor::onWait2(HANDLE handle, DWORD dwBytes, DWORD dwErr, OO
 	pThis->release();
 }
 
-OOBase::Acceptor* OOBase::detail::ProactorWin32::wait_for_object(HANDLE hObject, void* param, wait_object_callback_t callback, int& err, ULONG dwMilliseconds)
+OOBase::Acceptor* OOBase::detail::ProactorWin32::wait_for_object(void* param, wait_object_callback_t callback, HANDLE hObject, int& err, ULONG dwMilliseconds)
 {
 	WaitAcceptor* pAcceptor = NULL;
 	if (!OOBase::CrtAllocator::allocate_new(pAcceptor))
