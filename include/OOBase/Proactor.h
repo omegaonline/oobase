@@ -250,7 +250,7 @@ namespace OOBase
 		static void destroy(Proactor* proactor);
 
 		typedef void (*accept_pipe_callback_t)(void* param, AsyncSocket* pSocket, int err);
-		virtual Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa) = 0;
+		virtual Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa = NULL) = 0;
 
 		typedef void (*accept_callback_t)(void* param, AsyncSocket* pSocket, const sockaddr* addr, socklen_t addr_len, int err);
 		virtual Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err) = 0;
@@ -258,6 +258,9 @@ namespace OOBase
 		virtual AsyncSocket* attach(socket_t sock, int& err) = 0;
 #if defined(_WIN32)
 		virtual AsyncSocket* attach(HANDLE hPipe, int& err) = 0;
+
+		typedef void (*wait_object_callback_t)(void* param, HANDLE hObject, bool bTimedout, int err);
+		virtual Acceptor* wait_for_object(HANDLE hObject, void* param, wait_object_callback_t callback, int& err, ULONG dwMilliseconds = INFINITE) = 0;
 #endif
 
 		virtual AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout) = 0;

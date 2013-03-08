@@ -47,6 +47,8 @@ namespace OOBase
 			AsyncSocket* connect(const sockaddr* addr, socklen_t addr_len, int& err, const Timeout& timeout);
 			AsyncSocket* connect(const char* path, int& err, const Timeout& timeout);
 
+			Acceptor* wait_for_object(HANDLE hObject, void* param, wait_object_callback_t callback, int& err, ULONG dwMilliseconds);
+
 			// 'Internal' public members
 		public:
 			ProactorWin32();
@@ -66,6 +68,8 @@ namespace OOBase
 		
 			int new_overlapped(Overlapped*& pOv, pfnCompletion_t callback);
 			void delete_overlapped(Overlapped* pOv);
+
+			int post_completion(DWORD dwBytes, ULONG_PTR dwKey, Overlapped* pOv);
 									
 			int bind(HANDLE hFile);
 			void unbind();
