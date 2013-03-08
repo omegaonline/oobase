@@ -126,7 +126,7 @@ int AsyncPipe::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, 
 		
 	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 	err = m_pProactor->new_overlapped(pOv,&on_recv);
-	if (err != 0)
+	if (err)
 		return err;
 	
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
@@ -157,7 +157,7 @@ void AsyncPipe::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detai
 	
 	buffer->wr_ptr(dwBytes);
 
-	if (dwErr == 0 && pOv->m_extras[3] != 0 && pOv->m_extras[3] != dwBytes)
+	if (!dwErr && pOv->m_extras[3] != 0 && pOv->m_extras[3] != dwBytes)
 	{
 		pOv->m_extras[3] -= dwBytes;
 
@@ -202,7 +202,7 @@ int AsyncPipe::send(void* param, send_callback_t callback, OOBase::Buffer* buffe
 
 	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 	int dwErr = m_pProactor->new_overlapped(pOv,&on_send);
-	if (dwErr != 0)
+	if (dwErr)
 		return dwErr;
 	
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
@@ -289,7 +289,7 @@ int AsyncPipe::send_v(void* param, send_v_callback_t callback, OOBase::Buffer* b
 			
 	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 	int dwErr = m_pProactor->new_overlapped(pOv,&on_send_v);
-	if (dwErr != 0)
+	if (dwErr)
 	{
 		buffer->release();
 		return dwErr;
@@ -439,7 +439,7 @@ namespace
 		OOBase::Proactor::accept_pipe_callback_t m_callback;
 	
 		static void on_completion(HANDLE hPipe, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
-		bool on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
+		void on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
 		int do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, bool bFirst);
 	};
 
@@ -477,7 +477,7 @@ int PipeAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::L
 		return ERROR_OUTOFMEMORY;
 
 	int err = m_pAcceptor->start();
-	if (err != 0)
+	if (err)
 	{
 		m_pAcceptor->stop();
 		m_pAcceptor = NULL;
@@ -549,6 +549,8 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 	
 	while (m_stkPending.size() < m_backlog)
 	{
+		++m_refcount;
+
 		DWORD dwFlags = PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED;
 		if (bFirst)
 		{
@@ -568,13 +570,13 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 		}
 		
 		dwErr = m_pProactor->bind(hPipe);
-		if (dwErr != 0)
+		if (dwErr)
 			break;
 					
 		if (!pOv)
 		{
 			dwErr = m_pProactor->new_overlapped(pOv,&on_completion);
-			if (dwErr != 0)
+			if (dwErr)
 			{
 				m_pProactor->unbind();
 				break;
@@ -591,7 +593,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 			{
 				// Will complete later...
 				dwErr = m_stkPending.push(hPipe);
-				if (dwErr == 0)
+				if (!dwErr)
 				{
 					hPipe.detach();
 					pOv = NULL;
@@ -609,16 +611,19 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 		}
 		
 		// Call the callback
-		if (on_accept(hPipe.detach(),false,0,guard))
-		{
-			// We have self destructed
-			break;
-		}
+		on_accept(hPipe.detach(),false,0,guard);
 	}
 	
 	if (pOv)
 		m_pProactor->delete_overlapped(pOv);
 	
+	if (dwErr && --m_refcount == 0)
+	{
+		guard.release();
+
+		OOBase::CrtAllocator::delete_free(this);
+	}
+
 	return dwErr;
 }
 
@@ -634,7 +639,7 @@ void InternalAcceptor::on_completion(HANDLE hPipe, DWORD /*dwBytes*/, DWORD dwEr
 	pThis->on_accept(hPipe,true,dwErr,guard);
 }
 
-bool InternalAcceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard)
+void InternalAcceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard)
 {
 	bool bSignal = false;
 	bool bAgain = false;
@@ -653,14 +658,11 @@ bool InternalAcceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase
 		m_pProactor->unbind();
 	else
 	{
-		// Keep us alive while the callbacks fire
-		++m_refcount;
-		
 		guard.release();
 		
 		// Wrap the handle
 		AsyncPipe* pSocket = NULL;
-		if (dwErr == 0)
+		if (!dwErr)
 		{
 			if (!OOBase::CrtAllocator::allocate_new(pSocket,m_pProactor,hPipe))
 			{
@@ -678,7 +680,7 @@ bool InternalAcceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase
 		{
 			// Try to accept some more connections
 			dwErr = do_accept(guard,false);
-			if (dwErr != 0)
+			if (dwErr)
 			{
 				guard.release();
 				
@@ -689,22 +691,17 @@ bool InternalAcceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase
 			
 			bSignal = (m_stkPending.empty() && m_backlog == 0);
 		}
-		
-		// See if we have been killed in the callback
-		if (--m_refcount == 0)
-		{
-			guard.release();
-
-			OOBase::CrtAllocator::delete_free(this);
-
-			return true;
-		}
 	}
 	
 	if (bSignal)
 		m_condition.broadcast();
 	
-	return false;
+	if (--m_refcount == 0)
+	{
+		guard.release();
+
+		OOBase::CrtAllocator::delete_free(this);
+	}
 }
 
 OOBase::Acceptor* OOBase::detail::ProactorWin32::accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa)
@@ -724,13 +721,13 @@ OOBase::Acceptor* OOBase::detail::ProactorWin32::accept(void* param, accept_pipe
 		StackAllocator<256> allocator;
 		LocalString strPipe(allocator);
 		err = strPipe.assign("\\\\.\\pipe\\");
-		if (err == 0)
+		if (!err)
 			err = strPipe.append(path);
 
-		if (err == 0)
+		if (!err)
 			err = pAcceptor->bind(this,strPipe,psa,param,callback);
 
-		if (err != 0)
+		if (err)
 		{
 			pAcceptor->release();
 			pAcceptor = NULL;
@@ -743,7 +740,7 @@ OOBase::Acceptor* OOBase::detail::ProactorWin32::accept(void* param, accept_pipe
 OOBase::AsyncSocket* OOBase::detail::ProactorWin32::attach(HANDLE hPipe, int& err)
 {
 	err = bind(hPipe);
-	if (err != 0)
+	if (err)
 		return NULL;
 
 	AsyncPipe* pPipe = NULL;
@@ -761,9 +758,9 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const char* path, in
 	StackAllocator<256> allocator;
 	LocalString strPipe(allocator);
 	err = strPipe.assign("\\\\.\\pipe\\");
-	if (err == 0)
+	if (!err)
 		err = strPipe.append(path);
-	if (err != 0)
+	if (err)
 		return NULL;
 	
 	TempPtr<wchar_t> wname(allocator);
@@ -807,7 +804,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const char* path, in
 	}
 
 	err = bind(hPipe);
-	if (err != 0)
+	if (err)
 		return NULL;
 
 	// Wrap socket
