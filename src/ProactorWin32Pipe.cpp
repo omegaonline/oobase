@@ -28,6 +28,8 @@
 #include "../include/OOBase/Condition.h"
 #include "../include/OOBase/Win32Security.h"
 
+#include "tr24731.h"
+
 namespace
 {
 	class AsyncPipe : public OOBase::AsyncSocket
@@ -818,6 +820,348 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const char* path, in
 		hPipe.detach();
 
 	return pSocket;
+}
+
+namespace
+{
+	class InternalUniqueAcceptor : public OOBase::RefCounted
+	{
+	public:
+		InternalUniqueAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_pipe_callback_t callback, const OOBase::LocalString& pipe_name, SECURITY_ATTRIBUTES* psa);
+
+		int start();
+		void stop();
+
+	private:
+		OOBase::detail::ProactorWin32*           m_pProactor;
+		OOBase::Condition::Mutex                 m_lock;
+		OOBase::Condition                        m_condition;
+		OOBase::Win32::SmartHandle               m_hPipe;
+		OOBase::LocalString                      m_pipe_name;
+		bool                                     m_running;
+		bool                                     m_null_sa;
+		SECURITY_ATTRIBUTES                      m_sa;
+		OOBase::Win32::sec_descript_t            m_sd;
+		size_t                                   m_refcount;
+		void*                                    m_param;
+		OOBase::Proactor::accept_pipe_callback_t m_callback;
+
+		static void on_completion(HANDLE hPipe, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
+		void on_accept(HANDLE hPipe, DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
+	};
+
+	class UniqueAcceptor : public OOBase::Acceptor
+	{
+	public:
+		UniqueAcceptor();
+		virtual ~UniqueAcceptor();
+
+		int bind(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_pipe_callback_t callback, const char* pipe_name, SECURITY_ATTRIBUTES* psa);
+
+	private:
+		void destroy()
+		{
+			OOBase::CrtAllocator::delete_free(this);
+		}
+
+		InternalUniqueAcceptor* m_pAcceptor;
+	};
+}
+
+UniqueAcceptor::UniqueAcceptor() :
+		m_pAcceptor(NULL)
+{ }
+
+UniqueAcceptor::~UniqueAcceptor()
+{
+	if (m_pAcceptor)
+		m_pAcceptor->stop();
+}
+
+int UniqueAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_pipe_callback_t callback, const char* pipe_name, SECURITY_ATTRIBUTES* psa)
+{
+	OOBase::StackAllocator<256> allocator;
+	OOBase::LocalString strPipe(allocator);
+	int err = strPipe.assign("\\\\.\\pipe\\");
+	if (!err)
+		err = strPipe.append(pipe_name);
+
+	if (err)
+		return err;
+
+	if (!OOBase::CrtAllocator::allocate_new<InternalUniqueAcceptor>(m_pAcceptor,pProactor,param,callback,strPipe,psa))
+		return ERROR_OUTOFMEMORY;
+
+	err = m_pAcceptor->start();
+	if (err)
+	{
+		m_pAcceptor->stop();
+		m_pAcceptor = NULL;
+	}
+
+	return err;
+}
+
+InternalUniqueAcceptor::InternalUniqueAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_pipe_callback_t callback, const OOBase::LocalString& pipe_name, SECURITY_ATTRIBUTES* psa) :
+		m_pProactor(pProactor),
+		m_pipe_name(pipe_name),
+		m_running(false),
+		m_null_sa(psa == NULL),
+		m_sd(psa ? psa->lpSecurityDescriptor : NULL),
+		m_refcount(1),
+		m_param(param),
+		m_callback(callback)
+{
+	if (psa)
+	{
+		m_sa = *psa;
+		m_sa.lpSecurityDescriptor = m_sd.descriptor();
+	}
+}
+
+int InternalUniqueAcceptor::start()
+{
+	OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
+
+	OOBase::StackAllocator<256> allocator;
+	OOBase::TempPtr<wchar_t> wname(allocator);
+	DWORD dwErr = OOBase::Win32::utf8_to_wchar_t(m_pipe_name.c_str(),wname);
+	if (dwErr)
+		return dwErr;
+
+	m_hPipe = CreateNamedPipeW(wname,
+				PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED | FILE_FLAG_FIRST_PIPE_INSTANCE,
+				PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+				1,
+				0,0,0,m_null_sa ? NULL : &m_sa);
+
+	if (!m_hPipe.is_valid())
+		return GetLastError();
+
+	dwErr = m_pProactor->bind(m_hPipe);
+	if (dwErr)
+		return dwErr;
+
+	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
+	dwErr = m_pProactor->new_overlapped(pOv,&on_completion);
+	if (dwErr)
+	{
+		m_pProactor->unbind();
+		return dwErr;
+	}
+
+	// Set this pointer
+	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(this);
+
+	++m_refcount;
+
+	if (!ConnectNamedPipe(m_hPipe,pOv))
+	{
+		dwErr = GetLastError();
+		if (dwErr == ERROR_IO_PENDING)
+		{
+			// Will complete later
+			m_running = true;
+			return 0;
+		}
+
+		if (dwErr == ERROR_PIPE_CONNECTED)
+			dwErr = 0;
+	}
+
+	m_pProactor->delete_overlapped(pOv);
+
+	if (!dwErr)
+	{
+		// Call the callback
+		on_accept(m_hPipe.detach(),0,guard);
+	}
+	else
+	{
+		m_pProactor->unbind();
+
+		if (--m_refcount == 0)
+		{
+			guard.release();
+
+			OOBase::CrtAllocator::delete_free(this);
+		}
+	}
+
+	return dwErr;
+}
+
+void InternalUniqueAcceptor::stop()
+{
+	OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
+
+	if (m_running)
+	{
+		m_hPipe.close();
+
+		// Wait for all pending operations to complete
+		while (m_running)
+			m_condition.wait(m_lock);
+	}
+
+	if (--m_refcount == 0)
+	{
+		guard.release();
+
+		OOBase::CrtAllocator::delete_free(this);
+	}
+}
+
+void InternalUniqueAcceptor::on_completion(HANDLE hPipe, DWORD /*dwBytes*/, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
+{
+	InternalUniqueAcceptor* pThis = reinterpret_cast<InternalUniqueAcceptor*>(pOv->m_extras[0]);
+
+	pOv->m_pProactor->delete_overlapped(pOv);
+
+	OOBase::Guard<OOBase::Condition::Mutex> guard(pThis->m_lock);
+
+	// Perform the callback
+	pThis->on_accept(hPipe,dwErr,guard);
+}
+
+void InternalUniqueAcceptor::on_accept(HANDLE hPipe, DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard)
+{
+	// If we close the pipe with outstanding connects, we get a load of ERROR_BROKEN_PIPE,
+	// just ignore them
+	if (dwErr == ERROR_BROKEN_PIPE)
+		m_pProactor->unbind();
+	else
+	{
+		guard.release();
+
+		// Wrap the handle
+		AsyncPipe* pSocket = NULL;
+		if (!dwErr)
+		{
+			if (!OOBase::CrtAllocator::allocate_new(pSocket,m_pProactor,hPipe))
+			{
+				dwErr = ERROR_OUTOFMEMORY;
+				m_pProactor->unbind();
+				CloseHandle(hPipe);
+			}
+		}
+
+		(*m_callback)(m_param,pSocket,dwErr);
+
+		guard.acquire();
+	}
+
+	if (m_running)
+	{
+		m_running = false;
+		m_condition.broadcast();
+	}
+
+	if (--m_refcount == 0)
+	{
+		guard.release();
+
+		OOBase::CrtAllocator::delete_free(this);
+	}
+}
+
+OOBase::Acceptor* OOBase::detail::ProactorWin32::accept_unique_pipe(void* param, accept_pipe_callback_t callback, /*(out)*/ char path[64], int& err, SECURITY_ATTRIBUTES* psa)
+{
+	snprintf_s(path,sizeof(path),"%X%X%X",GetCurrentProcessId(),GetCurrentThreadId(),GetTickCount());
+
+	UniqueAcceptor* pAcceptor = NULL;
+	if (!OOBase::CrtAllocator::allocate_new(pAcceptor))
+		err = ERROR_OUTOFMEMORY;
+	else
+	{
+		if (!err)
+			err = pAcceptor->bind(this,param,callback,path,psa);
+
+		if (err)
+		{
+			pAcceptor->release();
+			pAcceptor = NULL;
+		}
+	}
+
+	return pAcceptor;
+}
+
+OOBase::Acceptor* OOBase::Proactor::accept_unique_pipe(void* param, accept_pipe_callback_t callback, /*(out)*/ char path[64], int& err, const char* pszSID)
+{
+	if (!pszSID)
+		return accept_unique_pipe(param,callback,path,err);
+
+	// Get the logon SID of the Token
+	SmartPtr<void,Win32::LocalAllocDestructor> ptrSIDLogon;
+	err = Win32::StringToSID(pszSID,ptrSIDLogon);
+	if (err)
+		return NULL;
+
+	// Create security descriptor
+	PSID pSID;
+	SID_IDENTIFIER_AUTHORITY SIDAuthCreator = {SECURITY_CREATOR_SID_AUTHORITY};
+	if (!AllocateAndInitializeSid(&SIDAuthCreator, 1,
+								  SECURITY_CREATOR_OWNER_RID,
+								  0, 0, 0, 0, 0, 0, 0,
+								  &pSID))
+	{
+		err = GetLastError();
+		return NULL;
+	}
+	LocalPtr<void,Win32::SIDDestructor> pSIDOwner(pSID);
+
+	// Create a SID for the Network group.
+	SID_IDENTIFIER_AUTHORITY SIDAuthNT = {SECURITY_NT_AUTHORITY};
+	if (!AllocateAndInitializeSid(&SIDAuthNT, 1,
+								  SECURITY_NETWORK_RID,
+								  0, 0, 0, 0, 0, 0, 0,
+								  &pSID))
+	{
+		err = GetLastError();
+		return NULL;
+	}
+	LocalPtr<void,Win32::SIDDestructor> pSIDNetwork(pSID);
+
+	static const int NUM_ACES = 3;
+	EXPLICIT_ACCESSW ea[NUM_ACES] = { {0}, {0} };
+
+	// Set full control for the creating process SID
+	ea[0].grfAccessPermissions = FILE_ALL_ACCESS;
+	ea[0].grfAccessMode = SET_ACCESS;
+	ea[0].grfInheritance = NO_INHERITANCE;
+	ea[0].Trustee.TrusteeForm = TRUSTEE_IS_SID;
+	ea[0].Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
+	ea[0].Trustee.ptstrName = (LPWSTR)pSIDOwner;
+
+	// Set read/write control for Specific logon.
+	ea[1].grfAccessPermissions = FILE_GENERIC_READ | FILE_WRITE_DATA;
+	ea[1].grfAccessMode = SET_ACCESS;
+	ea[1].grfInheritance = NO_INHERITANCE;
+	ea[1].Trustee.TrusteeForm = TRUSTEE_IS_SID;
+	ea[1].Trustee.TrusteeType = TRUSTEE_IS_USER;
+	ea[1].Trustee.ptstrName = (LPWSTR)ptrSIDLogon;
+
+	// Deny all to NETWORK
+	ea[2].grfAccessPermissions = FILE_ALL_ACCESS;
+	ea[2].grfAccessMode = DENY_ACCESS;
+	ea[2].grfInheritance = NO_INHERITANCE;
+	ea[2].Trustee.TrusteeForm = TRUSTEE_IS_SID;
+	ea[2].Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
+	ea[2].Trustee.ptstrName = (LPWSTR)pSIDNetwork;
+
+	Win32::sec_descript_t sd;
+	err = sd.SetEntriesInAcl(NUM_ACES,ea,NULL);
+	if (err != ERROR_SUCCESS)
+		return NULL;
+
+	// Create security attribute
+	SECURITY_ATTRIBUTES sa;
+	sa.nLength = sizeof(sa);
+	sa.bInheritHandle = FALSE;
+	sa.lpSecurityDescriptor = sd.descriptor();
+
+	return accept_unique_pipe(param,callback,path,err,&sa);
 }
 
 #endif // _WIN32

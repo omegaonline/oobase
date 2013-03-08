@@ -259,6 +259,9 @@ namespace OOBase
 #if defined(_WIN32)
 		virtual AsyncSocket* attach(HANDLE hPipe, int& err) = 0;
 
+		virtual Acceptor* accept_unique_pipe(void* param, accept_pipe_callback_t callback, /*(out)*/ char path[64], int& err, SECURITY_ATTRIBUTES* psa = NULL) = 0;
+		Acceptor* accept_unique_pipe(void* param, accept_pipe_callback_t callback, /*(out)*/ char path[64], int& err, const char* pszSID);
+
 		typedef void (*wait_object_callback_t)(void* param, HANDLE hObject, bool bTimedout, int err);
 		virtual Acceptor* wait_for_object(HANDLE hObject, void* param, wait_object_callback_t callback, int& err, ULONG dwMilliseconds = INFINITE) = 0;
 #endif

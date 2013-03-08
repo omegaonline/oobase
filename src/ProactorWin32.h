@@ -40,6 +40,7 @@ namespace OOBase
 		public:
 			Acceptor* accept(void* param, accept_pipe_callback_t callback, const char* path, int& err, SECURITY_ATTRIBUTES* psa);
 			Acceptor* accept(void* param, accept_callback_t callback, const sockaddr* addr, socklen_t addr_len, int& err);
+			Acceptor* accept_unique_pipe(void* param, accept_pipe_callback_t callback, /*(out)*/ char path[64], int& err, SECURITY_ATTRIBUTES* psa);
 
 			AsyncSocket* attach(socket_t sock, int& err);
 			AsyncSocket* attach(HANDLE hPipe, int& err);
