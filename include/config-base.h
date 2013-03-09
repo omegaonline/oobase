@@ -148,6 +148,8 @@ namespace OOBase
 #if defined(DOXYGEN)
 /// Compile time assertion, assert that expr == true
 #define static_assert(expr,msg)
+#elif (_MSC_VER >= 1500)
+// Builtin static_assert
 #elif (__cplusplus <= 199711L)
 #define static_assert(expr,msg) \
 	{ struct oobase_static_assert { char static_check[expr ? 1 : -1]; }; }

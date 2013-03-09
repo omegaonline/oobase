@@ -32,6 +32,17 @@
 #define HAVE__IS_POD 1
 #define HAVE__ALIGNOF 1
 #define ALIGNOF(X) __alignof(X)
+#if (_MSC_VER == 1400)
+#include <type_traits>
+#define IS_POD(X) (std::tr1::is_pod<X>::value)
+#elif (_MSC_VER > 1400)
+#include <type_traits>
+#define IS_POD(X) (std::is_pod<X>::value)
+#else
+#include <limits>
+#define HAVE__IS_POD 1
+#define IS_POD(X) (std::numeric_limits<X>::is_specialized || __is_enum(X) || (__has_trivial_constructor(X) && __is_pod(X)))
+#endif
 #elif defined(__GNUC__) && (__GNUC__ >= 3)
 #define HAVE__ALIGNOF 1
 #define ALIGNOF(X) __alignof__(X)
@@ -40,9 +51,11 @@
 #if defined(__clang__)
 #if __has_extension(is_pod)
 #define HAVE__IS_POD 1
+#define IS_POD(X) __is_pod(X)
 #endif
 #elif defined(__GNUG__) && ((__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
 #define HAVE__IS_POD 1
+#define IS_POD(X) __is_pod(X)
 #endif
 
 #if !defined(HAVE__IS_POD)
@@ -70,13 +83,12 @@ namespace OOBase
 		struct is_pod
 		{
 #if defined(HAVE__IS_POD)
-			static const bool value = __is_pod(T);
+			static const bool value = IS_POD(T);
 #else
-			static const bool value = std::numeric_limits<T>::is_integer || std::numeric_limits<T>::is_signed;
+			static const bool value = std::numeric_limits<T>::is_specialized;
 #endif
 		};
 
-#if !defined(HAVE__IS_POD)
 		template <>
 		struct is_pod<void>
 		{
@@ -92,7 +104,7 @@ namespace OOBase
 		template <typename T>
 		struct is_pod<T*>
 		{
-			static const bool value = is_pod<T>::value;
+			static const bool value = true;
 		};
 
 		template <typename T>
@@ -106,7 +118,6 @@ namespace OOBase
 		{
 			static const bool value = is_pod<T>::value;
 		};
-#endif
 	}
 
 	struct NonCopyable
