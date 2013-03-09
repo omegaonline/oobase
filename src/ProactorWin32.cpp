@@ -298,22 +298,27 @@ void InternalWaitAcceptor::onWait(void* param, BOOLEAN TimerOrWaitFired)
 	InternalWaitAcceptor* pThis = static_cast<InternalWaitAcceptor*>(param);
 
 	// Done with the wait
-	UnregisterWaitEx(pThis->m_hWait,NULL);
-	pThis->m_hWait = NULL;
-
-	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
-	int err = pThis->m_pProactor->new_overlapped(pOv,&onWait2);
-	if (!err)
+	int err = 0;
+	if (!UnregisterWaitEx(pThis->m_hWait,NULL))
+		err = GetLastError();
+	else
 	{
-		pThis->addref();
-
-		pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(pThis);
-		pOv->m_extras[1] = TimerOrWaitFired;
-		err = pThis->m_pProactor->post_completion(0,0,pOv);
-		if (err)
+		pThis->m_hWait = NULL;
+		
+		OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
+		err = pThis->m_pProactor->new_overlapped(pOv,&onWait2);
+		if (!err)
 		{
-			pThis->m_pProactor->delete_overlapped(pOv);
-			pThis->release();
+			pThis->addref();
+
+			pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(pThis);
+			pOv->m_extras[1] = TimerOrWaitFired;
+			err = pThis->m_pProactor->post_completion(0,0,pOv);
+			if (err)
+			{
+				pThis->m_pProactor->delete_overlapped(pOv);
+				pThis->release();
+			}
 		}
 	}
 
@@ -323,10 +328,10 @@ void InternalWaitAcceptor::onWait(void* param, BOOLEAN TimerOrWaitFired)
 	pThis->release();
 }
 
-void InternalWaitAcceptor::onWait2(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
+void InternalWaitAcceptor::onWait2(HANDLE /*handle*/, DWORD /*dwBytes*/, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
 {
 	InternalWaitAcceptor* pThis = reinterpret_cast<InternalWaitAcceptor*>(pOv->m_extras[0]);
-	BOOLEAN TimerOrWaitFired = pOv->m_extras[1];
+	BOOLEAN TimerOrWaitFired = static_cast<BOOLEAN>(pOv->m_extras[1]);
 
 	pThis->m_pProactor->delete_overlapped(pOv);
 

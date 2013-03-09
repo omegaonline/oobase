@@ -109,11 +109,8 @@ namespace
 		};
 		DWORD dwWait = WaitForMultipleObjects(2,handles,FALSE,INFINITE);
 		if (dwWait != WAIT_OBJECT_0 && dwWait != WAIT_OBJECT_0+1)
-		{
-			TerminateThread(hThread,1);
 			return GetLastError();
-		}
-
+		
 		m_hThread = hThread.detach();
 		return 0;
 	}
