@@ -104,21 +104,23 @@ void OOBase::detail::ProactorWin32::unbind()
 
 int OOBase::detail::ProactorWin32::run(int& err, const Timeout& timeout)
 {
-	Guard<SpinLock> guard(m_lock);
-	
 	err = bind(INVALID_HANDLE_VALUE);
 	if (err)
 		return -1;
+
+	Guard<SpinLock> guard(m_lock);
 	
 	while (m_bound > 0)
 	{
+		HANDLE hPort = m_hPort;
+
 		guard.release();
 
 		DWORD dwErr = 0;
 		DWORD dwBytes = 0;
 		ULONG_PTR key = 0;
 		LPOVERLAPPED lpOv = NULL;
-		if (!GetQueuedCompletionStatus(m_hPort,&dwBytes,&key,&lpOv,timeout.millisecs()))
+		if (!GetQueuedCompletionStatus(hPort,&dwBytes,&key,&lpOv,timeout.millisecs()))
 		{
 			dwErr = GetLastError();
 			if (lpOv)
