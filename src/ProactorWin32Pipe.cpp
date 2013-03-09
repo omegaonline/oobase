@@ -1151,7 +1151,7 @@ OOBase::Acceptor* OOBase::Proactor::accept_unique_pipe(void* param, accept_pipe_
 	ea[2].Trustee.ptstrName = (LPWSTR)pSIDNetwork;
 
 	Win32::sec_descript_t sd;
-	err = sd.SetEntriesInAcl(NUM_ACES,ea,NULL);
+	err = sd.SetEntriesInAcl(NUM_ACES,ea);
 	if (err != ERROR_SUCCESS)
 		return NULL;
 

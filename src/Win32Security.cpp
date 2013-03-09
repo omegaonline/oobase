@@ -108,7 +108,7 @@ void OOBase::Win32::sec_descript_t::copy(PSECURITY_DESCRIPTOR other)
 	}
 }
 
-DWORD OOBase::Win32::sec_descript_t::SetEntriesInAcl(ULONG cCountOfExplicitEntries, PEXPLICIT_ACCESSW pListOfExplicitEntries, PACL OldAcl)
+DWORD OOBase::Win32::sec_descript_t::SetEntriesInAcl(ULONG cCountOfExplicitEntries, PEXPLICIT_ACCESSW pListOfExplicitEntries)
 {
 	if (!m_psd)
 	{

@@ -107,7 +107,7 @@ namespace OOBase
 
 			~sec_descript_t();
 
-			DWORD SetEntriesInAcl(ULONG cCountOfExplicitEntries, PEXPLICIT_ACCESSW pListOfExplicitEntries, PACL OldAcl);
+			DWORD SetEntriesInAcl(ULONG cCountOfExplicitEntries, PEXPLICIT_ACCESSW pListOfExplicitEntries);
 
 			PSECURITY_DESCRIPTOR descriptor()
 			{
