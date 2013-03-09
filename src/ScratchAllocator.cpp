@@ -23,11 +23,13 @@
 
 #if !defined(OOBASE_STACK_ALLOC_CHECK) || !OOBASE_STACK_ALLOC_CHECK
 #define check()
+#else
+#include <stdio.h>
 #endif
 
 OOBase::ScratchAllocator::ScratchAllocator(char* start, size_t len) :
 		m_start(align_up(start,alignment_of<index_t>::value)),
-		m_end(start + (len >= index_t(-1) ? index_t(-1) : len)),
+		m_end(align_down(start + (len >= index_t(-1) ? index_t(-1) : len),alignment_of<index_t>::value)),
 		m_free(m_start)
 {
 	reinterpret_cast<free_block_t*>(m_free)->m_size = static_cast<index_t>((m_end - m_start) / sizeof(index_t));
@@ -153,6 +155,11 @@ char* OOBase::ScratchAllocator::align_up(char* p, size_t align)
 	if (o)
 		p += align - o;
 	return p;
+}
+
+char* OOBase::ScratchAllocator::align_down(char* p, size_t align)
+{
+	return reinterpret_cast<char*>(reinterpret_cast<size_t>(p) & ~(align - 1));
 }
 
 size_t OOBase::ScratchAllocator::correct_align(size_t align)

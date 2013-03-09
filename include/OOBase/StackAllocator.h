@@ -52,6 +52,7 @@ namespace OOBase
 		};
 
 		static char* align_up(char* p, size_t align);
+		static char* align_down(char* p, size_t align);
 		static size_t correct_align(size_t align);
 		static size_t min_alloc(size_t bytes);
 		static index_t get_size(char* p);
