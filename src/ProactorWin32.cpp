@@ -302,8 +302,13 @@ void InternalWaitAcceptor::onWait(void* param, BOOLEAN TimerOrWaitFired)
 	// Done with the wait
 	int err = 0;
 	if (!UnregisterWaitEx(pThis->m_hWait,NULL))
+	{
 		err = GetLastError();
-	else
+		if (err == ERROR_IO_PENDING)
+			err = 0;
+	}
+	
+	if (!err)
 	{
 		pThis->m_hWait = NULL;
 		
