@@ -111,7 +111,7 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, TempPtr<wchar_t>& 
 			err = Win32::utf8_to_wchar_t(tabEnv.at(i)->c_str(),val);
 		if (!err)
 			err = wenv.insert(temp_wchar_t(allocator,key),temp_wchar_t(allocator,val));
-
+		
 		if (err)
 			return err;
 
@@ -120,6 +120,10 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, TempPtr<wchar_t>& 
 		size_t val_len = wcslen(val);
 		if (val_len)
 			total_size += val_len + 1;
+
+		// Key and val now owned by SmartPtr in wenv
+		key.detach();
+		val.detach();
 	}
 	++total_size;
 
