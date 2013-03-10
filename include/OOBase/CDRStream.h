@@ -101,28 +101,16 @@ namespace OOBase
 			return (m_buffer ? m_buffer->length() : 0);
 		}
 
-		int reset()
+		void reset()
 		{
-			if (!m_last_error)
-			{
-				if (!m_buffer)
-					m_last_error = EINVAL;
-				else
-					m_buffer->reset();
-			}
-			return m_last_error;
+			if (m_buffer)
+				m_buffer->reset();
 		}
 
-		int compact()
+		void compact()
 		{
-			if (!m_last_error)
-			{
-				if (!m_buffer)
-					m_last_error = EINVAL;
-				else
-					m_buffer->compact();
-			}
-			return m_last_error;
+			if (m_buffer)
+				m_buffer->compact();
 		}
 
 		int last_error() const
@@ -152,11 +140,8 @@ namespace OOBase
 				return false;
 
 			if (!m_buffer)
-			{
-				m_last_error = EINVAL;
-				return false;
-			}
-
+				return error_too_big();
+				
 			m_last_error = m_buffer->align_wr_ptr(2);
 			if (m_last_error != 0)
 				return false;
@@ -180,10 +165,7 @@ namespace OOBase
 				return false;
 
 			if (!m_buffer)
-			{
-				m_last_error = EINVAL;
-				return false;
-			}
+				return error_eof();
 
 			m_buffer->align_rd_ptr(2);
 			if (m_buffer->length() < 2)
@@ -206,11 +188,8 @@ namespace OOBase
 				return false;
 
 			if (!m_buffer)
-			{
-				m_last_error = EINVAL;
-				return false;
-			}
-
+				return error_eof();
+				
 			m_buffer->align_rd_ptr(alignment_of<T>::value);
 			if (m_buffer->length() < sizeof(T))
 				return error_eof();
@@ -235,10 +214,7 @@ namespace OOBase
 				return false;
 
 			if (!m_buffer)
-			{
-				m_last_error = EINVAL;
-				return false;
-			}
+				return error_eof();
 
 			if (m_buffer->length() < 1)
 				return error_eof();
@@ -257,10 +233,7 @@ namespace OOBase
 				return false;
 
 			if (!m_buffer)
-			{
-				m_last_error = EINVAL;
-				return false;
-			}
+				return error_eof();
 
 			size_t len = 0;
 			if (!read_dyn_int(len))
@@ -289,7 +262,7 @@ namespace OOBase
 
 			if (!m_buffer)
 			{
-				m_last_error = EINVAL;
+				error_eof();
 				return 0;
 			}
 
@@ -313,11 +286,8 @@ namespace OOBase
 				return false;
 
 			if (!m_buffer)
-			{
-				m_last_error = EINVAL;
-				return false;
-			}
-
+				return error_too_big();
+				
 			m_last_error = m_buffer->align_wr_ptr(alignment_of<T>::value);
 			if (m_last_error != 0)
 				return false;
@@ -339,10 +309,7 @@ namespace OOBase
 				return false;
 
 			if (!m_buffer)
-			{
-				m_last_error = EINVAL;
-				return false;
-			}
+				return error_too_big();
 
 			if (!pszText)
 				len = 0;
@@ -376,10 +343,7 @@ namespace OOBase
 				return false;
 
 			if (!m_buffer)
-			{
-				m_last_error = EINVAL;
-				return false;
-			}
+				return error_too_big();
 
 			m_last_error = m_buffer->space(1);
 			if (m_last_error != 0)
@@ -402,10 +366,7 @@ namespace OOBase
 				return false;
 
 			if (!m_buffer)
-			{
-				m_last_error = EINVAL;
-				return false;
-			}
+				return error_too_big();
 
 			if (count)
 			{
@@ -427,7 +388,7 @@ namespace OOBase
 
 			if (!m_buffer)
 			{
-				m_last_error = EINVAL;
+				error_too_big();
 				return 0;
 			}
 
