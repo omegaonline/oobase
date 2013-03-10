@@ -1065,7 +1065,7 @@ void InternalUniqueAcceptor::on_accept(HANDLE hPipe, DWORD dwErr, OOBase::Guard<
 
 OOBase::Acceptor* OOBase::detail::ProactorWin32::accept_unique_pipe(void* param, accept_pipe_callback_t callback, /*(out)*/ char path[64], int& err, SECURITY_ATTRIBUTES* psa)
 {
-	snprintf_s(path,sizeof(path),"%X%X%X",GetCurrentProcessId(),GetCurrentThreadId(),GetTickCount());
+	snprintf_s(path,64,"%X%X%X",GetCurrentProcessId(),GetCurrentThreadId(),GetTickCount());
 
 	UniqueAcceptor* pAcceptor = NULL;
 	if (!OOBase::CrtAllocator::allocate_new(pAcceptor))
