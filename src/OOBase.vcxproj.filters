@@ -225,13 +225,13 @@
     <ClInclude Include="ProactorWin32.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="tr24731.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Win32Impl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Win32Socket.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\OOBase\tr24731.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

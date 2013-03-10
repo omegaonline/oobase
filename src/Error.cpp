@@ -22,8 +22,7 @@
 #include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/Posix.h"
 #include "../include/OOBase/Atomic.h"
-
-#include "tr24731.h"
+#include "../include/OOBase/tr24731.h"
 
 #include <stdlib.h>
 #include <signal.h>

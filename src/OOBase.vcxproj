@@ -206,6 +206,7 @@
     <ClInclude Include="..\include\OOBase\Server.h" />
     <ClInclude Include="..\include\OOBase\Set.h" />
     <ClInclude Include="..\include\OOBase\StackAllocator.h" />
+    <ClInclude Include="..\include\OOBase\tr24731.h" />
     <ClInclude Include="..\include\OOBase\Win32Security.h" />
     <ClInclude Include="BSDSocket.h" />
     <ClInclude Include="..\include\OOBase\Buffer.h" />
@@ -235,7 +236,6 @@
     <ClInclude Include="..\include\OOBase\utf8.h" />
     <ClInclude Include="..\include\OOBase\Win32.h" />
     <ClInclude Include="ProactorWin32.h" />
-    <ClInclude Include="tr24731.h" />
     <ClInclude Include="Win32Impl.h" />
     <ClInclude Include="Win32Socket.h" />
   </ItemGroup>

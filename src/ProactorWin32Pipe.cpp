@@ -27,8 +27,7 @@
 #include "../include/OOBase/String.h"
 #include "../include/OOBase/Condition.h"
 #include "../include/OOBase/Win32Security.h"
-
-#include "tr24731.h"
+#include "../include/OOBase/tr24731.h"
 
 namespace
 {

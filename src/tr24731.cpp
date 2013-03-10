@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "tr24731.h"
+#include "../include/OOBase/tr24731.h"
 
 #if defined(HAVE_TR_24731) && (!defined(__STDC_LIB_EXT1__) || (__STDC_LIB_EXT1__ < 200509L))
 int OOBase::vsnprintf_s_fixed(char* s, rsize_t n, const char* format, va_list arg)

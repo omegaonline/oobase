@@ -27,8 +27,7 @@
 #include "../include/OOBase/String.h"
 #include "../include/OOBase/Logger.h"
 #include "../include/OOBase/Environment.h"
-
-#include "tr24731.h"
+#include "../include/OOBase/tr24731.h"
 
 #if defined(_WIN32)
 #define getpid GetCurrentProcessId

@@ -20,8 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/String.h"
-
-#include "tr24731.h"
+#include "../include/OOBase/tr24731.h"
 
 #if !defined(va_copy)
 #define va_copy(a,b) ((a) = (b))
