@@ -136,9 +136,10 @@ int AsyncPipe::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, 
 	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer);
 	pOv->m_extras[3] = bytes;
 	buffer->addref();
-	
+
+	DWORD dwToRead = static_cast<DWORD>(bytes ? bytes : buffer->space());
 	DWORD dwRead = 0;
-	if (!ReadFile(m_hPipe,buffer->wr_ptr(),static_cast<DWORD>(bytes),&dwRead,pOv))
+	if (!ReadFile(m_hPipe,buffer->wr_ptr(),dwToRead,&dwRead,pOv))
 	{
 		err = GetLastError();
 		if (err != ERROR_IO_PENDING)
