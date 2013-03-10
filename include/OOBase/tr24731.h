@@ -22,7 +22,7 @@
 #ifndef OOBASE_TR24731_H_INCLUDED_
 #define OOBASE_TR24731_H_INCLUDED_
 
-#include "../include/config-base.h"
+#include "../config-base.h"
 
 #if !defined(DOXYGEN)
 #define __STDC_WANT_LIB_EXT1__ 1
