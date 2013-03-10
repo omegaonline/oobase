@@ -284,12 +284,14 @@ void InternalWaitAcceptor::stop()
 		int err = 0;
 		if (!UnregisterWaitEx(m_hWait,event.is_valid() ? (HANDLE)event : INVALID_HANDLE_VALUE))
 			err = GetLastError();
-
-		if (!err || err == ERROR_IO_PENDING)
+		
+		if (!err)
+			m_callback(m_param,m_hObject,true,ERROR_CANCELLED);
+		else if (err == ERROR_IO_PENDING)
 		{
 			if (event.is_valid())
 				WaitForSingleObject(event,INFINITE);
-		}
+		}		
 	}
 
 	release();
@@ -330,7 +332,7 @@ void InternalWaitAcceptor::onWait(void* param, BOOLEAN TimerOrWaitFired)
 	}
 
 	if (err)
-		pThis->m_callback(pThis->m_param,pThis->m_hObject,false,err);
+		pThis->m_callback(pThis->m_param,pThis->m_hObject,true,err);
 
 	pThis->release();
 }
