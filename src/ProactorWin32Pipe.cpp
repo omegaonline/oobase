@@ -421,7 +421,7 @@ namespace
 	class InternalAcceptor
 	{
 	public:
-		InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, const OOBase::LocalString& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback);
+		InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback);
 		
 		int start();
 		int stop();
@@ -430,7 +430,7 @@ namespace
 		OOBase::detail::ProactorWin32*           m_pProactor;
 		OOBase::Condition::Mutex                 m_lock;
 		OOBase::Condition                        m_condition;
-		OOBase::LocalString                      m_pipe_name;
+		OOBase::String                           m_pipe_name;
 		bool                                     m_null_sa;
 		SECURITY_ATTRIBUTES                      m_sa;
 		OOBase::Win32::sec_descript_t            m_sd;
@@ -451,7 +451,7 @@ namespace
 		PipeAcceptor();
 		virtual ~PipeAcceptor();
 		
-		int bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::LocalString& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback);
+		int bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback);
 		
 	private:
 		void destroy()
@@ -473,7 +473,7 @@ PipeAcceptor::~PipeAcceptor()
 		m_pAcceptor->stop();
 }
 
-int PipeAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::LocalString& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback)
+int PipeAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback)
 {
 	if (!OOBase::CrtAllocator::allocate_new<InternalAcceptor>(m_pAcceptor,pProactor,pipe_name,psa,param,callback))
 		return ERROR_OUTOFMEMORY;
@@ -488,7 +488,7 @@ int PipeAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, const OOBase::L
 	return err;
 }
 
-InternalAcceptor::InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, const OOBase::LocalString& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback) :
+InternalAcceptor::InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa, void* param, OOBase::Proactor::accept_pipe_callback_t callback) :
 		m_pProactor(pProactor),
 		m_pipe_name(pipe_name),
 		m_null_sa(psa == NULL),
@@ -720,8 +720,7 @@ OOBase::Acceptor* OOBase::detail::ProactorWin32::accept(void* param, accept_pipe
 		err = ERROR_OUTOFMEMORY;
 	else
 	{
-		StackAllocator<256> allocator;
-		LocalString strPipe(allocator);
+		String strPipe;
 		err = strPipe.assign("\\\\.\\pipe\\");
 		if (!err)
 			err = strPipe.append(path);
@@ -827,7 +826,7 @@ namespace
 	class InternalUniqueAcceptor : public OOBase::RefCounted
 	{
 	public:
-		InternalUniqueAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_pipe_callback_t callback, const OOBase::LocalString& pipe_name, SECURITY_ATTRIBUTES* psa);
+		InternalUniqueAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_pipe_callback_t callback, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa);
 
 		int start();
 		void stop();
@@ -837,7 +836,7 @@ namespace
 		OOBase::Condition::Mutex                 m_lock;
 		OOBase::Condition                        m_condition;
 		OOBase::Win32::SmartHandle               m_hPipe;
-		OOBase::LocalString                      m_pipe_name;
+		OOBase::String                           m_pipe_name;
 		bool                                     m_running;
 		bool                                     m_null_sa;
 		SECURITY_ATTRIBUTES                      m_sa;
@@ -880,8 +879,7 @@ UniqueAcceptor::~UniqueAcceptor()
 
 int UniqueAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_pipe_callback_t callback, const char* pipe_name, SECURITY_ATTRIBUTES* psa)
 {
-	OOBase::StackAllocator<256> allocator;
-	OOBase::LocalString strPipe(allocator);
+	OOBase::String strPipe;
 	int err = strPipe.assign("\\\\.\\pipe\\");
 	if (!err)
 		err = strPipe.append(pipe_name);
@@ -902,7 +900,7 @@ int UniqueAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, void* param, 
 	return err;
 }
 
-InternalUniqueAcceptor::InternalUniqueAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_pipe_callback_t callback, const OOBase::LocalString& pipe_name, SECURITY_ATTRIBUTES* psa) :
+InternalUniqueAcceptor::InternalUniqueAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_pipe_callback_t callback, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa) :
 		m_pProactor(pProactor),
 		m_pipe_name(pipe_name),
 		m_running(false),
