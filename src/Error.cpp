@@ -151,21 +151,67 @@ namespace
 		{
 #if defined(_WIN32)
 			HANDLE h = GetStdHandle(use_stderr ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE);
-			DWORD dw = 0;
-			if (h == INVALID_HANDLE_VALUE || !WriteFile(h,sz,(DWORD)len,&dw,NULL))
+			if (h == INVALID_HANDLE_VALUE)
 				err = GetLastError();
 			else
-				FlushFileBuffers(h);
+			{
+				DWORD dwMode = 0;
+				if (GetConsoleMode(h,&dwMode))
+				{
+					DWORD dwWritten = 0;
+					if (!WriteConsoleA(h,sz,(DWORD)len,&dwWritten,NULL))
+						err = GetLastError();
+				}
+				else
+				{
+					DWORD dw = 0;
+					if (!WriteFile(h,sz,(DWORD)len,&dw,NULL))
+						err = GetLastError();
+				}
+			}
 
 #elif defined(HAVE_UNISTD_H)
 			int fd = use_stderr ? STDERR_FILENO : STDOUT_FILENO;
 			ssize_t s = OOBase::POSIX::write(fd,sz,len);
-			if (s != -1)
-				fsync(fd);
+			if (s == -1)
+				err = errno;
 #endif
 		}
 		return err;
 	}
+
+#if defined(_WIN32)
+	int std_write(bool use_stderr, const wchar_t* wsz, size_t len)
+	{
+		if (len == size_t(-1))
+			len = wcslen(wsz);
+
+		int err = s_err_handler; // Force usage of s_err_handler
+		if (len > 0)
+		{
+			HANDLE h = GetStdHandle(use_stderr ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE);
+			if (h == INVALID_HANDLE_VALUE)
+				err = GetLastError();
+			else
+			{
+				DWORD dwMode = 0;
+				if (GetConsoleMode(h,&dwMode))
+				{
+					DWORD dwWritten = 0;
+					if (!WriteConsoleW(h,wsz,(DWORD)len,&dwWritten,NULL))
+						err = GetLastError();
+				}
+				else
+				{
+					DWORD dw = 0;
+					if (!WriteFile(h,wsz,(DWORD)(len * sizeof(wchar_t)),&dw,NULL))
+						err = GetLastError();
+				}
+			}
+		}
+		return err;
+	}
+#endif
 
 	char s_err_buf[512];
 }
@@ -240,6 +286,18 @@ int OOBase::stdout_write(const char* sz, size_t len)
 {
 	return std_write(false,sz,len);
 }
+
+#if defined(_WIN32)
+int OOBase::stderr_write(const wchar_t* wsz, size_t len)
+{
+	return std_write(true,wsz,len);
+}
+
+int OOBase::stdout_write(const wchar_t* wsz, size_t len)
+{
+	return std_write(false,wsz,len);
+}
+#endif
 
 void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, int err)
 {

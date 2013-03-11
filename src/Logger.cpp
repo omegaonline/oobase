@@ -166,9 +166,31 @@ namespace
 		m_hLog = RegisterEventSourceA(NULL,name);
 	}
 
+	WORD get_console_attrs(bool use_stderr)
+	{
+		CONSOLE_SCREEN_BUFFER_INFO info;
+		info.wAttributes = 0;
+		HANDLE h = GetStdHandle(use_stderr ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE);
+		if (h != INVALID_HANDLE_VALUE)
+			GetConsoleScreenBufferInfo(h,&info);
+
+		return info.wAttributes;
+	}
+
+	void set_console_attrs(bool use_stderr, WORD attrs)
+	{
+		HANDLE h = GetStdHandle(use_stderr ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE);
+		if (h != INVALID_HANDLE_VALUE)
+			SetConsoleTextAttribute(h,attrs);
+	}
+
 	void Win32Logger::log(OOBase::Logger::Priority priority, const char* msg)
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
+
+		OOBase::StackAllocator<512> allocator;
+		OOBase::TempPtr<wchar_t> wmsg(allocator);
+		OOBase::Win32::utf8_to_wchar_t(msg,wmsg);
 
 #if defined(NDEBUG)
 		if (m_hLog && priority != OOBase::Logger::Debug)
@@ -192,9 +214,6 @@ namespace
 				break;
 			}
 
-			const char* arrBufs[2] = { msg, NULL };
-
-			OOBase::StackAllocator<256> allocator;
 			OOBase::LocalPtr<TOKEN_USER,OOBase::FreeDestructor<OOBase::AllocatorInstance> > ptrSIDProcess(allocator);
 			PSID psid = NULL;
 			OOBase::Win32::SmartHandle hProcessToken;
@@ -205,40 +224,79 @@ namespace
 					psid = ptrSIDProcess->User.Sid;
 			}
 
-			ReportEventA(m_hLog,wType,0,0,psid,1,0,arrBufs,NULL);
+			if (wmsg)
+			{
+				const wchar_t* arrBufs[2] = { static_cast<wchar_t*>(wmsg), NULL };
+				ReportEventW(m_hLog,wType,0,0,psid,1,0,arrBufs,NULL);
+			}
+			else
+			{
+				const char* arrBufs[2] = { msg, NULL };
+				ReportEventA(m_hLog,wType,0,0,psid,1,0,arrBufs,NULL);
+			}
 		}
 
 		if (priority == OOBase::Logger::Debug)
 #endif
 		{
-			OutputDebugStringA(msg);
-			OutputDebugStringA("\n");
+			if (wmsg)
+			{
+				OutputDebugStringW(wmsg);
+				OutputDebugStringW(L"\n");
+			}
+			else
+			{
+				OutputDebugStringA(msg);
+				OutputDebugStringA("\n");
+			}
 		}
 
+		WORD attrs = 0;
 		switch (priority)
 		{
 		case OOBase::Logger::Error:
+			attrs = get_console_attrs(true);
+			set_console_attrs(true,FOREGROUND_RED);
 			OOBase::stderr_write("Error: ");
-			OOBase::stderr_write(msg);
+			if (wmsg)
+				OOBase::stderr_write(wmsg);
+			else
+				OOBase::stderr_write(msg);
 			OOBase::stderr_write("\n");
+			set_console_attrs(true,attrs);
 			break;
 
 		case OOBase::Logger::Warning:
+			attrs = get_console_attrs(false);
+			set_console_attrs(false,FOREGROUND_RED | FOREGROUND_GREEN);
 			OOBase::stdout_write("Warning: ");
-			OOBase::stdout_write(msg);
+			if (wmsg)
+				OOBase::stdout_write(wmsg);
+			else
+				OOBase::stdout_write(msg);
 			OOBase::stdout_write("\n");
+			set_console_attrs(false,attrs);
 			break;
 
 		case OOBase::Logger::Information:
-			OOBase::stdout_write(msg);
+			if (wmsg)
+				OOBase::stdout_write(wmsg);
+			else
+				OOBase::stdout_write(msg);
 			OOBase::stdout_write("\n");
 			break;
 
 #if !defined(NDEBUG)
 		case OOBase::Logger::Debug:
+			attrs = get_console_attrs(false);
+			set_console_attrs(false,FOREGROUND_GREEN);
 			OOBase::stdout_write("Debug: ");
-			OOBase::stdout_write(msg);
+			if (wmsg)
+				OOBase::stdout_write(wmsg);
+			else
+				OOBase::stdout_write(msg);
 			OOBase::stdout_write("\n");
+			set_console_attrs(false,attrs);
 			return;
 #endif
 

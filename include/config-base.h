@@ -139,6 +139,11 @@ namespace OOBase
 	int stderr_write(const char* sz, size_t len = size_t(-1));
 	int stdout_write(const char* sz, size_t len = size_t(-1));
 
+#if defined(_WIN32)
+	int stderr_write(const wchar_t* wsz, size_t len = size_t(-1));
+	int stdout_write(const wchar_t* wsz, size_t len = size_t(-1));
+#endif
+
 	typedef bool (*OnCriticalFailure)(const char*);
 
 	/// Override the default critical failure behaviour
