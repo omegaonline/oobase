@@ -296,21 +296,24 @@ namespace
 		syslog(wType,"%s",msg);
 #endif
 
+		bool is_a_tty;
 		switch (priority)
 		{
 		case OOBase::Logger::Error:
-			if (m_use_term) OOBase::stdout_write("\x1b[31m");
+			is_a_tty = (isatty(STDERR_FILENO) == 1);
+			if (m_use_term && is_a_tty) OOBase::stderr_write("\x1b[31m");
 			OOBase::stderr_write("Error: ");
 			OOBase::stderr_write(msg);
-			if (m_use_term) OOBase::stdout_write("\x1b[0m");
-			OOBase::stdout_write("\n");
+			if (m_use_term && is_a_tty) OOBase::stderr_write("\x1b[0m");
+			OOBase::stderr_write("\n");
 			break;
 
 		case OOBase::Logger::Warning:
-			if (m_use_term) OOBase::stdout_write("\x1b[33m");
+			is_a_tty = (isatty(STDOUT_FILENO) == 1);
+			if (m_use_term && is_a_tty) OOBase::stdout_write("\x1b[33m");
 			OOBase::stdout_write("Warning: ");
 			OOBase::stdout_write(msg);
-			if (m_use_term) OOBase::stdout_write("\x1b[0m");
+			if (m_use_term && is_a_tty) OOBase::stdout_write("\x1b[0m");
 			OOBase::stdout_write("\n");
 			break;
 
@@ -321,10 +324,11 @@ namespace
 
 #if !defined(NDEBUG)
 		case OOBase::Logger::Debug:
-			if (m_use_term) OOBase::stdout_write("\x1b[32m");
+			is_a_tty = (isatty(STDOUT_FILENO) == 1);
+			if (m_use_term && is_a_tty) OOBase::stdout_write("\x1b[32m");
 			OOBase::stdout_write("Debug: ");
 			OOBase::stdout_write(msg);
-			if (m_use_term) OOBase::stdout_write("\x1b[0m");
+			if (m_use_term && is_a_tty) OOBase::stdout_write("\x1b[0m");
 			OOBase::stdout_write("\n");
 			break;
 #endif
