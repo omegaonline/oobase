@@ -780,14 +780,13 @@ int OOBase::Win32::utf8_to_wchar_t(const char* sz, OOBase::TempPtr<wchar_t>& wsz
 	if (len <= 0)
 		return GetLastError();
 	
-	if (!wsz.reallocate(len + 1))
+	if (!wsz.reallocate(len))
 		return ERROR_OUTOFMEMORY;
 
-	len = MultiByteToWideChar(CP_UTF8,0,sz,-1,wsz,len + 1);
+	len = MultiByteToWideChar(CP_UTF8,0,sz,-1,wsz,len);
 	if (len <= 0)
 		return GetLastError();
 
-	wsz[len] = L'\0';
 	return ERROR_SUCCESS;
 }
 
