@@ -49,28 +49,32 @@ namespace
 
 	bool format_msg(char* err_buf, size_t err_len, DWORD dwErr, HMODULE hModule)
 	{
-		DWORD dwFlags = FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK;
+		DWORD dwFlags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK;
 		if (hModule)
 			dwFlags |= FORMAT_MESSAGE_FROM_HMODULE;
 		else
 			dwFlags |= FORMAT_MESSAGE_FROM_SYSTEM;
 
-		if (::FormatMessageA(
+		LPVOID lpBuf = NULL;
+		if (::FormatMessageW(
 					dwFlags,
 					hModule,
 					dwErr,
 					0,
-					err_buf,
-					err_len-1,  NULL))
+					(LPWSTR)&lpBuf,
+					0, NULL))
 		{
-			err_buf[err_len-1] = '\0';
+			int len = WideCharToMultiByte(CP_UTF8,0,(LPWSTR)lpBuf,-1,err_buf,err_len,NULL,NULL);
 
-			size_t len = strlen(err_buf);
-			while (len > 0 && (err_buf[len-1]=='\r' || err_buf[len-1]=='\n'))
-				--len;
+			LocalFree(lpBuf);
+
+			if (len <= 0)
+				return false;
+
+			for (--len; len > 0 && (err_buf[len-1]=='\r' || err_buf[len-1]=='\n'); --len)
+				;
 
 			err_buf[len] = '\0';
-
 			return true;
 		}
 		else
@@ -335,14 +339,20 @@ void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, const 
 			"The application will now terminate.\n",msg);
 	}
 
-	bool bReport = false;
-	if (!(*s_pfnCriticalFailure)(szBuf))
+	// Restore default behaviour in case of recursive critical failures!
+	OnCriticalFailure pfn = SetCriticalFailure(&DefaultOnCriticalFailure);
+	if (!(*pfn)(szBuf))
 	{
-		bReport = true;
-
 #if defined(_WIN32)
-		// Output to the debugger
-		OutputDebugStringA(szBuf);
+		static wchar_t wszBuf[1024] = {0};
+		int len = MultiByteToWideChar(CP_UTF8,0,szBuf,-1,wszBuf,sizeof(wszBuf)/sizeof(wszBuf[0]));
+		if (len <= 0)
+			OutputDebugStringA(szBuf);
+		else
+		{
+			wszBuf[len-1] = L'\0';
+			OutputDebugStringW(wszBuf);
+		}
 
 		// Try to detect if we are running as a service
 		static wchar_t sn[] = L"";
@@ -352,23 +362,34 @@ void OOBase::CallCriticalFailure(const char* pszFile, unsigned int nLine, const 
 			{NULL, NULL}
 		};
 
+		bool bReport = true;
 		if (!StartServiceCtrlDispatcherW(ste) && GetLastError() == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT)
 		{
 			if (GetConsoleWindow() == NULL)
 			{
 				// We are not a console application...
-				::MessageBoxA(NULL,szBuf,"Critical error in application",MB_ICONERROR | MB_TASKMODAL | MB_OK | MB_SETFOREGROUND);
+				if (len > 0)
+					::MessageBoxW(NULL,wszBuf,L"Critical error in application",MB_ICONERROR | MB_TASKMODAL | MB_OK | MB_SETFOREGROUND);
+				else
+					::MessageBoxA(NULL,szBuf,"Critical error in application",MB_ICONERROR | MB_TASKMODAL | MB_OK | MB_SETFOREGROUND);
 				bReport = false;
 			}
 		}
+
+		if (bReport)
+		{
+			if (len > 0)
+				stderr_write(wszBuf);
+			else
+				stderr_write(szBuf);
+		}
+#else
+		stderr_write(szBuf);
 #endif
 	}
 
-	if (bReport)
-		stderr_write(szBuf);
-
 #if defined(_WIN32)
-#if !defined(NDEBUG)
+	#if !defined(NDEBUG)
 		if (IsDebuggerPresent()) DebugBreak();
 	#endif
 	// We don't want the stupid CRT abort message
