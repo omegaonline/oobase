@@ -56,15 +56,26 @@ namespace OOBase
 		template <>
 		struct FNV<4>
 		{
-			static const size_t offset_bias = 2166136261ul;
-			static const size_t prime = 16777619ul;
+			static const size_t offset_bias = 0x811c9dc5;
+
+			static void hash(size_t& hval)
+			{
+				//hval *= 0x01000193;
+				hval += (hval<<1) + (hval<<4) + (hval<<7) + (hval<<8) + (hval<<24);
+			}
 		};
 
 		template <>
 		struct FNV<8>
 		{
-			static const unsigned long long offset_bias = 14695981039346656037ull;
-			static const unsigned long long prime = 1099511628211ull;
+			static const size_t offset_bias = 0xcbf29ce484222325ULL;
+
+			static void hash(size_t& hval)
+			{
+				//hval *= 0x100000001b3ULL;
+				hval += (hval << 1) + (hval << 4) + (hval << 5) +
+						(hval << 7) + (hval << 8) + (hval << 40);
+			}
 		};
 	}
 
@@ -77,7 +88,7 @@ namespace OOBase
 			do
 			{
 				hash ^= *c;
-				hash *= detail::FNV<sizeof(size_t)>::prime;
+				detail::FNV<sizeof(size_t)>::hash(hash);
 			}
 			while (*c++ != '\0');
 			return hash;
@@ -89,7 +100,7 @@ namespace OOBase
 			for (size_t i=0;i<len;++i)
 			{
 				hash ^= *c++;
-				hash *= detail::FNV<sizeof(size_t)>::prime;
+				detail::FNV<sizeof(size_t)>::hash(hash);
 			}
 			return hash;
 		}
