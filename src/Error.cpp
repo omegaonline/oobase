@@ -64,7 +64,7 @@ namespace
 					(LPWSTR)&lpBuf,
 					0, NULL))
 		{
-			int len = WideCharToMultiByte(CP_UTF8,0,(LPWSTR)lpBuf,-1,err_buf,err_len,NULL,NULL);
+			int len = WideCharToMultiByte(CP_UTF8,0,(LPWSTR)lpBuf,-1,err_buf,(int)err_len,NULL,NULL);
 
 			LocalFree(lpBuf);
 

@@ -354,7 +354,7 @@ void AsyncPipe::on_send_v(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOBase:
 			if (dwBytes >= len)
 			{
 				buffers[count]->rd_ptr(len);
-				dwBytes -= len;
+				dwBytes -= (DWORD)len;
 			}
 			else if (dwBytes)
 			{

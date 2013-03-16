@@ -406,7 +406,7 @@ void Win32AsyncSocket::on_send_v(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, 
 			if (dwBytes >= len)
 			{
 				buffers[i]->rd_ptr(len);
-				dwBytes -= len;
+				dwBytes -= (DWORD)len;
 			}
 			else
 			{
