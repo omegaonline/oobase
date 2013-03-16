@@ -68,9 +68,9 @@ namespace OOBase
 		template <>
 		struct FNV<8>
 		{
-			static const size_t offset_bias = 0xcbf29ce484222325ULL;
+			static const unsigned long long offset_bias = 0xcbf29ce484222325ULL;
 
-			static void hash(size_t& hval)
+			static void hash(unsigned long long& hval)
 			{
 				//hval *= 0x100000001b3ULL;
 				hval += (hval << 1) + (hval << 4) + (hval << 5) +
