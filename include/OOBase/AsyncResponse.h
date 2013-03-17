@@ -170,6 +170,7 @@ namespace OOBase
 
 			void destroy(Allocating<Allocator>* allocator)
 			{
+				(void)allocator;
 				allocator->delete_free(this);
 			}
 
