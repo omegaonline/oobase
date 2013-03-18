@@ -24,6 +24,10 @@
 
 #include "Memory.h"
 
+#if defined(HAVE_STDINT_H)
+#include <stdint.h>
+#endif
+
 namespace OOBase
 {
 	template <typename T>
@@ -70,8 +74,10 @@ namespace OOBase
 		{
 #if defined(_MSC_VER)
 			typedef unsigned __int64 fnv_uint64;
+#elif defined(HAVE_STDINT_H)
+			typedef uint64_t fnv_uint64;
 #else
-			typedef size_t fnv_uint64;
+			typedef unsigned long long fnv_uint64;
 #endif
 			static const fnv_uint64 offset_bias = 0xcbf29ce484222325ULL;
 
@@ -92,7 +98,7 @@ namespace OOBase
 			size_t hash = detail::FNV<sizeof(size_t)>::offset_bias;
 			do
 			{
-				hash ^= *c;
+				hash ^= static_cast<unsigned char>(*c);
 				detail::FNV<sizeof(size_t)>::hash(hash);
 			}
 			while (*c++ != '\0');
@@ -104,7 +110,7 @@ namespace OOBase
 			size_t hash = detail::FNV<sizeof(size_t)>::offset_bias;
 			for (size_t i=0;i<len;++i)
 			{
-				hash ^= *c++;
+				hash ^= static_cast<unsigned char>(*c++);
 				detail::FNV<sizeof(size_t)>::hash(hash);
 			}
 			return hash;
