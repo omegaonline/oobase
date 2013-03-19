@@ -143,11 +143,7 @@ namespace OOBase
 #if defined(FAST_BYTESWAP_2)
 				return (T)(FAST_BYTESWAP_2(val));
 #else
-				char* v = (char*)&val;
-				char r[2];
-				r[0] = v[1];
-				r[1] = v[0];
-				return *(T*)r;
+				return (val & 0x00FF) << 8 | (val& 0xFF00) >> 8;
 #endif
 			}
 		};
@@ -161,13 +157,9 @@ namespace OOBase
 #if defined(FAST_BYTESWAP_4)
 				return (T)(FAST_BYTESWAP_4(val));
 #else
-				char* v = (char*)&val;
-				char r[4];
-				r[0] = v[3];
-				r[1] = v[2];
-				r[2] = v[1];
-				r[3] = v[0];
-				return *(T*)r;
+				val = (val & 0x0000FFFF) << 16 | (val & 0xFFFF0000) >> 16;
+				val = (val & 0x00FF00FF) << 8 | (val & 0xFF00FF00) >> 8;
+				return val;
 #endif
 			}
 		};
@@ -181,17 +173,9 @@ namespace OOBase
 #if defined(FAST_BYTESWAP_8)
 				return (T)(FAST_BYTESWAP_8(val));
 #else
-				char* v = (char*)&val;
-				char r[8];
-				r[0] = v[7];
-				r[1] = v[6];
-				r[2] = v[5];
-				r[3] = v[4];
-				r[4] = v[3];
-				r[5] = v[2];
-				r[6] = v[1];
-				r[7] = v[0];
-				return *(T*)r;
+				T hi = byte_swapper<4>::byte_swap(val);
+				T lo = byte_swapper<4>::byte_swap(val >> 32);
+				return (hi << 32) | lo;
 #endif
 			}
 		};
