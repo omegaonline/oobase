@@ -108,7 +108,7 @@ namespace OOBase
 		template <typename K1, typename V1>
 		int insert(const K1& key, const V1& value)
 		{
-			int err = baseClass::add(Node::build(key,value));
+			int err = baseClass::push(Node::build(key,value));
 			if (!err)
 				m_sorted = false;
 			return err;

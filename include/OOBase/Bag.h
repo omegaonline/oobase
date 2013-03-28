@@ -180,7 +180,7 @@ namespace OOBase
 			}
 
 		protected:
-			int add(const T& value)
+			int push(const T& value)
 			{
 				if (this->m_size+1 > this->m_capacity)
 				{
@@ -259,9 +259,9 @@ namespace OOBase
 		Bag(AllocatorInstance& allocator) : baseClass(allocator)
 		{}
 
-		int add(const T& value)
+		int push(const T& value)
 		{
-			return baseClass::add(value);
+			return baseClass::push(value);
 		}
 
 		bool remove(const T& value)

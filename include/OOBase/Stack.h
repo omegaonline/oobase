@@ -40,7 +40,7 @@ namespace OOBase
 			
 		int push(const T& value)
 		{
-			return baseClass::add(value);
+			return baseClass::push(value);
 		}
 		
 		void remove_at(size_t pos)

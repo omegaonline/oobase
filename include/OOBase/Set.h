@@ -42,7 +42,7 @@ namespace OOBase
 
 		int insert(const T& value)
 		{
-			int err = baseClass::add(value);
+			int err = baseClass::push(value);
 			if (!err)
 				m_sorted = false;
 			return err;
