@@ -71,6 +71,11 @@ namespace OOBase
 		{
 			return baseClass::at(pos);
 		}
+
+		T* at(size_t pos)
+		{
+			return baseClass::at(pos);
+		}
 	};
 }
 
