@@ -259,7 +259,7 @@ namespace OOBase
 		Bag(AllocatorInstance& allocator) : baseClass(allocator)
 		{}
 
-		int push(const T& value)
+		int add(const T& value)
 		{
 			return baseClass::push(value);
 		}

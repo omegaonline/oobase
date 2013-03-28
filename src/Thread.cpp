@@ -421,7 +421,7 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 		}
 		if (bAdd)
 		{
-			int err = m_threads.push(pThread);
+			int err = m_threads.add(pThread);
 			if (err != 0)
 				return err;
 		}
