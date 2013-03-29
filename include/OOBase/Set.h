@@ -50,10 +50,7 @@ namespace OOBase
 
 		void remove_at(size_t pos)
 		{
-			if (m_sorted)
-				baseClass::remove_at_sorted(pos);
-			else
-				baseClass::remove_at(pos);
+			baseClass::remove_at(pos,m_sorted);
 		}
 
 		bool remove(const T& value)

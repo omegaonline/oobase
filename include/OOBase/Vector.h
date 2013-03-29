@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2011 Rick Taylor
+// Copyright (C) 2013 Rick Taylor
 //
 // This file is part of OOBase, the Omega Online Base library.
 //
@@ -19,33 +19,38 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#ifndef OOBASE_STACK_H_INCLUDED_
-#define OOBASE_STACK_H_INCLUDED_
+#ifndef OOBASE_VECTOR_H_INCLUDED_
+#define OOBASE_VECTOR_H_INCLUDED_
 
 #include "Bag.h"
 
 namespace OOBase
 {
-	template <typename T, typename Allocator = CrtAllocator>
-	class Stack : public detail::BagImpl<T,Allocator>
+template <typename T, typename Allocator = CrtAllocator>
+	class Vector : public detail::BagImpl<T,Allocator>
 	{
 		typedef detail::BagImpl<T,Allocator> baseClass;
 
 	public:
-		Stack() : baseClass()
+		Vector() : baseClass()
 		{}
 
-		Stack(AllocatorInstance& allocator) : baseClass(allocator)
+		Vector(AllocatorInstance& allocator) : baseClass(allocator)
 		{}
-			
-		int push(const T& value)
+
+		int push_back(const T& value)
 		{
 			return baseClass::push(value);
 		}
-		
-		void remove_at(size_t pos)
+
+		bool pop_back(T* value = NULL)
 		{
-			baseClass::remove_at(pos,true);
+			return baseClass::pop(value);
+		}
+
+		int insert(const T& value, size_t pos)
+		{
+			return baseClass::insert_at(value,pos);
 		}
 
 		bool remove(const T& value)
@@ -59,24 +64,25 @@ namespace OOBase
 					return true;
 				}
 			}
+
 			return false;
 		}
 
-		bool pop(T* value = NULL)
+		void remove_at(size_t pos)
 		{
-			return baseClass::pop(value);
-		}
-		
-		const T* at(size_t pos) const
-		{
-			return baseClass::at(pos);
+			baseClass::remove_at(pos,true);
 		}
 
 		T* at(size_t pos)
 		{
 			return baseClass::at(pos);
 		}
+
+		const T* at(size_t pos) const
+		{
+			return baseClass::at(pos);
+		}
 	};
 }
 
-#endif // OOBASE_STACK_H_INCLUDED_
+#endif // OOBASE_VECTOR_H_INCLUDED_

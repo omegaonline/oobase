@@ -65,16 +65,11 @@ namespace OOBase
 			}
 
 		protected:
-			static void copy_to(T* p, const T& v)
+			int insert_at(size_t pos, const T& value)
 			{
-				// Placement new with copy constructor
-				::new (p) T(v);
-			}
-
-			int reserve_i(size_t capacity)
-			{
-				if (this->m_capacity < capacity)
+				if (this->m_size+1 > this->m_capacity)
 				{
+					size_t capacity = (this->m_capacity == 0 ? 4 : this->m_capacity*2);
 					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
 						return ERROR_OUTOFMEMORY;
@@ -83,14 +78,18 @@ namespace OOBase
 					size_t i = 0;
 					try
 					{
-						for (i=0;i<this->m_size;++i)
-							copy_to(&new_data[i],this->m_data[i]);
+						for (;i<this->m_size;++i)
+							::new (&new_data[i + (i<pos ? 0 : 1)]) T(this->m_data[i]);
+
+						::new (&new_data[pos]) T(value);
 					}
 					catch (...)
 					{
-						for (;i>0;--i)
-							new_data[i-1].~T();
-
+						while (i-- > 0)
+						{
+							if (i != pos)
+								new_data[i].~T();
+						}
 						baseClass::free(new_data);
 						throw;
 					}
@@ -99,18 +98,50 @@ namespace OOBase
 						this->m_data[i].~T();
 
 #else
-					for (size_t i=0;i<this->m_size;++i)
+					for (size_t i = 0;i<this->m_size;++i)
 					{
-						copy_to(&new_data[i],this->m_data[i]);
+						::new (&new_data[i + (i<pos ? 0 : 1)]) T(this->m_data[i]);
 						this->m_data[i].~T();
 					}
-#endif
 
+					::new (&new_data[pos]) T(value);
+#endif
 					baseClass::free(this->m_data);
 					this->m_data = new_data;
 					this->m_capacity = capacity;
 				}
+				else
+				{
+					if (pos < this->m_size)
+					{
+						// Shuffle the contents down the buffer
+						::new (&this->m_data[this->m_size]) T(this->m_data[this->m_size-1]);
+						for (size_t i = this->m_size-1; i > pos; --i)
+							this->m_data[i] = this->m_data[i-1];
+
+						this->m_data[pos] = value;
+					}
+					else
+						::new (&this->m_data[this->m_size]) T(value);
+				}
+				++this->m_size;
 				return 0;
+			}
+
+			void remove_at(size_t pos, bool sorted)
+			{
+				if (this->m_data && pos < this->m_size)
+				{
+					if (sorted)
+					{
+						for(--this->m_size;pos < this->m_size;++pos)
+							this->m_data[pos] = this->m_data[pos+1];
+					}
+					else
+						this->m_data[pos] = this->m_data[--this->m_size];
+
+					this->m_data[this->m_size].~T();
+				}
 			}
 		};
 
@@ -132,23 +163,56 @@ namespace OOBase
 			}
 
 		protected:
-			static void copy_to(T* p, const T& v)
+			int insert_at(size_t pos, const T& value)
 			{
-				*p = v;
-			}
-
-			int reserve_i(size_t capacity)
-			{
-				if (this->m_capacity < capacity)
+				if (this->m_size+1 > this->m_capacity)
 				{
-					T* new_data = static_cast<T*>(baseClass::reallocate(this->m_data,capacity*sizeof(T),alignment_of<T>::value));
+					size_t capacity = (this->m_capacity == 0 ? 4 : this->m_capacity*2);
+
+					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
 						return ERROR_OUTOFMEMORY;
 
+					if (pos < this->m_size)
+						memcpy(&new_data[pos + 1],&this->m_data[pos],(this->m_size - pos) * sizeof(T));
+					else
+						pos = this->m_size;
+
+					if (pos > 0)
+						memcpy(new_data,&this->m_data,pos * sizeof(T));
+
+					new_data[pos] = value;
+
+					baseClass::free(this->m_data);
 					this->m_data = new_data;
 					this->m_capacity = capacity;
 				}
+				else
+				{
+					if (pos < this->m_size)
+						memmove(&this->m_data[pos + 1],&this->m_data[pos],(this->m_size - pos) * sizeof(T));
+					else
+						pos = this->m_size;
+
+					this->m_data[pos] = value;
+				}
+				++this->m_size;
 				return 0;
+			}
+
+			void remove_at(size_t pos, bool sorted)
+			{
+				if (this->m_data && pos < this->m_size)
+				{
+					--this->m_size;
+					if (pos < this->m_size)
+					{
+						if (sorted)
+							memmove(&this->m_data[pos],&this->m_data[pos+1],(this->m_size - pos) * sizeof(T));
+						else
+							this->m_data[pos] = this->m_data[this->m_size+1];
+					}
+				}
 			}
 		};
 
@@ -182,19 +246,7 @@ namespace OOBase
 		protected:
 			int push(const T& value)
 			{
-				if (this->m_size+1 > this->m_capacity)
-				{
-					size_t cap = (this->m_capacity == 0 ? 4 : this->m_capacity*2);
-					int err = baseClass::reserve_i(cap);
-					if (err != 0)
-						return err;
-				}
-
-				baseClass::copy_to(&this->m_data[this->m_size],value);
-
-				// This is exception safe as the increment happens here
-				++this->m_size;
-				return 0;
+				return baseClass::insert_at(size_t(-1),value);
 			}
 
 			bool pop(T* value = NULL)
@@ -207,15 +259,6 @@ namespace OOBase
 
 				this->m_data[--this->m_size].~T();
 				return true;
-			}
-
-			void remove_at(size_t pos)
-			{
-				if (this->m_data && pos < this->m_size)
-				{
-					this->m_data[pos] = this->m_data[--this->m_size];
-					this->m_data[this->m_size].~T();
-				}
 			}
 
 			T* at(size_t pos)
@@ -232,17 +275,6 @@ namespace OOBase
 			{
 				baseClass::clear();
 				this->free(this->m_data);
-			}
-
-			void remove_at_sorted(size_t pos)
-			{
-				if (this->m_data && pos < this->m_size)
-				{
-					for(--this->m_size;pos < this->m_size;++pos)
-						this->m_data[pos] = this->m_data[pos+1];
-
-					this->m_data[this->m_size].~T();
-				}
 			}
 		};
 	}
@@ -271,7 +303,7 @@ namespace OOBase
 			{
 				if (this->m_data[pos] == value)
 				{
-					baseClass::remove_at(pos);
+					remove_at(pos);
 					return true;
 				}
 			}
@@ -286,7 +318,7 @@ namespace OOBase
 
 		void remove_at(size_t pos)
 		{
-			baseClass::remove_at(pos);
+			baseClass::remove_at(pos,false);
 		}
 
 		T* at(size_t pos)

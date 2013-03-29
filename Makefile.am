@@ -109,6 +109,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/TLSSingleton.h \
 	include/OOBase/tr24731.h \
 	include/OOBase/utf8.h \
+	include/OOBase/Vector.h \
 	include/OOBase/Win32.h \
 	include/OOBase/Win32Security.h \
 	src/BSDSocket.h \
