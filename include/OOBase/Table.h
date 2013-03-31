@@ -108,15 +108,21 @@ namespace OOBase
 		template <typename K1, typename V1>
 		int insert(const K1& key, const V1& value)
 		{
-			int err = baseClass::push(Node::build(key,value));
+			int err = baseClass::append(Node::build(key,value));
 			if (!err)
 				m_sorted = false;
 			return err;
 		}
 
-		void remove_at(size_t pos)
+		bool remove_at(size_t pos, K* key = NULL, V* value = NULL)
 		{
-			baseClass::remove_at(pos,m_sorted);
+			if (key)
+				*key = *key_at(pos);
+
+			if (value)
+				*value = *at(pos);
+
+			return remove_at(pos);
 		}
 
 		template <typename K1>
@@ -126,32 +132,12 @@ namespace OOBase
 			if (pos == npos)
 				return false;
 
-			if (value)
-				*value = *at(pos);
-
-			remove_at(pos);
-
-			return true;
+			return remove_at(pos,NULL,value);
 		}
 
 		bool pop(K* key = NULL, V* value = NULL)
 		{
-			if (key || value)
-			{
-				Node n;
-				bool ret = baseClass::pop(&n);
-				if (ret)
-				{
-					if (key)
-						*key = n->m_key;
-
-					if (value)
-						*value = n->m_value;
-				}
-				return ret;
-			}
-
-			return baseClass::pop();
+			return remove_at(baseClass::size()-1,key,value);
 		}
 
 		template <typename K1>

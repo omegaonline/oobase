@@ -32,6 +32,9 @@ template <typename T, typename Allocator = CrtAllocator>
 		typedef detail::BagImpl<T,Allocator> baseClass;
 
 	public:
+		typedef detail::IteratorImpl<Vector,T,size_t> iterator;
+		typedef detail::IteratorImpl<const Vector,const T,size_t> const_iterator;
+
 		Vector() : baseClass()
 		{}
 
@@ -40,37 +43,46 @@ template <typename T, typename Allocator = CrtAllocator>
 
 		int push_back(const T& value)
 		{
-			return baseClass::push(value);
+			return baseClass::append(value);
 		}
 
 		bool pop_back(T* value = NULL)
 		{
-			return baseClass::pop(value);
+			return baseClass::remove_at(this->m_size - 1,false,value);
 		}
 
-		int insert(const T& value, size_t pos)
+		iterator find(const T& value)
 		{
-			return baseClass::insert_at(value,pos);
-		}
-
-		bool remove(const T& value)
-		{
-			// This is just really useful!
-			for (size_t pos = 0;pos < this->m_size;++pos)
+			size_t pos = 0;
+			for (;pos < this->m_size;++pos)
 			{
 				if (this->m_data[pos] == value)
-				{
-					remove_at(pos);
-					return true;
-				}
+					break;
 			}
-
-			return false;
+			return iterator(*this,pos);
 		}
 
-		void remove_at(size_t pos)
+		const_iterator find(const T& value) const
 		{
-			baseClass::remove_at(pos,true);
+			size_t pos = 0;
+			for (;pos < this->m_size;++pos)
+			{
+				if (this->m_data[pos] == value)
+					break;
+			}
+			return const_iterator(*this,pos);
+		}
+
+		int insert(const T& value, const iterator& iter)
+		{
+			assert(iter.check(this));
+			return baseClass::insert_at(value,iter.deref());
+		}
+
+		bool remove_at(const iterator& iter, T* pval = NULL)
+		{
+			assert(iter.check(this));
+			return baseClass::remove_at(iter.deref(),true,pval);
 		}
 
 		T* at(size_t pos)
@@ -81,6 +93,38 @@ template <typename T, typename Allocator = CrtAllocator>
 		const T* at(size_t pos) const
 		{
 			return baseClass::at(pos);
+		}
+
+		T* at(const iterator& iter)
+		{
+			assert(iter.check(this));
+			return baseClass::at(iter.deref());
+		}
+
+		const T* at(const const_iterator& iter) const
+		{
+			assert(iter.check(this));
+			return baseClass::at(iter.deref());
+		}
+
+		iterator begin()
+		{
+			return iterator(*this,0);
+		}
+
+		const_iterator begin() const
+		{
+			return const_iterator(*this,0);
+		}
+
+		iterator end()
+		{
+			return iterator(*this,this->m_size);
+		}
+
+		const_iterator end() const
+		{
+			return const_iterator(*this,this->m_size);
 		}
 	};
 }

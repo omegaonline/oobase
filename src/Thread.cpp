@@ -396,32 +396,29 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 {
 	for (size_t i=0;i<threads;++i)
 	{
-		Thread* pThread = NULL;
+		SmartPtr<Thread> ptrThread;
 		bool f = false;
+
+		Thread* pThread = NULL;
 		if (!CrtAllocator::allocate_new(pThread,f))
 			return ERROR_OUTOFMEMORY;
+		ptrThread = pThread;
 
 		Guard<SpinLock> guard(m_lock);
 
 		bool bAdd = true;
-		for (size_t j = 0;j<m_threads.size();++j)
+		for (Vector<SmartPtr<Thread>,CrtAllocator>::iterator j = m_threads.begin();j != m_threads.end();++j)
 		{
-			Thread** ppThread = m_threads.at(j);
-			if (!*ppThread || !(*ppThread)->is_running())
+			if (!(*j)->is_running())
 			{
-				CrtAllocator::delete_free(*ppThread);
-				if (!bAdd)
-				{
-					*ppThread = pThread;
-					bAdd = false;
-				}
-				else
-					*ppThread = NULL;
+				*j = ptrThread;
+				bAdd = false;
+				break;
 			}
 		}
 		if (bAdd)
 		{
-			int err = m_threads.add(pThread);
+			int err = m_threads.push_back(ptrThread);
 			if (err != 0)
 				return err;
 		}
@@ -438,46 +435,29 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 
 void OOBase::ThreadPool::join()
 {
-	for (;;)
+	Guard<SpinLock> guard(m_lock);
+
+	for (SmartPtr<Thread> ptrThread;!m_threads.pop_back(&ptrThread);)
 	{
-		Guard<SpinLock> guard(m_lock);
+		guard.release();
 
-		if (m_threads.empty())
-			break;
-		
-		Thread* pThread = *m_threads.at(m_threads.size()-1);
-		if (pThread)
-		{
-			guard.release();
+		ptrThread->join();
 
-			pThread->join();
-
-			guard.acquire();
-		
-			if (!m_threads.empty() && pThread == *m_threads.at(m_threads.size()-1))
-			{
-				m_threads.pop();
-				CrtAllocator::delete_free(pThread);
-			}
-		}
-		else
-			m_threads.pop();
+		guard.acquire();
 	}
 }
 
 void OOBase::ThreadPool::abort()
 {
-	for (;;)
+	Guard<SpinLock> guard(m_lock);
+
+	for (SmartPtr<Thread> ptrThread;!m_threads.pop_back(&ptrThread);)
 	{
-		Guard<SpinLock> guard(m_lock);
+		guard.release();
 
-		Thread* pThread = NULL;
-		if (!m_threads.pop(&pThread))
-			break;
+		ptrThread->abort();
 
-		if (pThread)
-			pThread->abort();
-		CrtAllocator::delete_free(pThread);
+		guard.acquire();
 	}
 }
 
@@ -486,10 +466,9 @@ size_t OOBase::ThreadPool::number_running()
 	Guard<SpinLock> guard(m_lock);
 
 	size_t count = 0;
-	for (size_t i=0;i<m_threads.size();++i)
+	for (Vector<SmartPtr<Thread>,CrtAllocator>::const_iterator i=m_threads.begin();i != m_threads.end();++i)
 	{
-		Thread* pThread = *m_threads.at(i);
-		if (pThread && pThread->is_running())
+		if ((*i)->is_running())
 			++count;
 	}
 

@@ -23,7 +23,7 @@
 
 #if defined(_WIN32)
 
-#include "../include/OOBase/Stack.h"
+#include "../include/OOBase/Vector.h"
 #include "../include/OOBase/String.h"
 #include "../include/OOBase/Condition.h"
 #include "../include/OOBase/Win32Security.h"
@@ -436,7 +436,7 @@ namespace
 		OOBase::Win32::sec_descript_t            m_sd;
 		size_t                                   m_backlog;
 		size_t                                   m_refcount;
-		OOBase::Stack<HANDLE>                    m_stkPending;
+		OOBase::Vector<HANDLE>                   m_stkPending;
 		void*                                    m_param;
 		OOBase::Proactor::accept_pipe_callback_t m_callback;
 	
@@ -594,7 +594,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 			if (dwErr == ERROR_IO_PENDING)
 			{
 				// Will complete later...
-				dwErr = m_stkPending.push(hPipe);
+				dwErr = m_stkPending.push_back(hPipe);
 				if (!dwErr)
 				{
 					hPipe.detach();

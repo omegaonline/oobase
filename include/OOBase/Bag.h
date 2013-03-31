@@ -128,10 +128,13 @@ namespace OOBase
 				return 0;
 			}
 
-			void remove_at(size_t pos, bool sorted)
+			bool remove_at(size_t pos, bool sorted, T* pval = NULL)
 			{
 				if (this->m_data && pos < this->m_size)
 				{
+					if (pval)
+						*pval = this->m_data[pos];
+
 					if (sorted)
 					{
 						for(--this->m_size;pos < this->m_size;++pos)
@@ -141,7 +144,10 @@ namespace OOBase
 						this->m_data[pos] = this->m_data[--this->m_size];
 
 					this->m_data[this->m_size].~T();
+					return true;
 				}
+				else
+					return false;
 			}
 		};
 
@@ -200,10 +206,13 @@ namespace OOBase
 				return 0;
 			}
 
-			void remove_at(size_t pos, bool sorted)
+			bool remove_at(size_t pos, bool sorted, T* pval = NULL)
 			{
 				if (this->m_data && pos < this->m_size)
 				{
+					if (pval)
+						*pval = this->m_data[pos];
+
 					--this->m_size;
 					if (pos < this->m_size)
 					{
@@ -212,7 +221,11 @@ namespace OOBase
 						else
 							this->m_data[pos] = this->m_data[this->m_size+1];
 					}
+
+					return true;
 				}
+				else
+					return false;
 			}
 		};
 
@@ -244,21 +257,9 @@ namespace OOBase
 			}
 
 		protected:
-			int push(const T& value)
+			int append(const T& val)
 			{
-				return baseClass::insert_at(size_t(-1),value);
-			}
-
-			bool pop(T* value = NULL)
-			{
-				if (this->m_size == 0)
-					return false;
-
-				if (value)
-					*value = this->m_data[this->m_size-1];
-
-				this->m_data[--this->m_size].~T();
-				return true;
+				return baseClass::insert_at(this->m_size,val);
 			}
 
 			T* at(size_t pos)
@@ -277,60 +278,99 @@ namespace OOBase
 				this->free(this->m_data);
 			}
 		};
-	}
 
-	template <typename T, typename Allocator = CrtAllocator>
-	class Bag : public detail::BagImpl<T,Allocator>
-	{
-		typedef detail::BagImpl<T,Allocator> baseClass;
-
-	public:
-		Bag() : baseClass()
-		{}
-
-		Bag(AllocatorInstance& allocator) : baseClass(allocator)
-		{}
-
-		int add(const T& value)
+		template <class Container, class T, class Iter>
+		class IteratorImpl
 		{
-			return baseClass::push(value);
-		}
+			friend Container;
 
-		bool remove(const T& value)
-		{
-			// This is just really useful!
-			for (size_t pos = 0;pos < this->m_size;++pos)
+		public:
+			IteratorImpl() : m_cont(NULL)
+			{}
+
+			IteratorImpl(const IteratorImpl& rhs) : m_cont(rhs.m_cont), m_pos(rhs.m_pos)
+			{}
+
+			IteratorImpl& operator = (const IteratorImpl& rhs)
 			{
-				if (this->m_data[pos] == value)
+				if (this != &rhs)
 				{
-					remove_at(pos);
-					return true;
+					m_cont = rhs.m_cont;
+					m_pos = rhs.m_pos;
 				}
+				return *this;
 			}
 
-			return false;
-		}
+			bool operator == (const IteratorImpl& rhs) const
+			{
+				return (&m_cont == &rhs.m_cont && m_pos == rhs.m_pos);
+			}
 
-		bool pop(T* value = NULL)
-		{
-			return baseClass::pop(value);
-		}
+			bool operator != (const IteratorImpl& rhs) const
+			{
+				return !(*this == rhs);
+			}
 
-		void remove_at(size_t pos)
-		{
-			baseClass::remove_at(pos,false);
-		}
+			T* operator -> () const
+			{
+				assert(m_cont.at(*this) != NULL);
+				return m_cont.at(*this);
+			}
 
-		T* at(size_t pos)
-		{
-			return baseClass::at(pos);
-		}
+			T& operator * () const
+			{
+				assert(m_cont.at(*this) != NULL);
+				return *m_cont.at(*this);
+			}
 
-		const T* at(size_t pos) const
-		{
-			return baseClass::at(pos);
-		}
-	};
+			IteratorImpl& operator ++ ()
+			{
+				if (*this != m_cont.end())
+					++m_pos;
+				return *this;
+			}
+
+			IteratorImpl operator ++ (int)
+			{
+				IteratorImpl r(*this);
+				++(*this);
+				return r;
+			}
+
+			IteratorImpl& operator -- ()
+			{
+				if (*this != m_cont.begin())
+					--m_pos;
+				return *this;
+			}
+
+			IteratorImpl operator -- (int)
+			{
+				IteratorImpl r(*this);
+				--(*this);
+				return r;
+			}
+
+		protected:
+			IteratorImpl(Container& cont, Iter pos) : m_cont(cont), m_pos(pos)
+			{}
+
+#if !defined(NDEBUG)
+			bool check(Container const* cont) const
+			{
+				return (cont == &m_cont);
+			}
+#endif
+			Iter deref() const
+			{
+				return m_pos;
+			}
+
+		private:
+			Container& m_cont;
+			Iter       m_pos;
+		};
+	}
 }
 
 #endif // OOBASE_BAG_H_INCLUDED_

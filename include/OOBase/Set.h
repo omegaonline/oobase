@@ -42,15 +42,15 @@ namespace OOBase
 
 		int insert(const T& value)
 		{
-			int err = baseClass::push(value);
+			int err = baseClass::append(value);
 			if (!err)
 				m_sorted = false;
 			return err;
 		}
 
-		void remove_at(size_t pos)
+		bool remove_at(size_t pos, T* pval = NULL)
 		{
-			baseClass::remove_at(pos,m_sorted);
+			return baseClass::remove_at(pos,m_sorted,pval);
 		}
 
 		bool remove(const T& value)
@@ -59,9 +59,7 @@ namespace OOBase
 			if (pos == npos)
 				return false;
 
-			remove_at(pos);
-
-			return true;
+			return remove_at(pos);
 		}
 
 		bool pop(T* value = NULL)

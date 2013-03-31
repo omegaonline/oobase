@@ -23,7 +23,7 @@
 #define OOBASE_THREAD_H_INCLUDED_
 
 #include "Mutex.h"
-#include "Bag.h"
+#include "Vector.h"
 
 namespace OOBase
 {
@@ -64,7 +64,7 @@ namespace OOBase
 
 	private:
 		SpinLock     m_lock;
-		Bag<Thread*> m_threads;
+		Vector<SmartPtr<Thread>,CrtAllocator> m_threads;
 	};
 }
 

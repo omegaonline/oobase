@@ -28,7 +28,6 @@
 
 #include "../include/OOBase/Condition.h"
 #include "../include/OOBase/Set.h"
-#include "../include/OOBase/Stack.h"
 
 namespace OOBase
 {

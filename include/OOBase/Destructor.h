@@ -25,7 +25,7 @@
 #include "Memory.h"
 #include "Mutex.h"
 #include "Once.h"
-#include "Stack.h"
+#include "Vector.h"
 
 namespace OOBase
 {
@@ -40,7 +40,7 @@ namespace OOBase
 			DLLDestructor& inst = instance();
 			Guard<SpinLock> guard(inst.m_lock);
 			
-			return inst.m_stack.push(Node(pfn,p));
+			return inst.m_stack.push_back(Node(pfn,p));
 		}
 
 		static void remove_destructor(pfn_destructor pfn, void* p)
@@ -48,15 +48,7 @@ namespace OOBase
 			DLLDestructor& inst = instance();
 			Guard<SpinLock> guard(inst.m_lock);
 
-			Node f(pfn,p);
-			for (size_t pos = 0;pos < inst.m_stack.size();++pos)
-			{
-				if (*inst.m_stack.at(pos) == f)
-				{
-					inst.m_stack.remove_at(pos);
-					break;
-				}
-			}
+			inst.m_stack.remove_at(inst.m_stack.find(Node(pfn,p)));
 		}
 
 	private:
@@ -76,14 +68,14 @@ namespace OOBase
 			void*          m_param;
 		};
 
-		SpinLock                 m_lock;
-		Stack<Node,CrtAllocator> m_stack;
+		SpinLock                  m_lock;
+		Vector<Node,CrtAllocator> m_stack;
 
 		~DLLDestructor()
 		{
 			Guard<SpinLock> guard(m_lock);
 
-			for (Node node(NULL,NULL);m_stack.pop(&node);)
+			for (Node node(NULL,NULL);m_stack.pop_back(&node);)
 			{
 				guard.release();
 

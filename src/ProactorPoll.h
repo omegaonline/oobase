@@ -34,6 +34,30 @@ namespace OOBase
 {
 	namespace detail
 	{
+		class PollBag : public detail::BagImpl<pollfd,AllocatorInstance>
+		{
+			typedef detail::BagImpl<pollfd,AllocatorInstance> baseClass;
+
+		public:
+			PollBag(AllocatorInstance& allocator) : baseClass(allocator)
+			{}
+
+			int add(const pollfd& value)
+			{
+				return baseClass::append(value);
+			}
+
+			bool pop(pollfd* pval = NULL)
+			{
+				return baseClass::remove_at(this->m_size-1,false,pval);
+			}
+
+			pollfd* at(size_t pos)
+			{
+				return baseClass::at(pos);
+			}
+		};
+
 		class ProactorPoll : public ProactorPosix
 		{
 		public:
@@ -59,7 +83,7 @@ namespace OOBase
 				unsigned int m_events;
 			};
 
-			Bag<pollfd,AllocatorInstance>                   m_poll_fds;
+			PollBag                                         m_poll_fds;
 			OOBase::HashTable<int,FdItem,AllocatorInstance> m_items;
 
 			int do_bind_fd(int fd, void* param, fd_callback_t callback);
