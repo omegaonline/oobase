@@ -42,7 +42,7 @@ namespace
 		int run(int (*thread_fn)(void*), void* param);
 		bool join(const OOBase::Timeout& timeout);
 		void abort();
-		bool is_running();
+		bool is_running() const;
 
 	private:
 		struct wrapper
@@ -68,7 +68,7 @@ namespace
 		abort();
 	}
 
-	bool Win32Thread::is_running()
+	bool Win32Thread::is_running() const
 	{
 		if (!m_hThread.is_valid())
 			return false;
@@ -173,7 +173,7 @@ namespace
 		int run(int (*thread_fn)(void*), void* param);
 		bool join(const OOBase::Timeout& timeout);
 		void abort();
-		bool is_running();
+		bool is_running() const;
 
 	private:
 		struct wrapper
@@ -207,7 +207,7 @@ namespace
 		abort();
 	}
 
-	bool PthreadThread::is_running()
+	bool PthreadThread::is_running() const
 	{
 		return !m_finished.is_set();
 	}
@@ -343,7 +343,7 @@ void OOBase::Thread::abort()
 	return m_impl->abort();
 }
 
-bool OOBase::Thread::is_running()
+bool OOBase::Thread::is_running() const
 {
 	return m_impl->is_running();
 }
@@ -461,7 +461,7 @@ void OOBase::ThreadPool::abort()
 	}
 }
 
-size_t OOBase::ThreadPool::number_running()
+size_t OOBase::ThreadPool::number_running() const
 {
 	Guard<SpinLock> guard(m_lock);
 

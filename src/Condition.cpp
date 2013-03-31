@@ -84,7 +84,7 @@ OOBase::Condition::~Condition()
 	pthread_cond_destroy(&m_var);
 }
 
-bool OOBase::Condition::wait(Condition::Mutex& mutex, const Timeout& timeout)
+bool OOBase::Condition::wait(Condition::Mutex& mutex, const Timeout& timeout) const
 {
 	int err = 0;
 	if (timeout.is_infinite())
@@ -134,7 +134,7 @@ OOBase::Event::~Event()
 {
 }
 
-bool OOBase::Event::is_set()
+bool OOBase::Event::is_set() const
 {
 	return (WaitForSingleObject(m_handle,0) == WAIT_OBJECT_0);
 }
@@ -145,7 +145,7 @@ void OOBase::Event::set()
 		OOBase_CallCriticalFailure(GetLastError());
 }
 
-bool OOBase::Event::wait(const Timeout& timeout)
+bool OOBase::Event::wait(const Timeout& timeout) const
 {
 	DWORD dwWait = WaitForSingleObject(m_handle,timeout.millisecs());
 	if (dwWait == WAIT_OBJECT_0)
@@ -173,7 +173,7 @@ OOBase::Event::~Event()
 {
 }
 
-bool OOBase::Event::is_set()
+bool OOBase::Event::is_set() const
 {
 	Guard<Condition::Mutex> guard(m_lock);
 
@@ -203,7 +203,7 @@ void OOBase::Event::set()
 	}
 }
 
-bool OOBase::Event::wait(const Timeout& timeout)
+bool OOBase::Event::wait(const Timeout& timeout) const
 {
 	Guard<Condition::Mutex> guard(m_lock);
 

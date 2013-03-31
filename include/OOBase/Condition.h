@@ -45,7 +45,7 @@ namespace OOBase
 		Condition();
 		~Condition();
 
-		bool wait(Condition::Mutex& mutex, const Timeout& timeout = OOBase::Timeout());
+		bool wait(Condition::Mutex& mutex, const Timeout& timeout = OOBase::Timeout()) const;
 		void signal();
 		void broadcast();
 
@@ -60,7 +60,7 @@ namespace OOBase
 
 		CONDITION_VARIABLE m_var;
 #elif defined(HAVE_PTHREAD)
-		pthread_cond_t     m_var;
+		mutable pthread_cond_t m_var;
 #endif
 	};
 
@@ -70,9 +70,9 @@ namespace OOBase
 		Event(bool bSet = false, bool bAutoReset = true);
 		~Event();
 
-		bool is_set();
+		bool is_set() const;
 		void set();
-		bool wait(const Timeout& timeout = OOBase::Timeout());
+		bool wait(const Timeout& timeout = OOBase::Timeout()) const;
 		void reset();
 
 	private:
@@ -83,10 +83,10 @@ namespace OOBase
 #if defined(_WIN32)
 		Win32::SmartHandle m_handle;
 #else
-		Condition          m_condition;
-		Condition::Mutex   m_lock;
-		bool               m_bAuto;
-		bool               m_bSet;
+		Condition                m_condition;
+		mutable Condition::Mutex m_lock;
+		bool                     m_bAuto;
+		mutable bool             m_bSet;
 #endif
 	};
 

@@ -37,7 +37,7 @@ namespace OOBase
 
 		virtual bool join(const Timeout& timeout = Timeout());
 		virtual void abort();
-		virtual bool is_running();
+		virtual bool is_running() const;
 
 		static void sleep(unsigned int millisecs);
 		static void yield();
@@ -60,10 +60,10 @@ namespace OOBase
 		int run(int (*thread_fn)(void*), void* param, size_t threads);
 		void join();
 		void abort();
-		size_t number_running();
+		size_t number_running() const;
 
 	private:
-		SpinLock     m_lock;
+		mutable SpinLock m_lock;
 		Vector<SmartPtr<Thread>,CrtAllocator> m_threads;
 	};
 }

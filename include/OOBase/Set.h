@@ -64,7 +64,7 @@ namespace OOBase
 
 		bool pop(T* value = NULL)
 		{
-			return baseClass::pop(value);
+			return baseClass::remove_at(this->m_size-1,true,value);
 		}
 
 		template <typename V1>
