@@ -122,7 +122,7 @@ namespace OOBase
 			if (value)
 				*value = *at(pos);
 
-			return remove_at(pos);
+			return baseClass::remove_at(pos,true);
 		}
 
 		template <typename K1>

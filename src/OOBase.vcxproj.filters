@@ -153,9 +153,6 @@
     <ClInclude Include="..\include\OOBase\Socket.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Stack.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\OOBase\String.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -232,6 +229,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\OOBase\tr24731.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\OOBase\Vector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

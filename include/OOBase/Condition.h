@@ -58,7 +58,7 @@ namespace OOBase
 		typedef OOBase::Win32::condition_variable_t* CONDITION_VARIABLE;
 	#endif
 
-		CONDITION_VARIABLE m_var;
+		mutable CONDITION_VARIABLE m_var;
 #elif defined(HAVE_PTHREAD)
 		mutable pthread_cond_t m_var;
 #endif

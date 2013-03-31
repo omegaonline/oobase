@@ -34,7 +34,7 @@ OOBase::Condition::~Condition()
 	Win32::DeleteConditionVariable(&m_var);
 }
 
-bool OOBase::Condition::wait(Condition::Mutex& mutex, const Timeout& timeout)
+bool OOBase::Condition::wait(Condition::Mutex& mutex, const Timeout& timeout) const
 {
 	if (!Win32::SleepConditionVariable(&m_var,&mutex,timeout.millisecs()))
 	{
