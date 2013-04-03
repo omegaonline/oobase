@@ -65,16 +65,20 @@ namespace OOBase
 			}
 
 		protected:
+#if defined(OOBASE_HAVE_EXCEPTIONS)
 			int insert_at(size_t pos, const T& value)
 			{
-				if (this->m_size+1 > this->m_capacity)
+				if (this->m_size >= this->m_capacity || pos < this->m_size)
 				{
-					size_t capacity = (this->m_capacity == 0 ? 4 : this->m_capacity*2);
+					// Copy buffer, inserting in the gap...
+					size_t capacity = this->m_capacity;
+					if (this->m_size+1 > this->m_capacity)
+						capacity = (this->m_capacity == 0 ? 4 : this->m_capacity*2);
+
 					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
 						return ERROR_OUTOFMEMORY;
 
-#if defined(OOBASE_HAVE_EXCEPTIONS)
 					size_t i = 0;
 					try
 					{
@@ -97,7 +101,26 @@ namespace OOBase
 					for (i=0;i<this->m_size;++i)
 						this->m_data[i].~T();
 
+					baseClass::free(this->m_data);
+					this->m_data = new_data;
+					this->m_capacity = capacity;
+				}
+				else
+					::new (&this->m_data[this->m_size]) T(value);
+
+				++this->m_size;
+				return 0;
+			}
 #else
+			int insert_at(size_t pos, const T& value)
+			{
+				if (this->m_size >= this->m_capacity)
+				{
+					size_t capacity = (this->m_capacity == 0 ? 4 : this->m_capacity*2);
+					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
+					if (!new_data)
+						return ERROR_OUTOFMEMORY;
+
 					for (size_t i = 0;i<this->m_size;++i)
 					{
 						::new (&new_data[i + (i<pos ? 0 : 1)]) T(this->m_data[i]);
@@ -105,29 +128,27 @@ namespace OOBase
 					}
 
 					::new (&new_data[pos]) T(value);
-#endif
+
 					baseClass::free(this->m_data);
 					this->m_data = new_data;
 					this->m_capacity = capacity;
 				}
-				else
+				else if (pos < this->m_size)
 				{
-					if (pos < this->m_size)
-					{
-						// Shuffle the contents down the buffer
-						::new (&this->m_data[this->m_size]) T(this->m_data[this->m_size-1]);
-						for (size_t i = this->m_size-1; i > pos; --i)
-							this->m_data[i] = this->m_data[i-1];
+					// Shuffle the contents down the buffer
+					::new (&this->m_data[this->m_size]) T(this->m_data[this->m_size-1]);
+					for (size_t i = this->m_size-1; i > pos; --i)
+						this->m_data[i] = this->m_data[i-1];
 
-						this->m_data[pos] = value;
-					}
-					else
-						::new (&this->m_data[this->m_size]) T(value);
+					this->m_data[pos] = value;
 				}
+				else
+					::new (&this->m_data[this->m_size]) T(value);
+
 				++this->m_size;
 				return 0;
 			}
-
+#endif
 			bool remove_at(size_t pos, bool sorted, T* pval = NULL)
 			{
 				if (this->m_data && pos < this->m_size)
@@ -171,7 +192,7 @@ namespace OOBase
 		protected:
 			int insert_at(size_t pos, const T& value)
 			{
-				if (this->m_size+1 > this->m_capacity)
+				if (this->m_size >= this->m_capacity)
 				{
 					size_t capacity = (this->m_capacity == 0 ? 4 : this->m_capacity*2);
 
