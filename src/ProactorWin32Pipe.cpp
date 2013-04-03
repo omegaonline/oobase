@@ -648,7 +648,7 @@ void InternalAcceptor::on_accept(HANDLE hPipe, bool bRemove, DWORD dwErr, OOBase
 	if (bRemove)
 	{		
 		// Remove from pending list
-		m_stkPending.remove_at(m_stkPending.find(hPipe));
+		m_stkPending.remove(m_stkPending.find(hPipe));
 				
 		bAgain = (m_stkPending.size() < m_backlog);
 		bSignal = (m_stkPending.empty() && m_backlog == 0);

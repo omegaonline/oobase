@@ -75,13 +75,13 @@ namespace OOBase
 			return const_iterator(*this,pos);
 		}
 
-		int insert(const T& value, const iterator& iter)
+		int insert(const T& value, const iterator& before)
 		{
-			assert(iter.check(this));
-			return baseClass::insert_at(value,iter.deref());
+			assert(before.check(this));
+			return baseClass::insert_at(value,before.deref());
 		}
 
-		bool remove_at(const iterator& iter, T* pval = NULL)
+		bool remove(const iterator& iter, T* pval = NULL)
 		{
 			assert(iter.check(this));
 			return baseClass::remove_at(iter.deref(),true,pval);

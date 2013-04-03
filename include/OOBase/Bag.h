@@ -294,15 +294,12 @@ namespace OOBase
 			}
 		};
 
-		template <class Container, class T, class Iter>
+		template <typename Container, typename T, typename Iter>
 		class IteratorImpl
 		{
 			friend Container;
 
 		public:
-			IteratorImpl() : m_cont(NULL)
-			{}
-
 			IteratorImpl(const IteratorImpl& rhs) : m_cont(rhs.m_cont), m_pos(rhs.m_pos)
 			{}
 
@@ -382,6 +379,8 @@ namespace OOBase
 			}
 
 		private:
+			IteratorImpl();
+
 			Container& m_cont;
 			Iter       m_pos;
 		};
