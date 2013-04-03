@@ -28,44 +28,36 @@ namespace OOBase
 {
 	namespace detail
 	{
-		template <typename Allocator, typename T>
-		class PODQueueBase : public Allocating<Allocator>, public NonCopyable
+		template <typename Allocator, typename T, bool POD = false>
+		class QueueBase : public Allocating<Allocator>, public NonCopyable
 		{
 			typedef Allocating<Allocator> baseClass;
 
 		public:
-			PODQueueBase() : baseClass(), m_data(NULL), m_capacity(0), m_front(0), m_back(0)
+			QueueBase() : baseClass(), m_data(NULL), m_capacity(0), m_front(0), m_back(0)
 			{}
 
-			PODQueueBase(AllocatorInstance& allocator) : baseClass(allocator), m_data(NULL), m_capacity(0), m_front(0), m_back(0)
+			QueueBase(AllocatorInstance& allocator) : baseClass(allocator), m_data(NULL), m_capacity(0), m_front(0), m_back(0)
 			{}
+
+			~QueueBase()
+			{
+				clear();
+				baseClass::free(m_data);
+			}
+
+			void clear()
+			{
+				for (;m_capacity != 0 && m_front != m_back;m_front = (m_front+1) % m_capacity)
+					m_data[m_front].~T();
+			}
 
 		protected:
 			T*     m_data;
 			size_t m_capacity;
 			size_t m_front;
 			size_t m_back;
-		};
 
-		template <typename Allocator, typename T, bool POD = false>
-		class PODQueue : public PODQueueBase<Allocator,T>
-		{
-			typedef PODQueueBase<Allocator,T> baseClass;
-
-		public:
-			PODQueue() : baseClass()
-			{}
-
-			PODQueue(AllocatorInstance& allocator) : baseClass(allocator)
-			{}
-
-			void clear()
-			{
-				for (;this->m_capacity != 0 && this->m_front != this->m_back;this->m_front = (this->m_front+1) % this->m_capacity)
-					this->m_data[this->m_front].~T();
-			}
-
-		protected:
 			static void copy_to(T* p, const T& v)
 			{
 				// Placement new with copy constructor
@@ -74,7 +66,7 @@ namespace OOBase
 
 			int grow()
 			{
-				size_t new_size = (this->m_capacity == 0 ? 8 : this->m_capacity * 2);
+				size_t new_size = (m_capacity == 0 ? 8 : m_capacity * 2);
 				T* new_data = static_cast<T*>(baseClass::allocate(new_size*sizeof(T),alignment_of<T>::value));
 				if (!new_data)
 					return ERROR_OUTOFMEMORY;
@@ -85,8 +77,8 @@ namespace OOBase
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try
 				{
-					for (size_t i=this->m_front;this->m_capacity != 0 && i != this->m_back; i = (i+1) % this->m_capacity)
-						copy_to(&new_data[new_back++],this->m_data[i]);
+					for (size_t i=m_front;m_capacity != 0 && i != m_back; i = (i+1) % m_capacity)
+						copy_to(&new_data[new_back++],m_data[i]);
 				}
 				catch (...)
 				{
@@ -97,45 +89,55 @@ namespace OOBase
 					throw;
 				}
 
-				for (size_t i=this->m_front;this->m_capacity != 0 && i != this->m_back; i = (i+1) % this->m_capacity)
-					this->m_data[i].~T();
+				for (size_t i=m_front;m_capacity != 0 && i != m_back; i = (i+1) % m_capacity)
+					m_data[i].~T();
 
 #else
-				for (size_t i=this->m_front;this->m_capacity != 0 && i != this->m_back; i = (i+1) % this->m_capacity)
+				for (size_t i=m_front;m_capacity != 0 && i != m_back; i = (i+1) % m_capacity)
 				{
-					copy_to(&new_data[new_back++],this->m_data[i]);
-					this->m_data[i].~T();
+					copy_to(&new_data[new_back++],m_data[i]);
+					m_data[i].~T();
 				}
 #endif
 
-				baseClass::free(this->m_data);
-				this->m_data = new_data;
-				this->m_capacity = new_size;
-				this->m_front = 0;
-				this->m_back = new_back;
+				baseClass::free(m_data);
+				m_data = new_data;
+				m_capacity = new_size;
+				m_front = 0;
+				m_back = new_back;
 
 				return 0;
 			}
 		};
 
 		template <typename Allocator, typename T>
-		class PODQueue<Allocator,T,true> : public PODQueueBase<Allocator,T>
+		class QueueBase<Allocator,T,true> : public Allocating<Allocator>, public NonCopyable
 		{
-			typedef PODQueueBase<Allocator,T> baseClass;
+			typedef Allocating<Allocator> baseClass;
 
 		public:
-			PODQueue() : baseClass()
+			QueueBase() : baseClass(), m_data(NULL), m_capacity(0), m_front(0), m_back(0)
 			{}
 
-			PODQueue(AllocatorInstance& allocator) : baseClass(allocator)
+			QueueBase(AllocatorInstance& allocator) : baseClass(allocator), m_data(NULL), m_capacity(0), m_front(0), m_back(0)
 			{}
+
+			~QueueBase()
+			{
+				baseClass::free(m_data);
+			}
 
 			void clear()
 			{
-				this->m_capacity = this->m_front = this->m_back = 0;
+				m_capacity = m_front = m_back = 0;
 			}
 
 		protected:
+			T*     m_data;
+			size_t m_capacity;
+			size_t m_front;
+			size_t m_back;
+
 			static void copy_to(T* p, const T& v)
 			{
 				*p = v;
@@ -143,22 +145,22 @@ namespace OOBase
 
 			int grow()
 			{
-				size_t new_size = (this->m_capacity == 0 ? 8 : this->m_capacity * 2);
-				T* new_data = static_cast<T*>(baseClass::reallocate(this->m_data,new_size*sizeof(T),alignment_of<T>::value));
+				size_t new_size = (m_capacity == 0 ? 8 : m_capacity * 2);
+				T* new_data = static_cast<T*>(baseClass::reallocate(m_data,new_size*sizeof(T),alignment_of<T>::value));
 				if (!new_data)
 					return ERROR_OUTOFMEMORY;
 				
-				this->m_capacity = new_size;
-				this->m_data = new_data;
+				m_capacity = new_size;
+				m_data = new_data;
 				return 0;
 			}
 		};
 	}
 
 	template <typename T, typename Allocator = CrtAllocator>
-	class Queue : public detail::PODQueue<Allocator,T,detail::is_pod<T>::value>
+	class Queue : public detail::QueueBase<Allocator,T,detail::is_pod<T>::value>
 	{
-		typedef detail::PODQueue<Allocator,T,detail::is_pod<T>::value> baseClass;
+		typedef detail::QueueBase<Allocator,T,detail::is_pod<T>::value> baseClass;
 
 	public:
 		Queue() : baseClass()
@@ -167,11 +169,6 @@ namespace OOBase
 		Queue(AllocatorInstance& allocator) : baseClass(allocator)
 		{}
 		
-		~Queue()
-		{
-			destroy();
-		}
-
 		int push(const T& val)
 		{
 			if (this->m_capacity == 0 || size() == (this->m_capacity - 1))
@@ -188,6 +185,14 @@ namespace OOBase
 		}
 
 		T* front()
+		{
+			if (this->m_front == this->m_back)
+				return NULL;
+
+			return &this->m_data[this->m_front];
+		}
+
+		const T* front() const
 		{
 			if (this->m_front == this->m_back)
 				return NULL;
@@ -230,13 +235,6 @@ namespace OOBase
 		bool empty() const
 		{
 			return (this->m_front == this->m_back);
-		}
-
-	protected:
-		void destroy()
-		{
-			baseClass::clear();
-			this->free(this->m_data);
 		}
 	};
 }
