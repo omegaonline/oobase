@@ -297,7 +297,13 @@ namespace OOBase
 		template <typename Container, typename T, typename Iter>
 		class IteratorImpl
 		{
-			friend Container;
+			// This is just to make Container a friend!
+			template <typename T1>
+			struct type_wrapper
+			{
+			   typedef T1 type;
+			};
+			friend class type_wrapper<Container>::type;
 
 		public:
 			IteratorImpl(const IteratorImpl& rhs) : m_cont(rhs.m_cont), m_pos(rhs.m_pos)
