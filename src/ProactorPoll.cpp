@@ -79,7 +79,7 @@ int OOBase::detail::ProactorPoll::init()
 
 	// Add the control pipe to m_poll_fds
 	pollfd pfd = { m_read_fd, POLLIN | POLLRDHUP, 0 };
-	return m_poll_fds.add(pfd);
+	return m_poll_fds.push_back(pfd);
 }
 
 int OOBase::detail::ProactorPoll::do_bind_fd(int fd, void* param, fd_callback_t callback)
@@ -99,7 +99,7 @@ int OOBase::detail::ProactorPoll::do_unbind_fd(int fd)
 		// Replace current with top of stack
 		pollfd* pfd = m_poll_fds.at(item.m_poll_pos);
 
-		m_poll_fds.pop(pfd);
+		m_poll_fds.pop_back(pfd);
 
 		// Reassign index
 		FdItem* pi = m_items.find(pfd->fd);
@@ -131,7 +131,7 @@ int OOBase::detail::ProactorPoll::do_watch_fd(int fd, unsigned int events)
 			{
 				// A new entry
 				pollfd pfd = { fd, p_events, 0 };
-				int err = m_poll_fds.add(pfd);
+				int err = m_poll_fds.push_back(pfd);
 				if (err)
 					return err;
 
@@ -209,11 +209,11 @@ bool OOBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count
 
 						// If we have no pending events, remove from m_poll_fds
 						if (pos == m_poll_fds.size()-1)
-							m_poll_fds.pop();
+							m_poll_fds.pop_back();
 						else
 						{
 							// Replace current with top of stack
-							m_poll_fds.pop(pfd);
+							m_poll_fds.pop_back(pfd);
 
 							// Reassign index
 							item = m_items.find(pfd->fd);
@@ -247,7 +247,7 @@ int OOBase::detail::ProactorPoll::run(int& err, const Timeout& timeout)
 		if (!timer_event)
 		{
 			// If no timers have expired, poll for I/O
-			int count = poll(m_poll_fds.at(0),m_poll_fds.size(),local_timeout.millisecs());
+			int count = ::poll(m_poll_fds.at(0),m_poll_fds.size(),local_timeout.millisecs());
 			if (count == -1)
 			{
 				if (errno == EINVAL)
@@ -257,7 +257,7 @@ int OOBase::detail::ProactorPoll::run(int& err, const Timeout& timeout)
 						err = errno;
 					else
 					{
-						count = poll(m_poll_fds.at(0),rl.rlim_cur,local_timeout.millisecs());
+						count = ::poll(m_poll_fds.at(0),rl.rlim_cur,local_timeout.millisecs());
 						if (count == -1)
 							err = errno;
 					}

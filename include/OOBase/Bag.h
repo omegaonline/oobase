@@ -28,52 +28,43 @@ namespace OOBase
 {
 	namespace detail
 	{
-		template <typename Allocator, typename T>
-		class PODBagBase : public Allocating<Allocator>, public NonCopyable
+		template <typename Allocator, typename T, bool POD = false>
+		class BagBase : public Allocating<Allocator>, public NonCopyable
 		{
 			typedef Allocating<Allocator> baseClass;
 
 		public:
-			PODBagBase() : baseClass(), m_data(NULL), m_size(0), m_capacity(0)
+			BagBase() : baseClass(), m_data(NULL), m_size(0), m_capacity(0)
 			{}
 
-			PODBagBase(AllocatorInstance& allocator) : baseClass(allocator), m_data(NULL), m_size(0), m_capacity(0)
+			BagBase(AllocatorInstance& allocator) : baseClass(allocator), m_data(NULL), m_size(0), m_capacity(0)
 			{}
+
+			~BagBase()
+			{
+				clear();
+				baseClass::free(m_data);
+			}
+
+			void clear()
+			{
+				while (m_size > 0)
+					m_data[--m_size].~T();
+			}
 
 		protected:
 			T*     m_data;
 			size_t m_size;
-			size_t m_capacity;
-		};
 
-		template <typename Allocator, typename T, bool POD = false>
-		class PODBag : public PODBagBase<Allocator,T>
-		{
-			typedef PODBagBase<Allocator,T> baseClass;
-
-		public:
-			PODBag() : baseClass()
-			{}
-
-			PODBag(AllocatorInstance& allocator) : baseClass(allocator)
-			{}
-
-			void clear()
-			{
-				while (this->m_size > 0)
-					this->m_data[--this->m_size].~T();
-			}
-
-		protected:
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 			int insert_at(size_t pos, const T& value)
 			{
-				if (this->m_size >= this->m_capacity || pos < this->m_size)
+				if (m_size >= m_capacity || pos < m_size)
 				{
 					// Copy buffer, inserting in the gap...
-					size_t capacity = this->m_capacity;
-					if (this->m_size+1 > this->m_capacity)
-						capacity = (this->m_capacity == 0 ? 4 : this->m_capacity*2);
+					size_t capacity = m_capacity;
+					if (m_size+1 > m_capacity)
+						capacity = (m_capacity == 0 ? 4 : m_capacity*2);
 
 					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
@@ -82,8 +73,8 @@ namespace OOBase
 					size_t i = 0;
 					try
 					{
-						for (;i<this->m_size;++i)
-							::new (&new_data[i + (i<pos ? 0 : 1)]) T(this->m_data[i]);
+						for (;i<m_size;++i)
+							::new (&new_data[i + (i<pos ? 0 : 1)]) T(m_data[i]);
 
 						::new (&new_data[pos]) T(value);
 					}
@@ -98,149 +89,160 @@ namespace OOBase
 						throw;
 					}
 
-					for (i=0;i<this->m_size;++i)
-						this->m_data[i].~T();
+					for (i=0;i<m_size;++i)
+						m_data[i].~T();
 
-					baseClass::free(this->m_data);
-					this->m_data = new_data;
-					this->m_capacity = capacity;
+					baseClass::free(m_data);
+					m_data = new_data;
+					m_capacity = capacity;
 				}
 				else
-					::new (&this->m_data[this->m_size]) T(value);
+					::new (&m_data[m_size]) T(value);
 
-				++this->m_size;
+				++m_size;
 				return 0;
 			}
 #else
 			int insert_at(size_t pos, const T& value)
 			{
-				if (this->m_size >= this->m_capacity)
+				if (m_size >= m_capacity)
 				{
-					size_t capacity = (this->m_capacity == 0 ? 4 : this->m_capacity*2);
+					size_t capacity = (m_capacity == 0 ? 4 : m_capacity*2);
 					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
 						return ERROR_OUTOFMEMORY;
 
-					for (size_t i = 0;i<this->m_size;++i)
+					for (size_t i = 0;i<m_size;++i)
 					{
-						::new (&new_data[i + (i<pos ? 0 : 1)]) T(this->m_data[i]);
-						this->m_data[i].~T();
+						::new (&new_data[i + (i<pos ? 0 : 1)]) T(m_data[i]);
+						m_data[i].~T();
 					}
 
 					::new (&new_data[pos]) T(value);
 
-					baseClass::free(this->m_data);
-					this->m_data = new_data;
-					this->m_capacity = capacity;
+					baseClass::free(m_data);
+					m_data = new_data;
+					m_capacity = capacity;
 				}
-				else if (pos < this->m_size)
+				else if (pos < m_size)
 				{
 					// Shuffle the contents down the buffer
-					::new (&this->m_data[this->m_size]) T(this->m_data[this->m_size-1]);
-					for (size_t i = this->m_size-1; i > pos; --i)
-						this->m_data[i] = this->m_data[i-1];
+					::new (&m_data[m_size]) T(m_data[m_size-1]);
+					for (size_t i = m_size-1; i > pos; --i)
+						m_data[i] = m_data[i-1];
 
-					this->m_data[pos] = value;
+					m_data[pos] = value;
 				}
 				else
-					::new (&this->m_data[this->m_size]) T(value);
+					::new (&m_data[m_size]) T(value);
 
-				++this->m_size;
+				++m_size;
 				return 0;
 			}
 #endif
 			bool remove_at(size_t pos, bool sorted, T* pval = NULL)
 			{
-				if (this->m_data && pos < this->m_size)
+				if (m_data && pos < m_size)
 				{
 					if (pval)
-						*pval = this->m_data[pos];
+						*pval = m_data[pos];
 
 					if (sorted)
 					{
-						for(--this->m_size;pos < this->m_size;++pos)
-							this->m_data[pos] = this->m_data[pos+1];
+						for(--m_size;pos < m_size;++pos)
+							m_data[pos] = m_data[pos+1];
 					}
 					else
-						this->m_data[pos] = this->m_data[--this->m_size];
+						m_data[pos] = m_data[--m_size];
 
-					this->m_data[this->m_size].~T();
+					m_data[m_size].~T();
 					return true;
 				}
 				else
 					return false;
 			}
+
+		private:
+			size_t m_capacity;
 		};
 
 		template <typename Allocator, typename T>
-		class PODBag<Allocator,T,true> : public PODBagBase<Allocator,T>
+		class BagBase<Allocator,T,true> : public Allocating<Allocator>, public NonCopyable
 		{
-			typedef PODBagBase<Allocator,T> baseClass;
+			typedef Allocating<Allocator> baseClass;
 
 		public:
-			PODBag() : baseClass()
+			BagBase() : baseClass(), m_data(NULL), m_size(0), m_capacity(0)
 			{}
 
-			PODBag(AllocatorInstance& allocator) : baseClass(allocator)
+			BagBase(AllocatorInstance& allocator) : baseClass(allocator), m_data(NULL), m_size(0), m_capacity(0)
 			{}
+
+			~BagBase()
+			{
+				baseClass::free(m_data);
+			}
 
 			void clear()
 			{
-				this->m_size = 0;
+				m_size = 0;
 			}
 
 		protected:
+			T*     m_data;
+			size_t m_size;
+
 			int insert_at(size_t pos, const T& value)
 			{
-				if (this->m_size >= this->m_capacity)
+				if (m_size >= m_capacity)
 				{
-					size_t capacity = (this->m_capacity == 0 ? 4 : this->m_capacity*2);
+					size_t capacity = (m_capacity == 0 ? 4 : m_capacity*2);
 
 					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
 						return ERROR_OUTOFMEMORY;
 
-					if (pos < this->m_size)
-						memcpy(&new_data[pos + 1],&this->m_data[pos],(this->m_size - pos) * sizeof(T));
+					if (pos < m_size)
+						memcpy(&new_data[pos + 1],&m_data[pos],(m_size - pos) * sizeof(T));
 					else
-						pos = this->m_size;
+						pos = m_size;
 
 					if (pos > 0)
-						memcpy(new_data,&this->m_data,pos * sizeof(T));
+						memcpy(new_data,&m_data,pos * sizeof(T));
 
 					new_data[pos] = value;
 
-					baseClass::free(this->m_data);
-					this->m_data = new_data;
-					this->m_capacity = capacity;
+					baseClass::free(m_data);
+					m_data = new_data;
+					m_capacity = capacity;
 				}
 				else
 				{
-					if (pos < this->m_size)
-						memmove(&this->m_data[pos + 1],&this->m_data[pos],(this->m_size - pos) * sizeof(T));
+					if (pos < m_size)
+						memmove(&m_data[pos + 1],&m_data[pos],(m_size - pos) * sizeof(T));
 					else
-						pos = this->m_size;
+						pos = m_size;
 
-					this->m_data[pos] = value;
+					m_data[pos] = value;
 				}
-				++this->m_size;
+				++m_size;
 				return 0;
 			}
 
 			bool remove_at(size_t pos, bool sorted, T* pval = NULL)
 			{
-				if (this->m_data && pos < this->m_size)
+				if (m_data && pos < m_size)
 				{
 					if (pval)
-						*pval = this->m_data[pos];
+						*pval = m_data[pos];
 
-					--this->m_size;
-					if (pos < this->m_size)
+					--m_size;
+					if (pos < m_size)
 					{
 						if (sorted)
-							memmove(&this->m_data[pos],&this->m_data[pos+1],(this->m_size - pos) * sizeof(T));
+							memmove(&m_data[pos],&m_data[pos+1],(m_size - pos) * sizeof(T));
 						else
-							this->m_data[pos] = this->m_data[this->m_size+1];
+							m_data[pos] = m_data[m_size+1];
 					}
 
 					return true;
@@ -248,12 +250,15 @@ namespace OOBase
 				else
 					return false;
 			}
+
+		private:
+			size_t m_capacity;
 		};
 
 		template <typename T, typename Allocator>
-		class BagImpl : public PODBag<Allocator,T,is_pod<T>::value>
+		class BagImpl : public BagBase<Allocator,T,is_pod<T>::value>
 		{
-			typedef PODBag<Allocator,T,is_pod<T>::value> baseClass;
+			typedef BagBase<Allocator,T,is_pod<T>::value> baseClass;
 
 		public:
 			BagImpl() : baseClass()
@@ -261,11 +266,6 @@ namespace OOBase
 
 			BagImpl(AllocatorInstance& allocator) : baseClass(allocator)
 			{}
-
-			~BagImpl()
-			{
-				destroy();
-			}
 
 			bool empty() const
 			{
@@ -291,12 +291,6 @@ namespace OOBase
 			const T* at(size_t pos) const
 			{
 				return (pos >= this->m_size ? NULL : &this->m_data[pos]);
-			}
-
-			void destroy()
-			{
-				baseClass::clear();
-				this->free(this->m_data);
 			}
 		};
 

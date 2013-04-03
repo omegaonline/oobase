@@ -26,7 +26,7 @@
 
 namespace OOBase
 {
-template <typename T, typename Allocator = CrtAllocator>
+	template <typename T, typename Allocator = CrtAllocator>
 	class Vector : public detail::BagImpl<T,Allocator>
 	{
 		typedef detail::BagImpl<T,Allocator> baseClass;
@@ -51,7 +51,8 @@ template <typename T, typename Allocator = CrtAllocator>
 			return baseClass::remove_at(this->m_size - 1,false,value);
 		}
 
-		iterator find(const T& value)
+		template <typename T1>
+		iterator find(const T1& value)
 		{
 			size_t pos = 0;
 			for (;pos < this->m_size;++pos)
@@ -62,7 +63,8 @@ template <typename T, typename Allocator = CrtAllocator>
 			return iterator(*this,pos);
 		}
 
-		const_iterator find(const T& value) const
+		template <typename T1>
+		const_iterator find(const T1& value) const
 		{
 			size_t pos = 0;
 			for (;pos < this->m_size;++pos)
@@ -85,16 +87,6 @@ template <typename T, typename Allocator = CrtAllocator>
 			return baseClass::remove_at(iter.deref(),true,pval);
 		}
 
-		T* at(size_t pos)
-		{
-			return baseClass::at(pos);
-		}
-
-		const T* at(size_t pos) const
-		{
-			return baseClass::at(pos);
-		}
-
 		T* at(const iterator& iter)
 		{
 			assert(iter.check(this));
@@ -105,6 +97,26 @@ template <typename T, typename Allocator = CrtAllocator>
 		{
 			assert(iter.check(this));
 			return baseClass::at(iter.deref());
+		}
+
+		T* at(size_t pos)
+		{
+			return baseClass::at(pos);
+		}
+
+		const T* at(size_t pos) const
+		{
+			return baseClass::at(pos);
+		}
+
+		T& operator [](size_t pos)
+		{
+			return *at(pos);
+		}
+
+		const T& operator [](size_t pos) const
+		{
+			return *at(pos);
 		}
 
 		iterator begin()
