@@ -87,6 +87,7 @@ liboobase_la_SOURCES = \
 	include/OOBase/GlobalNew.h \
 	include/OOBase/HandleTable.h \
 	include/OOBase/HashTable.h \
+	include/OOBase/List.h \
 	include/OOBase/Logger.h \
 	include/OOBase/Memory.h \
 	include/OOBase/Mutex.h \
