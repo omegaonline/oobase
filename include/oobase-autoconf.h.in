@@ -34,6 +34,9 @@
 /* Define to 1 if you have the __builtin_bswap64 compiler intrinsic */
 #undef HAVE___BUILTIN_BSWAP64
 
+/* Define to 1 if you have the __builtin_ffs compiler intrinsic */
+#undef HAVE___BUILTIN_FFS
+
 /* Define to 1 if you have the __sync_val_compare_and_swap compiler intrinsic */
 #undef HAVE___SYNC_VAL_COMPARE_AND_SWAP
 

@@ -37,7 +37,7 @@
 #define FAST_BYTESWAP_4(x) _byteswap_ulong((unsigned long)(x))
 #define FAST_BYTESWAP_8(x) _byteswap_uint64((unsigned __int64)(x))
 
-#elif !defined(ECLIPSE_PARSER) && !defined(DOXYGEN)
+#else
 
 #if defined(HAVE___BUILTIN_BSWAP16)
 #define FAST_BYTESWAP_2(x) __builtin_bswap16((x))

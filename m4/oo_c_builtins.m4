@@ -82,5 +82,25 @@ AC_DEFUN([OO_C_BUILTINS],
         ]
     )
     
+    AC_MSG_CHECKING([for __builtin_ffs compiler intrinsic])
+	AC_COMPILE_IFELSE(
+        [
+			AC_LANG_PROGRAM([[ ]],
+            [[
+				unsigned int x = 12;
+				unsigned int y = __builtin_ffs(x);
+				++y;
+            ]]
+        )
+        ],
+        [
+			AC_MSG_RESULT([yes])
+			AC_DEFINE([HAVE___BUILTIN_FFS], [1], [Define to 1 if you have the __builtin_ffs compiler intrinsic])
+        ],
+        [
+			AC_MSG_RESULT([unsupported])
+        ]
+    )
+    
     AC_LANG_POP([C++])
 ])
