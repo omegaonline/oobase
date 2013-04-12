@@ -28,6 +28,89 @@ namespace OOBase
 {
 	namespace detail
 	{
+		template <typename T, typename Allocator>
+		class SlabContainer : public Allocating<Allocator>, public NonCopyable
+		{
+			typedef Allocating<Allocator> baseClass;
+
+			struct SlabBlock : public NonCopyable
+			{
+				SlabBlock*     m_next;
+				unsigned short m_mask;
+				T              m_data[sizeof(unsigned short)*8];
+			};
+
+		public:
+			SlabContainer() : baseClass(), m_block_head(NULL)
+			{}
+
+			SlabContainer(AllocatorInstance& allocator) : baseClass(allocator), m_block_head(NULL)
+			{}
+
+			~SlabContainer()
+			{
+				while (m_block_head)
+				{
+					SlabBlock* next = m_block_head->m_next;
+					assert(m_block_head->m_mask == (unsigned short)(-1));
+					baseClass::free(m_block_head);
+					m_block_head = next;
+				}
+			}
+
+		protected:
+			int alloc_node(T*& new_node)
+			{
+				SlabBlock*& block = m_block_head;
+				while (block && block->m_mask == 0)
+					block = block->m_next;
+
+				if (!block)
+				{
+					block = static_cast<SlabBlock*>(baseClass::allocate(sizeof(SlabBlock),alignment_of<SlabBlock>::value));
+					if (!block)
+						return ERROR_OUTOFMEMORY;
+
+					block->m_mask = (unsigned short)(-1);
+					block->m_next = NULL;
+				}
+
+				// Find the index of the lowest set bit in block->mask
+				unsigned int idx;
+#if defined(HAVE___BUILTIN_FFS)
+				idx = __builtin_ffs(block->m_mask) - 1;
+#elif defined(_MSC_VER)
+				{
+					unsigned long i = 0;
+					_BitScanForward(&i,block->m_mask);
+					idx = i;
+				}
+#else
+				{
+					unsigned short idx_mask = (block->m_mask & (~block->m_mask + 1));
+					unsigned short i0 = (idx_mask & 0xAAAA) ?  1 : 0;
+					unsigned short i1 = (idx_mask & 0xCCCC) ?  2 : 0;
+					unsigned short i2 = (idx_mask & 0xF0F0) ?  4 : 0;
+					unsigned short i3 = (idx_mask & 0xFF00) ?  8 : 0;
+					idx = i3 | i2 | i1 | i0;
+				}
+#endif
+				new_node = block->m_data[idx];
+
+				// Clear the bit
+				block->m_mask &= ~(1 << idx);
+				return 0;
+			}
+
+			void free_node(T* node)
+			{
+
+			}
+
+		private:
+			SlabBlock* m_block_head;
+		};
+
 		template <typename T>
 		struct ListNode : public NonCopyable
 		{
@@ -39,107 +122,12 @@ namespace OOBase
 			ListNode* m_next;
 			T         m_data;
 		};
-
-		template <typename T>
-		struct ListBlock : public NonCopyable
-		{
-			ListBlock*     m_next;
-			unsigned short m_mask;
-		};
-
-		template <typename Allocator, typename T, bool POD = false>
-		class ListBase : public Allocating<Allocator>, public NonCopyable
-		{
-			typedef Allocating<Allocator> baseClass;
-
-		public:
-			ListBase() : baseClass(), m_head(NULL)
-			{}
-
-			ListBase(AllocatorInstance& allocator) : baseClass(allocator), m_head(NULL)
-			{}
-
-			~ListBase()
-			{
-
-			}
-
-		protected:
-			int alloc_node(ListNode<T>*& new_node, const T& value, ListNode<T>* prev, ListNode<T>* next)
-			{
-				ListBlock<T>*& ins = m_head;
-				while (ins && ins->m_mask == 0)
-					ins = ins->m_next;
-
-				if (!ins)
-				{
-					ins = baseClass::allocate(sizeof(ListBlock<T>) + ((sizeof(ins->m_mask)*8) * sizeof(ListNode<T>)),alignment_of<ListBlock<T> >::value);
-					if (!ins)
-						return ERROR_OUTOFMEMORY;
-
-					ins->m_mask = (unsigned short)(-1);
-					ins->m_next = NULL;
-				}
-
-				unsigned int idx;
-#if defined(HAVE___BUILTIN_FFS)
-				idx = __builtin_ffs(ins->m_mask) - 1;
-#elif defined(_MSC_VER)
-				{
-					unsigned long i = 0;
-					_BitScanForward(&i,ins->m_mask);
-					idx = i;
-				}
-#else
-				{
-					unsigned short idx_mask = (ins->m_mask & (~ins->m_mask + 1));
-					unsigned short i0 = (idx_mask & 0xAAAA) ?  1 : 0;
-					unsigned short i1 = (idx_mask & 0xCCCC) ?  2 : 0;
-					unsigned short i2 = (idx_mask & 0xF0F0) ?  4 : 0;
-					unsigned short i3 = (idx_mask & 0xFF00) ?  8 : 0;
-					idx = i3 | i2 | i1 | i0;
-				}
-#endif
-				return 0;
-			}
-
-			void free_node(ListNode<T>* node)
-			{
-
-			}
-
-		private:
-			ListBlock<T>* m_head;
-		};
-
-		template <typename Allocator, typename T>
-		class ListBase<Allocator,T,true> : public Allocating<Allocator>, public NonCopyable
-		{
-			typedef Allocating<Allocator> baseClass;
-
-		public:
-			ListBase() : baseClass()
-			{}
-
-			ListBase(AllocatorInstance& allocator) : baseClass(allocator)
-			{}
-
-			~ListBase()
-			{
-
-			}
-
-		protected:
-
-		private:
-
-		};
 	}
 
-	template <typename T, typename Allocator>
-	class List : public detail::ListBase<Allocator,T,detail::is_pod<T>::value>
+	template <typename T, typename Allocator = CrtAllocator>
+	class List : public detail::SlabContainer<detail::ListNode<T>,Allocator>
 	{
-		typedef detail::ListBase<Allocator,T,detail::is_pod<T>::value> baseClass;
+		typedef detail::SlabContainer<detail::ListNode<T>,Allocator> baseClass;
 
 	public:
 		typedef detail::IteratorImpl<List,T,detail::ListNode<T>*> iterator;
@@ -192,8 +180,8 @@ namespace OOBase
 
 		bool remove_at(iterator& iter)
 		{
-			assert(before.check(this));
-			return remove(pval,before.deref());
+			assert(iter.check(this));
+			return remove(NULL,iter.deref());
 		}
 
 		template <typename T1>
@@ -299,6 +287,19 @@ namespace OOBase
 			if (err)
 				return NULL;
 
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+			try
+			{
+#endif
+				new_node = ::new (new_node) detail::ListNode<T>(prev,next,value);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+			}
+			catch (...)
+			{
+				baseClass::free_node(new_node);
+				throw;
+			}
+#endif
 			(next ? next->m_prev : m_tail) = new_node;
 			(prev ? prev->m_next : m_head) = new_node;
 
