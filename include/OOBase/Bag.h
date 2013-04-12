@@ -384,6 +384,11 @@ namespace OOBase
 				return m_pos;
 			}
 
+			Iter& deref()
+			{
+				return m_pos;
+			}
+
 		private:
 			IteratorImpl();
 

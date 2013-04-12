@@ -48,7 +48,7 @@ namespace OOBase
 			DLLDestructor& inst = instance();
 			Guard<SpinLock> guard(inst.m_lock);
 
-			inst.m_stack.remove(inst.m_stack.find(Node(pfn,p)));
+			inst.m_stack.remove(Node(pfn,p));
 		}
 
 	private:

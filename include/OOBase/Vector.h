@@ -286,9 +286,9 @@ namespace OOBase
 			return baseClass::insert_at(this->m_size,value);
 		}
 
-		bool pop_back(T* value = NULL)
+		bool pop_back(T* pval = NULL)
 		{
-			return baseClass::remove_at(this->m_size - 1,false,value);
+			return baseClass::remove_at(this->m_size - 1,false,pval);
 		}
 
 		template <typename T1>
@@ -321,16 +321,35 @@ namespace OOBase
 			return baseClass::insert_at(value,before.deref());
 		}
 
-		bool remove(const iterator& iter, T* pval = NULL)
+		iterator insert(const T& value, const iterator& before, int& err)
+		{
+			err = insert(value,before);
+			return (!err ? before : end());
+		}
+
+		bool remove_at(iterator& iter)
 		{
 			assert(iter.check(this));
-			return baseClass::remove_at(iter.deref(),true,pval);
+			return baseClass::remove_at(iter.deref(),true,NULL);
+		}
+
+		template <typename T1>
+		bool remove(const T1& value)
+		{
+			iterator i = find(value);
+			return remove_at(i);
 		}
 
 		T* at(const iterator& iter)
 		{
 			assert(iter.check(this));
 			return at(iter.deref());
+		}
+
+		const T* at(const iterator& iter) const
+		{
+			assert(iter.check(this));
+			return baseClass::at(iter.deref());
 		}
 
 		const T* at(const const_iterator& iter) const
