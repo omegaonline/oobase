@@ -24,81 +24,6 @@
 
 #include "Memory.h"
 
-#if defined(_MSC_VER)
-
-#pragma warning(push)
-#pragma warning(disable : 6540)
-#include <intrin.h>
-#pragma warning(pop)
-
-/* Define if you have atomic compare-and-swap for 32bit values */
-#define ATOMIC_CAS_32(t,c,x) _InterlockedCompareExchange((long volatile*)(t),(long)(x),(long)(c))
-
-/* Define if you have atomic exchange for 32bit values */
-#define ATOMIC_EXCH_32(t,v) _InterlockedExchange((long volatile*)(t),(long)(v))
-
-/* Define if you have atomic inc and dec for 32bit values */
-#define ATOMIC_INC_32(t) _InterlockedIncrement((long volatile*)(t))
-#define ATOMIC_DEC_32(t) _InterlockedDecrement((long volatile*)(t))
-#define ATOMIC_ADD_32(t,v) _InterlockedExchangeAdd((long volatile*)(t),(long)(v))
-
-/* Define if you have atomic compare-and-swap for 64bit values */
-#define ATOMIC_CAS_64(t,c,x) _InterlockedCompareExchange64((__int64 volatile*)(t),(__int64)(x),(__int64)(c))
-
-/* Define if you have atomic exchange for 64bit values */
-#define ATOMIC_EXCH_64(t,v) _InterlockedExchange64((__int64 volatile*)(t),(__int64)(v))
-
-/* Define if you have atomic compare-and-swap for 64bit values */
-#define ATOMIC_INC_64(t) _InterlockedIncrement64((__int64 volatile*)(t))
-#define ATOMIC_DEC_64(t) _InterlockedDecrement64((__int64 volatile*)(t))
-#define ATOMIC_ADD_64(t,v) _InterlockedExchangeAdd64((__int64 volatile*)(t),(__int64)(v))
-
-#elif defined(HAVE___SYNC_VAL_COMPARE_AND_SWAP)
-
-#if defined(__clang__)
-#define ATOMIC_CAS_32(t,c,x) __sync_val_compare_and_swap((int volatile*)(t),(int)c,(int)x)
-#define ATOMIC_CAS_64(t,c,x)  __sync_val_compare_and_swap((long volatile*)(t),(long)c,(long)x)
-#define ATOMIC_ADD_32(t,v) __sync_add_and_fetch((int volatile*)(t),(int)v)
-#define ATOMIC_ADD_64(t,v) __sync_add_and_fetch((long volatile*)(t),(long)v)
-#elif defined(ECLIPSE_PARSER)
-#define ATOMIC_CAS_32(t,c,x)
-#define ATOMIC_CAS_64(t,c,x)
-#else
-#define ATOMIC_CAS_32(t,c,x) __sync_val_compare_and_swap(t,c,x)
-#define ATOMIC_CAS_64(t,c,x)  __sync_val_compare_and_swap(t,c,x)
-#define ATOMIC_ADD_32(t,v) __sync_add_and_fetch(t,v)
-#define ATOMIC_ADD_64(t,v) __sync_add_and_fetch(t,v)
-#endif
-
-#elif defined(_WIN32)
-
-/* Define if you have atomic compare-and-swap for 32bit values */
-#define ATOMIC_CAS_32(t,c,x) InterlockedCompareExchange((long volatile*)(t),(long)(x),(long)(c))
-
-/* Define if you have atomic exchange for 32bit values */
-#define ATOMIC_EXCH_32(t,v) InterlockedExchange((long volatile*)(t),(long)(v))
-
-/* Define if you have atomic inc and dec for 32bit values */
-#define ATOMIC_INC_32(t) InterlockedIncrement((LONG volatile*)(t))
-#define ATOMIC_DEC_32(t) InterlockedDecrement((LONG volatile*)(t))
-#define ATOMIC_ADD_32(t,v) InterlockedExchangeAdd((LONG volatile*)(t),(LONG)(v))
-
-#if (_WIN32_WINNT >= 0x0600)
-/* Define if you have atomic compare-and-swap for 64bit values */
-#define ATOMIC_CAS_64(t,c,x) InterlockedCompareExchange64((LONGLONG volatile*)(t),(LONGLONG)(x),(LONGLONG)(c))
-
-/* Define if you have atomic exchange for 64bit values */
-#define ATOMIC_EXCH_64(t,v) InterlockedExchange64((LONGLONG volatile*)(t),(LONGLONG)(v))
-
-/* Define if you have atomic compare-and-swap for 64bit values */
-#define ATOMIC_INC_64(t) InterlockedIncrement64((LONGLONG volatile*)(t))
-#define ATOMIC_DEC_64(t) InterlockedDecrement64((LONGLONG volatile*)(t))
-#define ATOMIC_ADD_64(t,v) InterlockedExchangeAdd64((LONGLONG volatile*)(t),(LONGLONG)(v))
-
-#endif // _WIN32_WINNT >= 0x0600
-
-#endif // defined(HAVE___SYNC_VAL_COMPARE_AND_SWAP)
-
 namespace OOBase
 {
 	namespace detail
@@ -223,131 +148,95 @@ namespace OOBase
 
 	namespace detail
 	{
+		unsigned int atomic_cas_4(unsigned int volatile* val, const unsigned int oldVal, const unsigned int newVal);
+		unsigned int atomic_swap_4(unsigned int volatile* val, const unsigned int newVal);
+		unsigned int atomic_add_4(unsigned int volatile* val, const unsigned int add);
+		unsigned int atomic_inc_4(unsigned int volatile* val);
+		unsigned int atomic_sub_4(unsigned int volatile* val, const unsigned int sub);
+		unsigned int atomic_dec_4(unsigned int volatile* val);
+
 		template <typename T>
 		struct AtomicImpl<T,4>
 		{
 			static T CompareAndSwap(T& val, const T oldVal, const T newVal)
 			{
-			#if defined(ATOMIC_CAS_32)
-				return (T)ATOMIC_CAS_32(&val,oldVal,newVal);
-			#else
-				#error define ATOMIC_CAS_32
-			#endif
+				return (T)atomic_cas_4((unsigned int volatile*)(&val),(const unsigned int)oldVal,(const unsigned int)newVal);
 			}
 
 			static T Exchange(T& val, const T newVal)
 			{
-			#if defined (ATOMIC_EXCH_32)
-				return (T)ATOMIC_EXCH_32(&val,newVal);
-			#else
-				T oldVal(val);
-				while (CompareAndSwap(val,oldVal,newVal) != oldVal)
-					oldVal = val;
-
-				return oldVal;
-			#endif
+				return (T)atomic_swap_4((unsigned int volatile*)(&val),(const unsigned int)newVal);
 			}
 
 			static T Add(T& val, const T add)
 			{
-			#if defined(ATOMIC_ADD_32)
-				return (T)ATOMIC_ADD_32(&val,add);
-			#else
-				T res = val + add;
-				Exchange(val,res);
-				return res;
-			#endif
+				return (T)atomic_add_4((unsigned int volatile*)(&val),(const unsigned int)add);
 			}
 
 			static T Increment(T& val)
 			{
-			#if defined(ATOMIC_INC_32)
-				return (T)ATOMIC_INC_32(&val);
-			#else
-				return Add(val,1);
-			#endif
+				return (T)atomic_inc_4((unsigned int volatile*)(&val));
 			}
 
 			static T Subtract(T& val, const T sub)
 			{
-			#if defined(ATOMIC_SUB_32)
-				return (T)ATOMIC_SUB_32(&val,sub);
-			#else
-				return Add(val,-sub);
-			#endif
+				return (T)atomic_sub_4((unsigned int volatile*)(&val),(const unsigned int)sub);
 			}
 
 			static T Decrement(T& val)
 			{
-			#if defined(ATOMIC_DEC_32)
-				return (T)ATOMIC_DEC_32(&val);
-			#else
-				return Subtract(val,1);
-			#endif
+				return (T)atomic_dec_4((unsigned int volatile*)(&val));
 			}
 		};
 
-#if defined(ATOMIC_CAS_64)
+#if defined(_MSC_VER)
+		typedef unsigned __int64 atomic_8_t;
+#elif defined(__LP64__)
+		typedef unsigned long atomic_8_t;
+#else
+		typedef unsigned long long atomic_8_t;
+#endif
+
+		atomic_8_t atomic_cas_8(atomic_8_t volatile* val, const atomic_8_t oldVal, const atomic_8_t newVal);
+		atomic_8_t atomic_swap_8(atomic_8_t volatile* val, const atomic_8_t newVal);
+		atomic_8_t atomic_add_8(atomic_8_t volatile* val, const atomic_8_t add);
+		atomic_8_t atomic_inc_8(atomic_8_t volatile* val);
+		atomic_8_t atomic_sub_8(atomic_8_t volatile* val, const atomic_8_t sub);
+		atomic_8_t atomic_dec_8(atomic_8_t volatile* val);
+
 		template <typename T>
 		struct AtomicImpl<T,8>
 		{
 			static T CompareAndSwap(T& val, const T oldVal, const T newVal)
 			{
-				return (T)ATOMIC_CAS_64(&val,oldVal,newVal);
+				return (T)atomic_cas_8((atomic_8_t volatile*)(&val),(const atomic_8_t)(oldVal),(const atomic_8_t)newVal);
 			}
 
 			static T Exchange(T& val, const T newVal)
 			{
-			#if defined (ATOMIC_EXCH_64)
-				return (T)ATOMIC_EXCH_64(&val,newVal);
-			#else
-				T oldVal(val);
-				while (CompareAndSwap(val,oldVal,newVal) != oldVal)
-					oldVal = val;
-
-				return oldVal;
-			#endif
+				return (T)atomic_swap_8((atomic_8_t volatile*)(&val),(const atomic_8_t)newVal);
 			}
 
 			static T Add(T& val, const T add)
 			{
-			#if defined(ATOMIC_ADD_64)
-				return (T)ATOMIC_ADD_64(&val,add);
-			#else
-				T res = val + add;
-				Exchange(val,res);
-				return res;
-			#endif
+				return (T)atomic_add_8((atomic_8_t volatile*)(&val),(const atomic_8_t)add);
 			}
 
 			static T Increment(T& val)
 			{
-			#if defined(ATOMIC_INC_64)
-				return (T)ATOMIC_INC_64(&val);
-			#else
-				return Add(val,1);
-			#endif
+				return (T)atomic_inc_8((atomic_8_t volatile*)(&val));
 			}
 
 			static T Subtract(T& val, const T sub)
 			{
-			#if defined(ATOMIC_SUB_64)
-				return (T)ATOMIC_SUB_64(&val,sub);
-			#else
-				return Add(val,-sub);
-			#endif
+				return (T)atomic_sub_8((atomic_8_t volatile*)(&val),(const atomic_8_t)sub);
 			}
 
 			static T Decrement(T& val)
 			{
-			#if defined(ATOMIC_DEC_64)
-				return (T)ATOMIC_DEC_64(&val);
-			#else
-				return Subtract(val,1);
-			#endif
+				return (T)atomic_dec_8((atomic_8_t volatile*)(&val));
 			}
 		};
-#endif
 	}
 }
 

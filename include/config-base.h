@@ -29,47 +29,13 @@
 	#include <oobase-autoconf.h>
 #endif
 
-////////////////////////////////////////
-// Try to work out what's going on with MS Windows
+#include "OOBase/Base.h"
+
 #if defined(HAVE_WINDOWS_H)
 	#if !defined(_WIN32)
 	#error No _WIN32 ?!?
 	#endif
-
-	// Prevent inclusion of old winsock
-	#define _WINSOCKAPI_
-
-	// Reduce the amount of windows we include
-	#define WIN32_LEAN_AND_MEAN
-	#if !defined(STRICT)
-	#define STRICT
-	#endif
-
-	// We support Vista API's
-	#if !defined(_WIN32_WINNT)
-	#define _WIN32_WINNT 0x0600
-	#elif _WIN32_WINNT < 0x0500
-	#error OOBase requires _WIN32_WINNT >= 0x0500!
-	#endif
-
-	// We require IE 5 or later
-	#if !defined(_WIN32_IE)
-	#define _WIN32_IE 0x0500
-	#elif _WIN32_IE < 0x0500
-	#error OOBase requires _WIN32_IE >= 0x0500!
-	#endif
-
-	#if !defined(WINVER)
-	#define WINVER _WIN32_WINNT
-	#endif
-
-	#include <windows.h>
-
-	// Check for obsolete windows versions
-	#if defined(_WIN32_WINDOWS)
-	#error You cannot build Omega Online for Windows 95/98/Me!
-	#endif
-#endif // HAVE_WINDOWS_H
+#endif
 
 #if defined(_WIN32)
 	// Remove the unistd include - we are windows
@@ -95,71 +61,6 @@
 	#error Your pthreads does not appears to be POSIX compliant?
 	#endif
 	#endif
-#endif
-
-////////////////////////////////////////
-// Some standard headers.
-#include <assert.h>
-#include <errno.h>
-#include <stdarg.h>
-#include <stddef.h>
-
-////////////////////////////////////////
-// Define some standard errors to avoid lots of #ifdefs.
-
-#if !defined(ERROR_OUTOFMEMORY) && defined(ENOMEM) && !defined(DOXYGEN)
-#define ERROR_OUTOFMEMORY ENOMEM
-#endif
-
-////////////////////////////////////////
-// Forward declare custom error handling
-
-#ifdef __cplusplus
-
-/// Call OOBase::CallCriticalFailure passing __FILE__ and __LINE__
-#define OOBase_CallCriticalFailure(expr) \
-	OOBase::CallCriticalFailure(__FILE__,__LINE__,expr)
-
-#if !defined(OOBASE_NORETURN)
-#define OOBASE_NORETURN
-#endif
-
-#if ((defined(_MSC_VER) && defined(_CPPUNWIND)) || \
-		(defined(__GNUC__) && defined(__EXCEPTIONS)))
-	#define OOBASE_HAVE_EXCEPTIONS 1
-#endif
-
-namespace OOBase
-{
-	void OOBASE_NORETURN CallCriticalFailure(const char* pszFile, unsigned int nLine, const char*);
-	void OOBASE_NORETURN CallCriticalFailure(const char* pszFile, unsigned int nLine, int);
-
-	/// Return the system supplied error string from error code 'err' . If err == -1, use errno or GetLastError()
-	const char* system_error_text(int err = -1);
-	int stderr_write(const char* sz, size_t len = size_t(-1));
-	int stdout_write(const char* sz, size_t len = size_t(-1));
-
-#if defined(_WIN32)
-	int stderr_write(const wchar_t* wsz, size_t len = size_t(-1));
-	int stdout_write(const wchar_t* wsz, size_t len = size_t(-1));
-#endif
-
-	typedef bool (*OnCriticalFailure)(const char*);
-
-	/// Override the default critical failure behaviour
-	OnCriticalFailure SetCriticalFailure(OnCriticalFailure pfn);
-}
-
-#if defined(DOXYGEN)
-/// Compile time assertion, assert that expr == true
-#define static_assert(expr,msg)
-#elif (_MSC_VER >= 1500)
-// Builtin static_assert
-#elif (__cplusplus <= 199711L)
-#define static_assert(expr,msg) \
-	{ struct oobase_static_assert { char static_check[expr ? 1 : -1]; }; }
-#endif
-
 #endif
 
 #endif // OOBASE_CONFIG_BASE_H_INCLUDED_

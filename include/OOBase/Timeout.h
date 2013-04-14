@@ -22,7 +22,7 @@
 #ifndef OOBASE_TIME_H_INCLUDED_
 #define OOBASE_TIME_H_INCLUDED_
 
-#include "../config-base.h"
+#include "Base.h"
 
 #include <time.h>
 
@@ -33,7 +33,7 @@
 #include <winsock2.h>
 #endif
 
-#if defined(HAVE_UNISTD_H)
+#if defined(__unix__)
 #include <sys/time.h>
 #endif
 
@@ -61,7 +61,7 @@ namespace OOBase
 		bool read(CDRStream& stream);
 		bool write(CDRStream& stream) const;
 
-#if defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
+#if defined(_POSIX_TIMERS) && (_POSIX_TIMERS > 0)
 		bool get_abs_timespec(::timespec& timeout) const;
 		bool get_timespec(::timespec& timeout) const;
 #endif
@@ -71,7 +71,7 @@ namespace OOBase
 		
 #if defined(_WIN32)
 		LONGLONG   m_end;
-#elif defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
+#elif defined(_POSIX_TIMERS) && (_POSIX_TIMERS > 0)
 		::timespec m_end;
 #else
 #error Implement platform native time

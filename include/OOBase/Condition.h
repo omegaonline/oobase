@@ -36,7 +36,7 @@ namespace OOBase
 		 */
 #if defined(_WIN32)
 		typedef Win32::condition_mutex_t Mutex;
-#elif defined(HAVE_PTHREAD)
+#elif defined(__unix__)
 		typedef OOBase::SpinLock Mutex;
 #else
 #error Implement platform native condition variables
@@ -59,7 +59,7 @@ namespace OOBase
 	#endif
 
 		mutable CONDITION_VARIABLE m_var;
-#elif defined(HAVE_PTHREAD)
+#elif defined(__unix__)
 		mutable pthread_cond_t m_var;
 #endif
 	};

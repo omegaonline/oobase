@@ -19,6 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/config-base.h"
 #include "../include/OOBase/Timeout.h"
 #include "../include/OOBase/CDRStream.h"
 

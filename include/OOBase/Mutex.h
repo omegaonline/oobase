@@ -25,6 +25,10 @@
 #include "Timeout.h"
 #include "Win32.h"
 
+#if defined(__unix__)
+#include <pthread.h>
+#endif
+
 namespace OOBase
 {
 	/// A recursive mutex that can be acquired with a timeout
@@ -48,7 +52,7 @@ namespace OOBase
 		 */
 #if defined(_WIN32)
 		Win32::SmartHandle m_mutex;
-#elif defined(HAVE_PTHREAD)
+#elif defined(__unix__)
 	protected:
 		pthread_mutex_t    m_mutex;
 
@@ -105,7 +109,7 @@ namespace OOBase
 	private:
 #if defined(_WIN32)
 		SRWLOCK          m_lock;
-#elif defined(HAVE_PTHREAD)
+#elif defined(__unix__)
 		pthread_rwlock_t m_mutex;
 #else
 #error Implement platform native reader/writer locks

@@ -22,7 +22,7 @@
 #ifndef OOBASE_ONCE_H_INCLUDED_
 #define OOBASE_ONCE_H_INCLUDED_
 
-#include "Win32.h"
+#include "Mutex.h"
 
 #if defined(_WIN32) && (_WIN32_WINNT < 0x0600)
 typedef union 
@@ -46,7 +46,7 @@ namespace OOBase
 #elif defined(_WIN32)
 		typedef INIT_ONCE once_t;
 		#define ONCE_T_INIT {0}
-#elif defined(HAVE_PTHREAD)
+#elif defined(__unix__)
 		typedef pthread_once_t once_t;
 		#define ONCE_T_INIT PTHREAD_ONCE_INIT
 #else

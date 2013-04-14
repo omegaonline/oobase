@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/GlobalNew.h"
+#include "../include/config-base.h"
 #include "../include/OOBase/TLSSingleton.h"
 #include "../include/OOBase/Thread.h"
 #include "../include/OOBase/Condition.h"

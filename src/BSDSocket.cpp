@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/GlobalNew.h"
+#include "BSDSocket.h"
 
 #if defined(HAVE_UNISTD_H)
 
@@ -27,8 +27,6 @@
 #include "../include/OOBase/StackAllocator.h"
 #include "../include/OOBase/Socket.h"
 #include "../include/OOBase/Posix.h"
-
-#include "BSDSocket.h"
 
 #include <fcntl.h>
 #include <netdb.h>

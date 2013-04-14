@@ -22,7 +22,7 @@
 #ifndef OOBASE_MEMORY_H_INCLUDED_
 #define OOBASE_MEMORY_H_INCLUDED_
 
-#include "../config-base.h"
+#include "Base.h"
 
 #include <malloc.h>
 #include <string.h>

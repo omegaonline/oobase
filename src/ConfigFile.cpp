@@ -19,6 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/config-base.h"
 #include "../include/OOBase/Memory.h"
 #include "../include/OOBase/ConfigFile.h"
 #include "../include/OOBase/Buffer.h"

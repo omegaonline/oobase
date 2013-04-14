@@ -22,7 +22,7 @@
 #ifndef OOBASE_UTF8_H_INCLUDED_
 #define OOBASE_UTF8_H_INCLUDED_
 
-#include "../config-base.h"
+#include "Base.h"
 
 namespace OOBase
 {

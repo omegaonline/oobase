@@ -22,35 +22,13 @@
 #ifndef OOBASE_BYTE_SWAP_H_INCLUDED_
 #define OOBASE_BYTE_SWAP_H_INCLUDED_
 
-#include "../config-base.h"
+#include "Base.h"
 
 #if defined(_MSC_VER) && defined(_W64)
 // Turn off stupid 64-bit warnings..
 #pragma warning(push)
 #pragma warning(disable: 4311)
 #pragma warning(disable: 4312)
-#endif
-
-#if defined(_MSC_VER)
-
-#define FAST_BYTESWAP_2(x) _byteswap_ushort((unsigned short)(x))
-#define FAST_BYTESWAP_4(x) _byteswap_ulong((unsigned long)(x))
-#define FAST_BYTESWAP_8(x) _byteswap_uint64((unsigned __int64)(x))
-
-#else
-
-#if defined(HAVE___BUILTIN_BSWAP16)
-#define FAST_BYTESWAP_2(x) __builtin_bswap16((x))
-#endif
-
-#if defined(HAVE___BUILTIN_BSWAP32)
-#define FAST_BYTESWAP_4(x) __builtin_bswap32((long)(x))
-#endif
-
-#if defined(HAVE___BUILTIN_BSWAP64)
-#define FAST_BYTESWAP_8(x) __builtin_bswap64((long long)(x))
-#endif
-
 #endif
 
 ////////////////////////////////////////
@@ -124,6 +102,19 @@ namespace OOBase
 
 	namespace detail
 	{
+		unsigned short byte_swap_2(unsigned short v);
+		unsigned int byte_swap_4(unsigned int v);
+
+#if defined(_MSC_VER)
+		typedef unsigned __int64 bswap_8_t;
+#elif defined(__LP64__)
+		typedef unsigned long bswap_8_t;
+#else
+		typedef unsigned long long bswap_8_t;
+#endif
+
+		bswap_8_t byte_swap_8(bswap_8_t v);
+
 		template <>
 		struct byte_swapper<1>
 		{
@@ -140,11 +131,7 @@ namespace OOBase
 			template <typename T>
 			static T byte_swap(T val)
 			{
-#if defined(FAST_BYTESWAP_2)
-				return (T)(FAST_BYTESWAP_2(val));
-#else
-				return (val & 0x00FF) << 8 | (val& 0xFF00) >> 8;
-#endif
+				return byte_swap_2(val);
 			}
 		};
 
@@ -154,13 +141,7 @@ namespace OOBase
 			template <typename T>
 			static T byte_swap(T val)
 			{
-#if defined(FAST_BYTESWAP_4)
-				return (T)(FAST_BYTESWAP_4(val));
-#else
-				val = (val & 0x0000FFFF) << 16 | (val & 0xFFFF0000) >> 16;
-				val = (val & 0x00FF00FF) << 8 | (val & 0xFF00FF00) >> 8;
-				return val;
-#endif
+				return byte_swap_4(val);
 			}
 		};
 
@@ -170,13 +151,7 @@ namespace OOBase
 			template <typename T>
 			static T byte_swap(T val)
 			{
-#if defined(FAST_BYTESWAP_8)
-				return (T)(FAST_BYTESWAP_8(val));
-#else
-				T hi = byte_swapper<4>::byte_swap(val);
-				T lo = byte_swapper<4>::byte_swap(val >> 32);
-				return (hi << 32) | lo;
-#endif
+				return byte_swap_8(val);
 			}
 		};
 	}

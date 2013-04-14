@@ -45,7 +45,7 @@
 #endif
 #endif
 
-#if defined(HAVE_UNISTD_H)
+#if defined(__unix__)
 #include <sys/socket.h>
 #endif
 

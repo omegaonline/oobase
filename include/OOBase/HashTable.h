@@ -24,10 +24,6 @@
 
 #include "Memory.h"
 
-#if defined(HAVE_STDINT_H)
-#include <stdint.h>
-#endif
-
 namespace OOBase
 {
 	template <typename T>
@@ -74,8 +70,8 @@ namespace OOBase
 		{
 #if defined(_MSC_VER)
 			typedef unsigned __int64 fnv_uint64;
-#elif defined(HAVE_STDINT_H)
-			typedef uint64_t fnv_uint64;
+#elif defined(__LP64__)
+			typedef unsigned long fnv_uint64;
 #else
 			typedef unsigned long long fnv_uint64;
 #endif

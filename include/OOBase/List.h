@@ -28,6 +28,8 @@ namespace OOBase
 {
 	namespace detail
 	{
+		unsigned int ffs(unsigned short v);
+
 		template <typename T, typename Allocator>
 		class SlabContainer : public Allocating<Allocator>, public NonCopyable
 		{
@@ -76,25 +78,7 @@ namespace OOBase
 				}
 
 				// Find the index of the lowest set bit in block->mask
-				unsigned int idx;
-#if defined(HAVE___BUILTIN_FFS)
-				idx = __builtin_ffs(block->m_mask) - 1;
-#elif defined(_MSC_VER)
-				{
-					unsigned long i = 0;
-					_BitScanForward(&i,block->m_mask);
-					idx = i;
-				}
-#else
-				{
-					unsigned short idx_mask = (block->m_mask & (~block->m_mask + 1));
-					unsigned short i0 = (idx_mask & 0xAAAA) ?  1 : 0;
-					unsigned short i1 = (idx_mask & 0xCCCC) ?  2 : 0;
-					unsigned short i2 = (idx_mask & 0xF0F0) ?  4 : 0;
-					unsigned short i3 = (idx_mask & 0xFF00) ?  8 : 0;
-					idx = i3 | i2 | i1 | i0;
-				}
-#endif
+				unsigned int idx = ffs(block->m_mask);
 				new_node = block->m_data[idx];
 
 				// Clear the bit
