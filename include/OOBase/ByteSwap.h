@@ -131,7 +131,7 @@ namespace OOBase
 			template <typename T>
 			static T byte_swap(T val)
 			{
-				return byte_swap_2(val);
+				return byte_swap_2((unsigned short)val);
 			}
 		};
 
@@ -141,7 +141,7 @@ namespace OOBase
 			template <typename T>
 			static T byte_swap(T val)
 			{
-				return byte_swap_4(val);
+				return byte_swap_4((unsigned int)val);
 			}
 		};
 
@@ -151,7 +151,7 @@ namespace OOBase
 			template <typename T>
 			static T byte_swap(T val)
 			{
-				return byte_swap_8(val);
+				return byte_swap_8((bswap_8_t)val);
 			}
 		};
 	}
