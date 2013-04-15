@@ -19,7 +19,6 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/GlobalNew.h"
 #include "../include/OOBase/Posix.h"
 
 #include "ProactorPoll.h"

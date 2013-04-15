@@ -19,7 +19,6 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/GlobalNew.h"
 #include "../include/OOBase/Posix.h"
 
 #if defined(HAVE_UNISTD_H)

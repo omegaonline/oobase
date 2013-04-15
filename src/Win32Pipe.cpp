@@ -19,7 +19,6 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/GlobalNew.h"
 #include "../include/OOBase/Mutex.h"
 #include "../include/OOBase/String.h"
 #include "../include/OOBase/Socket.h"

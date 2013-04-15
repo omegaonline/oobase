@@ -22,7 +22,6 @@
 #ifndef OOSVRBASE_PROACTOR_WIN32_H_INCLUDED_
 #define OOSVRBASE_PROACTOR_WIN32_H_INCLUDED_
 
-#include "../include/OOBase/GlobalNew.h"
 #include "../include/OOBase/Proactor.h"
 #include "../include/OOBase/Win32.h"
 
