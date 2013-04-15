@@ -124,12 +124,12 @@ namespace OOBase
 			return (m_endianess == OOBASE_BYTE_ORDER ? val : OOBase::byte_swap(val));
 		}
 
-		void endianess(unsigned short be)
+		void endianess(uint16_t be)
 		{
 			m_endianess = be;
 		}
 
-		unsigned short endianess() const
+		uint16_t endianess() const
 		{
 			return m_endianess;
 		}
@@ -421,7 +421,7 @@ namespace OOBase
 
 	private:
 		RefPtr<Buffer> m_buffer;
-		unsigned short m_endianess;
+		uint16_t       m_endianess;
 		int            m_last_error;
 
 		bool error_eof()

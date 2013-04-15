@@ -39,7 +39,7 @@ namespace OOBase
 		void free(void* ptr);
 
 	protected:
-		typedef unsigned short index_t;
+		typedef uint16_t index_t;
 
 		bool is_our_ptr(void* p) const;
 

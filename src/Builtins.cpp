@@ -23,7 +23,14 @@
 
 #include "../include/OOBase/Atomic.h"
 #include "../include/OOBase/ByteSwap.h"
-#include "../include/OOBase/List.h"
+
+namespace OOBase
+{
+	namespace detail
+	{
+		unsigned int ffs(uint16_t v);
+	}
+}
 
 #if defined(_MSC_VER)
 
@@ -78,8 +85,10 @@ uint64_t OOBase::detail::byte_swap_8(uint64_t val)
 #endif
 }
 
-uint32_t OOBase::detail::ffs(uint16_t v)
+unsigned int OOBase::detail::ffs(uint16_t v)
 {
+	assert(v != 0);
+
 #if defined(HAVE___BUILTIN_FFS)
 	return __builtin_ffs(v) - 1;
 #elif defined(_MSC_VER)

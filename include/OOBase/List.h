@@ -28,7 +28,6 @@ namespace OOBase
 {
 	namespace detail
 	{
-		unsigned int ffs(unsigned short v);
 
 		template <typename T, typename Allocator>
 		class SlabContainer : public Allocating<Allocator>, public NonCopyable
