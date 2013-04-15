@@ -26,76 +26,12 @@
 
 namespace OOBase
 {
-	namespace detail
+	template <typename T, typename Allocator = CrtAllocator>
+	class List : public Allocating<Allocator>
 	{
+		typedef Allocating<Allocator> baseClass;
 
-		template <typename T, typename Allocator>
-		class SlabContainer : public Allocating<Allocator>, public NonCopyable
-		{
-			typedef Allocating<Allocator> baseClass;
-
-			struct SlabBlock : public NonCopyable
-			{
-				SlabBlock*     m_next;
-				unsigned short m_mask;
-				T              m_data[sizeof(unsigned short)*8];
-			};
-
-		public:
-			SlabContainer() : baseClass(), m_block_head(NULL)
-			{}
-
-			SlabContainer(AllocatorInstance& allocator) : baseClass(allocator), m_block_head(NULL)
-			{}
-
-			~SlabContainer()
-			{
-				while (m_block_head)
-				{
-					SlabBlock* next = m_block_head->m_next;
-					assert(m_block_head->m_mask == (unsigned short)(-1));
-					baseClass::free(m_block_head);
-					m_block_head = next;
-				}
-			}
-
-		protected:
-			int alloc_node(T*& new_node)
-			{
-				SlabBlock*& block = m_block_head;
-				while (block && block->m_mask == 0)
-					block = block->m_next;
-
-				if (!block)
-				{
-					block = static_cast<SlabBlock*>(baseClass::allocate(sizeof(SlabBlock),alignment_of<SlabBlock>::value));
-					if (!block)
-						return ERROR_OUTOFMEMORY;
-
-					block->m_mask = (unsigned short)(-1);
-					block->m_next = NULL;
-				}
-
-				// Find the index of the lowest set bit in block->mask
-				unsigned int idx = ffs(block->m_mask);
-				new_node = block->m_data[idx];
-
-				// Clear the bit
-				block->m_mask &= ~(1 << idx);
-				return 0;
-			}
-
-			void free_node(T* node)
-			{
-
-			}
-
-		private:
-			SlabBlock* m_block_head;
-		};
-
-		template <typename T>
-		struct ListNode : public NonCopyable
+		struct ListNode
 		{
 			ListNode(ListNode* prev, ListNode* next, const T& data) :
 				m_prev(prev), m_next(next), m_data(data)
@@ -105,16 +41,10 @@ namespace OOBase
 			ListNode* m_next;
 			T         m_data;
 		};
-	}
-
-	template <typename T, typename Allocator = CrtAllocator>
-	class List : public detail::SlabContainer<detail::ListNode<T>,Allocator>
-	{
-		typedef detail::SlabContainer<detail::ListNode<T>,Allocator> baseClass;
 
 	public:
-		typedef detail::IteratorImpl<List,T,detail::ListNode<T>*> iterator;
-		typedef detail::IteratorImpl<const List,const T,const detail::ListNode<T>*> const_iterator;
+		typedef detail::IteratorImpl<List,T,ListNode*> iterator;
+		typedef detail::IteratorImpl<const List,const T,const ListNode*> const_iterator;
 
 		List() : baseClass(), m_head(NULL), m_tail(m_head), m_size(0)
 		{}
@@ -247,42 +177,29 @@ namespace OOBase
 		}
 
 	private:
-		detail::ListNode<T>* m_head;
-		detail::ListNode<T>* m_tail;
-		size_t               m_size;
+		ListNode* m_head;
+		ListNode* m_tail;
+		size_t    m_size;
 
-		T* at(detail::ListNode<T>* node)
+		T* at(ListNode* node)
 		{
 			return (node ? &node->m_data : NULL);
 		}
 
-		const T* at(const detail::ListNode<T>* node) const
+		const T* at(const ListNode* node) const
 		{
 			return (node ? &node->m_data : NULL);
 		}
 
-		detail::ListNode<T>* insert(const T& value, detail::ListNode<T>* next, int& err)
+		ListNode* insert(const T& value, ListNode* next, int& err)
 		{
-			detail::ListNode<T>* prev = (next ? next->m_prev : m_tail);
+			ListNode* prev = (next ? next->m_prev : m_tail);
 
-			detail::ListNode<T>* new_node = NULL;
-			err = baseClass::alloc_node(new_node,value,prev,next);
+			ListNode* new_node = NULL;
+			err = baseClass::allocate_new(new_node,value,prev,next);
 			if (err)
 				return NULL;
 
-#if defined(OOBASE_HAVE_EXCEPTIONS)
-			try
-			{
-#endif
-				new_node = ::new (new_node) detail::ListNode<T>(prev,next,value);
-#if defined(OOBASE_HAVE_EXCEPTIONS)
-			}
-			catch (...)
-			{
-				baseClass::free_node(new_node);
-				throw;
-			}
-#endif
 			(next ? next->m_prev : m_tail) = new_node;
 			(prev ? prev->m_next : m_head) = new_node;
 
@@ -290,16 +207,16 @@ namespace OOBase
 			return new_node;
 		}
 
-		bool remove(T* pval, detail::ListNode<T>*& curr)
+		bool remove(T* pval, ListNode*& curr)
 		{
 			if (!curr)
 				return false;
 
-			detail::ListNode<T>* next = curr->m_next;
+			ListNode* next = curr->m_next;
 			(curr->m_next ? curr->m_next : m_tail) = curr->m_prev;
 			(curr->m_prev ? curr->m_prev : m_head) = next;
 
-			baseClass:free_node(curr);
+			baseClass:delete_free(curr);
 
 			--m_size;
 			curr = next;
