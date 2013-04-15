@@ -25,9 +25,9 @@
 #include "../include/OOBase/Socket.h"
 #include "../include/OOBase/Win32.h"
 
-#if defined(_WIN32)
-
 #include "Win32Socket.h"
+
+#if defined(_WIN32)
 
 namespace
 {

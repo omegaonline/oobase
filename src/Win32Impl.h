@@ -22,9 +22,9 @@
 #ifndef OOBASE_WIN32_IMPL_H_INCLUDED_
 #define OOBASE_WIN32_IMPL_H_INCLUDED_
 
-#if defined(_WIN32)
-
 #include "../include/OOBase/Once.h"
+
+#if defined(_WIN32)
 
 #if (_WIN32_WINNT < 0x0600)
 typedef BOOL (__stdcall *PINIT_ONCE_FN) (INIT_ONCE* InitOnce, void* Parameter, void** Context);

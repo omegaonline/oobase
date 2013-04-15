@@ -46,7 +46,7 @@ namespace OOBase
 #elif defined(_WIN32)
 		typedef INIT_ONCE once_t;
 		#define ONCE_T_INIT {0}
-#elif defined(__unix__)
+#elif defined(HAVE_PTHREAD)
 		typedef pthread_once_t once_t;
 		#define ONCE_T_INIT PTHREAD_ONCE_INIT
 #else

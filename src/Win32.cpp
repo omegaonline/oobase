@@ -20,11 +20,11 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/Memory.h"
+#include "../include/OOBase/Destructor.h"
+
+#include "Win32Impl.h"
 
 #if defined(_WIN32)
-
-#include "../include/OOBase/Destructor.h"
-#include "Win32Impl.h"
 
 namespace OOBase
 {

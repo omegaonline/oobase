@@ -19,12 +19,12 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/OOBase/Memory.h"
+#include "../include/OOBase/Thread.h"
+
 #include "ProactorWin32.h"
 
 #if defined(_WIN32)
-
-#include "../include/OOBase/Memory.h"
-#include "../include/OOBase/Thread.h"
 
 OOBase::Proactor* OOBase::Proactor::create(int& err)
 {

@@ -19,11 +19,10 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Win32Security.h"
 
 #if defined(_WIN32)
-
-#include "../include/OOBase/Memory.h"
 
 #include <shlwapi.h>
 #include <winsafer.h>

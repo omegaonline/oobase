@@ -148,93 +148,85 @@ namespace OOBase
 
 	namespace detail
 	{
-		unsigned int atomic_cas_4(unsigned int volatile* val, const unsigned int oldVal, const unsigned int newVal);
-		unsigned int atomic_swap_4(unsigned int volatile* val, const unsigned int newVal);
-		unsigned int atomic_add_4(unsigned int volatile* val, const unsigned int add);
-		unsigned int atomic_inc_4(unsigned int volatile* val);
-		unsigned int atomic_sub_4(unsigned int volatile* val, const unsigned int sub);
-		unsigned int atomic_dec_4(unsigned int volatile* val);
+		uint32_t atomic_cas_4(uint32_t volatile* val, const uint32_t oldVal, const uint32_t newVal);
+		uint32_t atomic_swap_4(uint32_t volatile* val, const uint32_t newVal);
+		uint32_t atomic_add_4(uint32_t volatile* val, const uint32_t add);
+		uint32_t atomic_inc_4(uint32_t volatile* val);
+		uint32_t atomic_sub_4(uint32_t volatile* val, const uint32_t sub);
+		uint32_t atomic_dec_4(uint32_t volatile* val);
 
 		template <typename T>
 		struct AtomicImpl<T,4>
 		{
 			static T CompareAndSwap(T& val, const T oldVal, const T newVal)
 			{
-				return (T)atomic_cas_4((unsigned int volatile*)(&val),(const unsigned int)oldVal,(const unsigned int)newVal);
+				return (T)atomic_cas_4((uint32_t volatile*)(&val),(const uint32_t)oldVal,(const uint32_t)newVal);
 			}
 
 			static T Exchange(T& val, const T newVal)
 			{
-				return (T)atomic_swap_4((unsigned int volatile*)(&val),(const unsigned int)newVal);
+				return (T)atomic_swap_4((uint32_t volatile*)(&val),(const uint32_t)newVal);
 			}
 
 			static T Add(T& val, const T add)
 			{
-				return (T)atomic_add_4((unsigned int volatile*)(&val),(const unsigned int)add);
+				return (T)atomic_add_4((uint32_t volatile*)(&val),(const uint32_t)add);
 			}
 
 			static T Increment(T& val)
 			{
-				return (T)atomic_inc_4((unsigned int volatile*)(&val));
+				return (T)atomic_inc_4((uint32_t volatile*)(&val));
 			}
 
 			static T Subtract(T& val, const T sub)
 			{
-				return (T)atomic_sub_4((unsigned int volatile*)(&val),(const unsigned int)sub);
+				return (T)atomic_sub_4((uint32_t volatile*)(&val),(const uint32_t)sub);
 			}
 
 			static T Decrement(T& val)
 			{
-				return (T)atomic_dec_4((unsigned int volatile*)(&val));
+				return (T)atomic_dec_4((uint32_t volatile*)(&val));
 			}
 		};
 
-#if defined(_MSC_VER)
-		typedef unsigned __int64 atomic_8_t;
-#elif defined(__LP64__)
-		typedef unsigned long atomic_8_t;
-#else
-		typedef unsigned long long atomic_8_t;
-#endif
-
-		atomic_8_t atomic_cas_8(atomic_8_t volatile* val, const atomic_8_t oldVal, const atomic_8_t newVal);
-		atomic_8_t atomic_swap_8(atomic_8_t volatile* val, const atomic_8_t newVal);
-		atomic_8_t atomic_add_8(atomic_8_t volatile* val, const atomic_8_t add);
-		atomic_8_t atomic_inc_8(atomic_8_t volatile* val);
-		atomic_8_t atomic_sub_8(atomic_8_t volatile* val, const atomic_8_t sub);
-		atomic_8_t atomic_dec_8(atomic_8_t volatile* val);
+		uint64_t atomic_cas_8(uint64_t volatile* val, const uint64_t oldVal, const uint64_t newVal);
+		uint64_t atomic_swap_8(uint64_t volatile* val, const uint64_t newVal);
+		uint64_t atomic_add_8(uint64_t volatile* val, const uint64_t add);
+		uint64_t atomic_inc_8(uint64_t volatile* val);
+		uint64_t atomic_sub_8(uint64_t volatile* val, const uint64_t sub);
+		uint64_t atomic_dec_8(uint64_t volatile* val);
 
 		template <typename T>
 		struct AtomicImpl<T,8>
 		{
 			static T CompareAndSwap(T& val, const T oldVal, const T newVal)
 			{
-				return (T)atomic_cas_8((atomic_8_t volatile*)(&val),(const atomic_8_t)(oldVal),(const atomic_8_t)newVal);
+				return (T)atomic_cas_8((uint64_t volatile*)(&val),(const uint64_t)(oldVal),(const uint64_t)newVal);
 			}
 
 			static T Exchange(T& val, const T newVal)
 			{
-				return (T)atomic_swap_8((atomic_8_t volatile*)(&val),(const atomic_8_t)newVal);
+				return (T)atomic_swap_8((uint64_t volatile*)(&val),(const uint64_t)newVal);
 			}
 
 			static T Add(T& val, const T add)
 			{
-				return (T)atomic_add_8((atomic_8_t volatile*)(&val),(const atomic_8_t)add);
+				return (T)atomic_add_8((uint64_t volatile*)(&val),(const uint64_t)add);
 			}
 
 			static T Increment(T& val)
 			{
-				return (T)atomic_inc_8((atomic_8_t volatile*)(&val));
+				return (T)atomic_inc_8((uint64_t volatile*)(&val));
 			}
 
 			static T Subtract(T& val, const T sub)
 			{
-				return (T)atomic_sub_8((atomic_8_t volatile*)(&val),(const atomic_8_t)sub);
+				return (T)atomic_sub_8((uint64_t volatile*)(&val),(const uint64_t)sub);
 			}
 
 			static T Decrement(T& val)
 			{
-				return (T)atomic_dec_8((atomic_8_t volatile*)(&val));
+				return (T)atomic_dec_8((uint64_t volatile*)(&val));
 			}
 		};
 	}

@@ -19,7 +19,7 @@
  *
  **********************************************************************************/
 
-#include "../include/config-base.h"
+#include "../include/OOBase/Base.h"
 
 #define DLMALLOC_EXPORT
 #define MSPACES 1

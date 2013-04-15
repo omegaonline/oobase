@@ -19,6 +19,9 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/OOBase/Condition.h"
+
+#include "Win32Socket.h"
 #include "ProactorWin32.h"
 
 #if defined(_WIN32)
@@ -26,10 +29,6 @@
 #if !defined(MSG_WAITALL)
 #define MSG_WAITALL 0x8
 #endif
-
-#include "../include/OOBase/Condition.h"
-
-#include "Win32Socket.h"
 
 namespace
 {

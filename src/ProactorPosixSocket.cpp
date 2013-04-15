@@ -24,10 +24,10 @@
 #include "../include/OOBase/Queue.h"
 #include "../include/OOBase/StackAllocator.h"
 
-#if defined(HAVE_UNISTD_H)
-
 #include "ProactorPosix.h"
 #include "BSDSocket.h"
+
+#if defined(HAVE_UNISTD_H)
 
 #include <sys/stat.h>
 #include <string.h>

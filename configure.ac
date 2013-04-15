@@ -2,7 +2,7 @@ AC_PREREQ(2.61)
 
 AC_INIT(OOBase,0.6.0)
 AC_CONFIG_SRCDIR([src/Buffer.cpp])
-AC_CONFIG_HEADERS([autoheader_dummy.h include/oobase-autoconf.h])
+AC_CONFIG_HEADERS([autoheader_dummy.h include/oobase-platform.h src/oobase-config.h])
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
@@ -108,7 +108,7 @@ OO_MULTI_THREAD
 OO_C_BUILTINS
 
 # Check for the headers we use
-AC_CHECK_HEADERS([stdint.h windows.h asl.h syslog.h sys.types.h unistd.h])
+AC_CHECK_HEADERS([stdint.h windows.h asl.h syslog.h unistd.h sys/socket.h])
 AC_CHECK_FUNCS([pipe2 accept4])
 
 # Set up libtool correctly

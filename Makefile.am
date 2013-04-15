@@ -66,8 +66,7 @@ liboobase_la_LIBADD = $(LIBLTDL) -lrt
 endif 
 
 liboobase_la_SOURCES = \
-	include/config-base.h \
-	include/config-msvc.h \
+	include/oobase-platform.h \
 	include/OOBase/Base.h \
 	include/OOBase/ArenaAllocator.h \
 	include/OOBase/AsyncResponse.h \
@@ -113,6 +112,8 @@ liboobase_la_SOURCES = \
 	include/OOBase/Vector.h \
 	include/OOBase/Win32.h \
 	include/OOBase/Win32Security.h \
+	src/config-base.h \
+	src/oobase-config.h \
 	src/BSDSocket.h \
 	src/Win32Impl.h \
 	src/Win32Socket.h \

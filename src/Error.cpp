@@ -19,6 +19,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "config-base.h"
+
 #include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/Posix.h"
 #include "../include/OOBase/Atomic.h"

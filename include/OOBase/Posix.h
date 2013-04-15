@@ -24,7 +24,7 @@
 
 #include "SmartPtr.h"
 
-#if defined(__unix__) || defined(DOXYGEN)
+#if defined(HAVE_UNISTD_H) || defined(DOXYGEN)
 
 #include <pwd.h>
 #include <fcntl.h>

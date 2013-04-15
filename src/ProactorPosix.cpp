@@ -20,14 +20,12 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/GlobalNew.h"
-
-#include "./ProactorPosix.h"
+#include "../include/OOBase/Posix.h"
 
 #if defined(HAVE_UNISTD_H)
 
-#include "../include/OOBase/Posix.h"
-
-#include "./BSDSocket.h"
+#include "ProactorPosix.h"
+#include "BSDSocket.h"
 
 namespace
 {

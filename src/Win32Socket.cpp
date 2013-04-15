@@ -20,11 +20,11 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/GlobalNew.h"
+#include "../include/OOBase/Singleton.h"
+
+#include "Win32Socket.h"
 
 #if defined(_WIN32)
-
-#include "../include/OOBase/Singleton.h"
-#include "Win32Socket.h"
 
 #include <mswsock.h>
 

@@ -68,16 +68,9 @@ namespace OOBase
 		template <>
 		struct FNV<8>
 		{
-#if defined(_MSC_VER)
-			typedef unsigned __int64 fnv_uint64;
-#elif defined(__LP64__)
-			typedef unsigned long fnv_uint64;
-#else
-			typedef unsigned long long fnv_uint64;
-#endif
-			static const fnv_uint64 offset_bias = 0xcbf29ce484222325ULL;
+			static const uint64_t offset_bias = 0xcbf29ce484222325ULL;
 
-			static void hash(fnv_uint64& hval)
+			static void hash(uint64_t& hval)
 			{
 				//hval *= 0x100000001b3ULL;
 				hval += (hval << 1) + (hval << 4) + (hval << 5) +

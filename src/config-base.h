@@ -22,45 +22,10 @@
 #ifndef OOBASE_CONFIG_BASE_H_INCLUDED_
 #define OOBASE_CONFIG_BASE_H_INCLUDED_
 
-#if defined(_MSC_VER)
-	#include "oobase-msvc.h"
-#elif !defined(DOXYGEN)
-	// Autoconf
-	#include <oobase-autoconf.h>
+#if defined(HAVE_CONFIG_H)
+	#include <oobase-config.h>
 #endif
 
-#include "OOBase/Base.h"
-
-#if defined(HAVE_WINDOWS_H)
-	#if !defined(_WIN32)
-	#error No _WIN32 ?!?
-	#endif
-#endif
-
-#if defined(_WIN32)
-	// Remove the unistd include - we are windows
-	#if defined(HAVE_UNISTD_H)
-	#undef HAVE_UNISTD_H
-	#endif
-#endif
-
-////////////////////////////////////////
-// Bring in POSIX if possible
-#if defined(HAVE_UNISTD_H)
-	#include <unistd.h>
-
-	// check for POSIX.1 IEEE 1003.1
-	#if !defined(_POSIX_VERSION)
-	#error <unistd.h> is not POSIX compliant?
-	#endif
-
-	// Check pthreads
-	#if defined (HAVE_PTHREAD)
-	#include <pthread.h>
-	#if !defined(_POSIX_THREADS)
-	#error Your pthreads does not appears to be POSIX compliant?
-	#endif
-	#endif
-#endif
+#include "../include/OOBase/Base.h"
 
 #endif // OOBASE_CONFIG_BASE_H_INCLUDED_

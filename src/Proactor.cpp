@@ -21,7 +21,6 @@
 
 #include "../include/OOBase/GlobalNew.h"
 #include "../include/OOBase/Condition.h"
-
 #include "../include/OOBase/Proactor.h"
 
 namespace

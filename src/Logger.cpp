@@ -19,7 +19,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/config-base.h"
+#include "config-base.h"
+
 #include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Once.h"
 #include "../include/OOBase/Mutex.h"

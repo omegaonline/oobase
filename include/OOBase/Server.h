@@ -25,7 +25,7 @@
 #include "Condition.h"
 #include "String.h"
 
-#if defined(__unix__)
+#if defined(HAVE_UNISTD_H)
 #include <signal.h>
 #endif
 
@@ -44,8 +44,11 @@ namespace OOBase
 		static int daemonize(const OOBase::LocalString& strPidFile, bool& already);
 
 	private:
-#if defined(__unix__)
+#if defined(HAVE_UNISTD_H)
 		sigset_t  m_set;
+#endif
+
+#if defined(HAVE_PTHREAD)
 		pthread_t m_tid;
 #endif
 	};

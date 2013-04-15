@@ -22,11 +22,11 @@
 #ifndef OOSVRBASE_PROACTOR_POLL_H_INCLUDED_
 #define OOSVRBASE_PROACTOR_POLL_H_INCLUDED_
 
-#include "./ProactorPosix.h"
+#include "../include/OOBase/HashTable.h"
+
+#include "ProactorPosix.h"
 
 #if defined(HAVE_UNISTD_H)
-
-#include "../include/OOBase/HashTable.h"
 
 #include <poll.h>
 

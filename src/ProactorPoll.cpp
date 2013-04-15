@@ -20,13 +20,12 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/GlobalNew.h"
-#include "./ProactorPoll.h"
-
-#if defined(HAVE_UNISTD_H)
-
 #include "../include/OOBase/Posix.h"
 
-#include "./BSDSocket.h"
+#include "ProactorPoll.h"
+#include "BSDSocket.h"
+
+#if defined(HAVE_UNISTD_H)
 
 #include <sys/resource.h>
 

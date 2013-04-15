@@ -19,15 +19,15 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "ProactorWin32.h"
-
-#if defined(_WIN32)
-
 #include "../include/OOBase/Vector.h"
 #include "../include/OOBase/String.h"
 #include "../include/OOBase/Condition.h"
 #include "../include/OOBase/Win32Security.h"
 #include "../include/OOBase/tr24731.h"
+
+#include "ProactorWin32.h"
+
+#if defined(_WIN32)
 
 namespace
 {

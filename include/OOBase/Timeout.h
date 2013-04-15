@@ -33,7 +33,7 @@
 #include <winsock2.h>
 #endif
 
-#if defined(__unix__)
+#if defined(HAVE_UNISTD_H)
 #include <sys/time.h>
 #endif
 

@@ -19,10 +19,12 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "config-base.h"
+
 #include "../include/OOBase/Posix.h"
 #include "../include/OOBase/String.h"
 
-#if defined (HAVE_UNISTD_H)
+#if defined(HAVE_UNISTD_H)
 
 #include <fcntl.h>
 #include <stdlib.h>

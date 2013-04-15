@@ -102,18 +102,9 @@ namespace OOBase
 
 	namespace detail
 	{
-		unsigned short byte_swap_2(unsigned short v);
-		unsigned int byte_swap_4(unsigned int v);
-
-#if defined(_MSC_VER)
-		typedef unsigned __int64 bswap_8_t;
-#elif defined(__LP64__)
-		typedef unsigned long bswap_8_t;
-#else
-		typedef unsigned long long bswap_8_t;
-#endif
-
-		bswap_8_t byte_swap_8(bswap_8_t v);
+		uint16_t byte_swap_2(uint16_t v);
+		uint32_t byte_swap_4(uint32_t v);
+		uint64_t byte_swap_8(uint64_t v);
 
 		template <>
 		struct byte_swapper<1>
@@ -131,7 +122,7 @@ namespace OOBase
 			template <typename T>
 			static T byte_swap(T val)
 			{
-				return (T)byte_swap_2((unsigned short)val);
+				return (T)byte_swap_2((uint16_t)val);
 			}
 		};
 
@@ -141,7 +132,7 @@ namespace OOBase
 			template <typename T>
 			static T byte_swap(T val)
 			{
-				return (T)byte_swap_4((unsigned int)val);
+				return (T)byte_swap_4((uint32_t)val);
 			}
 		};
 
@@ -151,7 +142,7 @@ namespace OOBase
 			template <typename T>
 			static T byte_swap(T val)
 			{
-				return (T)byte_swap_8((bswap_8_t)val);
+				return (T)byte_swap_8((uint64_t)val);
 			}
 		};
 	}

@@ -45,7 +45,7 @@
 #endif
 #endif
 
-#if defined(__unix__)
+#if defined(HAVE_SYS_SOCKET_H)
 #include <sys/socket.h>
 #endif
 

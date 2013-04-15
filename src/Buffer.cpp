@@ -19,13 +19,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/config-base.h"
 #include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Buffer.h"
-
-#if defined(HAVE_STDINT_H)
-#include <stdint.h>
-#endif
 
 OOBase::Buffer* OOBase::Buffer::create(AllocatorInstance& allocator, size_t cbSize, size_t align)
 {

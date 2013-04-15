@@ -19,7 +19,6 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/config-base.h"
 #include "../include/OOBase/TLSSingleton.h"
 #include "../include/OOBase/Thread.h"
 #include "../include/OOBase/Condition.h"
@@ -30,7 +29,6 @@
 
 namespace
 {
-
 #if defined(_WIN32)
 
 	class Win32Thread : public OOBase::Thread
