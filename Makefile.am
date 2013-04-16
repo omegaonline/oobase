@@ -84,7 +84,6 @@ liboobase_la_SOURCES = \
 	include/OOBase/Destructor.h \
 	include/OOBase/DLL.h \
 	include/OOBase/Environment.h \
-	include/OOBase/GlobalNew.h \
 	include/OOBase/HandleTable.h \
 	include/OOBase/HashTable.h \
 	include/OOBase/List.h \
