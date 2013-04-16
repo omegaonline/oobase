@@ -22,8 +22,6 @@
 #include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Destructor.h"
 
-const OOBase::critical_t OOBase::critical = {0};
-
 #if !defined(_WIN32)
 
 void* OOBase::CrtAllocator::allocate(size_t bytes, size_t /*align*/)

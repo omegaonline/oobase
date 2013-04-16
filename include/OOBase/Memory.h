@@ -64,9 +64,6 @@
 
 namespace OOBase
 {
-	struct critical_t { int unused; };
-	extern const critical_t critical;
-
 	template <typename T>
 	struct alignment_of
 	{
@@ -509,33 +506,6 @@ namespace OOBase
 	protected:
 		AllocatorInstance& m_allocator;
 	};
-}
-
-// Call the OOBase::OnCriticalError handler on failure
-inline void* operator new(size_t bytes, const OOBase::critical_t&)
-{
-	void* ptr = ::operator new(bytes,std::nothrow);
-	if (!ptr)
-		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-	return ptr;
-}
-
-inline void* operator new[](size_t bytes, const OOBase::critical_t&)
-{
-	void* ptr = ::operator new [] (bytes,std::nothrow);
-	if (!ptr)
-		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-	return ptr;
-}
-
-inline void operator delete(void* ptr, const OOBase::critical_t&)
-{
-	::operator delete(ptr);
-}
-
-inline void operator delete[](void* ptr, const OOBase::critical_t&)
-{
-	::operator delete[](ptr);
 }
 
 #endif // OOBASE_MEMORY_H_INCLUDED_
