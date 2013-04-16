@@ -19,7 +19,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Vector.h"
+#include "../include/OOBase/List.h"
 #include "../include/OOBase/String.h"
 #include "../include/OOBase/Condition.h"
 #include "../include/OOBase/Win32Security.h"
@@ -436,7 +436,7 @@ namespace
 		OOBase::Win32::sec_descript_t            m_sd;
 		size_t                                   m_backlog;
 		size_t                                   m_refcount;
-		OOBase::Vector<HANDLE>                   m_stkPending;
+		OOBase::List<HANDLE>                     m_stkPending;
 		void*                                    m_param;
 		OOBase::Proactor::accept_pipe_callback_t m_callback;
 	
@@ -521,8 +521,9 @@ int InternalAcceptor::stop()
 		m_backlog = 0;
 		
 		// Close all the pending handles
-		for (size_t i=0;i<m_stkPending.size();++i)
-			::CloseHandle(*m_stkPending.at(i));
+		HANDLE h = NULL;
+		for (OOBase::List<HANDLE>::const_iterator i=m_stkPending.begin();i!=m_stkPending.end();++i)
+			::CloseHandle(*i);
 	}
 	
 	// Wait for all pending operations to complete

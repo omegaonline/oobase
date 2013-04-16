@@ -25,7 +25,7 @@
 #include "Memory.h"
 #include "Mutex.h"
 #include "Once.h"
-#include "Vector.h"
+#include "List.h"
 
 namespace OOBase
 {
@@ -40,7 +40,9 @@ namespace OOBase
 			DLLDestructor& inst = instance();
 			Guard<SpinLock> guard(inst.m_lock);
 			
-			return inst.m_stack.push_back(Node(pfn,p));
+			int err = 0;
+			inst.m_stack.push_back(Node(pfn,p),err);
+			return err;
 		}
 
 		static void remove_destructor(pfn_destructor pfn, void* p)
@@ -68,8 +70,8 @@ namespace OOBase
 			void*          m_param;
 		};
 
-		SpinLock                  m_lock;
-		Vector<Node,CrtAllocator> m_stack;
+		SpinLock                m_lock;
+		List<Node,CrtAllocator> m_stack;
 
 		~DLLDestructor()
 		{

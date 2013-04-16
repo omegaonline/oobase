@@ -22,6 +22,7 @@
 #ifndef OOSVRBASE_PROACTOR_POLL_H_INCLUDED_
 #define OOSVRBASE_PROACTOR_POLL_H_INCLUDED_
 
+#include "../include/OOBase/Vector.h"
 #include "../include/OOBase/HashTable.h"
 
 #include "ProactorPosix.h"

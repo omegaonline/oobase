@@ -405,7 +405,7 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 		Guard<SpinLock> guard(m_lock);
 
 		bool bAdd = true;
-		for (Vector<SmartPtr<Thread>,CrtAllocator>::iterator j = m_threads.begin();j != m_threads.end();++j)
+		for (List<SmartPtr<Thread>,CrtAllocator>::iterator j = m_threads.begin();j != m_threads.end();++j)
 		{
 			if (!(*j)->is_running())
 			{
@@ -416,7 +416,8 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 		}
 		if (bAdd)
 		{
-			int err = m_threads.push_back(ptrThread);
+			int err = 0;
+			m_threads.push_back(ptrThread,err);
 			if (err != 0)
 				return err;
 		}
@@ -464,7 +465,7 @@ size_t OOBase::ThreadPool::number_running() const
 	Guard<SpinLock> guard(m_lock);
 
 	size_t count = 0;
-	for (Vector<SmartPtr<Thread>,CrtAllocator>::const_iterator i=m_threads.begin();i != m_threads.end();++i)
+	for (List<SmartPtr<Thread>,CrtAllocator>::const_iterator i=m_threads.begin();i != m_threads.end();++i)
 	{
 		if ((*i)->is_running())
 			++count;

@@ -106,12 +106,12 @@ namespace OOBase
 
 		bool pop_front(T* pval = NULL)
 		{
-			return (remove(pval,m_head) != NULL);
+			return remove(pval,m_head);
 		}
 
 		bool pop_back(T* pval = NULL)
 		{
-			return (remove(pval,m_tail) != NULL);
+			return remove(pval,m_tail);
 		}
 
 		template <typename T1>
@@ -196,7 +196,7 @@ namespace OOBase
 			ListNode* prev = (next ? next->m_prev : m_tail);
 
 			ListNode* new_node = NULL;
-			err = baseClass::allocate_new(new_node,value,prev,next);
+			err = baseClass::allocate_new(new_node,prev,next,value);
 			if (err)
 				return NULL;
 
@@ -216,7 +216,7 @@ namespace OOBase
 			(curr->m_next ? curr->m_next : m_tail) = curr->m_prev;
 			(curr->m_prev ? curr->m_prev : m_head) = next;
 
-			baseClass:delete_free(curr);
+			baseClass::delete_free(curr);
 
 			--m_size;
 			curr = next;
