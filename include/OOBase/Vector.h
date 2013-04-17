@@ -251,6 +251,9 @@ namespace OOBase
 	{
 		typedef detail::VectorBase<Allocator,T,detail::is_pod<T>::value> baseClass;
 
+		friend detail::IteratorImpl<Vector,T,size_t>;
+		friend detail::IteratorImpl<const Vector,const T,size_t>;
+
 	public:
 		typedef detail::IteratorImpl<Vector,T,size_t> iterator;
 		typedef detail::IteratorImpl<const Vector,const T,size_t> const_iterator;
@@ -386,6 +389,19 @@ namespace OOBase
 		const_iterator end() const
 		{
 			return const_iterator(*this,this->m_size);
+		}
+
+	private:
+		void next(size_t& pos) const
+		{
+			if (pos < this->m_size)
+				++pos;
+		}
+
+		void prev(size_t& pos) const
+		{
+			if (pos > 0)
+			--pos;
 		}
 	};
 }

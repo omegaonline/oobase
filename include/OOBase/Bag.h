@@ -343,8 +343,7 @@ namespace OOBase
 
 			IteratorImpl& operator ++ ()
 			{
-				if (*this != m_cont.end())
-					++m_pos;
+				m_cont.next(m_pos);
 				return *this;
 			}
 
@@ -357,8 +356,7 @@ namespace OOBase
 
 			IteratorImpl& operator -- ()
 			{
-				if (*this != m_cont.begin())
-					--m_pos;
+				m_cont.prev(m_pos);
 				return *this;
 			}
 

@@ -42,6 +42,9 @@ namespace OOBase
 			T         m_data;
 		};
 
+		friend detail::IteratorImpl<List,T,ListNode*>;
+		friend detail::IteratorImpl<const List,const T,const ListNode*>;
+
 	public:
 		typedef detail::IteratorImpl<List,T,ListNode*> iterator;
 		typedef detail::IteratorImpl<const List,const T,const ListNode*> const_iterator;
@@ -189,6 +192,30 @@ namespace OOBase
 		const T* at(const ListNode* node) const
 		{
 			return (node ? &node->m_data : NULL);
+		}
+
+		void next(ListNode*& node) const
+		{
+			if (node)
+				node = node->m_next;
+		}
+
+		void next(const ListNode*& node) const
+		{
+			if (node)
+				node = node->m_next;
+		}
+
+		void prev(ListNode*& node) const
+		{
+			if (node)
+				node = node->m_prev;
+		}
+
+		void prev(const ListNode*& node) const
+		{
+			if (node)
+				node = node->m_prev;
 		}
 
 		ListNode* insert(const T& value, ListNode* next, int& err)
