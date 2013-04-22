@@ -311,12 +311,12 @@ namespace OOBase
 		int insert(const T& value, const iterator& before)
 		{
 			assert(before.check(this));
-			return baseClass::insert_at(value,before.deref());
+			return baseClass::insert_at(before.deref(),value);
 		}
 
 		iterator insert(const T& value, const iterator& before, int& err)
 		{
-			err = insert(value,before);
+			err = baseClass::insert_at(before.deref(),value);
 			return (!err ? before : end());
 		}
 
