@@ -49,6 +49,8 @@ namespace OOBase
 #if defined(_WIN32)
 		Win32::SmartHandle m_mutex;
 #elif defined(HAVE_PTHREAD)
+		friend class Condition;
+
 	protected:
 		pthread_mutex_t    m_mutex;
 
@@ -65,7 +67,7 @@ namespace OOBase
 	class SpinLock : public NonCopyable
 	{
 	public:
-		SpinLock(unsigned int max_spin = 401);
+		SpinLock();
 		~SpinLock();
 
 		bool try_acquire();
@@ -75,11 +77,23 @@ namespace OOBase
 	private:
 		CRITICAL_SECTION m_cs;
 	};
+#elif defined(HAVE_PTHREAD) && defined(_POSIX_SPIN_LOCKS)
+	class SpinLock : public NonCopyable
+	{
+	public:
+		SpinLock();
+		~SpinLock();
+
+		bool try_acquire();
+		void acquire();
+		void release();
+
+	private:
+		pthread_spinlock_t m_sl;
+	};
 #else
 	class SpinLock : public Mutex
 	{
-		friend class Condition;
-
 	public:
 		SpinLock() : Mutex(true)
 		{}

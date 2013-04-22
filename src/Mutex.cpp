@@ -24,9 +24,9 @@
 
 #if defined(_WIN32)
 
-OOBase::SpinLock::SpinLock(unsigned int max_spin)
+OOBase::SpinLock::SpinLock()
 {
-	if (!InitializeCriticalSectionAndSpinCount(&m_cs,max_spin))
+	if (!InitializeCriticalSection(&m_cs))
 		OOBase_CallCriticalFailure(GetLastError());
 }
 
@@ -147,6 +147,50 @@ void OOBase::RWMutex::release_read()
 
 #elif defined(HAVE_PTHREAD)
 
+#if defined(_POSIX_SPIN_LOCKS)
+
+OOBase::SpinLock::SpinLock()
+{
+	int err = pthread_spin_init(&m_sl,PTHREAD_PROCESS_PRIVATE);
+	if (err)
+		OOBase_CallCriticalFailure(err);
+}
+
+OOBase::SpinLock::~SpinLock()
+{
+	int err = pthread_spin_destroy(&m_sl);
+	if (err)
+		OOBase_CallCriticalFailure(err);
+}
+
+bool OOBase::SpinLock::try_acquire()
+{
+	int err = pthread_spin_trylock(&m_sl);
+	if (!err)
+		return true;
+
+	if (err != EBUSY)
+		OOBase_CallCriticalFailure(err);
+
+	return false;
+}
+
+void OOBase::SpinLock::acquire()
+{
+	int err = pthread_spin_lock(&m_sl);
+	if (err)
+		OOBase_CallCriticalFailure(err);
+}
+
+void OOBase::SpinLock::release()
+{
+	int err = pthread_spin_unlock(&m_sl);
+	if (err != 0)
+		OOBase_CallCriticalFailure(err);
+}
+
+#endif // _POSIX_SPIN_LOCKS
+
 OOBase::Mutex::Mutex()
 {
 	init(true);
@@ -163,7 +207,11 @@ void OOBase::Mutex::init(bool bRecursive)
 	int err = pthread_mutexattr_init(&attr);
 	if (!err)
 	{
+#if !defined(NDEBUG) && defined(PTHREAD_MUTEX_ERRORCHECK)
+		err = pthread_mutexattr_settype(&attr,bRecursive ? PTHREAD_MUTEX_RECURSIVE : PTHREAD_MUTEX_ERRORCHECK);
+#else
 		err = pthread_mutexattr_settype(&attr,bRecursive ? PTHREAD_MUTEX_RECURSIVE : PTHREAD_MUTEX_NORMAL);
+#endif
 		if (!err)
 		{
 			err = pthread_mutexattr_setpshared(&attr,PTHREAD_PROCESS_PRIVATE);
@@ -180,13 +228,15 @@ void OOBase::Mutex::init(bool bRecursive)
 
 OOBase::Mutex::~Mutex()
 {
-	pthread_mutex_destroy(&m_mutex);
+	int err = pthread_mutex_destroy(&m_mutex);
+	if (err)
+		OOBase_CallCriticalFailure(err);
 }
 
 bool OOBase::Mutex::try_acquire()
 {
 	int err = pthread_mutex_trylock(&m_mutex);
-	if (err == 0)
+	if (!err)
 		return true;
 
 	if (err != EBUSY)
@@ -234,7 +284,7 @@ OOBase::RWMutex::~RWMutex()
 bool OOBase::RWMutex::try_acquire()
 {
 	int err = pthread_rwlock_trywrlock(&m_mutex);
-	if (err == 0)
+	if (!err)
 		return true;
 
 	if (err != EBUSY)
@@ -260,7 +310,7 @@ void OOBase::RWMutex::release()
 bool OOBase::RWMutex::try_acquire_read()
 {
 	int err = pthread_rwlock_tryrdlock(&m_mutex);
-	if (err == 0)
+	if (!err)
 		return true;
 
 	if (err != EBUSY)
