@@ -257,12 +257,14 @@ namespace OOBase
 			if (!ptr)
 				return allocate(bytes,align);
 
-			if (!is_our_ptr(ptr))
-				return baseClass::reallocate(ptr,bytes,align);
-
 			Guard<SpinLock> guard(m_lock);
 
-			return ScratchAllocator::reallocate(ptr,bytes,align);
+			if (is_our_ptr(ptr))
+				return ScratchAllocator::reallocate(ptr,bytes,align);
+
+			guard.release();
+
+			return baseClass::reallocate(ptr,bytes,align);
 		}
 
 		void free(void* ptr)
@@ -270,13 +272,14 @@ namespace OOBase
 			if (!ptr)
 				return;
 
-			if (!is_our_ptr(ptr))
-				baseClass::free(ptr);
-			else
-			{
-				Guard<SpinLock> guard(m_lock);
-				ScratchAllocator::free(ptr);
-			}
+			Guard<SpinLock> guard(m_lock);
+
+			if (is_our_ptr(ptr))
+				return ScratchAllocator::free(ptr);
+
+			guard.release();
+
+			baseClass::free(ptr);
 		}
 
 	private:
