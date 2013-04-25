@@ -63,7 +63,7 @@ namespace OOBase
 		size_t number_running() const;
 
 	private:
-		mutable SpinLock m_lock;
+		mutable Mutex m_lock;
 		List<SmartPtr<Thread>,CrtAllocator> m_threads;
 	};
 }

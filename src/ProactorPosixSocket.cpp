@@ -117,7 +117,7 @@ namespace
 
 		OOBase::detail::ProactorPosix* m_pProactor;
 		int                            m_fd;
-		OOBase::SpinLock               m_lock;
+		OOBase::Mutex                  m_lock;
 		OOBase::Queue<RecvItem>        m_recv_queue;
 		OOBase::Queue<SendItem>        m_send_queue;
 
@@ -204,7 +204,7 @@ int PosixAsyncSocket::recv(void* param, recv_callback_t callback, OOBase::Buffer
 	item.m_callback = callback;
 	item.m_buffer->addref();
 
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+	OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
 	bool watch = m_recv_queue.empty();
 	err = m_recv_queue.push(item);
@@ -243,7 +243,7 @@ int PosixAsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, OOBase
 	item.m_buffer->addref();
 	item.m_ctl_buffer->addref();
 
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+	OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
 	bool watch = m_recv_queue.empty();
 	err = m_recv_queue.push(item);
@@ -274,7 +274,7 @@ int PosixAsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer
 	item.m_buffer = buffer;
 	item.m_buffer->addref();
 
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+	OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
 	bool watch = m_send_queue.empty();
 	int err = m_send_queue.push(item);
@@ -326,7 +326,7 @@ int PosixAsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Bu
 		}
 	}
 
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+	OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
 	bool watch = m_send_queue.empty();
 	int err = m_send_queue.push(item);
@@ -363,7 +363,7 @@ int PosixAsyncSocket::send_msg(void* param, send_msg_callback_t callback, OOBase
 	item.m_buffer = data_buffer;
 	item.m_buffer->addref();
 
-	OOBase::Guard<OOBase::SpinLock> guard(m_lock);
+	OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
 	bool watch = m_send_queue.empty();
 	int err = m_send_queue.push(item);
@@ -406,7 +406,7 @@ void PosixAsyncSocket::fd_callback(int fd, void* param, unsigned int events)
 		OOBase::Queue<RecvNotify,OOBase::AllocatorInstance> recv_notify_queue(allocator);
 		OOBase::Queue<SendNotify,OOBase::AllocatorInstance> send_notify_queue(allocator);
 
-		OOBase::Guard<OOBase::SpinLock> guard(pThis->m_lock);
+		OOBase::Guard<OOBase::Mutex> guard(pThis->m_lock);
 
 		if (events & OOBase::detail::eTXRecv)
 			pThis->process_recv(recv_notify_queue);

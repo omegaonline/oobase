@@ -297,7 +297,7 @@ OOBase::Thread::Thread(bool bAutodelete) :
 		m_bAutodelete(bAutodelete),
 		m_impl(NULL)
 {
-	void* TODO; // Make this ref counted
+	void* TODO; // TODO, Make this ref counted
 
 
 #if defined(_WIN32)
@@ -402,7 +402,7 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 			return ERROR_OUTOFMEMORY;
 		ptrThread = pThread;
 
-		Guard<SpinLock> guard(m_lock);
+		Guard<Mutex> guard(m_lock);
 
 		bool bAdd = true;
 		for (List<SmartPtr<Thread>,CrtAllocator>::iterator j = m_threads.begin();j != m_threads.end();++j)
@@ -434,7 +434,7 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 
 void OOBase::ThreadPool::join()
 {
-	Guard<SpinLock> guard(m_lock);
+	Guard<Mutex> guard(m_lock);
 
 	for (SmartPtr<Thread> ptrThread;!m_threads.pop_back(&ptrThread);)
 	{
@@ -448,7 +448,7 @@ void OOBase::ThreadPool::join()
 
 void OOBase::ThreadPool::abort()
 {
-	Guard<SpinLock> guard(m_lock);
+	Guard<Mutex> guard(m_lock);
 
 	for (SmartPtr<Thread> ptrThread;!m_threads.pop_back(&ptrThread);)
 	{
@@ -462,7 +462,7 @@ void OOBase::ThreadPool::abort()
 
 size_t OOBase::ThreadPool::number_running() const
 {
-	Guard<SpinLock> guard(m_lock);
+	Guard<Mutex> guard(m_lock);
 
 	size_t count = 0;
 	for (List<SmartPtr<Thread>,CrtAllocator>::const_iterator i=m_threads.begin();i != m_threads.end();++i)

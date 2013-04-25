@@ -100,7 +100,7 @@ namespace OOBase
 			virtual int do_watch_fd(int fd, unsigned int events) = 0;
 			virtual int do_unbind_fd(int fd) = 0;
 
-			SpinLock              m_lock;
+			Mutex                 m_lock;
 			LockedAllocator<4096> m_allocator;
 			bool                  m_stopped;
 			int                   m_read_fd;

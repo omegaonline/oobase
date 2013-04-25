@@ -170,7 +170,7 @@ int OOBase::detail::ProactorPosix::process_timer(const TimerItem& active_timer)
 
 int OOBase::detail::ProactorPosix::start_timer(void* param, timer_callback_t callback, const Timeout& timeout)
 {
-	Guard<SpinLock> guard(m_lock,false);
+	Guard<Mutex> guard(m_lock,false);
 	if (guard.try_acquire())
 		return add_timer(param,callback,timeout);
 
@@ -196,7 +196,7 @@ int OOBase::detail::ProactorPosix::start_timer(void* param, timer_callback_t cal
 
 int OOBase::detail::ProactorPosix::stop_timer(void* param)
 {
-	Guard<SpinLock> guard(m_lock,false);
+	Guard<Mutex> guard(m_lock,false);
 	if (guard.try_acquire())
 		return remove_timer(param);
 
@@ -219,7 +219,7 @@ int OOBase::detail::ProactorPosix::stop_timer(void* param)
 
 void OOBase::detail::ProactorPosix::stop()
 {
-	Guard<SpinLock> guard(m_lock,false);
+	Guard<Mutex> guard(m_lock,false);
 	if (guard.try_acquire())
 		m_stopped = true;
 	else
@@ -235,14 +235,14 @@ void OOBase::detail::ProactorPosix::stop()
 
 int OOBase::detail::ProactorPosix::restart()
 {
-	Guard<SpinLock> guard(m_lock);
+	Guard<Mutex> guard(m_lock);
 	m_stopped = false;
 	return 0;
 }
 
 int OOBase::detail::ProactorPosix::bind_fd(int fd, void* param, fd_callback_t callback)
 {
-	Guard<SpinLock> guard(m_lock,false);
+	Guard<Mutex> guard(m_lock,false);
 	if (guard.try_acquire())
 		return do_bind_fd(fd,param,callback);
 
@@ -267,7 +267,7 @@ int OOBase::detail::ProactorPosix::bind_fd(int fd, void* param, fd_callback_t ca
 
 int OOBase::detail::ProactorPosix::watch_fd(int fd, unsigned int events)
 {
-	Guard<SpinLock> guard(m_lock,false);
+	Guard<Mutex> guard(m_lock,false);
 	if (guard.try_acquire())
 		return do_watch_fd(fd,events);
 
@@ -289,7 +289,7 @@ int OOBase::detail::ProactorPosix::watch_fd(int fd, unsigned int events)
 
 int OOBase::detail::ProactorPosix::unbind_fd(int fd)
 {
-	Guard<SpinLock> guard(m_lock,false);
+	Guard<Mutex> guard(m_lock,false);
 	if (guard.try_acquire())
 		return do_unbind_fd(fd);
 

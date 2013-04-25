@@ -182,7 +182,7 @@ bool OOBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count
 				}
 				else
 				{
-					if ((pfd->events & POLLIN) && (pfd->revents & (POLLIN | POLLRDHUP)))
+					if ((pfd->events & (POLLIN | POLLRDHUP)) && (pfd->revents & (POLLIN | POLLRDHUP)))
 					{
 						// We have a viable eTXRecv, clear (POLLIN | POLLRDHUP)
 						pfd->events &= ~(POLLIN | POLLRDHUP);
@@ -231,7 +231,7 @@ bool OOBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count
 
 int OOBase::detail::ProactorPoll::run(int& err, const Timeout& timeout)
 {
-	Guard<SpinLock> guard(m_lock);
+	Guard<Mutex> guard(m_lock);
 
 	while (!m_stopped && !timeout.has_expired())
 	{
