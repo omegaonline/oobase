@@ -41,7 +41,9 @@
 
 namespace
 {
-	class PosixAsyncSocket : public OOBase::AsyncSocket
+	class PosixAsyncSocket :
+			public OOBase::AsyncSocket,
+			public OOBase::AllocatorNew<OOBase::CrtAllocator>
 	{
 	public:
 		PosixAsyncSocket(OOBase::detail::ProactorPosix* pProactor, int fd);
@@ -64,11 +66,6 @@ namespace
 		}
 
 	private:
-		void destroy()
-		{
-			OOBase::CrtAllocator::delete_free(this);
-		}
-
 		struct RecvItem
 		{
 			void*           m_param;
@@ -865,7 +862,9 @@ void PosixAsyncSocket::process_send(OOBase::Queue<SendNotify,OOBase::AllocatorIn
 
 namespace
 {
-	class SocketAcceptor : public OOBase::Acceptor
+	class SocketAcceptor :
+			public OOBase::Acceptor,
+			public OOBase::AllocatorNew<OOBase::CrtAllocator>
 	{
 	public:
 		SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_callback_t callback);
@@ -1039,7 +1038,8 @@ void SocketAcceptor::do_accept()
 			if (err == 0)
 			{
 				// Wrap the handle
-				if (!OOBase::CrtAllocator::allocate_new(pSocket,m_pProactor,new_fd))
+				pSocket = new PosixAsyncSocket(m_pProactor,new_fd);
+				if (!pSocket)
 					err = ENOMEM;
 				else
 				{
@@ -1078,8 +1078,8 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_call
 		return NULL;
 	}
 
-	SocketAcceptor* pAcceptor = NULL;
-	if (!OOBase::CrtAllocator::allocate_new(pAcceptor,this,param,callback))
+	SocketAcceptor* pAcceptor = new SocketAcceptor(this,param,callback);
+	if (!pAcceptor)
 		err = ENOMEM;
 	else
 	{
@@ -1107,8 +1107,8 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_pipe
 		return NULL;
 	}
 
-	SocketAcceptor* pAcceptor = NULL;
-	if (!OOBase::CrtAllocator::allocate_new(pAcceptor,this,param,callback))
+	SocketAcceptor* pAcceptor = new SocketAcceptor(this,param,callback);
+	if (!pAcceptor)
 		err = ENOMEM;
 	else
 	{
@@ -1182,8 +1182,8 @@ OOBase::AsyncSocket* OOBase::detail::ProactorPosix::attach(socket_t sock, int& e
 	if (err)
 		return NULL;
 
-	PosixAsyncSocket* pSocket = NULL;
-	if (!OOBase::CrtAllocator::allocate_new(pSocket,this,sock))
+	PosixAsyncSocket* pSocket = new PosixAsyncSocket(this,sock);
+	if (!pSocket)
 		err = ENOMEM;
 	else
 	{

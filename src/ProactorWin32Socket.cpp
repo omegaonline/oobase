@@ -32,7 +32,9 @@
 
 namespace
 {
-	class Win32AsyncSocket : public OOBase::AsyncSocket
+	class Win32AsyncSocket :
+			public OOBase::AsyncSocket,
+			public OOBase::AllocatorNew<OOBase::CrtAllocator>
 	{
 	public:
 		Win32AsyncSocket(OOBase::detail::ProactorWin32* pProactor, SOCKET hSocket);
@@ -53,11 +55,6 @@ namespace
 		}
 
 	private:
-		void destroy()
-		{
-			OOBase::CrtAllocator::delete_free(this);
-		}
-
 		OOBase::detail::ProactorWin32* m_pProactor;
 		SOCKET                         m_hSocket;
 					
@@ -567,7 +564,9 @@ namespace
 		int do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard);
 	};
 
-	class SocketAcceptor : public OOBase::Acceptor
+	class SocketAcceptor :
+			public OOBase::Acceptor,
+			public OOBase::AllocatorNew<OOBase::CrtAllocator>
 	{
 	public:
 		SocketAcceptor();
@@ -578,11 +577,6 @@ namespace
 		int bind(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_callback_t callback, const sockaddr* addr, socklen_t addr_len);
 	
 	private:
-		void destroy()
-		{
-			OOBase::CrtAllocator::delete_free(this);
-		}
-
 		InternalAcceptor* m_pAcceptor;
 	};
 }
@@ -902,9 +896,9 @@ bool InternalAcceptor::on_accept(SOCKET hSocket, bool bRemove, DWORD dwErr, void
 		OOBase::Win32::WSAGetAcceptExSockAddrs(m_socket,addr_buf,0,m_addr_len+16,m_addr_len+16,&local_addr,&local_addr_len,&remote_addr,&remote_addr_len);
 			
 		// Wrap the handle
-		if (!OOBase::CrtAllocator::allocate_new(pSocket,m_pProactor,hSocket))
+		pSocket = new Win32AsyncSocket(m_pProactor,hSocket);
+		if (!pSocket)
 			dwErr = ERROR_OUTOFMEMORY;
-
 	}
 	
 	if (dwErr != 0)
@@ -965,8 +959,8 @@ OOBase::Acceptor* OOBase::detail::ProactorWin32::accept(void* param, accept_call
 		return NULL;
 	}
 	
-	SocketAcceptor* pAcceptor = NULL;
-	if (!OOBase::CrtAllocator::allocate_new(pAcceptor))
+	SocketAcceptor* pAcceptor = new SocketAcceptor();
+	if (!pAcceptor)
 		err = ERROR_OUTOFMEMORY;
 	else
 	{
@@ -1000,8 +994,8 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const sockaddr* addr
 		return NULL;
 	}
 	
-	Win32AsyncSocket* pSocket = NULL;
-	if (!OOBase::CrtAllocator::allocate_new(pSocket,this,sock))
+	Win32AsyncSocket* pSocket = new Win32AsyncSocket(this,sock);
+	if (!pSocket)
 	{
 		unbind();
 		Net::close_socket(sock);
@@ -1018,8 +1012,8 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::attach(socket_t sock, int& e
 		return NULL;
 
 	// The socket must have been opened as WSA_FLAG_OVERLAPPED!!!
-	Win32AsyncSocket* pSocket = NULL;
-	if (!OOBase::CrtAllocator::allocate_new(pSocket,this,sock))
+	Win32AsyncSocket* pSocket = new Win32AsyncSocket(this,sock);
+	if (!pSocket)
 	{
 		unbind();
 		err = ERROR_OUTOFMEMORY;

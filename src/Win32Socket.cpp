@@ -337,7 +337,9 @@ int OOBase::Net::bind(socket_t sock, const sockaddr* addr, socklen_t addr_len)
 
 namespace
 {
-	class WinSocket : public OOBase::Socket
+	class WinSocket :
+			public OOBase::Socket,
+			public OOBase::AllocatorNew<OOBase::CrtAllocator>
 	{
 	public:
 		WinSocket(SOCKET sock);
@@ -364,11 +366,6 @@ namespace
 
 		DWORD send_i(WSABUF* wsabuf, DWORD count, int& err, const OOBase::Timeout& timeout);
 		DWORD recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int& err, const OOBase::Timeout& timeout);
-
-		void destroy()
-		{
-			OOBase::CrtAllocator::delete_free(this);
-		}
 	};
 
 	SOCKET connect_i(const char* address, const char* port, int& err, const OOBase::Timeout& timeout)
@@ -928,8 +925,8 @@ int WinSocket::close()
 
 OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)
 {
-	WinSocket* pSocket = NULL;
-	if (!OOBase::CrtAllocator::allocate_new(pSocket,sock))
+	WinSocket* pSocket = new WinSocket(sock);
+	if (!pSocket)
 		err = ERROR_OUTOFMEMORY;
 
 	return pSocket;
@@ -944,8 +941,8 @@ OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, i
 	if (sock == INVALID_SOCKET)
 		return NULL;
 
-	WinSocket* pSocket = NULL;
-	if (!OOBase::CrtAllocator::allocate_new(pSocket,sock))
+	WinSocket* pSocket = new WinSocket(sock);
+	if (!pSocket)
 	{
 		err = ERROR_OUTOFMEMORY;
 		OOBase::Net::close_socket(sock);

@@ -258,7 +258,9 @@ int OOBase::Net::accept(socket_t accept_sock, socket_t& new_sock, const Timeout&
 
 namespace
 {
-	class BSDSocket : public OOBase::Socket
+	class BSDSocket :
+			public OOBase::Socket,
+			public OOBase::AllocatorNew<OOBase::CrtAllocator>
 	{
 	public:
 		BSDSocket(OOBase::socket_t sock);
@@ -281,11 +283,6 @@ namespace
 		OOBase::Mutex m_send_lock;
 
 		int do_select(bool bWrite, const OOBase::Timeout& timeout);
-
-		void destroy()
-		{
-			OOBase::CrtAllocator::delete_free(this);
-		}
 	};
 
 	int connect_i(const char* address, const char* port, int& err, const OOBase::Timeout& timeout)
@@ -860,8 +857,8 @@ OOBase::Socket* OOBase::Socket::attach(socket_t sock, int& err)
 	if (err)
 		return NULL;
 
-	BSDSocket* pSocket = NULL;
-	if (!OOBase::CrtAllocator::allocate_new(pSocket,sock))
+	BSDSocket* pSocket = new BSDSocket(sock);
+	if (!pSocket)
 		err = ENOMEM;
 
 	return pSocket;
@@ -873,8 +870,8 @@ OOBase::Socket* OOBase::Socket::connect(const char* address, const char* port, i
 	if (sock == -1)
 		return NULL;
 
-	BSDSocket* pSocket = NULL;
-	if (!OOBase::CrtAllocator::allocate_new(pSocket,sock))
+	BSDSocket* pSocket = new BSDSocket(sock);
+	if (!pSocket)
 	{
 		err = ENOMEM;
 		OOBase::Net::close_socket(sock);
@@ -917,8 +914,8 @@ OOBase::Socket* OOBase::Socket::connect(const char* path, int& err, const Timeou
 		return NULL;
 	}
 
-	BSDSocket* pSocket = NULL;
-	if (!OOBase::CrtAllocator::allocate_new(pSocket,sock))
+	BSDSocket* pSocket = new BSDSocket(sock);
+	if (!pSocket)
 	{
 		err = ENOMEM;
 		OOBase::Net::close_socket(sock);

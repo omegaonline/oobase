@@ -242,7 +242,9 @@ namespace OOBase
 		virtual ~Acceptor() {}
 	};
 
-	class Proactor : public NonCopyable
+	class Proactor :
+			public NonCopyable,
+			public AllocatorNew<CrtAllocator>
 	{
 	public:
 		// Factory creation functions

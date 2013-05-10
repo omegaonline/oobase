@@ -39,7 +39,9 @@ namespace
 		};
 	};
 
-	class Pipe : public OOBase::Socket
+	class Pipe :
+			public OOBase::Socket,
+			public OOBase::AllocatorNew<OOBase::CrtAllocator>
 	{
 	public:
 		explicit Pipe(HANDLE handle);
@@ -68,11 +70,6 @@ namespace
 		
 		size_t recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout);
 		size_t send_i(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout);
-
-		void destroy()
-		{
-			OOBase::CrtAllocator::delete_free(this);
-		}
 	};
 }
 
@@ -475,8 +472,8 @@ int OOBase::Net::accept(HANDLE hPipe, const Timeout& timeout)
 
 OOBase::Socket* OOBase::Socket::attach(HANDLE hPipe, int& err)
 {
-	Pipe* pSocket = NULL;
-	if (!OOBase::CrtAllocator::allocate_new(pSocket,hPipe))
+	Pipe* pSocket = new Pipe(hPipe);
+	if (!pSocket)
 		err = ERROR_OUTOFMEMORY;
 
 	return pSocket;
@@ -536,8 +533,8 @@ OOBase::Socket* OOBase::Socket::connect(const char* path, int& err, const Timeou
 		}
 	}
 	
-	Pipe* pPipe = NULL;
-	if (!OOBase::CrtAllocator::allocate_new(pPipe,hPipe))
+	Pipe* pPipe = new Pipe(hPipe);
+	if (!pPipe)
 		err = ERROR_OUTOFMEMORY;
 	else
 		hPipe.detach();
