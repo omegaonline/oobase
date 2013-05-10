@@ -26,8 +26,7 @@
 
 OOBase::SpinLock::SpinLock()
 {
-	if (!InitializeCriticalSection(&m_cs))
-		OOBase_CallCriticalFailure(GetLastError());
+	InitializeCriticalSection(&m_cs);
 }
 
 OOBase::SpinLock::~SpinLock()

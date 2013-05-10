@@ -521,8 +521,7 @@ int InternalAcceptor::stop()
 		m_backlog = 0;
 		
 		// Close all the pending handles
-		HANDLE h = NULL;
-		for (OOBase::List<HANDLE>::const_iterator i=m_stkPending.begin();i!=m_stkPending.end();++i)
+		for (OOBase::List<HANDLE>::iterator i=m_stkPending.begin();i!=m_stkPending.end();++i)
 			::CloseHandle(*i);
 	}
 	
@@ -544,9 +543,9 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 {
 	OOBase::StackAllocator<256> allocator;
 	OOBase::TempPtr<wchar_t> wname(allocator);
-	DWORD dwErr = OOBase::Win32::utf8_to_wchar_t(m_pipe_name.c_str(),wname);
-	if (dwErr)
-		return dwErr;
+	int err = OOBase::Win32::utf8_to_wchar_t(m_pipe_name.c_str(),wname);
+	if (err)
+		return err;
 
 	OOBase::detail::ProactorWin32::Overlapped* pOv = NULL;
 	
@@ -568,18 +567,18 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 
 		if (!hPipe.is_valid())
 		{
-			dwErr = GetLastError();
+			err = GetLastError();
 			break;
 		}
 		
-		dwErr = m_pProactor->bind(hPipe);
-		if (dwErr)
+		err = m_pProactor->bind(hPipe);
+		if (err)
 			break;
 					
 		if (!pOv)
 		{
-			dwErr = m_pProactor->new_overlapped(pOv,&on_completion);
-			if (dwErr)
+			err = m_pProactor->new_overlapped(pOv,&on_completion);
+			if (err)
 			{
 				m_pProactor->unbind();
 				break;
@@ -591,12 +590,12 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 		
 		if (!ConnectNamedPipe(hPipe,pOv))
 		{
-			dwErr = GetLastError();
-			if (dwErr == ERROR_IO_PENDING)
+			err = GetLastError();
+			if (err == ERROR_IO_PENDING)
 			{
 				// Will complete later...
-				dwErr = m_stkPending.push_back(hPipe);
-				if (!dwErr)
+				m_stkPending.push_back(hPipe,err);
+				if (!err)
 				{
 					hPipe.detach();
 					pOv = NULL;
@@ -604,13 +603,13 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 				}
 			}
 			
-			if (dwErr != ERROR_PIPE_CONNECTED)
+			if (err != ERROR_PIPE_CONNECTED)
 			{
 				m_pProactor->unbind();
 				break;
 			}
 			
-			dwErr = 0;
+			err = 0;
 		}
 		
 		// Call the callback
@@ -620,14 +619,14 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 	if (pOv)
 		m_pProactor->delete_overlapped(pOv);
 	
-	if (dwErr && --m_refcount == 0)
+	if (err && --m_refcount == 0)
 	{
 		guard.release();
 
 		OOBase::CrtAllocator::delete_free(this);
 	}
 
-	return dwErr;
+	return err;
 }
 
 void InternalAcceptor::on_completion(HANDLE hPipe, DWORD /*dwBytes*/, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv)
