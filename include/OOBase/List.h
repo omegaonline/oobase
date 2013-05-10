@@ -42,8 +42,8 @@ namespace OOBase
 			T         m_data;
 		};
 
-		friend detail::IteratorImpl<List,T,ListNode*>;
-		friend detail::IteratorImpl<const List,const T,const ListNode*>;
+		friend class detail::IteratorImpl<List,T,ListNode*>;
+		friend class detail::IteratorImpl<const List,const T,const ListNode*>;
 
 	public:
 		typedef detail::IteratorImpl<List,T,ListNode*> iterator;

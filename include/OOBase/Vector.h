@@ -251,8 +251,8 @@ namespace OOBase
 	{
 		typedef detail::VectorBase<Allocator,T,detail::is_pod<T>::value> baseClass;
 
-		friend detail::IteratorImpl<Vector,T,size_t>;
-		friend detail::IteratorImpl<const Vector,const T,size_t>;
+		friend class detail::IteratorImpl<Vector,T,size_t>;
+		friend class detail::IteratorImpl<const Vector,const T,size_t>;
 
 	public:
 		typedef detail::IteratorImpl<Vector,T,size_t> iterator;
