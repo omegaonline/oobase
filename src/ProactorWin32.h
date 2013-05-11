@@ -36,8 +36,7 @@ namespace OOBase
 	namespace detail
 	{
 		class ProactorWin32 :
-				public Proactor,
-				public AllocatorNew<CrtAllocator>
+				public Proactor
 		{
 		// Proactor public members
 		public:

@@ -239,6 +239,9 @@ namespace OOBase
 			if (!curr)
 				return false;
 
+			if (pval)
+				*pval = curr->m_data;
+
 			ListNode* next = curr->m_next;
 			(curr->m_next ? curr->m_next : m_tail) = curr->m_prev;
 			(curr->m_prev ? curr->m_prev : m_head) = next;

@@ -153,6 +153,7 @@
   <ItemGroup>
     <ClCompile Include="ArenaAllocator.cpp" />
     <ClCompile Include="Buffer.cpp" />
+    <ClCompile Include="Builtins.cpp" />
     <ClCompile Include="CmdArgs.cpp" />
     <ClCompile Include="Condition.cpp" />
     <ClCompile Include="ConfigFile.cpp" />
@@ -160,7 +161,6 @@
     <ClCompile Include="Environment.cpp" />
     <ClCompile Include="Error.cpp" />
     <ClCompile Include="Logger.cpp" />
-    <ClCompile Include="Memory.cpp" />
     <ClCompile Include="Mutex.cpp" />
     <ClCompile Include="Once.cpp" />
     <ClCompile Include="Proactor.cpp" />
@@ -183,8 +183,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\OOBase\ArenaAllocator.h" />
+    <ClInclude Include="..\include\OOBase\AsyncResponse.h" />
     <ClInclude Include="..\include\OOBase\Atomic.h" />
     <ClInclude Include="..\include\OOBase\Bag.h" />
+    <ClInclude Include="..\include\OOBase\Base.h" />
     <ClInclude Include="..\include\OOBase\BoundedQueue.h" />
     <ClInclude Include="..\include\OOBase\Cache.h" />
     <ClInclude Include="..\include\OOBase\CDRIO.h" />
@@ -192,6 +194,7 @@
     <ClInclude Include="..\include\OOBase\ConfigFile.h" />
     <ClInclude Include="..\include\OOBase\Environment.h" />
     <ClInclude Include="..\include\OOBase\GlobalNew.h" />
+    <ClInclude Include="..\include\OOBase\List.h" />
     <ClInclude Include="..\include\OOBase\Logger.h" />
     <ClInclude Include="..\include\OOBase\Proactor.h" />
     <ClInclude Include="..\include\OOBase\RefCount.h" />
@@ -227,6 +230,9 @@
     <ClInclude Include="..\include\OOBase\TLSSingleton.h" />
     <ClInclude Include="..\include\OOBase\utf8.h" />
     <ClInclude Include="..\include\OOBase\Win32.h" />
+    <ClInclude Include="config-base.h" />
+    <ClInclude Include="ProactorPoll.h" />
+    <ClInclude Include="ProactorPosix.h" />
     <ClInclude Include="ProactorWin32.h" />
     <ClInclude Include="Win32Impl.h" />
     <ClInclude Include="Win32Socket.h" />

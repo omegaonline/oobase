@@ -110,16 +110,28 @@
 #endif
 
 #if defined(_MSC_VER)
-typedef __int8 int8_t;
-typedef unsigned __int8 uint8_t;
-typedef __int16 int16_t;
-typedef unsigned __int16 uint16_t;
-typedef __int32 int32_t;
-typedef unsigned __int32 uint32_t;
-typedef __int64 int64_t;
-typedef unsigned __int64 uint64_t;
+namespace OOBase
+{
+	typedef __int8 int8_t;
+	typedef unsigned __int8 uint8_t;
+	typedef __int16 int16_t;
+	typedef unsigned __int16 uint16_t;
+	typedef __int32 int32_t;
+	typedef unsigned __int32 uint32_t;
+	typedef __int64 int64_t;
+	typedef unsigned __int64 uint64_t;
+}
 #elif (HAVE_STDINT_H)
 #include <stdint.h>
+namespace OOBase
+{
+	using ::int16_t;
+	using ::uint16_t;
+	using ::int32_t;
+	using ::uint32_t;
+	using ::int64_t;
+	using ::uint64_t;
+}
 #else
 #error Define uint64_t
 #endif

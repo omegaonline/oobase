@@ -303,7 +303,7 @@ namespace OOBase
 			{
 			   typedef T1 type;
 			};
-			friend class type_wrapper<Container>::type;
+			friend typename type_wrapper<Container>::type;
 
 		public:
 			IteratorImpl(const IteratorImpl& rhs) : m_cont(rhs.m_cont), m_pos(rhs.m_pos)

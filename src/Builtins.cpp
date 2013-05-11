@@ -34,6 +34,8 @@ namespace OOBase
 
 #if defined(_MSC_VER)
 
+#include <stdlib.h>
+
 #define FAST_BYTESWAP_2(x) _byteswap_ushort(x)
 #define FAST_BYTESWAP_4(x) _byteswap_ulong(x)
 #define FAST_BYTESWAP_8(x) _byteswap_uint64(x)
@@ -54,7 +56,7 @@ namespace OOBase
 
 #endif
 
-uint16_t OOBase::detail::byte_swap_2(uint16_t val)
+OOBase::uint16_t OOBase::detail::byte_swap_2(uint16_t val)
 {
 #if defined(FAST_BYTESWAP_2)
 	return (FAST_BYTESWAP_2(val));
@@ -63,7 +65,7 @@ uint16_t OOBase::detail::byte_swap_2(uint16_t val)
 #endif
 }
 
-uint32_t OOBase::detail::byte_swap_4(uint32_t val)
+OOBase::uint32_t OOBase::detail::byte_swap_4(uint32_t val)
 {
 #if defined(FAST_BYTESWAP_4)
 	return (FAST_BYTESWAP_4(val));
@@ -74,7 +76,7 @@ uint32_t OOBase::detail::byte_swap_4(uint32_t val)
 #endif
 }
 
-uint64_t OOBase::detail::byte_swap_8(uint64_t val)
+OOBase::uint64_t OOBase::detail::byte_swap_8(uint64_t val)
 {
 #if defined(FAST_BYTESWAP_8)
 	return (FAST_BYTESWAP_8(val));
@@ -123,6 +125,7 @@ unsigned int OOBase::detail::ffs(uint16_t v)
 #define ATOMIC_DEC_32(t) _InterlockedDecrement((long volatile*)(t))
 #define ATOMIC_ADD_32(t,v) _InterlockedExchangeAdd((long volatile*)(t),(long)(v))
 
+#if defined(_M_X64)
 /* Define if you have atomic compare-and-swap for 64bit values */
 #define ATOMIC_CAS_64(t,c,x) _InterlockedCompareExchange64((__int64 volatile*)(t),(__int64)(x),(__int64)(c))
 
@@ -133,6 +136,7 @@ unsigned int OOBase::detail::ffs(uint16_t v)
 #define ATOMIC_INC_64(t) _InterlockedIncrement64((__int64 volatile*)(t))
 #define ATOMIC_DEC_64(t) _InterlockedDecrement64((__int64 volatile*)(t))
 #define ATOMIC_ADD_64(t,v) _InterlockedExchangeAdd64((__int64 volatile*)(t),(__int64)(v))
+#endif
 
 #elif defined(__clang__)
 
@@ -193,7 +197,7 @@ static T Exchange(T& val, const T newVal)
 
 #endif // defined(_WIN32)
 
-uint32_t OOBase::detail::atomic_cas_4(uint32_t volatile* val, const uint32_t oldVal, const uint32_t newVal)
+OOBase::int32_t OOBase::detail::atomic_cas_4(int32_t volatile* val, const int32_t oldVal, const int32_t newVal)
 {
 #if defined(ATOMIC_CAS_32)
 	return ATOMIC_CAS_32(val,oldVal,newVal);
@@ -202,12 +206,12 @@ uint32_t OOBase::detail::atomic_cas_4(uint32_t volatile* val, const uint32_t old
 #endif
 }
 
-uint32_t OOBase::detail::atomic_swap_4(uint32_t volatile* val, const uint32_t newVal)
+OOBase::int32_t OOBase::detail::atomic_swap_4(int32_t volatile* val, const int32_t newVal)
 {
 #if defined (ATOMIC_EXCH_32)
 	return ATOMIC_EXCH_32(val,newVal);
 #else
-	uint32_t oldVal = *val;
+	int32_t oldVal = *val;
 	while (atomic_cas_4(val,oldVal,newVal) != oldVal)
 		oldVal = *val;
 
@@ -215,13 +219,13 @@ uint32_t OOBase::detail::atomic_swap_4(uint32_t volatile* val, const uint32_t ne
 #endif
 }
 
-uint32_t OOBase::detail::atomic_add_4(uint32_t volatile* val, const uint32_t add)
+OOBase::int32_t OOBase::detail::atomic_add_4(int32_t volatile* val, const int32_t add)
 {
 #if defined(ATOMIC_ADD_32)
 	return ATOMIC_ADD_32(val,add);
 #else
-	uint32_t oldVal = *val;
-	uint32_t newVal = *val + add;
+	int32_t oldVal = *val;
+	int32_t newVal = *val + add;
 	while (atomic_cas_4(val,oldVal,newVal) != oldVal)
 	{
 		oldVal = *val;
@@ -231,7 +235,7 @@ uint32_t OOBase::detail::atomic_add_4(uint32_t volatile* val, const uint32_t add
 #endif
 }
 
-uint32_t OOBase::detail::atomic_inc_4(uint32_t volatile* val)
+OOBase::int32_t OOBase::detail::atomic_inc_4(int32_t volatile* val)
 {
 #if defined(ATOMIC_INC_32)
 	return ATOMIC_INC_32(val);
@@ -240,7 +244,7 @@ uint32_t OOBase::detail::atomic_inc_4(uint32_t volatile* val)
 #endif
 }
 
-uint32_t OOBase::detail::atomic_sub_4(uint32_t volatile* val, const uint32_t sub)
+OOBase::int32_t OOBase::detail::atomic_sub_4(int32_t volatile* val, const int32_t sub)
 {
 #if defined(ATOMIC_SUB_32)
 	return ATOMIC_SUB_32(val,sub);
@@ -249,7 +253,7 @@ uint32_t OOBase::detail::atomic_sub_4(uint32_t volatile* val, const uint32_t sub
 #endif
 }
 
-uint32_t OOBase::detail::atomic_dec_4(uint32_t volatile* val)
+OOBase::int32_t OOBase::detail::atomic_dec_4(int32_t volatile* val)
 {
 #if defined(ATOMIC_DEC_32)
 	return ATOMIC_DEC_32(val);
@@ -258,17 +262,17 @@ uint32_t OOBase::detail::atomic_dec_4(uint32_t volatile* val)
 #endif
 }
 
-uint64_t OOBase::detail::atomic_cas_8(uint64_t volatile* val, const uint64_t oldVal, const uint64_t newVal)
+OOBase::int64_t OOBase::detail::atomic_cas_8(int64_t volatile* val, const int64_t oldVal, const int64_t newVal)
 {
 	return ATOMIC_CAS_64(val,oldVal,newVal);
 }
 
-uint64_t OOBase::detail::atomic_swap_8(uint64_t volatile* val, const uint64_t newVal)
+OOBase::int64_t OOBase::detail::atomic_swap_8(int64_t volatile* val, const int64_t newVal)
 {
 #if defined (ATOMIC_EXCH_64)
 	return ATOMIC_EXCH_64(val,newVal);
 #else
-	uint64_t oldVal = *val;
+	int64_t oldVal = *val;
 	while (atomic_cas_8(val,oldVal,newVal) != oldVal)
 		oldVal = *val;
 
@@ -276,13 +280,13 @@ uint64_t OOBase::detail::atomic_swap_8(uint64_t volatile* val, const uint64_t ne
 #endif
 }
 
-uint64_t OOBase::detail::atomic_add_8(uint64_t volatile* val, const uint64_t add)
+OOBase::int64_t OOBase::detail::atomic_add_8(int64_t volatile* val, const int64_t add)
 {
 #if defined(ATOMIC_ADD_64)
 	return ATOMIC_ADD_64(val,add);
 #else
-	uint64_t oldVal = *val;
-	uint64_t newVal = *val + add;
+	int64_t oldVal = *val;
+	int64_t newVal = *val + add;
 	while (atomic_cas_8(val,oldVal,newVal) != oldVal)
 	{
 		oldVal = *val;
@@ -292,7 +296,7 @@ uint64_t OOBase::detail::atomic_add_8(uint64_t volatile* val, const uint64_t add
 #endif
 }
 
-uint64_t OOBase::detail::atomic_inc_8(uint64_t volatile* val)
+OOBase::int64_t OOBase::detail::atomic_inc_8(int64_t volatile* val)
 {
 #if defined(ATOMIC_INC_64)
 	return ATOMIC_INC_64(val);
@@ -301,7 +305,7 @@ uint64_t OOBase::detail::atomic_inc_8(uint64_t volatile* val)
 #endif
 }
 
-uint64_t OOBase::detail::atomic_sub_8(uint64_t volatile* val, const uint64_t sub)
+OOBase::int64_t OOBase::detail::atomic_sub_8(int64_t volatile* val, const int64_t sub)
 {
 #if defined(ATOMIC_SUB_64)
 	return ATOMIC_SUB_64(val,sub);
@@ -310,7 +314,7 @@ uint64_t OOBase::detail::atomic_sub_8(uint64_t volatile* val, const uint64_t sub
 #endif
 }
 
-uint64_t OOBase::detail::atomic_dec_8(uint64_t volatile* val)
+OOBase::int64_t OOBase::detail::atomic_dec_8(int64_t volatile* val)
 {
 #if defined(ATOMIC_DEC_64)
 	return ATOMIC_DEC_64(val);
