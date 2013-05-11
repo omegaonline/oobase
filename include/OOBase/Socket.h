@@ -32,6 +32,7 @@
 #undef _WINSOCKAPI_
 #endif
 #include <winsock2.h>
+#include <mswsock.h>
 
 #if defined(_MSC_VER)
 #pragma warning(push)

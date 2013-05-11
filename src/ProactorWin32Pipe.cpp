@@ -486,7 +486,7 @@ InternalAcceptor::InternalAcceptor(OOBase::detail::ProactorWin32* pProactor, con
 		m_pProactor(pProactor),
 		m_pipe_name(pipe_name),
 		m_null_sa(psa == NULL),
-		m_sd(psa ? psa->lpSecurityDescriptor : NULL),
+		m_sd(psa ? (PSECURITY_DESCRIPTOR)psa->lpSecurityDescriptor : NULL),
 		m_backlog(3),
 		m_refcount(1),
 		m_param(param),
@@ -899,7 +899,7 @@ InternalUniqueAcceptor::InternalUniqueAcceptor(OOBase::detail::ProactorWin32* pP
 		m_pipe_name(pipe_name),
 		m_running(false),
 		m_null_sa(psa == NULL),
-		m_sd(psa ? psa->lpSecurityDescriptor : NULL),
+		m_sd(psa ? (PSECURITY_DESCRIPTOR)psa->lpSecurityDescriptor : NULL),
 		m_refcount(1),
 		m_param(param),
 		m_callback(callback)

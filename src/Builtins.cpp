@@ -262,6 +262,7 @@ OOBase::int32_t OOBase::detail::atomic_dec_4(int32_t volatile* val)
 #endif
 }
 
+#if defined (ATOMIC_CAS_64)
 OOBase::int64_t OOBase::detail::atomic_cas_8(int64_t volatile* val, const int64_t oldVal, const int64_t newVal)
 {
 	return ATOMIC_CAS_64(val,oldVal,newVal);
@@ -322,4 +323,4 @@ OOBase::int64_t OOBase::detail::atomic_dec_8(int64_t volatile* val)
 	return atomic_sub_8(val,1);
 #endif
 }
-
+#endif // ATOMIC_CAS_64

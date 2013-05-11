@@ -25,7 +25,6 @@
 #if defined(_WIN32)
 
 #include <shlwapi.h>
-#include <winsafer.h>
 
 namespace
 {
@@ -49,13 +48,13 @@ OOBase::Win32::sec_descript_t::sec_descript_t(PSECURITY_DESCRIPTOR pSD)
 
 OOBase::Win32::sec_descript_t::sec_descript_t(const sec_descript_t& rhs)
 {
-	copy(const_cast<PSECURITY_DESCRIPTOR>(static_cast<const void*>(rhs.m_psd)));
+	copy((PSECURITY_DESCRIPTOR)(static_cast<const void*>(rhs.m_psd)));
 }
 
 OOBase::Win32::sec_descript_t& OOBase::Win32::sec_descript_t::operator = (const sec_descript_t& rhs)
 {
 	if (this != &rhs)
-		copy(const_cast<PSECURITY_DESCRIPTOR>(static_cast<const void*>(rhs.m_psd)));
+		copy((PSECURITY_DESCRIPTOR)(static_cast<const void*>(rhs.m_psd)));
 
 	return *this;
 }
@@ -327,6 +326,7 @@ DWORD OOBase::Win32::RestrictToken(HANDLE hToken, HANDLE* hNewToken)
 			// Adjust Token to remove all privilege apart from SeChangeNotifyPrivilege
 			// Add membership of the least privilege SID
 
+#if defined(SAFER_SCOPEID_MACHINE)
 			// Apply SAFER rules if possible
 			if (GetProcAddress(hKernel32,"SaferCreateLevel"))
 			{
@@ -351,6 +351,7 @@ DWORD OOBase::Win32::RestrictToken(HANDLE hToken, HANDLE* hNewToken)
 
 				return dwRes;
 			}
+#endif
 		}
 	}
 
@@ -405,7 +406,8 @@ bool OOBase::Win32::MatchPrivileges(ULONG count, PLUID_AND_ATTRIBUTES Privs1, PL
 DWORD OOBase::Win32::StringToSID(const char* pszSID, SmartPtr<void,LocalAllocDestructor>& pSID)
 {
 	PSID pSID2 = NULL;
-	if (!ConvertStringSidToSidA(pszSID,&pSID2))
+	// Duff declaration in mingw 3.4.5
+	if (!ConvertStringSidToSidA((CHAR*)pszSID,&pSID2))
 		return GetLastError();
 
 	pSID = pSID2;

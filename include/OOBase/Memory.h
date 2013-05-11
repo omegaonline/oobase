@@ -59,6 +59,12 @@
 #endif
 
 #if !defined(HAVE__IS_POD)
+#if defined(min)
+#undef min
+#endif
+#if defined(max)
+#undef max
+#endif
 #include <limits>
 #endif
 
