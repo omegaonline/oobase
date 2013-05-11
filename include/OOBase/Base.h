@@ -123,8 +123,12 @@ namespace OOBase
 }
 #elif (HAVE_STDINT_H)
 #include <stdint.h>
+
+#if defined(__cplusplus)
 namespace OOBase
 {
+	using ::int8_t;
+	using ::uint8_t;
 	using ::int16_t;
 	using ::uint16_t;
 	using ::int32_t;
@@ -132,6 +136,8 @@ namespace OOBase
 	using ::int64_t;
 	using ::uint64_t;
 }
+#endif
+
 #else
 #error Define uint64_t
 #endif
