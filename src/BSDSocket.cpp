@@ -471,7 +471,7 @@ int BSDSocket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 		if (to_write)
 		{
 			msg.msg_iov[msg.msg_iovlen].iov_len = to_write;
-			msg.msg_iov[msg.msg_iovlen].iov_base = const_cast<char*>(buffers[i]->rd_ptr());
+			msg.msg_iov[msg.msg_iovlen].iov_base = const_cast<uint8_t*>(buffers[i]->rd_ptr());
 			++msg.msg_iovlen;
 		}
 	}

@@ -28,20 +28,20 @@
 
 namespace
 {
-	bool whitespace(const char c)
+	bool whitespace(const uint8_t c)
 	{
 		return (c == ' ' || c == '\r' || c == '\n' || c == '\t');
 	}
 
-	bool comment(const char c)
+	bool comment(const uint8_t c)
 	{
 		return (c == '#');
 	}
 
-	int parse_section(const char* key_start, const char* end, OOBase::String& strSection, OOBase::ConfigFile::error_pos_t* error_pos)
+	int parse_section(const uint8_t* key_start, const uint8_t* end, OOBase::String& strSection, OOBase::ConfigFile::error_pos_t* error_pos)
 	{
 		// Check for closing ] (And whitespace or comments in the section name)
-		const char* key_end = key_start + 1;
+		const uint8_t* key_end = key_start + 1;
 		while (key_end < end && *key_end != ']' && !comment(*key_end) && !whitespace(*key_end))
 			++key_end;
 
@@ -54,7 +54,7 @@ namespace
 		}
 
 		// Check for trailing nonsense
-		const char* p = key_end + 1;
+		const uint8_t* p = key_end + 1;
 		while (p < end && whitespace(*p))
 			++p;
 
@@ -69,7 +69,7 @@ namespace
 		// Update the section name, [] clears it...
 		if (key_end != key_start + 1)
 		{
-			int err = strSection.assign(key_start+1,key_end - key_start - 1);
+			int err = strSection.assign((const char*)(key_start+1),key_end - key_start - 1);
 			if (err)
 				return err;
 		}
@@ -79,14 +79,14 @@ namespace
 		return 0;
 	}
 
-	int parse_line(const char* key_start, const char* end, const OOBase::String& strSection, OOBase::ConfigFile::results_t& results, OOBase::ConfigFile::error_pos_t* error_pos)
+	int parse_line(const uint8_t* key_start, const uint8_t* end, const OOBase::String& strSection, OOBase::ConfigFile::results_t& results, OOBase::ConfigFile::error_pos_t* error_pos)
 	{
 		// Check for = (and whitespace or comments)
-		const char* key_end = key_start;
+		const uint8_t* key_end = key_start;
 		while (key_end < end && *key_end != '=' && !comment(*key_end) && !whitespace(*key_end))
 			++key_end;
 
-		const char* value_start = NULL;
+		const uint8_t* value_start = NULL;
 		if (key_end < end && whitespace(*key_end))
 		{
 			// Skip whitespace after key up to =
@@ -124,7 +124,7 @@ namespace
 		if (!strKey.empty())
 			err = strKey.append("/",1);
 		if (!err)
-			err = strKey.append(key_start,key_end - key_start);
+			err = strKey.append((const char*)key_start,key_end - key_start);
 		if (err)
 			return err;
 
@@ -136,13 +136,13 @@ namespace
 				++value_start;
 
 			// Search for the end of the value...
-			const char* value_end = value_start;
+			const uint8_t* value_end = value_start;
 			while (value_end < end && !comment(*value_end))
 				++value_end;
 
 			if (value_end > value_start)
 			{
-				err = strValue.assign(value_start,value_end - value_start);
+				err = strValue.assign((const char*)value_start,value_end - value_start);
 				if (err)
 					return err;
 			}
@@ -161,9 +161,9 @@ namespace
 		// Split into lines...
 		while (buffer->length() > 0)
 		{
-			const char* start = buffer->rd_ptr();
-			const char* end = start + buffer->length();
-			const char* p = start;
+			const uint8_t* start = buffer->rd_ptr();
+			const uint8_t* end = start + buffer->length();
+			const uint8_t* p = start;
 
 			// Skip leading whitespace
 			while (p < end && whitespace(*p))
@@ -182,7 +182,7 @@ namespace
 			}
 
 			// Find the next LF
-			const char* key_start = p;
+			const uint8_t* key_start = p;
 			while (p < end && *p != '\n')
 				++p;
 

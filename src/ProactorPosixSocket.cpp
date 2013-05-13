@@ -703,7 +703,7 @@ int PosixAsyncSocket::process_send_v(SendItem* item, bool& watch_again)
 			for (size_t i=0;i<msg.msg_iovlen;++i)
 			{
 				msg.msg_iov[i].iov_len = item->m_buffers[i+first_buffer]->length();
-				msg.msg_iov[i].iov_base = const_cast<char*>(item->m_buffers[i+first_buffer]->rd_ptr());
+				msg.msg_iov[i].iov_base = const_cast<uint8_t*>(item->m_buffers[i+first_buffer]->rd_ptr());
 			}
 
 			while (msg.msg_iovlen)
@@ -762,13 +762,13 @@ int PosixAsyncSocket::process_send_msg(SendItem* item, bool& watch_again)
 {
 	// We only do a single write
 	struct iovec io = {0};
-	io.iov_base = const_cast<char*>(item->m_buffer->rd_ptr());
+	io.iov_base = const_cast<uint8_t*>(item->m_buffer->rd_ptr());
 	io.iov_len = item->m_buffer->length();
 
 	struct msghdr msg = {0};
 	msg.msg_iov = &io;
 	msg.msg_iovlen = 1;
-	msg.msg_control = const_cast<char*>(item->m_ctl_buffer->rd_ptr());
+	msg.msg_control = const_cast<uint8_t*>(item->m_ctl_buffer->rd_ptr());
 	msg.msg_controllen = item->m_ctl_buffer->length();
 
 	ssize_t sent = 0;

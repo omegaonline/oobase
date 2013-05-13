@@ -110,7 +110,7 @@ int Win32AsyncSocket::recv(void* param, OOBase::AsyncSocket::recv_callback_t cal
 	buffer->addref();
 	
 	WSABUF wsa_buf;
-	wsa_buf.buf = buffer->wr_ptr();
+	wsa_buf.buf = reinterpret_cast<char*>(buffer->wr_ptr());
 	wsa_buf.len = static_cast<u_long>(bytes);
 	
 	DWORD dwFlags = (bytes != 0 ? MSG_WAITALL : 0);
@@ -184,13 +184,13 @@ int Win32AsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, OOBase
 	ctl_buffer->addref();
 
 	WSABUF wsa_buf;
-	wsa_buf.buf = data_buffer->wr_ptr();
+	wsa_buf.buf = reinterpret_cast<char*>(data_buffer->wr_ptr());
 	wsa_buf.len = static_cast<u_long>(data_bytes);
 
 	WSAMSG msg = {0};
 	msg.lpBuffers = &wsa_buf;
 	msg.dwBufferCount = 1;
-	msg.Control.buf = ctl_buffer->wr_ptr();
+	msg.Control.buf = reinterpret_cast<char*>(ctl_buffer->wr_ptr());
 	msg.Control.len = static_cast<u_long>(ctl_buffer->space());
 	msg.dwFlags = 0;
 
@@ -259,7 +259,7 @@ int Win32AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer
 	buffer->addref();
 	
 	WSABUF wsa_buf;
-	wsa_buf.buf = const_cast<char*>(buffer->rd_ptr());
+	wsa_buf.buf = (char*)(buffer->rd_ptr());
 	wsa_buf.len = static_cast<u_long>(bytes);
 	
 	if (WSASend(m_hSocket,&wsa_buf,1,NULL,0,pOv,NULL) == SOCKET_ERROR)
@@ -327,7 +327,7 @@ int Win32AsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Bu
 			total += len;
 
 			wsa_bufs[buf_count].len = static_cast<u_long>(len);
-			wsa_bufs[buf_count].buf = const_cast<char*>(buffers[i]->rd_ptr());
+			wsa_bufs[buf_count].buf = (char*)(buffers[i]->rd_ptr());
 
 			if (++buf_count == DWORD(-1))
 				return ERROR_BUFFER_OVERFLOW;
@@ -464,13 +464,13 @@ int Win32AsyncSocket::send_msg(void* param, send_msg_callback_t callback, OOBase
 	ctl_buffer->addref();
 
 	WSABUF wsa_buf;
-	wsa_buf.buf = const_cast<char*>(data_buffer->rd_ptr());
+	wsa_buf.buf = (char*)(data_buffer->rd_ptr());
 	wsa_buf.len = static_cast<u_long>(data_len);
 
 	WSAMSG msg = {0};
 	msg.lpBuffers = &wsa_buf;
 	msg.dwBufferCount = 1;
-	msg.Control.buf = const_cast<char*>(ctl_buffer->rd_ptr());
+	msg.Control.buf = (char*)(ctl_buffer->rd_ptr());
 	msg.Control.len = static_cast<u_long>(ctl_len);
 	msg.dwFlags = 0;
 

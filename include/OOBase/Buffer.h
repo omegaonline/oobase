@@ -60,7 +60,7 @@ namespace OOBase
 		static Buffer* create(AllocatorInstance& allocator, size_t cbSize = 256, size_t align = 1);
 
 		/// Get the current read pointer value.
-		const char* rd_ptr() const;
+		const uint8_t* rd_ptr() const;
 
 		/// Advance the read pointer by \p cbSkip bytes.
 		void rd_ptr(size_t cbSkip);
@@ -69,7 +69,7 @@ namespace OOBase
 		void align_rd_ptr(size_t align);
 
 		/// Get the current write pointer value.
-		char* wr_ptr();
+		uint8_t* wr_ptr();
 
 		/// Advance the write pointer by \p cbExpand bytes.
 		int wr_ptr(size_t cbExpand);
@@ -105,17 +105,17 @@ namespace OOBase
 		void mark_wr_ptr(size_t mark);
 
 	protected:
-		virtual char* reallocate(char* data, size_t size, size_t align) = 0;
+		virtual uint8_t* reallocate(uint8_t* data, size_t size, size_t align) = 0;
 
-		Buffer(char* buffer, size_t cbSize, size_t align);
+		Buffer(uint8_t* buffer, size_t cbSize, size_t align);
 
-		char*   m_buffer;   ///< The actual underlying buffer.
+		uint8_t* m_buffer;   ///< The actual underlying buffer.
 
 	private:
-		size_t  m_capacity; ///< The total allocated bytes for \p m_buffer.
-		size_t  m_align;    ///< The alignment of the start of \p m_buffer.
-		char*   m_wr_ptr;   ///< The current write pointer.
-		char*   m_rd_ptr;   ///< The current read pointer.
+		size_t   m_capacity; ///< The total allocated bytes for \p m_buffer.
+		size_t   m_align;    ///< The alignment of the start of \p m_buffer.
+		uint8_t* m_wr_ptr;   ///< The current write pointer.
+		uint8_t* m_rd_ptr;   ///< The current read pointer.
 	};
 
 	namespace detail
@@ -127,12 +127,12 @@ namespace OOBase
 
 		public:
 			BufferImpl(void* buffer, size_t cbSize, size_t align) :
-					Buffer(static_cast<char*>(buffer),cbSize,align),
+					Buffer(static_cast<uint8_t*>(buffer),cbSize,align),
 					baseClass()
 			{}
 
 			BufferImpl(AllocatorInstance& allocator, void* buffer, size_t cbSize, size_t align) :
-					Buffer(static_cast<char*>(buffer),cbSize,align),
+					Buffer(static_cast<uint8_t*>(buffer),cbSize,align),
 					baseClass(allocator)
 			{}
 
@@ -169,9 +169,9 @@ namespace OOBase
 				baseClass::delete_this(this);
 			}
 
-			char* reallocate(char* data, size_t size, size_t align)
+			uint8_t* reallocate(uint8_t* data, size_t size, size_t align)
 			{
-				return static_cast<char*>(baseClass::reallocate(data,size,align));
+				return static_cast<uint8_t*>(baseClass::reallocate(data,size,align));
 			}
 		};
 	}

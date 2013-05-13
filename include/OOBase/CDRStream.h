@@ -150,9 +150,9 @@ namespace OOBase
 			if (m_last_error != 0)
 				return false;
 
-			char* wr_ptr = m_buffer->wr_ptr();
-			wr_ptr[0] = static_cast<char>(m_endianess >> 8);
-			wr_ptr[1] = static_cast<char>(m_endianess & 0xFF);
+			uint8_t* wr_ptr = m_buffer->wr_ptr();
+			wr_ptr[0] = static_cast<uint8_t>(m_endianess >> 8);
+			wr_ptr[1] = static_cast<uint8_t>(m_endianess & 0xFF);
 
 			m_buffer->wr_ptr(2);
 
@@ -171,7 +171,7 @@ namespace OOBase
 			if (m_buffer->length() < 2)
 				return error_eof();
 
-			const char* rd_ptr = m_buffer->rd_ptr();
+			const uint8_t* rd_ptr = m_buffer->rd_ptr();
 			m_endianess = (rd_ptr[0] << 8) | rd_ptr[1];
 			m_buffer->rd_ptr(2);
 			return true;
@@ -219,7 +219,7 @@ namespace OOBase
 			if (m_buffer->length() < 1)
 				return error_eof();
 
-			val = (*m_buffer->rd_ptr() == 0 ? false : true);
+			val = (*m_buffer->rd_ptr() != 0);
 			m_buffer->rd_ptr(1);
 			return true;
 		}
@@ -248,14 +248,14 @@ namespace OOBase
 			if (len > m_buffer->length())
 				return error_too_big();
 
-			m_last_error = val.assign(m_buffer->rd_ptr(),len);
+			m_last_error = val.assign((const char*)m_buffer->rd_ptr(),len);
 			if (m_last_error == 0)
 				m_buffer->rd_ptr(len);
 
 			return (m_last_error == 0);
 		}
 
-		size_t read_bytes(unsigned char* buffer, size_t count)
+		size_t read_bytes(uint8_t* buffer, size_t count)
 		{
 			if (m_last_error != 0)
 				return 0;
@@ -320,7 +320,7 @@ namespace OOBase
 				return false;
 
 			// Then the bytes of the string
-			return write_bytes(reinterpret_cast<const unsigned char*>(pszText),len);
+			return write_bytes(reinterpret_cast<const uint8_t*>(pszText),len);
 		}
 
 		/// A specialization of write() for character arrays.
@@ -360,7 +360,7 @@ namespace OOBase
 			return write(str.c_str(),str.length());
 		}
 
-		bool write_bytes(const unsigned char* buffer, size_t count)
+		bool write_bytes(const uint8_t* buffer, size_t count)
 		{
 			if (m_last_error != 0)
 				return false;
@@ -449,7 +449,7 @@ namespace OOBase
 			len = 0;
 			for (size_t i=0;;i+=7)
 			{
-				unsigned char b = 0;
+				uint8_t b = 0;
 				if (!read(b))
 					return false;
 
@@ -469,7 +469,7 @@ namespace OOBase
 		{
 			do
 			{
-				unsigned char b = (len & 0x7F);
+				uint8_t b = (len & 0x7F);
 				if (len > 0x7F)
 					b |= 0x80;
 

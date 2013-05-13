@@ -486,7 +486,7 @@ int WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 			total_len += len;
 
 			wsa_bufs[actual_count].len = static_cast<u_long>(len);
-			wsa_bufs[actual_count].buf = const_cast<char*>(buffers[i]->rd_ptr());
+			wsa_bufs[actual_count].buf = (char*)(buffers[i]->rd_ptr());
 
 			if (++actual_count == DWORD(-1))
 				return ERROR_BUFFER_OVERFLOW;
@@ -719,7 +719,7 @@ int WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 			total_len += len;
 
 			wsa_bufs[actual_count].len = static_cast<u_long>(len);
-			wsa_bufs[actual_count].buf = const_cast<char*>(buffers[i]->wr_ptr());
+			wsa_bufs[actual_count].buf = reinterpret_cast<char*>(buffers[i]->wr_ptr());
 
 			if (++actual_count == DWORD(-1))
 				return ERROR_BUFFER_OVERFLOW;
@@ -865,7 +865,7 @@ size_t WinSocket::recv_msg(void* data_buf, size_t data_len, OOBase::Buffer* ctl_
 	WSAMSG msg = {0};
 	msg.lpBuffers = &wsabuf;
 	msg.dwBufferCount = 1;
-	msg.Control.buf = ctl_buffer->wr_ptr();
+	msg.Control.buf = reinterpret_cast<char*>(ctl_buffer->wr_ptr());
 	msg.Control.len = static_cast<u_long>(ctl_len);
 	msg.dwFlags = MSG_WAITALL;
 

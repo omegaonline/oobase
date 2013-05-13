@@ -27,7 +27,7 @@ OOBase::Buffer* OOBase::Buffer::create(AllocatorInstance& allocator, size_t cbSi
 	return detail::BufferImpl<AllocatorInstance>::create(allocator,cbSize,align);
 }
 
-OOBase::Buffer::Buffer(char* buffer, size_t cbSize, size_t align) :
+OOBase::Buffer::Buffer(uint8_t* buffer, size_t cbSize, size_t align) :
 		m_buffer(buffer),
 		m_capacity(cbSize),
 		m_align(align),
@@ -36,7 +36,7 @@ OOBase::Buffer::Buffer(char* buffer, size_t cbSize, size_t align) :
 {
 }
 
-const char* OOBase::Buffer::rd_ptr() const
+const uint8_t* OOBase::Buffer::rd_ptr() const
 {
 	return m_rd_ptr;
 }
@@ -66,7 +66,7 @@ void OOBase::Buffer::align_rd_ptr(size_t align)
 		rd_ptr(align - overrun);
 }
 
-char* OOBase::Buffer::wr_ptr()
+uint8_t* OOBase::Buffer::wr_ptr()
 {
 	return m_wr_ptr;
 }
@@ -118,7 +118,7 @@ void OOBase::Buffer::reset()
 
 void OOBase::Buffer::compact()
 {
-	char* orig_rd = m_rd_ptr;
+	uint8_t* orig_rd = m_rd_ptr;
 	ptrdiff_t len = (m_wr_ptr - m_rd_ptr);
 
 	reset();
@@ -150,7 +150,7 @@ int OOBase::Buffer::space(size_t cbSpace)
 		size_t rd_pos = (m_rd_ptr - m_buffer);
 		size_t wr_pos = (m_wr_ptr - m_buffer);
 
-		char* new_ptr = reallocate(m_buffer,cbAbsCapacity,m_align);
+		uint8_t* new_ptr = reallocate(m_buffer,cbAbsCapacity,m_align);
 		if (!new_ptr)
 			return ERROR_OUTOFMEMORY;
 
