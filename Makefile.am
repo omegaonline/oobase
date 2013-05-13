@@ -66,56 +66,6 @@ liboobase_la_LIBADD = $(LIBLTDL) -lrt
 endif 
 
 liboobase_la_SOURCES = \
-	include/oobase-platform.h \
-	include/OOBase/Base.h \
-	include/OOBase/ArenaAllocator.h \
-	include/OOBase/AsyncResponse.h \
-	include/OOBase/Atomic.h \
-	include/OOBase/Bag.h \
-	include/OOBase/BoundedQueue.h \
-	include/OOBase/Buffer.h \
-	include/OOBase/ByteSwap.h \
-	include/OOBase/Cache.h \
-	include/OOBase/CDRStream.h \
-	include/OOBase/CDRIO.h \
-	include/OOBase/CmdArgs.h \
-	include/OOBase/Condition.h \
-	include/OOBase/ConfigFile.h \
-	include/OOBase/Destructor.h \
-	include/OOBase/DLL.h \
-	include/OOBase/Environment.h \
-	include/OOBase/HandleTable.h \
-	include/OOBase/HashTable.h \
-	include/OOBase/List.h \
-	include/OOBase/Logger.h \
-	include/OOBase/Memory.h \
-	include/OOBase/Mutex.h \
-	include/OOBase/Once.h \
-	include/OOBase/Posix.h \
-	include/OOBase/Proactor.h \
-	include/OOBase/Queue.h \
-	include/OOBase/RefCount.h \
-	include/OOBase/Singleton.h \
-	include/OOBase/SmartPtr.h \
-	include/OOBase/Server.h \
-	include/OOBase/Set.h \
-	include/OOBase/Socket.h \
-	include/OOBase/StackAllocator.h \
-	include/OOBase/String.h \
-	include/OOBase/Table.h \
-	include/OOBase/Thread.h \
-	include/OOBase/Timeout.h \
-	include/OOBase/TLSSingleton.h \
-	include/OOBase/tr24731.h \
-	include/OOBase/utf8.h \
-	include/OOBase/Vector.h \
-	include/OOBase/Win32.h \
-	include/OOBase/Win32Security.h \
-	src/config-base.h \
-	src/oobase-config.h \
-	src/BSDSocket.h \
-	src/Win32Impl.h \
-	src/Win32Socket.h \
 	src/ArenaAllocator.cpp \
 	src/BSDSocket.cpp \
 	src/Builtins.cpp \
@@ -144,9 +94,6 @@ liboobase_la_SOURCES = \
 	src/Win32Debugger.cpp \
 	src/Win32Security.cpp \
 	src/Win32Socket.cpp	\
-	src/ProactorPoll.h \
-	src/ProactorPosix.h \
-	src/ProactorWin32.h \
 	src/Proactor.cpp \
 	src/ProactorPosix.cpp \
 	src/ProactorPosixSocket.cpp \
