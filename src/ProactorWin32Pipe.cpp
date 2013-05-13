@@ -588,7 +588,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 			if (err == ERROR_IO_PENDING)
 			{
 				// Will complete later...
-				m_stkPending.push_back(hPipe,err);
+				m_stkPending.push_back((HANDLE)hPipe,err);
 				if (!err)
 				{
 					hPipe.detach();
