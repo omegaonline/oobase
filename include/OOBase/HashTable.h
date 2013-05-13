@@ -156,7 +156,7 @@ namespace OOBase
 		struct HashTableNode
 		{
 			template <typename K1, typename V1>
-			HashTableNode(const K1& k, const V1& v) : m_in_use(2), m_key(k), m_value(v)
+			HashTableNode(const K1& k, const V1& v) : m_in_use(2), m_data(k,v)
 			{}
 
 			template <typename K1, typename V1>
@@ -166,8 +166,14 @@ namespace OOBase
 			}
 
 			int m_in_use;
-			K m_key;
-			V m_value;
+			struct pair
+			{
+				pair(K k, V v) : key(k), value(v)
+				{}
+
+				K key;
+				V value;
+			} m_data;
 		};
 
 		template <typename K, typename V>
@@ -177,13 +183,16 @@ namespace OOBase
 			static void inplace_copy(void* p, const K1& k, const V1& v)
 			{
 				static_cast<HashTableNode*>(p)->m_in_use = 2;
-				static_cast<HashTableNode*>(p)->m_key = k;
-				static_cast<HashTableNode*>(p)->m_value = v;
+				static_cast<HashTableNode*>(p)->m_data.key = k;
+				static_cast<HashTableNode*>(p)->m_data.value = v;
 			}
 
 			int m_in_use;
-			K m_key;
-			V m_value;
+			struct pair
+			{
+				K key;
+				V value;
+			} m_data;
 		};
 	}
 
@@ -194,12 +203,16 @@ namespace OOBase
 		typedef detail::HashTableNode<K,V,detail::is_pod<detail::HashTable::PODCheck<K,V> >::value> Node;
 
 	public:
-		static const size_t npos = size_t(-1);
+		typedef detail::IteratorImpl<HashTable,typename Node::pair,size_t> iterator;
+		typedef detail::IteratorImpl<const HashTable,const typename Node::pair,size_t> const_iterator;
 
-		HashTable(const H& h = H()) : baseClass(), m_data(NULL), m_size(0), m_count(0), m_hash(h), m_clone(false)
+		friend class detail::IteratorImpl<HashTable,typename Node::pair,size_t>;
+		friend class detail::IteratorImpl<const HashTable,const typename Node::pair,size_t>;
+
+		HashTable(const H& h = H()) : baseClass(), m_data(NULL), m_size(0), m_count(0), m_hash(h)
 		{}
 
-		HashTable(AllocatorInstance& allocator, const H& h = H()) : baseClass(allocator), m_data(NULL), m_size(0), m_count(0), m_hash(h), m_clone(false)
+		HashTable(AllocatorInstance& allocator, const H& h = H()) : baseClass(allocator), m_data(NULL), m_size(0), m_count(0), m_hash(h)
 		{}
 
 		~HashTable()
@@ -207,54 +220,73 @@ namespace OOBase
 			destroy(m_data,m_size);
 		}
 
-		int insert(const K& key, const V& value)
+		template <typename K1, typename V1>
+		iterator insert(K1 key, V1 value, int& err)
 		{
 			if (m_count+(m_size/7) >= m_size)
 			{
-				int err = clone(true);
-				if (err != 0)
-					return err;
-			}
-			else if (m_clone)
-			{
-				int err = clone(false);
-				if (err != 0)
-					return err;
+				if ((err = clone()))
+					return end();
 			}
 
-			int err = insert_i(m_data,m_size,key,value);
-			if (err == 0)
-				++m_count;
+			size_t pos = 0;
+			err = insert_i(m_data,m_size,pos,key,value,false);
+			if (err)
+				return end();
 
+			++m_count;
+			return iterator(this,pos);
+		}
+
+		template <typename K1, typename V1>
+		int insert(K1 key, V1 value)
+		{
+			int err = 0;
+			insert(key,value,err);
 			return err;
 		}
 
-		bool exists(const K& key) const
+		template <typename K1, typename V1>
+		iterator replace(K1 key, V1 value, int& err)
 		{
-			return (find_i(key) != npos);
+			if (m_count+(m_size/7) >= m_size)
+			{
+				if ((err = clone()))
+					return end();
+			}
+
+			size_t pos = 0;
+			err = insert_i(m_data,m_size,pos,key,value,true);
+			if (err)
+				return end();
+
+			++m_count;
+			return iterator(this,pos);
 		}
 
-		bool find(const K& key, V& value) const
+		template <typename K1>
+		bool exists(K1 key) const
 		{
-			size_t pos = find_i(key);
-			if (pos == npos)
-				return false;
-			
-			value = m_data[pos].m_value;
-			return true;
+			return (find_i(key) < m_size);
 		}
 
-		V* find(const K& key)
+		template <typename K1>
+		const_iterator find(K1 key) const
 		{
-			size_t pos = find_i(key);
-			if (pos == npos)
-				return NULL;
-			
-			return &m_data[pos].m_value;
+			return const_iterator(this,find_i(key));
 		}
 
-		void remove_at(size_t pos)
+		template <typename K1>
+		iterator find(K1 key)
 		{
+			return iterator(this,find_i(key));
+		}
+
+		void remove_at(iterator& iter)
+		{
+			assert(iter.check(this));
+			size_t pos = iter.deref();
+
 			m_data[pos].~Node();
 			m_data[pos].m_in_use = 1;
 			--m_count;
@@ -264,36 +296,34 @@ namespace OOBase
 				m_data[pos].m_in_use = 0;
 		}
 
-		bool remove(const K& key, V* value = NULL)
+		template <typename K1>
+		bool remove(K1 key, V* value = NULL)
 		{
-			size_t pos = find_i(key);
-			if (pos == npos)
+			iterator i = find(key);
+			if (i == end())
 				return false;
 			
 			if (value)
-				*value = m_data[pos].m_value;
+				*value = i->value;
 			
-			remove_at(pos);
+			remove_at(i);
 			return true;
 		}
 
 		bool pop(K* key = NULL, V* value = NULL)
 		{
-			for (size_t i=0;i<m_size && m_count>0;++i)
-			{
-				if (m_data[i].m_in_use == 2)
-				{
-					if (key)
-						*key = m_data[i].m_key;
+			iterator i = begin();
+			if (i == end())
+				return false;
 
-					if (value)
-						*value = m_data[i].m_value;
+			if (key)
+				*key = i->key;
 
-					remove_at(i);
-					return true;
-				}
-			}
-			return false;
+			if (value)
+				*value = i->value;
+
+			remove_at(i);
+			return true;
 		}
 
 		void clear()
@@ -319,39 +349,36 @@ namespace OOBase
 			return m_count;
 		}
 
-		size_t begin() const
+		iterator begin()
 		{
 			for (size_t i=0;i<m_size;++i)
 			{
 				if (m_data[i].m_in_use == 2)
-					return i;
+					return iterator(this,i);
 			}
-			return npos;
+
+			return end();
 		}
 
-		size_t next(size_t pos) const
+		const_iterator begin() const
 		{
-			for (size_t i=pos+1;i<m_size;++i)
+			for (size_t i=0;i<m_size;++i)
 			{
 				if (m_data[i].m_in_use == 2)
-					return i;
+					return iterator(this,i);
 			}
-			return npos;
+
+			return end();
 		}
 
-		V* at(size_t pos)
+		iterator end()
 		{
-			return (m_data && pos < m_size && m_data[pos].m_in_use==2 ? &m_data[pos].m_value : NULL);
+			return iterator(this,m_size);
 		}
 
-		const V* at(size_t pos) const
+		const_iterator end() const
 		{
-			return (m_data && pos < m_size && m_data[pos].m_in_use==2 ? &m_data[pos].m_value : NULL);
-		}
-
-		const K* key_at(size_t pos) const
-		{
-			return (m_data && pos < m_size && m_data[pos].m_in_use==2 ? &m_data[pos].m_key : NULL);
+			return const_iterator(this,m_size);
 		}
 
 	private:
@@ -360,13 +387,9 @@ namespace OOBase
 		size_t   m_count;
 		const H& m_hash;
 
-		mutable bool m_clone;
-
-		int clone(bool grow)
+		int clone()
 		{
-			m_clone = false;
-
-			size_t new_size = (m_size == 0 ? 16 : (grow ? m_size * 2 : m_size));
+			size_t new_size = (m_size == 0 ? 16 : m_size * 2);
 			Node* new_data = static_cast<Node*>(baseClass::allocate(new_size * sizeof(Node),alignment_of<Node>::value));
 			if (!new_data)
 				return ERROR_OUTOFMEMORY;
@@ -384,7 +407,8 @@ namespace OOBase
 					int err = 0;
 					try
 					{
-						err = insert_i(new_data,new_size,m_data[i].m_key,m_data[i].m_value);
+						size_t pos;
+						err = insert_i(new_data,new_size,pos,m_data[i].m_data.key,m_data[i].m_data.value,false);
 					}
 					catch (...)
 					{
@@ -392,9 +416,10 @@ namespace OOBase
 						throw;
 					}
 #else
-					int err = insert_i(new_data,new_size,m_data[i].m_key,m_data[i].m_value);
+					size_t pos;
+					int err = insert_i(new_data,new_size,pos,m_data[i].m_data.key,m_data[i].m_data.value,false);
 #endif
-					if (err != 0)
+					if (err)
 					{
 						destroy(new_data,new_size);
 						return err;
@@ -419,10 +444,11 @@ namespace OOBase
 			baseClass::free(data);
 		}
 
-		size_t find_i(const K& key) const
+		template <typename K1>
+		size_t find_i(K1 key) const
 		{
 			if (m_count == 0)
-				return npos;
+				return m_size;
 
 			size_t start = m_hash.hash(key);
 			for (size_t h = start;h < start + m_size;++h)
@@ -430,31 +456,63 @@ namespace OOBase
 				size_t h1 = h & (m_size-1);
 
 				if (m_data[h1].m_in_use == 0)
-					return npos;
+					return m_size;
 				
-				if (m_data[h1].m_in_use == 2 && m_data[h1].m_key == key)
+				if (m_data[h1].m_in_use == 2 && m_data[h1].m_data.key == key)
 					return h1;
 			}
 
-			m_clone = true;
-			return npos;
+			return m_size;
 		}
 
-		int insert_i(Node* data, size_t size, const K& key, const V& value)
+		int insert_i(Node* data, size_t size, size_t& pos, const K& key, const V& value, bool replace)
 		{
 			for (size_t h = m_hash.hash(key);;++h)
 			{
-				size_t h1 = h & (size-1);
+				pos = h & (size-1);
 
-				if (data[h1].m_in_use != 2)
+				if (data[pos].m_in_use != 2)
 				{
-					Node::inplace_copy(&data[h1],key,value);
-					return 0;
+					Node::inplace_copy(&data[pos],key,value);
+					break;
 				}
 
-				if (data[h1].m_key == key)
-					return EEXIST;
+				if (data[pos].m_data.key == key)
+				{
+					if (!replace)
+						return EEXIST;
+
+					Node::inplace_copy(&data[pos],key,value);
+					break;
+				}
 			}
+
+			return 0;
+		}
+
+		typename Node::pair* at(size_t pos)
+		{
+			return (pos < m_size && m_data[pos].m_in_use == 2 ? &m_data[pos].m_data : NULL);
+		}
+
+		const typename Node::pair* at(size_t pos) const
+		{
+			return (pos < m_size && m_data[pos].m_in_use == 2 ? &m_data[pos].m_data : NULL);
+		}
+
+		void next(size_t& pos) const
+		{
+			while (pos < m_size && m_data[pos].m_in_use != 2)
+				++pos;
+		}
+
+		void prev(size_t& pos) const
+		{
+			while (pos > 0 && m_data[pos].m_in_use != 2)
+				--pos;
+
+			if (m_data[pos].m_in_use != 2)
+				pos = m_size;
 		}
 	};
 }

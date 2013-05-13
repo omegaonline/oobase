@@ -76,35 +76,42 @@ namespace OOBase
 			return m_size;
 		}
 
-		iterator insert(const T& value, const iterator& before, int& err)
+		template <typename T1>
+		iterator insert(T1 value, const iterator& before, int& err)
 		{
 			assert(before.check(this));
-			return iterator(*this,insert(value,before.deref(),err));
+			return iterator(this,insert(value,before.deref(),err));
 		}
 
-		iterator push_back(const T& value, int& err)
+		template <typename T1>
+		iterator push_back(T1 value, int& err)
 		{
-			return iterator(*this,insert(value,NULL,err));
+			return iterator(this,insert(value,NULL,err));
 		}
 
-		int push_front(const T& value)
+		template <typename T1>
+		int push_front(T1 value)
 		{
 			int err = 0;
 			insert(value,m_head,err);
 			return err;
 		}
 
-		bool remove_at(iterator& iter)
+		void remove_at(iterator& iter)
 		{
 			assert(iter.check(this));
-			return remove(NULL,iter.deref());
+			remove(NULL,iter.deref());
 		}
 
 		template <typename T1>
-		bool remove(const T1& value)
+		bool remove(T1 value)
 		{
 			iterator i = find(value);
-			return remove_at(i);
+			if (i == end())
+				return false;
+
+			remove_at(i);
+			return true;
 		}
 
 		bool pop_front(T* pval = NULL)
@@ -118,7 +125,7 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		iterator find(const T1& value)
+		iterator find(T1 value)
 		{
 			iterator i = begin();
 			for (;i != end();++i)
@@ -130,7 +137,7 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		const_iterator find(const T1& value) const
+		const_iterator find(T1 value) const
 		{
 			const_iterator i = begin();
 			for (;i != end();++i)
@@ -141,42 +148,24 @@ namespace OOBase
 			return i;
 		}
 
-		T* at(const iterator& iter)
-		{
-			assert(iter.check(this));
-			return at(iter.deref());
-		}
-
-		const T* at(const iterator& iter) const
-		{
-			assert(iter.check(this));
-			return at(iter.deref());
-		}
-
-		const T* at(const const_iterator& iter) const
-		{
-			assert(iter.check(this));
-			return at(iter.deref());
-		}
-
 		iterator begin()
 		{
-			return iterator(*this,m_head);
+			return iterator(this,m_head);
 		}
 
 		const_iterator begin() const
 		{
-			return const_iterator(*this,m_head);
+			return const_iterator(this,m_head);
 		}
 
 		iterator end()
 		{
-			return iterator(*this,NULL);
+			return iterator(this,NULL);
 		}
 
 		const_iterator end() const
 		{
-			return const_iterator(*this,NULL);
+			return const_iterator(this,NULL);
 		}
 
 	private:

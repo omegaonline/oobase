@@ -88,9 +88,12 @@ int OOBase::detail::ProactorPoll::do_bind_fd(int fd, void* param, fd_callback_t 
 
 int OOBase::detail::ProactorPoll::do_unbind_fd(int fd)
 {
-	FdItem item;
-	if (!m_items.remove(fd,&item))
+	OOBase::HashTable<int,FdItem,AllocatorInstance>::iterator i = m_items.find(fd);
+	if (i == m_items.end())
 		return ENOENT;
+
+	FdItem item = i->value;
+	m_items.remove_at(i);
 
 	if (item.m_poll_pos != size_t(-1))
 	{
@@ -100,9 +103,9 @@ int OOBase::detail::ProactorPoll::do_unbind_fd(int fd)
 		m_poll_fds.pop_back(pfd);
 
 		// Reassign index
-		FdItem* pi = m_items.find(pfd->fd);
-		if (pi)
-			pi->m_poll_pos = item.m_poll_pos;
+		i = m_items.find(pfd->fd);
+		if (i != m_items.end())
+			i->value.m_poll_pos = item.m_poll_pos;
 	}
 
 	return 0;
@@ -110,8 +113,8 @@ int OOBase::detail::ProactorPoll::do_unbind_fd(int fd)
 
 int OOBase::detail::ProactorPoll::do_watch_fd(int fd, unsigned int events)
 {
-	FdItem* item = m_items.find(fd);
-	if (item)
+	OOBase::HashTable<int,FdItem,AllocatorInstance>::iterator i = m_items.find(fd);
+	if (i != m_items.end())
 	{
 		short p_events = 0;
 		if (events & eTXSend)
@@ -123,8 +126,8 @@ int OOBase::detail::ProactorPoll::do_watch_fd(int fd, unsigned int events)
 		if (p_events)
 		{
 			// See if fd already exists in the poll stack
-			if (item->m_poll_pos != size_t(-1))
-				m_poll_fds.at(item->m_poll_pos)->events |= p_events;
+			if (i->value.m_poll_pos != size_t(-1))
+				m_poll_fds.at(i->value.m_poll_pos)->events |= p_events;
 			else
 			{
 				// A new entry
@@ -133,7 +136,7 @@ int OOBase::detail::ProactorPoll::do_watch_fd(int fd, unsigned int events)
 				if (err)
 					return err;
 
-				item->m_poll_pos = m_poll_fds.size()-1;
+				i->value.m_poll_pos = m_poll_fds.size()-1;
 			}
 		}
 	}
@@ -162,11 +165,12 @@ bool OOBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count
 			}
 
 			// Find the corresponding FdItem
-			FdItem* item = m_items.find(pfd->fd);
-			if (item)
+			OOBase::HashTable<int,FdItem,AllocatorInstance>::iterator i = m_items.find(pfd->fd);
+			if (i != m_items.end())
 			{
 				active_fd.m_fd = pfd->fd;
-				active_fd.m_item = item;
+				active_fd.m_param = i->value.m_param;
+				active_fd.m_callback = i->value.m_callback;
 				active_fd.m_events = 0;
 
 				// If we have errored, favour eTXRecv...
@@ -203,7 +207,7 @@ bool OOBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count
 					if (!pfd->events)
 					{
 						// We are now longer in m_poll_fds
-						item->m_poll_pos = size_t(-1);
+						i->value.m_poll_pos = size_t(-1);
 
 						// If we have no pending events, remove from m_poll_fds
 						if (pos == m_poll_fds.size()-1)
@@ -214,9 +218,9 @@ bool OOBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count
 							m_poll_fds.pop_back(pfd);
 
 							// Reassign index
-							item = m_items.find(pfd->fd);
-							if (item)
-								item->m_poll_pos = pos;
+							i = m_items.find(pfd->fd);
+							if (i != m_items.end())
+								i->value.m_poll_pos = pos;
 						}
 					}
 
@@ -294,7 +298,7 @@ int OOBase::detail::ProactorPoll::run(int& err, const Timeout& timeout)
 			}
 			else
 			{
-				(*active_fd.m_item->m_callback)(active_fd.m_fd,active_fd.m_item->m_param,active_fd.m_events);
+				(*active_fd.m_callback)(active_fd.m_fd,active_fd.m_param,active_fd.m_events);
 			}
 
 			guard.acquire();

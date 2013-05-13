@@ -140,7 +140,7 @@ namespace OOBase
 				return 0;
 			}
 #endif
-			bool remove_at(size_t pos, T* pval = NULL)
+			void remove_at(size_t pos, T* pval = NULL)
 			{
 				if (m_data && pos < m_size)
 				{
@@ -151,10 +151,7 @@ namespace OOBase
 						m_data[pos] = m_data[pos+1];
 
 					m_data[m_size].~T();
-					return true;
 				}
-				else
-					return false;
 			}
 
 		private:
@@ -224,7 +221,7 @@ namespace OOBase
 				return 0;
 			}
 
-			bool remove_at(size_t pos, T* pval = NULL)
+			void remove_at(size_t pos, T* pval = NULL)
 			{
 				if (m_data && pos < m_size)
 				{
@@ -234,11 +231,7 @@ namespace OOBase
 					--m_size;
 					if (pos < m_size)
 						memmove(&m_data[pos],&m_data[pos+1],(m_size - pos) * sizeof(T));
-
-					return true;
 				}
-				else
-					return false;
 			}
 
 		private:
@@ -274,18 +267,20 @@ namespace OOBase
 			return this->m_size;
 		}
 
-		int push_back(const T& value)
+		template <typename T1>
+		int push_back(T1 value)
 		{
 			return baseClass::insert_at(this->m_size,value);
 		}
 
 		bool pop_back(T* pval = NULL)
 		{
-			return baseClass::remove_at(this->m_size - 1,pval);
+			baseClass::remove_at(this->m_size - 1,pval);
+			return !empty();
 		}
 
 		template <typename T1>
-		iterator find(const T1& value)
+		iterator find(T1 value)
 		{
 			size_t pos = 0;
 			for (;pos < this->m_size;++pos)
@@ -293,11 +288,11 @@ namespace OOBase
 				if (this->m_data[pos] == value)
 					break;
 			}
-			return iterator(*this,pos);
+			return iterator(this,pos);
 		}
 
 		template <typename T1>
-		const_iterator find(const T1& value) const
+		const_iterator find(T1 value) const
 		{
 			size_t pos = 0;
 			for (;pos < this->m_size;++pos)
@@ -305,50 +300,38 @@ namespace OOBase
 				if (this->m_data[pos] == value)
 					break;
 			}
-			return const_iterator(*this,pos);
+			return const_iterator(this,pos);
 		}
 
-		int insert(const T& value, const iterator& before)
+		template <typename T1>
+		int insert(T1 value, const iterator& before)
 		{
 			assert(before.check(this));
 			return baseClass::insert_at(before.deref(),value);
 		}
 
-		iterator insert(const T& value, const iterator& before, int& err)
+		template <typename T1>
+		iterator insert(T1 value, const iterator& before, int& err)
 		{
 			err = baseClass::insert_at(before.deref(),value);
 			return (!err ? before : end());
 		}
 
-		bool remove_at(iterator& iter)
+		void remove_at(iterator& iter)
 		{
 			assert(iter.check(this));
-			return baseClass::remove_at(iter.deref(),NULL);
+			baseClass::remove_at(iter.deref(),NULL);
 		}
 
 		template <typename T1>
-		bool remove(const T1& value)
+		bool remove(T1 value)
 		{
 			iterator i = find(value);
-			return remove_at(i);
-		}
+			if (i == end())
+				return false;
 
-		T* at(const iterator& iter)
-		{
-			assert(iter.check(this));
-			return at(iter.deref());
-		}
-
-		const T* at(const iterator& iter) const
-		{
-			assert(iter.check(this));
-			return baseClass::at(iter.deref());
-		}
-
-		const T* at(const const_iterator& iter) const
-		{
-			assert(iter.check(this));
-			return at(iter.deref());
+			remove_at(i);
+			return true;
 		}
 
 		T* at(size_t pos)
@@ -373,22 +356,22 @@ namespace OOBase
 
 		iterator begin()
 		{
-			return iterator(*this,0);
+			return iterator(this,0);
 		}
 
 		const_iterator begin() const
 		{
-			return const_iterator(*this,0);
+			return const_iterator(this,0);
 		}
 
 		iterator end()
 		{
-			return iterator(*this,this->m_size);
+			return iterator(this,this->m_size);
 		}
 
 		const_iterator end() const
 		{
-			return const_iterator(*this,this->m_size);
+			return const_iterator(this,this->m_size);
 		}
 
 	private:
@@ -401,7 +384,7 @@ namespace OOBase
 		void prev(size_t& pos) const
 		{
 			if (pos > 0)
-			--pos;
+				--pos;
 		}
 	};
 }

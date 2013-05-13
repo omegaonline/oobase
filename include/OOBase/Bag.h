@@ -325,7 +325,7 @@ namespace OOBase
 
 			bool operator == (const IteratorImpl& rhs) const
 			{
-				return (&m_cont == &rhs.m_cont && m_pos == rhs.m_pos);
+				return (m_cont == rhs.m_cont && m_pos == rhs.m_pos);
 			}
 
 			bool operator != (const IteratorImpl& rhs) const
@@ -335,19 +335,19 @@ namespace OOBase
 
 			T* operator -> () const
 			{
-				assert(m_cont.at(*this) != NULL);
-				return m_cont.at(*this);
+				assert(m_cont->at(deref()) != NULL);
+				return m_cont->at(deref());
 			}
 
 			T& operator * () const
 			{
-				assert(m_cont.at(*this) != NULL);
-				return *m_cont.at(*this);
+				assert(m_cont->at(deref()) != NULL);
+				return *m_cont->at(deref());
 			}
 
 			IteratorImpl& operator ++ ()
 			{
-				m_cont.next(m_pos);
+				m_cont->next(m_pos);
 				return *this;
 			}
 
@@ -360,7 +360,7 @@ namespace OOBase
 
 			IteratorImpl& operator -- ()
 			{
-				m_cont.prev(m_pos);
+				m_cont->prev(m_pos);
 				return *this;
 			}
 
@@ -372,13 +372,13 @@ namespace OOBase
 			}
 
 		protected:
-			IteratorImpl(Container& cont, Iter pos) : m_cont(cont), m_pos(pos)
+			IteratorImpl(Container* cont, Iter pos) : m_cont(cont), m_pos(pos)
 			{}
 
 #if !defined(NDEBUG)
-			bool check(Container const* cont) const
+			bool check(Container* cont) const
 			{
-				return (cont == &m_cont);
+				return (cont && cont == m_cont);
 			}
 #endif
 			Iter deref() const
@@ -394,7 +394,7 @@ namespace OOBase
 		private:
 			IteratorImpl();
 
-			Container& m_cont;
+			Container* m_cont;
 			Iter       m_pos;
 		};
 	}

@@ -106,7 +106,7 @@ namespace OOBase
 		{}
 
 		template <typename K1, typename V1>
-		int insert(const K1& key, const V1& value)
+		int insert(K1 key, V1 value)
 		{
 			int err = baseClass::append(Node::build(key,value));
 			if (!err)
@@ -126,7 +126,7 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		bool remove(const K1& key, V* value = NULL)
+		bool remove(K1 key, V* value = NULL)
 		{
 			size_t pos = find_i(key,false);
 			if (pos == npos)

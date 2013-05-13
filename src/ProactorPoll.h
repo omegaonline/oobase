@@ -55,9 +55,10 @@ namespace OOBase
 
 			struct FdEvent
 			{
-				int          m_fd;
-				FdItem*      m_item;
-				unsigned int m_events;
+				int           m_fd;
+				void*         m_param;
+				fd_callback_t m_callback;
+				unsigned int  m_events;
 			};
 
 			OOBase::Vector<pollfd,AllocatorInstance>        m_poll_fds;

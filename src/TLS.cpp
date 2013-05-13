@@ -235,11 +235,13 @@ bool OOBase::TLS::Get(const void* key, void** val)
 {
 	TLSMap* inst = TLSMap::instance();
 
-	TLSMap::tls_val v = {0};
-	if (!inst->m_mapVals.find(key,v))
+	OOBase::HashTable<const void*,TLSMap::tls_val,OOBase::AllocatorInstance>::iterator i = inst->m_mapVals.find(key);
+	if (i == inst->m_mapVals.end())
 		return false;
 
-	*val = v.m_val;
+	if (val)
+		*val = i->value.m_val;
+
 	return true;
 }
 
@@ -251,12 +253,9 @@ int OOBase::TLS::Set(const void* key, void* val, void (*destructor)(void*))
 	v.m_val = val;
 	v.m_destructor = destructor;
 
-	TLSMap::tls_val* pv = inst->m_mapVals.find(key);
-	if (!pv)
-		return inst->m_mapVals.insert(key,v);
-
-	*pv = v;
-	return true;
+	int err = 0;
+	inst->m_mapVals.replace(key,v,err);
+	return err;
 }
 
 void OOBase::TLS::ThreadExit()
