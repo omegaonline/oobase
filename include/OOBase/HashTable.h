@@ -287,13 +287,21 @@ namespace OOBase
 			assert(iter.check(this));
 			size_t pos = iter.deref();
 
-			m_data[pos].~Node();
-			m_data[pos].m_in_use = 1;
-			--m_count;
+			if (m_data[pos].m_in_use == 2)
+			{
+				m_data[pos].~Node();
+				m_data[pos].m_in_use = 1;
+				--m_count;
 
-			size_t next = (pos+1) & (m_size-1);
-			if (m_data[next].m_in_use == 0)
-				m_data[pos].m_in_use = 0;
+				size_t next = (pos+1) & (m_size-1);
+				if (m_data[next].m_in_use == 0)
+					m_data[pos].m_in_use = 0;
+			}
+
+			while (pos < m_size && m_data[pos].m_in_use != 2)
+				++pos;
+
+			iter = iterator(this,pos);
 		}
 
 		template <typename K1>
