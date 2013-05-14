@@ -45,51 +45,89 @@ namespace OOBase
 		typedef HashTable<ID,V,Allocator,detail::HandleHash<ID> > baseClass;
 		
 	public:
-		HandleTable(ID start = 1) : baseClass(),
-				m_next(start)
+		HandleTable() : baseClass(),
+				m_next(0)
 		{}
 
-		HandleTable(AllocatorInstance& allocator, ID start = 1) : baseClass(allocator),
-				m_next(start)
+		HandleTable(AllocatorInstance& allocator) : baseClass(allocator),
+				m_next(0)
 		{}
 			
 		~HandleTable()
 		{}
 
-		int force_insert(ID id, const V& value)
+		template <typename V1>
+		int force_insert(ID id, V1 value)
 		{
 			return baseClass::insert(id,value);
 		}
+
+		template <typename V1>
+		int insert(V1 value, ID& handle, ID min = 1, ID max = ID(-1))
+		{
+			return insert_i(value,handle,min,max,false);
+		}
+
+		template <typename V1>
+		typename baseClass::iterator insert(V1 value, int& err, ID min = 1, ID max = ID(-1))
+		{
+			ID handle = 0;
+			err = insert_i(value,handle,min,max,false);
+			if (err)
+				return baseClass::end();
 			
-		int insert(const V& value, ID& handle, ID min = 1, ID max = ID(-1))
+			return baseClass::iterator(this,handle);
+		}
+
+		template <typename V1>
+		int replace(ID handle, V1 value, ID min = 1, ID max = ID(-1))
+		{
+			return insert_i(value,handle,min,max,true);
+		}
+
+	private:
+		ID m_next;
+
+		template <typename V1>
+		int insert_i(V1 value, ID& handle, ID min, ID max, bool replace)
 		{
 			ID next = m_next;
 			if (next < min)
 				next = min;
 			
-			for (ID i = 0;;++i)
+			for (int twice = 0; twice < 2; ++twice)
 			{
-				if (next > max)
-					next = min;
+				for (handle = next+1; handle != next;)
+				{
+					if (handle++ == max)
+						handle = min;
+
+					ID pos = handle & (this->m_size-1);
+					if (this->m_data[pos].m_in_use != 2)
+					{
+						baseClass::Node::inplace_copy(&this->m_data[pos],handle,value);
+						++this->m_count;
+						m_next = handle;
+						return 0;
+					}
+
+					if (this->m_data[pos].m_data.key == handle)
+					{
+						if (!replace)
+							return EEXIST;
+
+						baseClass::Node::inplace_copy(&this->m_data[pos],handle,value);
+						m_next = handle;
+						return 0;
+					}
+				}
 				
-				handle = next++;
-				if (!baseClass::exists(handle))
-					break;
-				
-				// Check we don't loop endlessly
-				if (i == max-min)
-					return ERANGE;
-			}			
-						
-			int err = baseClass::insert(handle,value);
-			if (err == 0)
-				m_next = next;
-			
-			return err;
+				int err = baseClass::clone();
+				if (err)
+					return err;
+			}
+			return ERANGE;
 		}
-		
-	private:
-		ID m_next;
 	};
 }
 

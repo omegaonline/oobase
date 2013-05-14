@@ -200,6 +200,8 @@ namespace OOBase
 	class HashTable : public Allocating<Allocator>, public NonCopyable
 	{
 		typedef Allocating<Allocator> baseClass;
+
+	protected:
 		typedef detail::HashTableNode<K,V,detail::is_pod<detail::HashTable::PODCheck<K,V> >::value> Node;
 
 	public:
@@ -257,7 +259,7 @@ namespace OOBase
 
 			size_t pos = 0;
 			err = insert_i(m_data,m_size,pos,key,value,true);
-			if (err)
+			if (err && err != EEXIST)
 				return end();
 
 			++m_count;
@@ -392,11 +394,10 @@ namespace OOBase
 			return const_iterator(this,size_t(-1));
 		}
 
-	private:
+	protected:
 		Node*    m_data;
 		size_t   m_size;
 		size_t   m_count;
-		const H& m_hash;
 
 		int clone()
 		{
@@ -445,6 +446,9 @@ namespace OOBase
 			return 0;
 		}
 
+	private:
+		const H& m_hash;
+
 		void destroy(Node* data, size_t size)
 		{
 			for (size_t i=0;i<size;++i)
@@ -491,11 +495,9 @@ namespace OOBase
 
 				if (data[pos].m_data.key == key)
 				{
-					if (!replace)
-						return EEXIST;
-
-					Node::inplace_copy(&data[pos],key,value);
-					break;
+					if (replace)
+						Node::inplace_copy(&data[pos],key,value);
+					return EEXIST;
 				}
 			}
 
