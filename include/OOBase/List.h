@@ -33,7 +33,8 @@ namespace OOBase
 
 		struct ListNode
 		{
-			ListNode(ListNode* prev, ListNode* next, const T& data) :
+			template <typename T1>
+			ListNode(ListNode* prev, ListNode* next, T1 data) :
 				m_prev(prev), m_next(next), m_data(data)
 			{}
 
@@ -211,7 +212,8 @@ namespace OOBase
 				node = m_tail;
 		}
 
-		ListNode* insert(const T& value, ListNode* next, int& err)
+		template <typename T1>
+		ListNode* insert(T1 value, ListNode* next, int& err)
 		{
 			ListNode* prev = (next ? next->m_prev : m_tail);
 

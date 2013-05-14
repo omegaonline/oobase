@@ -57,7 +57,8 @@ namespace OOBase
 			size_t m_size;
 
 #if defined(OOBASE_HAVE_EXCEPTIONS)
-			int insert_at(size_t pos, const T& value)
+			template <typename T1>
+			int insert_at(size_t pos, T1 value)
 			{
 				if (m_size >= m_capacity || pos < m_size)
 				{
@@ -103,7 +104,8 @@ namespace OOBase
 				return 0;
 			}
 #else
-			int insert_at(size_t pos, const T& value)
+			template <typename T1>
+			int insert_at(size_t pos, T1 value)
 			{
 				if (m_size >= m_capacity)
 				{
@@ -184,7 +186,8 @@ namespace OOBase
 			T*     m_data;
 			size_t m_size;
 
-			int insert_at(size_t pos, const T& value)
+			template <typename T1>
+			int insert_at(size_t pos, T1 value)
 			{
 				if (m_size >= m_capacity)
 				{

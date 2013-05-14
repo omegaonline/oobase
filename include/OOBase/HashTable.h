@@ -156,11 +156,11 @@ namespace OOBase
 		struct HashTableNode
 		{
 			template <typename K1, typename V1>
-			HashTableNode(const K1& k, const V1& v) : m_in_use(2), m_data(k,v)
+			HashTableNode(K1 k, V1 v) : m_in_use(2), m_data(k,v)
 			{}
 
 			template <typename K1, typename V1>
-			static void inplace_copy(void* p, const K1& k, const V1& v)
+			static void inplace_copy(void* p, K1 k, V1 v)
 			{
 				::new (p) HashTableNode(k,v);
 			}
@@ -180,7 +180,7 @@ namespace OOBase
 		struct HashTableNode<K,V,true>
 		{
 			template <typename K1, typename V1>
-			static void inplace_copy(void* p, const K1& k, const V1& v)
+			static void inplace_copy(void* p, K1 k, V1 v)
 			{
 				static_cast<HashTableNode*>(p)->m_in_use = 2;
 				static_cast<HashTableNode*>(p)->m_data.key = k;
@@ -476,7 +476,8 @@ namespace OOBase
 			return size_t(-1);
 		}
 
-		int insert_i(Node* data, size_t size, size_t& pos, const K& key, const V& value, bool replace)
+		template <typename K1, typename V1>
+		int insert_i(Node* data, size_t size, size_t& pos, K1 key, V1 value, bool replace)
 		{
 			for (size_t h = m_hash.hash(key);;++h)
 			{
