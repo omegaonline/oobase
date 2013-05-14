@@ -199,12 +199,16 @@ namespace OOBase
 		{
 			if (node)
 				node = node->m_prev;
+			else
+				node = m_tail;
 		}
 
 		void prev(const ListNode*& node) const
 		{
 			if (node)
 				node = node->m_prev;
+			else
+				node = m_tail;
 		}
 
 		ListNode* insert(const T& value, ListNode* next, int& err)

@@ -286,9 +286,9 @@ namespace OOBase
 			for (;pos < this->m_size;++pos)
 			{
 				if (this->m_data[pos] == value)
-					break;
+					iterator(this,pos);
 			}
-			return iterator(this,pos);
+			return end();
 		}
 
 		template <typename T1>
@@ -298,9 +298,9 @@ namespace OOBase
 			for (;pos < this->m_size;++pos)
 			{
 				if (this->m_data[pos] == value)
-					break;
+					return const_iterator(this,pos);
 			}
-			return const_iterator(this,pos);
+			return end();
 		}
 
 		template <typename T1>
@@ -366,24 +366,28 @@ namespace OOBase
 
 		iterator end()
 		{
-			return iterator(this,this->m_size);
+			return iterator(this,size_t(-1));
 		}
 
 		const_iterator end() const
 		{
-			return const_iterator(this,this->m_size);
+			return const_iterator(this,size_t(-1));
 		}
 
 	private:
 		void next(size_t& pos) const
 		{
-			if (pos < this->m_size)
+			if (pos < this->m_size - 1)
 				++pos;
+			else
+				pos = size_t(-1);
 		}
 
 		void prev(size_t& pos) const
 		{
-			if (pos > 0)
+			if (pos >= this->m_size)
+				pos = this->m_size-1;
+			else
 				--pos;
 		}
 	};

@@ -301,6 +301,9 @@ namespace OOBase
 			while (pos < m_size && m_data[pos].m_in_use != 2)
 				++pos;
 
+			if (pos >= m_size)
+				pos = size_t(-1);
+
 			iter = iterator(this,pos);
 		}
 
@@ -381,12 +384,12 @@ namespace OOBase
 
 		iterator end()
 		{
-			return iterator(this,m_size);
+			return iterator(this,size_t(-1));
 		}
 
 		const_iterator end() const
 		{
-			return const_iterator(this,m_size);
+			return const_iterator(this,size_t(-1));
 		}
 
 	private:
@@ -456,21 +459,21 @@ namespace OOBase
 		size_t find_i(K1 key) const
 		{
 			if (m_count == 0)
-				return m_size;
+				return size_t(-1);
 
 			size_t start = m_hash.hash(key);
-			for (size_t h = start;h < start + m_size;++h)
+			for (size_t h = start;h != start + m_size;++h)
 			{
 				size_t h1 = h & (m_size-1);
 
 				if (m_data[h1].m_in_use == 0)
-					return m_size;
+					return size_t(-1);
 				
 				if (m_data[h1].m_in_use == 2 && m_data[h1].m_data.key == key)
 					return h1;
 			}
 
-			return m_size;
+			return size_t(-1);
 		}
 
 		int insert_i(Node* data, size_t size, size_t& pos, const K& key, const V& value, bool replace)
@@ -510,17 +513,20 @@ namespace OOBase
 
 		void next(size_t& pos) const
 		{
-			while (pos < m_size && m_data[pos].m_in_use != 2)
-				++pos;
+			while (++pos < m_size && m_data[pos].m_in_use != 2)
+				;
+
+			if (pos >= m_size)
+				pos = size_t(-1);
 		}
 
 		void prev(size_t& pos) const
 		{
-			while (pos > 0 && m_data[pos].m_in_use != 2)
-				--pos;
-
-			if (m_data[pos].m_in_use != 2)
+			if (pos > m_size)
 				pos = m_size;
+
+			while (pos-- > 0 && m_data[pos].m_in_use != 2)
+				;
 		}
 	};
 }
