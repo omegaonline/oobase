@@ -36,7 +36,7 @@ OOBase::Buffer::Buffer(uint8_t* buffer, size_t cbSize, size_t align) :
 {
 }
 
-const uint8_t* OOBase::Buffer::rd_ptr() const
+const OOBase::uint8_t* OOBase::Buffer::rd_ptr() const
 {
 	return m_rd_ptr;
 }
@@ -66,7 +66,7 @@ void OOBase::Buffer::align_rd_ptr(size_t align)
 		rd_ptr(align - overrun);
 }
 
-uint8_t* OOBase::Buffer::wr_ptr()
+OOBase::uint8_t* OOBase::Buffer::wr_ptr()
 {
 	return m_wr_ptr;
 }
