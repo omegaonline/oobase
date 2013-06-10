@@ -23,6 +23,7 @@
 #define OOBASE_HASHTABLE_H_INCLUDED_
 
 #include "Memory.h"
+#include "Bag.h"
 
 namespace OOBase
 {
