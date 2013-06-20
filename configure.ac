@@ -91,6 +91,9 @@ AS_IF([test "x$oo_test_CXXFLAGS" != "xset"],
   ])
 ])
 
+AX_CFLAGS_WARN_ALL
+AX_CXXFLAGS_WARN_ALL
+
 # Not required any more...
 #AS_CASE([$host_os],[mingw*],
 #[
@@ -115,7 +118,7 @@ AC_CHECK_FUNCS([pipe2 accept4])
 m4_ifdef([LT_PREREQ],,[AC_MSG_ERROR([Need libtool version 2.2.6 or later])])
 LT_PREREQ([2.2.6])
 LT_CONFIG_LTDL_DIR([libltdl])
-LT_INIT([dlopen])
+LT_INIT([dlopen disable-shared])
 LTDL_INIT
 
 AC_OUTPUT
