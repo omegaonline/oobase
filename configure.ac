@@ -36,9 +36,6 @@ OO_PROG_CXX
 # Set sensible default CFLAGS if necessary
 AS_IF([test "x$oo_test_CFLAGS" != "xset"],
 [
-  # Always try to hide symbols
-  AX_CFLAGS_GCC_OPTION([-fvisibility=hidden])
-
   AS_IF([test "x$debug" = "xtrue"],
   [
     AX_CFLAGS_GCC_OPTION([-ggdb])
@@ -48,28 +45,16 @@ AS_IF([test "x$oo_test_CFLAGS" != "xset"],
     AX_CFLAGS_GCC_OPTION([-O2])
   ])
 
-  AX_CFLAGS_GCC_OPTION([-pipe])
-
   AS_CASE([$host_os],[mingw*],
   [
     AX_CFLAGS_GCC_OPTION([-march=i686])
     AX_CFLAGS_GCC_OPTION([-mtune=native])
-
-	AX_CFLAGS_GCC_OPTION([-static-libgcc])
   ])
 ])
 
 # Set sensible default CXXFLAGS if necessary
 AS_IF([test "x$oo_test_CXXFLAGS" != "xset"],
 [
-  # Always try to hide symbols
-  AX_CXXFLAGS_GCC_OPTION([-fvisibility=hidden])
-  AX_CXXFLAGS_GCC_OPTION([-fno-rtti])
-  AX_CXXFLAGS_GCC_OPTION([-fno-exceptions])
-
-  # Always add full warnings
-  AX_CXXFLAGS_WARN_ALL
-
   AS_IF([test "x$debug" = "xtrue"],
   [
   	AX_CXXFLAGS_GCC_OPTION([-ggdb])
@@ -79,20 +64,33 @@ AS_IF([test "x$oo_test_CXXFLAGS" != "xset"],
     AX_CXXFLAGS_GCC_OPTION([-O2])
   ])
 
-  AX_CXXFLAGS_GCC_OPTION([-pipe])
-
   AS_CASE([$host_os],[mingw*],
   [
     AX_CXXFLAGS_GCC_OPTION([-march=i686])
     AX_CXXFLAGS_GCC_OPTION([-mtune=native])
-
-	AX_CXXFLAGS_GCC_OPTION([-static-libgcc])
-	AX_CXXFLAGS_GCC_OPTION([-static-libstdc++])
   ])
 ])
 
-AX_CFLAGS_WARN_ALL
+# Always try to hide symbols
+AX_CFLAGS_GCC_OPTION([-fvisibility=hidden])
+AX_CXXFLAGS_GCC_OPTION([-fvisibility=hidden])
+AX_CXXFLAGS_GCC_OPTION([-fno-rtti])
+AX_CXXFLAGS_GCC_OPTION([-fno-exceptions])
+
+# -pipe is just faster
+AX_CFLAGS_GCC_OPTION([-pipe])
+AX_CXXFLAGS_GCC_OPTION([-pipe])
+
+# Always add full warnings
 AX_CXXFLAGS_WARN_ALL
+
+# Just for Win32 with GCC
+AS_CASE([$host_os],[mingw*],
+[
+  AX_CFLAGS_GCC_OPTION([-static-libgcc])
+  AX_CXXFLAGS_GCC_OPTION([-static-libgcc])
+  AX_CXXFLAGS_GCC_OPTION([-static-libstdc++])
+])
 
 # Not required any more...
 #AS_CASE([$host_os],[mingw*],
