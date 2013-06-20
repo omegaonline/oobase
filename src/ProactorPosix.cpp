@@ -92,7 +92,7 @@ int OOBase::detail::ProactorPosix::init()
 	// Create the control pipe
 	int pipe_ends[2] = { -1, -1 };
 
-#if defined(HAVE_PIPE2)
+#if defined(HAVE_PIPE2) && defined(O_CLOEXEC)
 	if (::pipe2(pipe_ends,O_CLOEXEC) != 0)
 		return errno;
 
