@@ -110,7 +110,13 @@ namespace OOBase
 		{
 			int err = baseClass::append(Node::build(key,value));
 			if (!err)
-				m_sorted = false;
+			{
+				// Only clear sorted flag if we are sorted, and have inserted an
+				// item that does not change the sort order
+				if (m_sorted && this->m_size > 1 && !default_sort(*key_at(this->m_size-2),key))
+					m_sorted = false;
+			}
+
 			return err;
 		}
 
@@ -246,7 +252,7 @@ namespace OOBase
 		}
 
 	private:
-		mutable bool m_sorted;
+		bool m_sorted;
 
 		template <typename K1>
 		size_t find_i(K1 key, bool first) const
