@@ -125,8 +125,7 @@ namespace OOBase
 		{
 			t = NULL;
 			AllocatorInstance& allocator = get_internal_allocator();
-			allocator.allocate_new(t,param,callback,allocator);
-			return (t != NULL);
+			return allocator.allocate_new(t,param,callback,allocator);
 		}
 
 		virtual AllocatorInstance& get_internal_allocator() const = 0;

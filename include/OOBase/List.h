@@ -218,8 +218,7 @@ namespace OOBase
 			ListNode* prev = (next ? next->m_prev : m_tail);
 
 			ListNode* new_node = NULL;
-			err = baseClass::allocate_new(new_node,prev,next,value);
-			if (err)
+			if (!baseClass::allocate_new(new_node,prev,next,value))
 				return NULL;
 
 			(next ? next->m_prev : m_tail) = new_node;
