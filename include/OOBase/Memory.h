@@ -291,14 +291,6 @@ namespace OOBase
 		static void free(void* ptr);
 	};
 
-	class ThreadLocalAllocator : public AllocateNewStatic<ThreadLocalAllocator>
-	{
-	public:
-		static void* allocate(size_t bytes, size_t align = 16);
-		static void* reallocate(void* ptr, size_t bytes, size_t align = 16);
-		static void free(void* ptr);
-	};
-
 	template <typename Derived>
 	class AllocateNew
 	{
@@ -444,6 +436,16 @@ namespace OOBase
 		virtual void* allocate(size_t bytes, size_t align) = 0;
 		virtual void* reallocate(void* ptr, size_t bytes, size_t align) = 0;
 		virtual void free(void* ptr) = 0;
+	};
+
+	class ThreadLocalAllocator : public AllocateNewStatic<ThreadLocalAllocator>
+	{
+	public:
+		static void* allocate(size_t bytes, size_t align = 16);
+		static void* reallocate(void* ptr, size_t bytes, size_t align = 16);
+		static void free(void* ptr);
+
+		static AllocatorInstance& instance();
 	};
 
 	template <typename Allocator = CrtAllocator>
