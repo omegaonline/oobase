@@ -219,7 +219,10 @@ namespace OOBase
 
 			ListNode* new_node = NULL;
 			if (!baseClass::allocate_new(new_node,prev,next,value))
+			{
+				err = ERROR_OUTOFMEMORY;
 				return NULL;
+			}
 
 			(next ? next->m_prev : m_tail) = new_node;
 			(prev ? prev->m_next : m_head) = new_node;
