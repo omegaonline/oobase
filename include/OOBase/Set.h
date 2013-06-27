@@ -46,17 +46,6 @@ namespace OOBase
 		Set(AllocatorInstance& allocator) : baseClass(allocator), m_sorted(true)
 		{}
 
-		template <typename T1>
-		int push_back(T1 value)
-		{
-			return baseClass::push_back(value);
-		}
-
-		bool pop_back(T* pval = NULL)
-		{
-			return baseClass::pop_back(pval);
-		}
-
 		int insert(const T& value)
 		{
 			int err = baseClass::push_back(value);
@@ -85,6 +74,11 @@ namespace OOBase
 
 			remove_at(i);
 			return true;
+		}
+
+		bool pop_back(T* pval = NULL)
+		{
+			return baseClass::pop_back(pval);
 		}
 
 		template <typename T1>
