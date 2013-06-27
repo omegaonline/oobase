@@ -22,7 +22,7 @@
 #ifndef OOBASE_LIST_H_INCLUDED_
 #define OOBASE_LIST_H_INCLUDED_
 
-#include "Bag.h"
+#include "Iterator.h"
 
 namespace OOBase
 {

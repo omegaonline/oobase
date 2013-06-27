@@ -22,7 +22,7 @@
 #ifndef OOBASE_VECTOR_H_INCLUDED_
 #define OOBASE_VECTOR_H_INCLUDED_
 
-#include "Bag.h"
+#include "Iterator.h"
 
 namespace OOBase
 {
@@ -142,7 +142,7 @@ namespace OOBase
 				return 0;
 			}
 #endif
-			void remove_at(size_t pos, T* pval = NULL)
+			void remove_at(size_t pos, T* pval)
 			{
 				if (m_data && pos < m_size)
 				{
@@ -224,7 +224,7 @@ namespace OOBase
 				return 0;
 			}
 
-			void remove_at(size_t pos, T* pval = NULL)
+			void remove_at(size_t pos, T* pval)
 			{
 				if (m_data && pos < m_size)
 				{
@@ -240,12 +240,74 @@ namespace OOBase
 		private:
 			size_t m_capacity;
 		};
+
+		template <typename T, typename Allocator>
+		class VectorImpl : public VectorBase<Allocator,T,is_pod<T>::value>
+		{
+			typedef VectorBase<Allocator,T,is_pod<T>::value> baseClass;
+
+		public:
+			VectorImpl() : baseClass()
+			{}
+
+			VectorImpl(AllocatorInstance& allocator) : baseClass(allocator)
+			{}
+
+			bool empty() const
+			{
+				return (this->m_size == 0);
+			}
+
+			size_t size() const
+			{
+				return this->m_size;
+			}
+
+		protected:
+			template <typename T1>
+			int push_back(T1 value)
+			{
+				return baseClass::insert_at(this->m_size,value);
+			}
+
+			bool pop_back(T* pval = NULL)
+			{
+				baseClass::remove_at(this->m_size - 1,pval);
+				return !empty();
+			}
+
+			T* at(size_t pos)
+			{
+				return (pos >= this->m_size ? NULL : &this->m_data[pos]);
+			}
+
+			const T* at(size_t pos) const
+			{
+				return (pos >= this->m_size ? NULL : &this->m_data[pos]);
+			}
+
+			void next(size_t& pos) const
+			{
+				if (pos < this->m_size - 1)
+					++pos;
+				else
+					pos = size_t(-1);
+			}
+
+			void prev(size_t& pos) const
+			{
+				if (pos >= this->m_size)
+					pos = this->m_size-1;
+				else
+					--pos;
+			}
+		};
 	}
 
 	template <typename T, typename Allocator = CrtAllocator>
-	class Vector : public detail::VectorBase<Allocator,T,detail::is_pod<T>::value>
+	class Vector : public detail::VectorImpl<T,Allocator>
 	{
-		typedef detail::VectorBase<Allocator,T,detail::is_pod<T>::value> baseClass;
+		typedef detail::VectorImpl<T,Allocator> baseClass;
 
 		friend class detail::IteratorImpl<Vector,T,size_t>;
 		friend class detail::IteratorImpl<const Vector,const T,size_t>;
@@ -259,28 +321,6 @@ namespace OOBase
 
 		Vector(AllocatorInstance& allocator) : baseClass(allocator)
 		{}
-
-		bool empty() const
-		{
-			return (this->m_size == 0);
-		}
-
-		size_t size() const
-		{
-			return this->m_size;
-		}
-
-		template <typename T1>
-		int push_back(T1 value)
-		{
-			return baseClass::insert_at(this->m_size,value);
-		}
-
-		bool pop_back(T* pval = NULL)
-		{
-			baseClass::remove_at(this->m_size - 1,pval);
-			return !empty();
-		}
 
 		template <typename T1>
 		iterator find(T1 value)
@@ -304,6 +344,17 @@ namespace OOBase
 					return const_iterator(this,pos);
 			}
 			return end();
+		}
+
+		template <typename T1>
+		int push_back(T1 value)
+		{
+			return baseClass::push_back(value);
+		}
+
+		bool pop_back(T* pval = NULL)
+		{
+			return baseClass::pop_back(pval);
 		}
 
 		template <typename T1>
@@ -339,12 +390,12 @@ namespace OOBase
 
 		T* at(size_t pos)
 		{
-			return (pos >= this->m_size ? NULL : &this->m_data[pos]);
+			return baseClass::at(pos);
 		}
 
 		const T* at(size_t pos) const
 		{
-			return (pos >= this->m_size ? NULL : &this->m_data[pos]);
+			return baseClass::at(pos);
 		}
 
 		T& operator [](size_t pos)
@@ -367,6 +418,16 @@ namespace OOBase
 			return const_iterator(this,0);
 		}
 
+		iterator back()
+		{
+			return (this->m_size ? iterator(this,this->m_size-1) : end());
+		}
+
+		const_iterator back() const
+		{
+			return (this->m_size ? const_iterator(this,this->m_size-1) : end());
+		}
+
 		iterator end()
 		{
 			return iterator(this,size_t(-1));
@@ -375,23 +436,6 @@ namespace OOBase
 		const_iterator end() const
 		{
 			return const_iterator(this,size_t(-1));
-		}
-
-	private:
-		void next(size_t& pos) const
-		{
-			if (pos < this->m_size - 1)
-				++pos;
-			else
-				pos = size_t(-1);
-		}
-
-		void prev(size_t& pos) const
-		{
-			if (pos >= this->m_size)
-				pos = this->m_size-1;
-			else
-				--pos;
 		}
 	};
 }

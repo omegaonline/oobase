@@ -22,16 +22,22 @@
 #ifndef OOBASE_SET_H_INCLUDED_
 #define OOBASE_SET_H_INCLUDED_
 
-#include "Bag.h"
+#include "Vector.h"
 
 namespace OOBase
 {
 	template <typename T, typename Allocator = CrtAllocator>
-	class Set : public detail::BagImpl<T,Allocator>
+	class Set : public detail::VectorImpl<T,Allocator>
 	{
-		typedef detail::BagImpl<T,Allocator> baseClass;
+		typedef detail::VectorImpl<T,Allocator> baseClass;
+
+		friend class detail::IteratorImpl<Set,T,size_t>;
+		friend class detail::IteratorImpl<const Set,const T,size_t>;
 
 	public:
+		typedef detail::IteratorImpl<Set,T,size_t> iterator;
+		typedef detail::IteratorImpl<const Set,const T,size_t> const_iterator;
+
 		static const size_t npos = size_t(-1);
 
 		Set() : baseClass(), m_sorted(true)
@@ -40,54 +46,75 @@ namespace OOBase
 		Set(AllocatorInstance& allocator) : baseClass(allocator), m_sorted(true)
 		{}
 
+		template <typename T1>
+		int push_back(T1 value)
+		{
+			return baseClass::push_back(value);
+		}
+
+		bool pop_back(T* pval = NULL)
+		{
+			return baseClass::pop_back(pval);
+		}
+
 		int insert(const T& value)
 		{
-			int err = baseClass::append(value);
+			int err = baseClass::push_back(value);
 			if (!err)
-				m_sorted = false;
+			{
+				// Only clear sorted flag if we are sorted, and have inserted an
+				// item that does not change the sort order
+				if (m_sorted && this->m_size > 1 && !default_sort(*baseClass::at(this->m_size-2),value))
+					m_sorted = false;
+			}
 			return err;
 		}
 
-		bool remove_at(size_t pos, T* pval = NULL)
+		void remove_at(iterator& iter)
 		{
-			return baseClass::remove_at(pos,m_sorted,pval);
-		}
-
-		bool remove(const T& value)
-		{
-			size_t pos = find(value,false);
-			if (pos == npos)
-				return false;
-
-			return remove_at(pos);
-		}
-
-		bool pop(T* value = NULL)
-		{
-			return baseClass::remove_at(this->m_size-1,true,value);
-		}
-
-		template <typename V1>
-		bool exists(V1 key) const
-		{
-			return (find(key) != npos);
+			assert(iter.check(this));
+			remove_at(iter.deref());
 		}
 
 		template <typename T1>
-		size_t find(T1 key, bool first = false) const
+		bool remove(T1 value)
 		{
-			const T* p = bsearch(key);
+			iterator i = find(value);
+			if (i == end())
+				return false;
+
+			remove_at(i);
+			return true;
+		}
+
+		template <typename T1>
+		bool exists(T1 value) const
+		{
+			return (find(value) != end());
+		}
+
+		template <typename T1>
+		iterator find(T1 value, bool first = false)
+		{
+			const T* p = bsearch(value);
 
 			// Scan for the first
 			while (p && first && p > this->m_data && *(p-1) == *p)
 				--p;
 
-			return (p ? static_cast<size_t>(p - this->m_data) : npos);
+			return (p ? iterator(this,static_cast<size_t>(p - this->m_data)) : end());
 		}
 
-		const T* at(size_t pos) const
+		template <typename T1>
+		const_iterator find(T1 value, bool first = false) const
 		{
-			return baseClass::at(pos);
+			const T* p = bsearch(value);
+
+			// Scan for the first
+			while (p && first && p > this->m_data && *(p-1) == *p)
+				--p;
+
+			return (p ? const_iterator(this,static_cast<size_t>(p - this->m_data)) : end());
 		}
 
 		void sort()
@@ -128,8 +155,49 @@ namespace OOBase
 			m_sorted = (less_than == &default_sort);
 		}
 
+		iterator begin()
+		{
+			return iterator(this,0);
+		}
+
+		const_iterator begin() const
+		{
+			return const_iterator(this,0);
+		}
+
+		iterator back()
+		{
+			return (this->m_size ? iterator(this,this->m_size-1) : end());
+		}
+
+		const_iterator back() const
+		{
+			return (this->m_size ? const_iterator(this,this->m_size-1) : end());
+		}
+
+		iterator end()
+		{
+			return iterator(this,size_t(-1));
+		}
+
+		const_iterator end() const
+		{
+			return const_iterator(this,size_t(-1));
+		}
+
 	private:
-		mutable bool m_sorted;
+		bool m_sorted;
+
+		void remove_at(size_t pos)
+		{
+			if (m_sorted)
+				baseClass::remove_at(pos,NULL);
+			else if (this->m_data && pos < this->m_size)
+			{
+				this->m_data[pos] = this->m_data[--this->m_size];
+				this->m_data[this->m_size].~T();
+			}
+		}
 
 		template <typename T1>
 		const T* bsearch(T1 key) const
