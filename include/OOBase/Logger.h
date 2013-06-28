@@ -43,6 +43,7 @@ namespace OOBase
 #else
 		void log(Priority priority, const char* fmt, ...);
 #endif
+		void log(Priority priority, const char* fmt, va_list args);
 		
 #if !defined(DOXYGEN)
 		struct filenum_t
