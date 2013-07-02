@@ -105,8 +105,8 @@ namespace OOBase
 		Table(AllocatorInstance& allocator) : baseClass(allocator), m_sorted(true)
 		{}
 
-		template <typename K1, typename V1>
-		int insert(K1 key, V1 value)
+		template <typename V1>
+		int insert(K key, V1 value)
 		{
 			int err = baseClass::push_back(Node::build(key,value));
 			if (!err)
