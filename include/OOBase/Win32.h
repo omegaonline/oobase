@@ -24,6 +24,7 @@
 
 #include "SmartPtr.h"
 #include "String.h"
+#include "Timeout.h"
 
 #if defined(_WIN32) || defined(DOXYGEN)
 
