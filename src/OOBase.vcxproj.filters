@@ -88,6 +88,9 @@
     <ClCompile Include="Builtins.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="File.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\OOBase\Atomic.h">
@@ -250,6 +253,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\OOBase\List.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\OOBase\File.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

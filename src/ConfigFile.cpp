@@ -22,6 +22,7 @@
 #include "../include/OOBase/Memory.h"
 #include "../include/OOBase/ConfigFile.h"
 #include "../include/OOBase/Buffer.h"
+#include "../include/OOBase/File.h"
 
 #include "../include/OOBase/Posix.h"
 #include "../include/OOBase/Win32.h"
@@ -237,27 +238,14 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 		error_pos->col = 1;
 	}
 
-	OOBase::StackAllocator<512> allocator;
-
-#if defined(_WIN32)
-	TempPtr<wchar_t> wname(allocator);
-	int err2 = Win32::utf8_to_wchar_t(filename,wname);
-	if (err2)
-		return err2;
-
-	Win32::SmartHandle f(::CreateFileW(wname,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL));
-	if (!f.is_valid())
-		return ::GetLastError();
-#elif defined(HAVE_UNISTD_H)
-	POSIX::SmartFD f(POSIX::open(filename,O_RDONLY));
-	if (!f.is_valid())
-		return errno;
-#else
-#error Implement platform native file handling
-#endif
+	File file;
+	int err = file.open(filename);
+	if (err)
+		return err;
 
 	static const size_t s_read_block_size = 400;
 
+	OOBase::StackAllocator<512> allocator;
 	RefPtr<Buffer> buffer = Buffer::create(allocator,s_read_block_size,1);
 	if (!buffer)
 		return ERROR_OUTOFMEMORY;
@@ -265,13 +253,9 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 	String strSection;
 	for (;;)
 	{
-#if defined(_WIN32)
-		DWORD r = 0;
-		if (!::ReadFile(f,buffer->wr_ptr(),static_cast<DWORD>(buffer->space()),&r,NULL))
-			return GetLastError();
-#elif defined(HAVE_UNISTD_H)
-		ssize_t r = POSIX::read(f,buffer->wr_ptr(),buffer->space());
-#endif
+		size_t r = file.read(buffer,err);
+		if (err)
+			return err;
 
 		if (r == 0)
 		{
@@ -279,13 +263,8 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 			*buffer->wr_ptr() = '\n';
 			buffer->wr_ptr(1);
 		}
-		else
-		{
-			// Update wr_ptr
-			buffer->wr_ptr(r);
-		}
-
-		int err = parse_text(buffer,strSection,results,error_pos);
+		
+		err = parse_text(buffer,strSection,results,error_pos);
 		if (err)
 			return err;
 

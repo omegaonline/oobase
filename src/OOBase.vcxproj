@@ -160,6 +160,7 @@
     <ClCompile Include="DLL.cpp" />
     <ClCompile Include="Environment.cpp" />
     <ClCompile Include="Error.cpp" />
+    <ClCompile Include="File.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Mutex.cpp" />
     <ClCompile Include="Once.cpp" />
@@ -193,6 +194,7 @@
     <ClInclude Include="..\include\OOBase\CmdArgs.h" />
     <ClInclude Include="..\include\OOBase\ConfigFile.h" />
     <ClInclude Include="..\include\OOBase\Environment.h" />
+    <ClInclude Include="..\include\OOBase\File.h" />
     <ClInclude Include="..\include\OOBase\GlobalNew.h" />
     <ClInclude Include="..\include\OOBase\List.h" />
     <ClInclude Include="..\include\OOBase\Logger.h" />
