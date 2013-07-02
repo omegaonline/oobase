@@ -36,7 +36,8 @@ namespace OOBase
 			Debug
 		};
 
-		void open(const char* name, const char* pszSrcFile = NULL);
+		void open_console_log(const char* pszSrcFile = NULL);
+		void open_system_log(const char* name, const char* pszSrcFile = NULL);
 
 #if defined(__GNUC__)
 		void log(Priority priority, const char* fmt, ...) __attribute__((format(printf,2,3)));
