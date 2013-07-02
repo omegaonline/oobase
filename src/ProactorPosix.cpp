@@ -135,23 +135,20 @@ bool OOBase::detail::ProactorPosix::check_timers(TimerItem& active_timer, Timeou
 		// Sort the timer set, so soonest is last
 		m_timers.sort();
 
-		// Count the number of expired timers...
-		size_t pos = m_timers.size() - 1;
-
 		// Check last entry
-		const TimerItem* item = m_timers.at(pos);
+		Set<TimerItem,AllocatorInstance>::iterator i = m_timers.back();
 
 		// If the timer has expired, remove from set
-		if (item->m_timeout.has_expired())
+		if (i->m_timeout.has_expired())
 		{
-			active_timer = *item;
-			m_timers.remove_at(pos);
+			active_timer = *i;
+			m_timers.pop_back();
 			return true;
 		}
 
 		// Set current timeout to the next value, as the set is sorted
-		if (item->m_timeout < timeout)
-			timeout = item->m_timeout;
+		if (i->m_timeout < timeout)
+			timeout = i->m_timeout;
 	}
 
 	return false;
@@ -321,11 +318,11 @@ int OOBase::detail::ProactorPosix::add_timer(void* param, timer_callback_t callb
 
 int OOBase::detail::ProactorPosix::remove_timer(void* param)
 {
-	for (size_t pos = 0; pos < m_timers.size(); ++pos)
+	for (Set<TimerItem,AllocatorInstance>::iterator i = m_timers.begin(); i != m_timers.end(); ++i)
 	{
-		if (m_timers.at(pos)->m_param == param)
+		if (i->m_param == param)
 		{
-			m_timers.remove_at(pos);
+			m_timers.remove_at(i);
 			return 0;
 		}
 	}
