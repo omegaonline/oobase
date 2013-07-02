@@ -47,16 +47,7 @@ namespace OOBase
 			}
 		};
 
-		class LocalAllocDestructor
-		{
-		public:
-			typedef LocalAllocator Allocator;
-			
-			static void destroy(void* ptr)
-			{
-				::LocalFree((HLOCAL)ptr);
-			}
-		};
+		typedef FreeDestructor<LocalAllocator> LocalAllocDestructor;
 
 		class SmartHandle : public NonCopyable
 		{
