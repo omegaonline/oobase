@@ -250,20 +250,17 @@ namespace
 			}
 		}
 
-		if (priority == OOBase::Logger::Debug)
+		if (wmsg)
 		{
-			if (wmsg)
-			{
-				OutputDebugStringW(wmsg);
-				OutputDebugStringW(L"\n");
-			}
-			else
-			{
-				OutputDebugStringA(msg);
-				OutputDebugStringA("\n");
-			}
+			OutputDebugStringW(wmsg);
+			OutputDebugStringW(L"\n");
 		}
-
+		else
+		{
+			OutputDebugStringA(msg);
+			OutputDebugStringA("\n");
+		}
+		
 		WORD attrs = 0;
 		switch (priority)
 		{
