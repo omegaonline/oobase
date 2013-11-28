@@ -397,100 +397,91 @@ OOBase::socket_t PosixAsyncSocket::get_handle() const
 void PosixAsyncSocket::fd_callback(int fd, void* param, unsigned int events)
 {
 	PosixAsyncSocket* pThis = static_cast<PosixAsyncSocket*>(param);
-	if (pThis->m_fd == fd)
+	if (pThis->m_fd != fd)
+		OOBase_CallCriticalFailure("Wrong fd passed to callback");
+
+	OOBase::StackAllocator<512> allocator;
+	OOBase::Queue<RecvNotify,OOBase::AllocatorInstance> recv_notify_queue(allocator);
+	OOBase::Queue<SendNotify,OOBase::AllocatorInstance> send_notify_queue(allocator);
+
+	OOBase::Guard<OOBase::Mutex> guard(pThis->m_lock);
+
+	if (events & OOBase::detail::eTXRecv)
+		pThis->process_recv(recv_notify_queue);
+
+	if (events & OOBase::detail::eTXSend)
+		pThis->process_send(send_notify_queue);
+
+	guard.release();
+
+	RecvNotify recv_notify;
+	while (recv_notify_queue.pop(&recv_notify))
 	{
-		OOBase::StackAllocator<512> allocator;
-		OOBase::Queue<RecvNotify,OOBase::AllocatorInstance> recv_notify_queue(allocator);
-		OOBase::Queue<SendNotify,OOBase::AllocatorInstance> send_notify_queue(allocator);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+		try
+		{
+#endif
+			if (recv_notify.m_item.m_ctl_buffer)
+				(*recv_notify.m_item.m_msg_callback)(recv_notify.m_item.m_param,recv_notify.m_item.m_buffer,recv_notify.m_item.m_ctl_buffer,recv_notify.m_err);
+			else
+				(*recv_notify.m_item.m_callback)(recv_notify.m_item.m_param,recv_notify.m_item.m_buffer,recv_notify.m_err);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+		}
+		catch (...)
+		{
+			if (recv_notify.m_item.m_ctl_buffer)
+				recv_notify.m_item.m_ctl_buffer->release();
+			recv_notify.m_item.m_buffer->release();
+			throw;
+		}
+#endif
+		if (recv_notify.m_item.m_ctl_buffer)
+			recv_notify.m_item.m_ctl_buffer->release();
+		recv_notify.m_item.m_buffer->release();
+	}
 
-		OOBase::Guard<OOBase::Mutex> guard(pThis->m_lock);
-
-		if (events & OOBase::detail::eTXRecv)
-			pThis->process_recv(recv_notify_queue);
-
-		if (events & OOBase::detail::eTXSend)
-			pThis->process_send(send_notify_queue);
-
-		guard.release();
-
-		RecvNotify recv_notify;
-		while (recv_notify_queue.pop(&recv_notify))
+	SendNotify send_notify;
+	while (send_notify_queue.pop(&send_notify))
+	{
+		if (send_notify.m_item.m_count == 1)
 		{
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 			try
 			{
 #endif
-				if (recv_notify.m_item.m_ctl_buffer)
-					(*recv_notify.m_item.m_msg_callback)(recv_notify.m_item.m_param,recv_notify.m_item.m_buffer,recv_notify.m_item.m_ctl_buffer,recv_notify.m_err);
-				else
-					(*recv_notify.m_item.m_callback)(recv_notify.m_item.m_param,recv_notify.m_item.m_buffer,recv_notify.m_err);
+				if (send_notify.m_item.m_ctl_buffer)
+				{
+					if (send_notify.m_item.m_msg_callback)
+						(*send_notify.m_item.m_msg_callback)(send_notify.m_item.m_param,send_notify.m_item.m_buffer,send_notify.m_item.m_ctl_buffer,send_notify.m_err);
+				}
+				else if (send_notify.m_item.m_callback)
+					(*send_notify.m_item.m_callback)(send_notify.m_item.m_param,send_notify.m_item.m_buffer,send_notify.m_err);
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 			}
 			catch (...)
 			{
-				if (recv_notify.m_item.m_ctl_buffer)
-					recv_notify.m_item.m_ctl_buffer->release();
-				recv_notify.m_item.m_buffer->release();
-				throw;
-			}
-#endif
-			if (recv_notify.m_item.m_ctl_buffer)
-				recv_notify.m_item.m_ctl_buffer->release();
-			recv_notify.m_item.m_buffer->release();
-		}
-
-		SendNotify send_notify;
-		while (send_notify_queue.pop(&send_notify))
-		{
-			if (send_notify.m_item.m_count == 1)
-			{
-#if defined(OOBASE_HAVE_EXCEPTIONS)
-				try
-				{
-#endif
-					if (send_notify.m_item.m_ctl_buffer)
-					{
-						if (send_notify.m_item.m_msg_callback)
-							(*send_notify.m_item.m_msg_callback)(send_notify.m_item.m_param,send_notify.m_item.m_buffer,send_notify.m_item.m_ctl_buffer,send_notify.m_err);
-					}
-					else if (send_notify.m_item.m_callback)
-						(*send_notify.m_item.m_callback)(send_notify.m_item.m_param,send_notify.m_item.m_buffer,send_notify.m_err);
-#if defined(OOBASE_HAVE_EXCEPTIONS)
-				}
-				catch (...)
-				{
-					if (send_notify.m_item.m_ctl_buffer)
-						send_notify.m_item.m_ctl_buffer->release();
-					send_notify.m_item.m_buffer->release();
-					throw;
-				}
-#endif
 				if (send_notify.m_item.m_ctl_buffer)
 					send_notify.m_item.m_ctl_buffer->release();
 				send_notify.m_item.m_buffer->release();
+				throw;
 			}
-			else
+#endif
+			if (send_notify.m_item.m_ctl_buffer)
+				send_notify.m_item.m_ctl_buffer->release();
+			send_notify.m_item.m_buffer->release();
+		}
+		else
+		{
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+			try
 			{
-#if defined(OOBASE_HAVE_EXCEPTIONS)
-				try
-				{
 #endif
-					if (send_notify.m_item.m_v_callback)
-						(*send_notify.m_item.m_v_callback)(send_notify.m_item.m_param,send_notify.m_item.m_buffers,send_notify.m_item.m_count,send_notify.m_err);
+				if (send_notify.m_item.m_v_callback)
+					(*send_notify.m_item.m_v_callback)(send_notify.m_item.m_param,send_notify.m_item.m_buffers,send_notify.m_item.m_count,send_notify.m_err);
 #if defined(OOBASE_HAVE_EXCEPTIONS)
-				}
-				catch (...)
-				{
-					for (size_t i = 0;i<send_notify.m_item.m_count;++i)
-					{
-						if (send_notify.m_item.m_buffers[i])
-							send_notify.m_item.m_buffers[i]->release();
-					}
-
-					pThis->m_pProactor->get_internal_allocator().free(send_notify.m_item.m_buffers);
-					throw;
-				}
-#endif
+			}
+			catch (...)
+			{
 				for (size_t i = 0;i<send_notify.m_item.m_count;++i)
 				{
 					if (send_notify.m_item.m_buffers[i])
@@ -498,7 +489,16 @@ void PosixAsyncSocket::fd_callback(int fd, void* param, unsigned int events)
 				}
 
 				pThis->m_pProactor->get_internal_allocator().free(send_notify.m_item.m_buffers);
+				throw;
 			}
+#endif
+			for (size_t i = 0;i<send_notify.m_item.m_count;++i)
+			{
+				if (send_notify.m_item.m_buffers[i])
+					send_notify.m_item.m_buffers[i]->release();
+			}
+
+			pThis->m_pProactor->get_internal_allocator().free(send_notify.m_item.m_buffers);
 		}
 	}
 }
@@ -882,7 +882,6 @@ namespace
 		int                                      m_fd;
 
 		static void fd_callback(int fd, void* param, unsigned int events);
-		void do_accept();
 	};
 }
 
@@ -966,12 +965,9 @@ int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len, SECURITY_ATTR
 void SocketAcceptor::fd_callback(int fd, void* param, unsigned int events)
 {
 	SocketAcceptor* pThis = static_cast<SocketAcceptor*>(param);
-	if (pThis->m_fd == fd && (events & OOBase::detail::eTXRecv))
-		pThis->do_accept();
-}
+	if (pThis->m_fd != fd)
+		OOBase_CallCriticalFailure("Wrong fd passed to callback");
 
-void SocketAcceptor::do_accept()
-{
 	for (;;)
 	{
 		sockaddr_storage addr = {0};
@@ -983,7 +979,7 @@ void SocketAcceptor::do_accept()
 			addr_len = sizeof(addr);
 
 #if defined (HAVE_ACCEPT4)
-			new_fd = ::accept4(m_fd,(sockaddr*)&addr,&addr_len,0
+			new_fd = ::accept4(pThis->m_fd,(sockaddr*)&addr,&addr_len,0
 #if defined(SOCK_NONBLOCK)
 					| SOCK_NONBLOCK
 #endif
@@ -992,7 +988,7 @@ void SocketAcceptor::do_accept()
 #endif
 					);
 #else
-			new_fd = ::accept(m_fd,(sockaddr*)&addr,&addr_len);
+			new_fd = ::accept(pThis->m_fd,(sockaddr*)&addr,&addr_len);
 #endif
 		}
 		while (new_fd == -1 && errno == EINTR);
@@ -1006,7 +1002,7 @@ void SocketAcceptor::do_accept()
 			if (err == EAGAIN || err == EWOULDBLOCK)
 			{
 				// Will complete later...
-				err = m_pProactor->watch_fd(m_fd,OOBase::detail::eTXRecv);
+				err = pThis->m_pProactor->watch_fd(pThis->m_fd,OOBase::detail::eTXRecv);
 				if (!err)
 					break;
 			}
@@ -1022,7 +1018,7 @@ void SocketAcceptor::do_accept()
 				err = OOBase::POSIX::set_close_on_exec(new_fd,true);
 #endif
 
-			if (m_sa.pass_credentials)
+			if (pThis->m_sa.pass_credentials)
 			{
 #if defined(SO_PASSCRED)
 				int val = 1;
@@ -1038,7 +1034,7 @@ void SocketAcceptor::do_accept()
 			if (err == 0)
 			{
 				// Wrap the handle
-				pSocket = new PosixAsyncSocket(m_pProactor,new_fd);
+				pSocket = new PosixAsyncSocket(pThis->m_pProactor,new_fd);
 				if (!pSocket)
 					err = ENOMEM;
 				else
@@ -1056,10 +1052,10 @@ void SocketAcceptor::do_accept()
 				OOBase::Net::close_socket(new_fd);
 		}
 
-		if (m_callback_local)
-			(*m_callback_local)(m_param,pSocket,err);
+		if (pThis->m_callback_local)
+			(*pThis->m_callback_local)(pThis->m_param,pSocket,err);
 		else
-			(*m_callback)(m_param,pSocket,(sockaddr*)&addr,addr_len,err);
+			(*pThis->m_callback)(pThis->m_param,pSocket,(sockaddr*)&addr,addr_len,err);
 
 		if (new_fd == -1)
 		{
