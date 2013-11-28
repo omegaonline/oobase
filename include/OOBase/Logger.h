@@ -36,13 +36,15 @@ namespace OOBase
 			Debug
 		};
 
-		void open(const char* name, const char* pszSrcFile = NULL);
+		void open_console_log(const char* pszSrcFile = NULL);
+		void open_system_log(const char* name, const char* pszSrcFile = NULL);
 
 #if defined(__GNUC__)
 		void log(Priority priority, const char* fmt, ...) __attribute__((format(printf,2,3)));
 #else
 		void log(Priority priority, const char* fmt, ...);
 #endif
+		void log(Priority priority, const char* fmt, va_list args);
 		
 #if !defined(DOXYGEN)
 		struct filenum_t

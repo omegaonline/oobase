@@ -24,6 +24,7 @@
 
 #include "SmartPtr.h"
 #include "String.h"
+#include "Timeout.h"
 
 #if defined(_WIN32) || defined(DOXYGEN)
 
@@ -46,16 +47,7 @@ namespace OOBase
 			}
 		};
 
-		class LocalAllocDestructor
-		{
-		public:
-			typedef LocalAllocator Allocator;
-			
-			static void destroy(void* ptr)
-			{
-				::LocalFree((HLOCAL)ptr);
-			}
-		};
+		typedef FreeDestructor<LocalAllocator> LocalAllocDestructor;
 
 		class SmartHandle : public NonCopyable
 		{

@@ -22,7 +22,7 @@
 #ifndef OOBASE_HASHTABLE_H_INCLUDED_
 #define OOBASE_HASHTABLE_H_INCLUDED_
 
-#include "Memory.h"
+#include "Iterator.h"
 
 namespace OOBase
 {
@@ -253,7 +253,7 @@ namespace OOBase
 		{
 			if (m_count+(m_size/7) >= m_size)
 			{
-				if ((err = clone()))
+				if ((err = clone()) != 0)
 					return end();
 			}
 

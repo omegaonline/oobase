@@ -22,7 +22,7 @@
 #ifndef OOBASE_TABLE_H_INCLUDED_
 #define OOBASE_TABLE_H_INCLUDED_
 
-#include "Bag.h"
+#include "Vector.h"
 
 namespace OOBase
 {
@@ -91,10 +91,10 @@ namespace OOBase
 	}
 
 	template <typename K, typename V, typename Allocator = CrtAllocator>
-	class Table : public detail::BagImpl<detail::TableNode<K,V,detail::is_pod<detail::Table::PODCheck<K,V> >::value>,Allocator>
+	class Table : public detail::VectorImpl<detail::TableNode<K,V,detail::is_pod<detail::Table::PODCheck<K,V> >::value>,Allocator>
 	{
 		typedef detail::TableNode<K,V,detail::is_pod<detail::Table::PODCheck<K,V> >::value> Node;
-		typedef detail::BagImpl<detail::TableNode<K,V,detail::is_pod<detail::Table::PODCheck<K,V> >::value>,Allocator> baseClass;
+		typedef detail::VectorImpl<detail::TableNode<K,V,detail::is_pod<detail::Table::PODCheck<K,V> >::value>,Allocator> baseClass;
 
 	public:
 		static const size_t npos = size_t(-1);
@@ -105,24 +105,34 @@ namespace OOBase
 		Table(AllocatorInstance& allocator) : baseClass(allocator), m_sorted(true)
 		{}
 
-		template <typename K1, typename V1>
-		int insert(K1 key, V1 value)
+		template <typename V1>
+		int insert(K key, V1 value)
 		{
-			int err = baseClass::append(Node::build(key,value));
+			int err = baseClass::push_back(Node::build(key,value));
 			if (!err)
-				m_sorted = false;
+			{
+				// Only clear sorted flag if we are sorted, and have inserted an
+				// item that does not change the sort order
+				if (m_sorted && this->m_size > 1 && !default_sort(*key_at(this->m_size-2),key))
+					m_sorted = false;
+			}
+
 			return err;
 		}
 
 		bool remove_at(size_t pos, K* key = NULL, V* value = NULL)
 		{
+			Node node;
+			if (!baseClass::remove_at(pos,&node))
+				return false;
+
 			if (key)
-				*key = *key_at(pos);
+				*key = node.m_key;
 
 			if (value)
-				*value = *at(pos);
+				*value = node.m_value;
 
-			return baseClass::remove_at(pos,true);
+			return true;
 		}
 
 		template <typename K1>
@@ -135,9 +145,19 @@ namespace OOBase
 			return remove_at(pos,NULL,value);
 		}
 
-		bool pop(K* key = NULL, V* value = NULL)
+		bool pop_back(K* key = NULL, V* value = NULL)
 		{
-			return remove_at(baseClass::size()-1,key,value);
+			Node node;
+			if (!baseClass::pop_back(&node))
+				return false;
+
+			if (key)
+				*key = node.m_key;
+
+			if (value)
+				*value = node.m_value;
+
+			return true;
 		}
 
 		template <typename K1>
@@ -246,7 +266,7 @@ namespace OOBase
 		}
 
 	private:
-		mutable bool m_sorted;
+		bool m_sorted;
 
 		template <typename K1>
 		size_t find_i(K1 key, bool first) const

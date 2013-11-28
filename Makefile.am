@@ -76,6 +76,7 @@ liboobase_la_SOURCES = \
 	src/DLL.cpp \
 	src/Environment.cpp \
 	src/Error.cpp \
+	src/File.cpp \
 	src/Logger.cpp \
 	src/Memory.cpp \
 	src/Mutex.cpp \

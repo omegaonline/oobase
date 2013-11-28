@@ -27,7 +27,7 @@
 
 namespace OOBase
 {
-	class RefCounted
+	class RefCounted : public OOBase::NonCopyable
 	{
 	public:
 		RefCounted() : m_refcount(1)
@@ -56,10 +56,6 @@ namespace OOBase
 		{}
 
 	private:
-		// Prevent copying
-		RefCounted(const RefCounted& rhs);
-		RefCounted& operator = (const RefCounted& rhs);
-
 		Atomic<size_t> m_refcount; ///< The reference count.
 	};
 

@@ -55,9 +55,13 @@ namespace
 	class Win32Logger
 	{
 	public:
+		Win32Logger() : m_hLog(NULL), m_pszSrcFile("")
+		{};
+
 		static void init();
 
-		void open(const char* name, const char* pszSrcFile);
+		void open_console(const char* pszSrcFile);
+		void open_system_log(const char* name, const char* pszSrcFile);
 		void log(OOBase::Logger::Priority priority, const char* msg);
 		const char* src() const { return m_pszSrcFile; }
 
@@ -80,9 +84,13 @@ namespace
 	class SysLogLogger
 	{
 	public:
+		SysLogLogger() : m_pszSrcFile(""), m_use_term(false), m_syslog(false)
+		{};
+
 		static void init();
 
-		void open(const char* name, const char* pszSrcFile);
+		void open_console(const char* pszSrcFile);
+		void open_system_log(const char* name, const char* pszSrcFile);
 		void log(OOBase::Logger::Priority priority, const char* msg);
 		const char* src() const { return m_pszSrcFile; }
 
@@ -90,6 +98,7 @@ namespace
 		OOBase::Mutex m_lock;
 		const char*   m_pszSrcFile;
 		bool          m_use_term;
+		bool          m_syslog;
 	};
 #endif
 
@@ -122,21 +131,25 @@ namespace
 	void Win32Logger::init()
 	{
 		s_instance.m_hLog = NULL;
-		s_instance.m_pszSrcFile = "";
 	}
 
-	void Win32Logger::open(const char* name, const char* pszSrcFile)
+	void Win32Logger::open_console(const char* pszSrcFile)
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
-
-		if (pszSrcFile)
-			m_pszSrcFile = pszSrcFile;
 
 		if (m_hLog)
 		{
 			DeregisterEventSource(m_hLog);
 			m_hLog = NULL;
 		}
+
+		if (pszSrcFile)
+			m_pszSrcFile = pszSrcFile;
+	}
+
+	void Win32Logger::open_system_log(const char* name, const char* pszSrcFile)
+	{
+		open_console(pszSrcFile);
 
 		wchar_t szPath[MAX_PATH];
 		if (!GetModuleFileNameW(NULL,szPath,MAX_PATH))
@@ -194,7 +207,6 @@ namespace
 		OOBase::TempPtr<wchar_t> wmsg(allocator);
 		OOBase::Win32::utf8_to_wchar_t(msg,wmsg);
 
-#if defined(NDEBUG)
 		if (m_hLog && priority != OOBase::Logger::Debug)
 		{
 			WORD wType = 0;
@@ -238,21 +250,17 @@ namespace
 			}
 		}
 
-		if (priority == OOBase::Logger::Debug)
-#endif
+		if (wmsg)
 		{
-			if (wmsg)
-			{
-				OutputDebugStringW(wmsg);
-				OutputDebugStringW(L"\n");
-			}
-			else
-			{
-				OutputDebugStringA(msg);
-				OutputDebugStringA("\n");
-			}
+			OutputDebugStringW(wmsg);
+			OutputDebugStringW(L"\n");
 		}
-
+		else
+		{
+			OutputDebugStringA(msg);
+			OutputDebugStringA("\n");
+		}
+		
 		WORD attrs = 0;
 		switch (priority)
 		{
@@ -313,15 +321,28 @@ namespace
 
 	void SysLogLogger::init()
 	{
-		s_instance.m_pszSrcFile = "";
 		s_instance.m_use_term = (::getenv("TERM") != NULL);
 	}
 
-	void SysLogLogger::open(const char* name, const char* pszSrcFile)
+	void SysLogLogger::open_console(const char* pszSrcFile)
 	{
+		OOBase::Guard<OOBase::Mutex> guard(m_lock);
+
+		if (m_syslog)
+			closelog();
+
+		m_syslog = false;
+
 		if (pszSrcFile)
 			m_pszSrcFile = pszSrcFile;
+	}
 
+	void SysLogLogger::open_system_log(const char* name, const char* pszSrcFile)
+	{
+		open_console(pszSrcFile);
+
+		m_syslog = true;
+	
 		openlog(name,LOG_NDELAY,LOG_DAEMON | LOG_CONS);
 	}
 
@@ -329,32 +350,33 @@ namespace
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
-#if defined(NDEBUG)
-		int wType = 0;
-		switch (priority)
+		if (m_syslog)
 		{
-		case OOBase::Logger::Error:
-			wType = LOG_MAKEPRI(LOG_DAEMON,LOG_ERR);
-			break;
+			int wType = 0;
+			switch (priority)
+			{
+			case OOBase::Logger::Error:
+				wType = LOG_MAKEPRI(LOG_DAEMON,LOG_ERR);
+				break;
 
-		case OOBase::Logger::Warning:
-			wType = LOG_MAKEPRI(LOG_DAEMON,LOG_WARNING);
-			break;
+			case OOBase::Logger::Warning:
+				wType = LOG_MAKEPRI(LOG_DAEMON,LOG_WARNING);
+				break;
 
-		case OOBase::Logger::Information:
-			wType = LOG_MAKEPRI(LOG_DAEMON,LOG_INFO);
-			break;
+			case OOBase::Logger::Information:
+				wType = LOG_MAKEPRI(LOG_DAEMON,LOG_INFO);
+				break;
 
-		case OOBase::Logger::Debug:
-			wType = LOG_MAKEPRI(LOG_DAEMON,LOG_DEBUG);
-			break;
+			case OOBase::Logger::Debug:
+				wType = LOG_MAKEPRI(LOG_DAEMON,LOG_DEBUG);
+				break;
 
-		default:
-			break;
+			default:
+				break;
+			}
+
+			syslog(wType,"%s",msg);
 		}
-
-		syslog(wType,"%s",msg);
-#endif
 
 		bool is_a_tty;
 		switch (priority)
@@ -402,9 +424,14 @@ namespace
 
 } // Anonymous namespace
 
-void OOBase::Logger::open(const char* name, const char* pszSrcFile)
+void OOBase::Logger::open_console_log(const char* pszSrcFile)
 {
-	LoggerInstance().open(name,pszSrcFile);
+	LoggerInstance().open_console(pszSrcFile);
+}
+
+void OOBase::Logger::open_system_log(const char* name, const char* pszSrcFile)
+{
+	LoggerInstance().open_system_log(name,pszSrcFile);
 }
 
 void OOBase::Logger::log(Priority priority, const char* fmt, ...)
@@ -412,14 +439,19 @@ void OOBase::Logger::log(Priority priority, const char* fmt, ...)
 	va_list args;
 	va_start(args,fmt);
 
-	StackAllocator<512> allocator;
-	TempPtr<char> ptr(allocator);
-	int err = OOBase::temp_vprintf(ptr,fmt,args);
+	log(priority,fmt,args);
 
 	va_end(args);
+}
 
-	if (err == 0)
-		LoggerInstance().log(priority,ptr);
+void OOBase::Logger::log(Priority priority, const char* fmt, va_list args)
+{
+	StackAllocator<512> allocator;
+	TempPtr<char> ptr(allocator);
+	if (temp_vprintf(ptr,fmt,args) == 0)
+		LoggerInstance().log(priority,static_cast<char*>(ptr));
+	else
+		LoggerInstance().log(priority,fmt);
 }
 
 OOBase::Logger::filenum_t::filenum_t(Priority priority, const char* pszFilename, unsigned int nLine) :
@@ -436,7 +468,7 @@ void OOBase::Logger::filenum_t::log(const char* fmt, ...)
 
 	StackAllocator<512> allocator;
 	TempPtr<char> msg(allocator);
-	int err = OOBase::temp_vprintf(msg,fmt,args);
+	int err = temp_vprintf(msg,fmt,args);
 
 	va_end(args);
 

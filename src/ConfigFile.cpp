@@ -22,26 +22,27 @@
 #include "../include/OOBase/Memory.h"
 #include "../include/OOBase/ConfigFile.h"
 #include "../include/OOBase/Buffer.h"
+#include "../include/OOBase/File.h"
 
 #include "../include/OOBase/Posix.h"
 #include "../include/OOBase/Win32.h"
 
 namespace
 {
-	bool whitespace(const uint8_t c)
+	bool whitespace(const OOBase::uint8_t c)
 	{
 		return (c == ' ' || c == '\r' || c == '\n' || c == '\t');
 	}
 
-	bool comment(const uint8_t c)
+	bool comment(const OOBase::uint8_t c)
 	{
 		return (c == '#');
 	}
 
-	int parse_section(const uint8_t* key_start, const uint8_t* end, OOBase::String& strSection, OOBase::ConfigFile::error_pos_t* error_pos)
+	int parse_section(const OOBase::uint8_t* key_start, const OOBase::uint8_t* end, OOBase::String& strSection, OOBase::ConfigFile::error_pos_t* error_pos)
 	{
 		// Check for closing ] (And whitespace or comments in the section name)
-		const uint8_t* key_end = key_start + 1;
+		const OOBase::uint8_t* key_end = key_start + 1;
 		while (key_end < end && *key_end != ']' && !comment(*key_end) && !whitespace(*key_end))
 			++key_end;
 
@@ -54,7 +55,7 @@ namespace
 		}
 
 		// Check for trailing nonsense
-		const uint8_t* p = key_end + 1;
+		const OOBase::uint8_t* p = key_end + 1;
 		while (p < end && whitespace(*p))
 			++p;
 
@@ -79,14 +80,14 @@ namespace
 		return 0;
 	}
 
-	int parse_line(const uint8_t* key_start, const uint8_t* end, const OOBase::String& strSection, OOBase::ConfigFile::results_t& results, OOBase::ConfigFile::error_pos_t* error_pos)
+	int parse_line(const OOBase::uint8_t* key_start, const OOBase::uint8_t* end, const OOBase::String& strSection, OOBase::ConfigFile::results_t& results, OOBase::ConfigFile::error_pos_t* error_pos)
 	{
 		// Check for = (and whitespace or comments)
-		const uint8_t* key_end = key_start;
+		const OOBase::uint8_t* key_end = key_start;
 		while (key_end < end && *key_end != '=' && !comment(*key_end) && !whitespace(*key_end))
 			++key_end;
 
-		const uint8_t* value_start = NULL;
+		const OOBase::uint8_t* value_start = NULL;
 		if (key_end < end && whitespace(*key_end))
 		{
 			// Skip whitespace after key up to =
@@ -136,7 +137,7 @@ namespace
 				++value_start;
 
 			// Search for the end of the value...
-			const uint8_t* value_end = value_start;
+			const OOBase::uint8_t* value_end = value_start;
 			while (value_end < end && !comment(*value_end))
 				++value_end;
 
@@ -161,9 +162,9 @@ namespace
 		// Split into lines...
 		while (buffer->length() > 0)
 		{
-			const uint8_t* start = buffer->rd_ptr();
-			const uint8_t* end = start + buffer->length();
-			const uint8_t* p = start;
+			const OOBase::uint8_t* start = buffer->rd_ptr();
+			const OOBase::uint8_t* end = start + buffer->length();
+			const OOBase::uint8_t* p = start;
 
 			// Skip leading whitespace
 			while (p < end && whitespace(*p))
@@ -182,7 +183,7 @@ namespace
 			}
 
 			// Find the next LF
-			const uint8_t* key_start = p;
+			const OOBase::uint8_t* key_start = p;
 			while (p < end && *p != '\n')
 				++p;
 
@@ -237,27 +238,14 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 		error_pos->col = 1;
 	}
 
-	OOBase::StackAllocator<512> allocator;
-
-#if defined(_WIN32)
-	TempPtr<wchar_t> wname(allocator);
-	int err2 = Win32::utf8_to_wchar_t(filename,wname);
-	if (err2)
-		return err2;
-
-	Win32::SmartHandle f(::CreateFileW(wname,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL));
-	if (!f.is_valid())
-		return ::GetLastError();
-#elif defined(HAVE_UNISTD_H)
-	POSIX::SmartFD f(POSIX::open(filename,O_RDONLY));
-	if (!f.is_valid())
-		return errno;
-#else
-#error Implement platform native file handling
-#endif
+	File file;
+	int err = file.open(filename);
+	if (err)
+		return err;
 
 	static const size_t s_read_block_size = 400;
 
+	OOBase::StackAllocator<512> allocator;
 	RefPtr<Buffer> buffer = Buffer::create(allocator,s_read_block_size,1);
 	if (!buffer)
 		return ERROR_OUTOFMEMORY;
@@ -265,13 +253,9 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 	String strSection;
 	for (;;)
 	{
-#if defined(_WIN32)
-		DWORD r = 0;
-		if (!::ReadFile(f,buffer->wr_ptr(),static_cast<DWORD>(buffer->space()),&r,NULL))
-			return GetLastError();
-#elif defined(HAVE_UNISTD_H)
-		ssize_t r = POSIX::read(f,buffer->wr_ptr(),buffer->space());
-#endif
+		size_t r = file.read(buffer,err);
+		if (err)
+			return err;
 
 		if (r == 0)
 		{
@@ -279,13 +263,8 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 			*buffer->wr_ptr() = '\n';
 			buffer->wr_ptr(1);
 		}
-		else
-		{
-			// Update wr_ptr
-			buffer->wr_ptr(r);
-		}
-
-		int err = parse_text(buffer,strSection,results,error_pos);
+		
+		err = parse_text(buffer,strSection,results,error_pos);
 		if (err)
 			return err;
 

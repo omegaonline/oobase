@@ -38,6 +38,9 @@ namespace OOBase
 		typedef Table<LocalString,LocalString,AllocatorInstance> results_t;
 		int parse(int argc, char* argv[], results_t& results, int skip = 1) const;
 		int parse(int argc, const char* argv[], results_t& results, int skip = 1) const;
+#if defined(_WIN32)
+		int parse(results_t& results, int skip = 1) const;
+#endif
 
 	private:
 		struct Option
@@ -55,6 +58,7 @@ namespace OOBase
 		int parse_long_option(results_t& results, const char** argv, int& arg, int argc) const;
 		int parse_short_options(results_t& results, const char** argv, int& arg, int argc) const;
 		int parse_arg(results_t& results, const char* opt, unsigned int position) const;
+		int error(results_t& results, int err, const char* key, const char* value) const;
 	};
 }
 

@@ -303,3 +303,8 @@ void OOBase::ThreadLocalAllocator::free(void* ptr)
 {
 	TLS::detail::swap_allocator()->free(ptr);
 }
+
+OOBase::AllocatorInstance& OOBase::ThreadLocalAllocator::instance()
+{
+	return *TLS::detail::swap_allocator();
+}

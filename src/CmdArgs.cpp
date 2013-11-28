@@ -21,6 +21,11 @@
 
 #include "../include/OOBase/Memory.h"
 #include "../include/OOBase/CmdArgs.h"
+#include "../include/OOBase/Win32.h"
+
+#if defined(_WIN32)
+#include <shellapi.h>
+#endif
 
 int OOBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, const char* long_opt)
 {
@@ -46,6 +51,49 @@ int OOBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, 
 
 	return m_map_opts.insert(strId,opt);
 }
+
+int OOBase::CmdArgs::error(results_t& results, int retval, const char* key, const char* value) const
+{
+	results.clear();
+
+	LocalString strErr(results.get_allocator()),strVal(results.get_allocator());
+	int err = strErr.assign(key);
+	if (err == 0)
+		err = strVal.assign(value);
+	if (err == 0)
+		err = results.insert(strErr,strVal);
+	if (err == 0)
+		err = retval;
+					
+	return err;
+}
+
+#if defined(_WIN32)
+int OOBase::CmdArgs::parse(results_t& results, int skip) const
+{
+	int argc = 0;
+	LocalPtr<LPWSTR,Win32::LocalAllocDestructor> argvw = CommandLineToArgvW(GetCommandLineW(),&argc);
+	if (!argvw)
+		return GetLastError();
+
+	TempPtr<const char*> argv(results.get_allocator());
+	if (!argv.reallocate(argc))
+		return ERROR_OUTOFMEMORY;
+
+	Vector<LocalString,AllocatorInstance> vecArgv(results.get_allocator());
+	for (int i=0;i<argc;++i)
+	{
+		OOBase::LocalString s(results.get_allocator());
+		int err = Win32::wchar_t_to_utf8(argvw[i],s);
+		if (err)
+			return err;
+
+		argv[i] = s.c_str();
+	}
+
+	return parse(argc,argv,results,skip);
+}
+#endif
 
 int OOBase::CmdArgs::parse(int argc, char* argv[], results_t& results, int skip) const
 {
@@ -103,20 +151,7 @@ int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, in
 			if (opt.m_has_value)
 			{
 				if (arg >= argc-1)
-				{
-					results.clear();
-
-					LocalString strErr(results.get_allocator());
-					int err = strErr.assign("missing");
-					if (err == 0)
-						err = strVal.assign(argv[arg]);
-					if (err == 0)
-						err = results.insert(strErr,strVal);
-					if (err == 0)
-						err = EINVAL;
-					
-					return err;
-				}
+					return error(results,EINVAL,"missing",argv[arg]);
 					
 				value = argv[++arg];
 			}
@@ -148,18 +183,8 @@ int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, in
 			return results.insert(strKey,strVal);
 		}
 	}
-	
-	results.clear();
-	
-	int err = strKey.assign("unknown");
-	if (err == 0)
-		err = strVal.assign(argv[arg]);
-	if (err == 0)
-		err = results.insert(strKey,strVal);
-	if (err == 0)
-		err = ENOENT;
-	
-	return err;
+
+	return error(results,ENOENT,"unknown",argv[arg]);
 }
 
 int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, int& arg, int argc) const
@@ -181,17 +206,11 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 						// Next arg is the value
 						if (arg >= argc-1)
 						{
-							results.clear();
-							
-							int err = strKey.assign("missing");
-							if (err == 0)
-								err = strVal.printf("-%c",*c);
-							if (err == 0)
-								err = results.insert(strKey,strVal);
-							if (err == 0)
-								err = EINVAL;
-							
-							return err;
+							int err = strVal.printf("-%c",*c);
+							if (err)
+								return err;
+
+							return error(results,EINVAL,"missing",strVal.c_str());
 						}
 						
 						value = argv[++arg];
@@ -231,17 +250,11 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 
 		if (i == m_map_opts.size())
 		{
-			results.clear();
-
-			int err = strKey.assign("unknown");
-			if (err == 0)
-				err = strVal.printf("-%c",*c);
-			if (err == 0)
-				err = results.insert(strKey,strVal);
-			if (err == 0)
-				err = ENOENT;
-			
-			return err;
+			int err = strVal.printf("-%c",*c);
+			if (err)
+				return err;
+				
+			return error(results,ENOENT,"unknown",strVal.c_str());
 		}
 	}
 

@@ -22,7 +22,7 @@
 #ifndef OOBASE_LIST_H_INCLUDED_
 #define OOBASE_LIST_H_INCLUDED_
 
-#include "Bag.h"
+#include "Iterator.h"
 
 namespace OOBase
 {
@@ -218,9 +218,11 @@ namespace OOBase
 			ListNode* prev = (next ? next->m_prev : m_tail);
 
 			ListNode* new_node = NULL;
-			err = baseClass::allocate_new(new_node,prev,next,value);
-			if (err)
+			if (!baseClass::allocate_new(new_node,prev,next,value))
+			{
+				err = ERROR_OUTOFMEMORY;
 				return NULL;
+			}
 
 			(next ? next->m_prev : m_tail) = new_node;
 			(prev ? prev->m_next : m_head) = new_node;
