@@ -87,12 +87,12 @@ namespace OOBase
 	public:
 		StackAllocator() : ScratchAllocator(m_buffer,sizeof(m_buffer)), baseClass()
 		{
-			static_assert(sizeof(m_buffer) < index_t(-1),"SIZE too big");
+			static_assert(sizeof(m_buffer) < StackAllocator::index_t(-1),"SIZE too big");
 		}
 
 		StackAllocator(AllocatorInstance& allocator) : ScratchAllocator(m_buffer,sizeof(m_buffer)), baseClass(allocator)
 		{
-			static_assert(sizeof(m_buffer) < index_t(-1),"SIZE too big");
+			static_assert(sizeof(m_buffer) < StackAllocator::index_t(-1),"SIZE too big");
 		}
 
 		void* allocate(size_t bytes, size_t align)

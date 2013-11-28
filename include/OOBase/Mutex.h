@@ -231,12 +231,12 @@ namespace OOBase
 	public:
 		LockedAllocator() : ScratchAllocator(m_buffer,sizeof(m_buffer)), baseClass()
 		{
-			static_assert(sizeof(m_buffer) < index_t(-1),"SIZE too big");
+			static_assert(sizeof(m_buffer) < LockedAllocator::index_t(-1),"SIZE too big");
 		}
 
 		LockedAllocator(AllocatorInstance& allocator) : ScratchAllocator(m_buffer,sizeof(m_buffer)), baseClass(allocator)
 		{
-			static_assert(sizeof(m_buffer) < index_t(-1),"SIZE too big");
+			static_assert(sizeof(m_buffer) < LockedAllocator::index_t(-1),"SIZE too big");
 		}
 
 		void* allocate(size_t bytes, size_t align)
