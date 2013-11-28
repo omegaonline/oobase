@@ -33,63 +33,53 @@ AM_CONDITIONAL([DEBUG], [test "x$debug" = "xtrue"])
 OO_PROG_CC
 OO_PROG_CXX
 
+# Check the multi-threading flags
+AS_CASE([$host_os],
+	[mingw*],[PTHREAD_CFLAGS=-mthreads AC_SUBST(PTHREAD_LIBS) AC_SUBST(PTHREAD_CFLAGS)],
+	[AX_PTHREAD]
+)
+
 # Set sensible default CFLAGS if necessary
 AS_IF([test "x$oo_test_CFLAGS" != "xset"],
 [
-  AS_IF([test "x$debug" = "xtrue"],
-  [
-    AX_CFLAGS_GCC_OPTION([-ggdb])
-    AX_CFLAGS_GCC_OPTION([-O0])
-  ],
-  [
-    AX_CFLAGS_GCC_OPTION([-O2])
+  AS_IF([test "x$debug" = "xtrue"],[
+    AX_APPEND_COMPILE_FLAGS([-ggdb -O0],[CFLAGS])
+  ],[
+    AX_APPEND_COMPILE_FLAGS([-O2],[CFLAGS])
   ])
 
-  AS_CASE([$host_os],[mingw*],
-  [
-    AX_CFLAGS_GCC_OPTION([-march=i686])
-    AX_CFLAGS_GCC_OPTION([-mtune=native])
-  ])
+  AS_CASE([$host_os],
+    [mingw*],[AX_APPEND_COMPILE_FLAGS([-march=i686 -mtune=native],[CFLAGS])]
+  )
 ])
 
 # Set sensible default CXXFLAGS if necessary
 AS_IF([test "x$oo_test_CXXFLAGS" != "xset"],
 [
-  AS_IF([test "x$debug" = "xtrue"],
-  [
-  	AX_CXXFLAGS_GCC_OPTION([-ggdb])
-  	AX_CXXFLAGS_GCC_OPTION([-O0])
-  ],
-  [
-    AX_CXXFLAGS_GCC_OPTION([-O2])
+  AS_IF([test "x$debug" = "xtrue"],[
+  	AX_APPEND_COMPILE_FLAGS([-ggdb -O0],[CXXFLAGS])
+  ],[
+    AX_APPEND_COMPILE_FLAGS([-O2],[CXXFLAGS])
   ])
 
-  AS_CASE([$host_os],[mingw*],
-  [
-    AX_CXXFLAGS_GCC_OPTION([-march=i686])
-    AX_CXXFLAGS_GCC_OPTION([-mtune=native])
-  ])
+  AS_CASE([$host_os],
+    [mingw*],[AX_APPEND_COMPILE_FLAGS([-march=i686 -mtune=native],[CXXFLAGS])]
+  )
 ])
 
 # Always try to hide symbols
-AX_CFLAGS_GCC_OPTION([-fvisibility=hidden])
-AX_CXXFLAGS_GCC_OPTION([-fvisibility=hidden])
-AX_CXXFLAGS_GCC_OPTION([-fno-rtti])
-AX_CXXFLAGS_GCC_OPTION([-fno-exceptions])
-
-# -pipe is just faster
-AX_CFLAGS_GCC_OPTION([-pipe])
-AX_CXXFLAGS_GCC_OPTION([-pipe])
+AX_APPEND_COMPILE_FLAGS([-fvisibility=hidden -pipe],[CFLAGS])
+AX_APPEND_COMPILE_FLAGS([-fvisibility=hidden -fno-rtti -fno-exceptions -pipe],[CXXFLAGS])
 
 # Always add full warnings
+AX_CFLAGS_WARN_ALL
 AX_CXXFLAGS_WARN_ALL
 
 # Just for Win32 with GCC
 AS_CASE([$host_os],[mingw*],
 [
-  AX_CFLAGS_GCC_OPTION([-static-libgcc])
-  AX_CXXFLAGS_GCC_OPTION([-static-libgcc])
-  AX_CXXFLAGS_GCC_OPTION([-static-libstdc++])
+  AX_APPEND_COMPILE_FLAGS([-static-libgcc],[CFLAGS])
+  AX_APPEND_COMPILE_FLAGS([-static-libgcc -static-libstdc++],[CXXFLAGS])
 ])
 
 # Not required any more...
@@ -101,9 +91,6 @@ AS_CASE([$host_os],[mingw*],
 
 # Add debug defines
 AS_IF([test "x$debug" = "xtrue"],[CPPFLAGS="$CPPFLAGS -D_DEBUG"],[CPPFLAGS="$CPPFLAGS -DNDEBUG"])
-
-# Check the multi-threading flags
-OO_MULTI_THREAD
 
 # Check for the builtin intrinsics functions we use
 OO_C_BUILTINS
