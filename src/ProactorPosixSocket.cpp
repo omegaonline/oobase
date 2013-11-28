@@ -924,7 +924,7 @@ int SocketAcceptor::bind(const sockaddr* addr, socklen_t addr_len, SECURITY_ATTR
 	// Apparently, chmod before bind()
 
 	// Bind to the address
-	if (::fchmod(fd,m_sa.mode) != 0 || ::bind(fd,addr,addr_len) != 0 || ::listen(fd,SOMAXCONN) != 0)
+	if ((m_sa.mode && ::fchmod(fd,m_sa.mode) != 0) || ::bind(fd,addr,addr_len) != 0 || ::listen(fd,SOMAXCONN) != 0)
 		err = errno;
 	else
 	{
@@ -1084,7 +1084,7 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_call
 	else
 	{
 		SECURITY_ATTRIBUTES defaults;
-		defaults.mode = 0777;
+		defaults.mode = 0;
 		defaults.pass_credentials = false;
 
 		err = pAcceptor->bind(addr,addr_len,defaults);

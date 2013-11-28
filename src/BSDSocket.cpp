@@ -884,7 +884,7 @@ void OOBase::POSIX::create_unix_socket_address(sockaddr_un& addr, socklen_t& len
 {
 	addr.sun_family = AF_UNIX;
 	
-	if (path[0] == '\0')
+	if (path && path[0] == '\0')
 	{
 		addr.sun_path[0] = '\0';
 		strncpy(addr.sun_path+1,path+1,sizeof(addr.sun_path)-1);
