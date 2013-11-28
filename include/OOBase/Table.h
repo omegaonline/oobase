@@ -48,6 +48,9 @@ namespace OOBase
 		template <typename K, typename V, bool POD = false>
 		struct TableNode
 		{
+			TableNode()
+			{}
+
 			TableNode(const TableNode& n) : m_key(n.m_key), m_value(n.m_value)
 			{}
 

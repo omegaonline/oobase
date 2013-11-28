@@ -142,7 +142,7 @@ namespace OOBase
 				return 0;
 			}
 #endif
-			void remove_at(size_t pos, T* pval)
+			bool remove_at(size_t pos, T* pval)
 			{
 				if (m_data && pos < m_size)
 				{
@@ -153,7 +153,11 @@ namespace OOBase
 						m_data[pos] = m_data[pos+1];
 
 					m_data[m_size].~T();
+
+					return true;
 				}
+
+				return false;
 			}
 
 		private:
