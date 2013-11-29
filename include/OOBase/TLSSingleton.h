@@ -108,7 +108,7 @@ namespace OOBase
 				AllocatorInstance* curr = i->m_allocator;
 				AllocatorInstance* prev = TLS::detail::swap_allocator(curr);
 
-				// We do this long-hand so singleton class can friend us
+				// We do this long-hand so T can friend singleton
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try
 				{

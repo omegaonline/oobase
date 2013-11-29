@@ -89,7 +89,7 @@ namespace OOBase
 		{
 			if (i == s_instance)
 			{
-				// We do this long-hand so singleton class can friend us
+				// We do this long-hand so T can friend singleton
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try
 				{
