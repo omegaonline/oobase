@@ -103,53 +103,37 @@ namespace OOBase
 
 	namespace detail
 	{
-		template <typename T, typename Destructor, typename Allocator>
-		class SmartPtrNode : public RefCounted
+		template <typename T, typename T_Destructor, typename Allocator>
+		struct SmartPtrNode : public RefCounted
 		{
-		public:
 			T* m_data;
 
-			static SmartPtrNode* create(T* data)
-			{
-				void* p = Allocator::allocate(sizeof(SmartPtrNode),alignment_of<SmartPtrNode>::value);
-				if (!p)
-					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-
-				return ::new (p) SmartPtrNode(data);
-			}
-
-		protected:
 			SmartPtrNode(T* p) : m_data(p)
 			{}
 
 			~SmartPtrNode()
 			{
-				Destructor::destroy(m_data);
+				T_Destructor::destroy(m_data);
+			}
+
+			static SmartPtrNode* create(T* data)
+			{
+				SmartPtrNode* p = NULL;
+				if (!Allocator::allocate_new(p,data))
+					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+				return p;
 			}
 
 			virtual void destroy()
 			{
-				this->~SmartPtrNode();
-				Allocator::free(this);
+				Allocator::delete_free(this);
 			}
 		};
 
-		template <typename T, typename Destructor>
-		class SmartPtrNode<T,Destructor,AllocatorInstance> : public RefCounted
+		template <typename T, typename T_Destructor>
+		struct SmartPtrNode<T,T_Destructor,AllocatorInstance> : public RefCounted
 		{
-		public:
 			T* m_data;
-
-			static SmartPtrNode* create(AllocatorInstance& allocator, T* data)
-			{
-				void* p = allocator.allocate(sizeof(SmartPtrNode),alignment_of<SmartPtrNode>::value);
-				if (!p)
-					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-
-				return ::new (p) SmartPtrNode(allocator,data);
-			}
-
-		private:
 			AllocatorInstance& m_allocator;
 
 			SmartPtrNode(AllocatorInstance& allocator, T* p) : m_data(p), m_allocator(allocator)
@@ -157,21 +141,28 @@ namespace OOBase
 
 			~SmartPtrNode()
 			{
-				Destructor::destroy(m_allocator,m_data);
+				T_Destructor::destroy(m_allocator,m_data);
+			}
+
+			static SmartPtrNode* create(AllocatorInstance& allocator, T* data)
+			{
+				SmartPtrNode* p = NULL;
+				if (!allocator.allocate_new(p,allocator,data))
+					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+				return p;
 			}
 
 			virtual void destroy()
 			{
 				AllocatorInstance& allocator = m_allocator;
-				this->~SmartPtrNode();
-				allocator.free(this);
+				allocator.delete_free(this);
 			}
 		};
 
-		template <typename T, typename Destructor, typename Allocator>
+		template <typename T, typename T_Destructor, typename Allocator>
 		class SmartPtrImpl
 		{
-			typedef SmartPtrNode<T,Destructor,Allocator> nodeType;
+			typedef SmartPtrNode<T,T_Destructor,Allocator> nodeType;
 
 		public:
 			SmartPtrImpl(T* ptr) : m_node(NULL)
@@ -217,10 +208,10 @@ namespace OOBase
 		};
 	}
 
-	template <typename T, typename Destructor = StdDeleteDestructor >
-	class SmartPtr : public detail::SmartPtrImpl<T,Destructor,typename Destructor::Allocator>
+	template <typename T, typename T_Destructor = StdDeleteDestructor >
+	class SmartPtr : public detail::SmartPtrImpl<T,T_Destructor,typename T_Destructor::Allocator>
 	{
-		typedef detail::SmartPtrImpl<T,Destructor,typename Destructor::Allocator> baseClass;
+		typedef detail::SmartPtrImpl<T,T_Destructor,typename T_Destructor::Allocator> baseClass;
 
 	public:
 		SmartPtr(T* ptr = NULL) : baseClass(ptr)
@@ -311,7 +302,7 @@ namespace OOBase
 			T* m_data;
 		};
 
-		template <typename T, typename Destructor, typename Allocator>
+		template <typename T, typename T_Destructor, typename Allocator>
 		class LocalPtrImpl : public LocalPtrBase<T>
 		{
 		public:
@@ -321,7 +312,7 @@ namespace OOBase
 			~LocalPtrImpl()
 			{
 				if (LocalPtrBase<T>::m_data)
-					Destructor::destroy(LocalPtrBase<T>::m_data);
+					T_Destructor::destroy(LocalPtrBase<T>::m_data);
 			}
 
 		protected:
@@ -330,15 +321,15 @@ namespace OOBase
 				if (p != LocalPtrBase<T>::m_data)
 				{
 					if (LocalPtrBase<T>::m_data)
-						Destructor::destroy(LocalPtrBase<T>::m_data);
+						T_Destructor::destroy(LocalPtrBase<T>::m_data);
 
 					LocalPtrBase<T>::m_data = p;
 				}
 			}
 		};
 
-		template <typename T, typename Destructor>
-		class LocalPtrImpl<T,Destructor,AllocatorInstance> : public LocalPtrBase<T>
+		template <typename T, typename T_Destructor>
+		class LocalPtrImpl<T,T_Destructor,AllocatorInstance> : public LocalPtrBase<T>
 		{
 		public:
 			LocalPtrImpl(AllocatorInstance& allocator, T* p) : LocalPtrBase<T>(p), m_allocator(allocator)
@@ -347,7 +338,7 @@ namespace OOBase
 			~LocalPtrImpl()
 			{
 				if (LocalPtrBase<T>::m_data)
-					Destructor::destroy(m_allocator,LocalPtrBase<T>::m_data);
+					T_Destructor::destroy(m_allocator,LocalPtrBase<T>::m_data);
 			}
 
 			AllocatorInstance& get_allocator() const
@@ -363,7 +354,7 @@ namespace OOBase
 				if (p != LocalPtrBase<T>::m_data)
 				{
 					if (LocalPtrBase<T>::m_data)
-						Destructor::destroy(m_allocator,LocalPtrBase<T>::m_data);
+						T_Destructor::destroy(m_allocator,LocalPtrBase<T>::m_data);
 
 					LocalPtrBase<T>::m_data = p;
 				}
