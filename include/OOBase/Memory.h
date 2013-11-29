@@ -68,18 +68,6 @@
 #include <limits>
 #endif
 
-#if defined(OOBASE_HAVE_EXCEPTIONS)
-#if defined(_MSC_VER)
-#define OOBASE_BAD_ALLOC_DECL
-#else
-#define OOBASE_BAD_ALLOC_DECL throw (std::bad_alloc)
-#endif
-#define OOBASE_THROW_DECL throw()
-#else
-#define OOBASE_BAD_ALLOC_DECL
-#define OOBASE_THROW_DECL
-#endif
-
 namespace OOBase
 {
 	template <typename T>
@@ -525,32 +513,6 @@ namespace OOBase
 
 	protected:
 		AllocatorInstance& m_allocator;
-	};
-
-	template <typename Allocator>
-	class AllocatorNew
-	{
-	public:
-		// Custom new and delete
-		static void* operator new(std::size_t size) OOBASE_BAD_ALLOC_DECL
-		{
-			return Allocator::allocate(size);
-		}
-
-		static void* operator new[](std::size_t size) OOBASE_BAD_ALLOC_DECL
-		{
-			return Allocator::allocate(size);
-		}
-
-		static void operator delete(void* p) OOBASE_THROW_DECL
-		{
-			Allocator::free(p);
-		}
-
-		static void operator delete[](void* p) OOBASE_THROW_DECL
-		{
-			Allocator::free(p);
-		}
 	};
 }
 
