@@ -2,6 +2,27 @@
 AC_DEFUN([OO_C_BUILTINS],
 [
 	AC_LANG_PUSH([C++])
+	
+	AC_MSG_CHECKING([for __sync_synchronize compiler intrinsic])
+	AC_COMPILE_IFELSE(
+        [
+			AC_LANG_PROGRAM([[ ]],
+            [[
+            	int x = 1;
+				__sync_synchronize();
+				++x;
+            ]]
+        )
+        ],
+        [
+			AC_MSG_RESULT([yes])
+			AC_DEFINE([HAVE___SYNC_SYNCHRONIZE], [1], [Define to 1 if you have the __sync_synchronize compiler intrinsic])
+        ],
+        [
+			AC_MSG_RESULT([unsupported])
+        ]
+    )
+    
 	AC_MSG_CHECKING([for __sync_val_compare_and_swap compiler intrinsic])
 	AC_COMPILE_IFELSE(
         [
@@ -16,6 +37,26 @@ AC_DEFUN([OO_C_BUILTINS],
         [
 			AC_MSG_RESULT([yes])
 			AC_DEFINE([HAVE___SYNC_VAL_COMPARE_AND_SWAP], [1], [Define to 1 if you have the __sync_val_compare_and_swap compiler intrinsic])
+        ],
+        [
+			AC_MSG_RESULT([unsupported])
+        ]
+    )
+    
+    AC_MSG_CHECKING([for __sync_add_and_fetch compiler intrinsic])
+	AC_COMPILE_IFELSE(
+        [
+			AC_LANG_PROGRAM([[ ]],
+            [[
+				long x = 12;
+				long y = __sync_add_and_fetch(&x,60);
+				++y;
+            ]]
+        )
+        ],
+        [
+			AC_MSG_RESULT([yes])
+			AC_DEFINE([HAVE___SYNC_ADD_AND_FETCH], [1], [Define to 1 if you have the __sync_add_and_fetch compiler intrinsic])
         ],
         [
 			AC_MSG_RESULT([unsupported])

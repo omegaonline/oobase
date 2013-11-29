@@ -30,6 +30,8 @@ namespace OOBase
 	{
 		template <typename T, const size_t S>
 		struct AtomicImpl;
+
+		void atomic_memory_barrier();
 	}
 
 	template <typename T>
@@ -51,7 +53,7 @@ namespace OOBase
 		Atomic& operator = (const Atomic& a)
 		{
 			if (&a != this)
-				m_val = a.m_val;
+				detail::AtomicImpl<T,sizeof(T)>::Exchange(m_val,a.m_val);
 			return *this;
 		}
 
@@ -77,6 +79,8 @@ namespace OOBase
 
 		operator T () const
 		{
+			detail::atomic_memory_barrier();
+
 			return m_val;
 		}
 
@@ -121,6 +125,11 @@ namespace OOBase
 			return *this;
 		}
 
+		Atomic& operator += (const Atomic& rhs)
+		{
+			return *this += rhs.m_val;
+		}
+
 		static T Subtract(T& val, const T subtract)
 		{
 			return detail::AtomicImpl<T,sizeof(T)>::Subtract(val,subtract);
@@ -130,11 +139,6 @@ namespace OOBase
 		{
 			Subtract(m_val,val);
 			return *this;
-		}
-
-		Atomic& operator += (const Atomic& rhs)
-		{
-			return *this += rhs.m_val;
 		}
 
 		Atomic& operator -= (const Atomic& rhs)

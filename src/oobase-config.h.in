@@ -22,7 +22,14 @@
 /* Define to 1 if you have the __builtin_ffs compiler intrinsic */
 #undef HAVE___BUILTIN_FFS
 
-/* Define to 1 if you have the __sync_val_compare_and_swap compiler intrinsic */
+/* Define to 1 if you have the __sync_add_and_fetch compiler intrinsic */
+#undef HAVE___SYNC_ADD_AND_FETCH
+
+/* Define to 1 if you have the __sync_synchronize compiler intrinsic */
+#undef HAVE___SYNC_SYNCHRONIZE
+
+/* Define to 1 if you have the __sync_val_compare_and_swap compiler intrinsic
+   */
 #undef HAVE___SYNC_VAL_COMPARE_AND_SWAP
 
 /* Define to necessary symbol if this constant uses a non-standard name on

@@ -125,10 +125,10 @@ unsigned int OOBase::detail::ffs(uint16_t v)
 #define ATOMIC_DEC_32(t) _InterlockedDecrement((long volatile*)(t))
 #define ATOMIC_ADD_32(t,v) _InterlockedExchangeAdd((long volatile*)(t),(long)(v))
 
-#if defined(_M_X64)
 /* Define if you have atomic compare-and-swap for 64bit values */
 #define ATOMIC_CAS_64(t,c,x) _InterlockedCompareExchange64((__int64 volatile*)(t),(__int64)(x),(__int64)(c))
 
+#if defined(_M_X64)
 /* Define if you have atomic exchange for 64bit values */
 #define ATOMIC_EXCH_64(t,v) _InterlockedExchange64((__int64 volatile*)(t),(__int64)(v))
 
@@ -150,52 +150,90 @@ unsigned int OOBase::detail::ffs(uint16_t v)
 #define ATOMIC_EXCH_64(t,v) __sync_swap((long volatile*)(t),(long)v)
 #endif
 
-#if __has_extension(__sync_addstatic T CompareAndSwap(T& val, const T oldVal, const T newVal)
-{
-	return (T)ATOMIC_CAS_64(&val,oldVal,newVal);
-}
-
-static T Exchange(T& val, const T newVal)
-{
-#if defined (ATOMIC_EXCH_64)
-	return (T)ATOMIC_EXCH_64(&val,newVal);
-#else
-	T oldVal(val);
-	while (CompareAndSwap(val,oldVal,newVal) != oldVal)
-		oldVal = val;
-
-	return oldVal;
-#endif
-}_and_fetch)
+#if __has_extension(__sync_add_and_fetch)
 #define ATOMIC_ADD_32(t,v) __sync_add_and_fetch((int volatile*)(t),(int)v)
 #define ATOMIC_ADD_64(t,v) __sync_add_and_fetch((long volatile*)(t),(long)v)
 #endif
 
-#elif defined(__GNUC__)
+#if __has_extension(__sync_synchronize)
+#define ATOMIC_MEMORY_BARRIER() __sync_synchronize()
+#endif
 
-#if defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4)
+#endif
+
+#if defined(HAVE___SYNC_VAL_COMPARE_AND_SWAP)
+#if !defined(ATOMIC_CAS_32)
 #define ATOMIC_CAS_32(t,c,x) __sync_val_compare_and_swap(t,c,x)
+#endif
+#if !defined(ATOMIC_CAS_64)
+#define ATOMIC_CAS_64(t,c,x)  __sync_val_compare_and_swap(t,c,x)
+#endif
+#endif
+
+#if defined(HAVE___SYNC_ADD_AND_FETCH)
+#if !defined(ATOMIC_ADD_32)
 #define ATOMIC_ADD_32(t,v) __sync_add_and_fetch(t,v)
 #endif
-
-#if defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8)
-#define ATOMIC_CAS_64(t,c,x)  __sync_val_compare_and_swap(t,c,x)
+#if !defined(ATOMIC_ADD_64)
 #define ATOMIC_ADD_64(t,v) __sync_add_and_fetch(t,v)
 #endif
+#endif
 
+#if defined(HAVE___SYNC_SYNCHRONIZE) && !defined(ATOMIC_MEMORY_BARRIER)
+#define ATOMIC_MEMORY_BARRIER() __sync_synchronize()
 #endif
 
 #if defined(_WIN32)
+
+/* Define if you have atomic memory barrier */
+#if !defined(ATOMIC_MEMORY_BARRIER)
+#define ATOMIC_MEMORY_BARRIER() MemoryBarrier();
+#endif
 
 #if !defined(ATOMIC_CAS_32)
 #define ATOMIC_CAS_32(t,c,x) InterlockedCompareExchange((long volatile*)(t),(long)(x),(long)(c))
 #endif
 
-#if (_WIN32_WINNT >= 0x0600) && !defined(ATOMIC_CAS_64)
+#if !defined(ATOMIC_EXCH_32)
+#define ATOMIC_EXCH_32(t,v) InterlockedExchange((long volatile*)(t),(long)(v))
+#endif
+
+#if !defined(ATOMIC_INC_32)
+#define ATOMIC_INC_32(t) InterlockedIncrement((long volatile*)(t))
+#endif
+
+#if !defined(ATOMIC_DEC_32)
+#define ATOMIC_DEC_32(t) InterlockedDecrement((long volatile*)(t))
+#endif
+
+#if !defined(ATOMIC_ADD_32)
+#define ATOMIC_ADD_32(t,v) InterlockedExchangeAdd((long volatile*)(t),(long)(v))
+#endif
+
+#if (_WIN32_WINNT >= 0x0600)
+#if !defined(ATOMIC_CAS_64)
 #define ATOMIC_CAS_64(t,c,x) InterlockedCompareExchange64((LONGLONG volatile*)(t),(LONGLONG)(x),(LONGLONG)(c))
 #endif
 
+#if !defined(ATOMIC_INC_64)
+#define ATOMIC_INC_64(t) InterlockedIncrement64((__int64 volatile*)(t))
+#endif
+
+#if !defined(ATOMIC_DEC_64)
+#define ATOMIC_DEC_64(t) InterlockedDecrement64((__int64 volatile*)(t))
+#endif
+
+#if !defined(ATOMIC_ADD_64)
+#define ATOMIC_ADD_64(t,v) InterlockedExchangeAdd64((__int64 volatile*)(t),(__int64)(v))
+#endif
+#endif
+
 #endif // defined(_WIN32)
+
+void OOBase::detail::atomic_memory_barrier()
+{
+	ATOMIC_MEMORY_BARRIER();
+}
 
 OOBase::int32_t OOBase::detail::atomic_cas_4(int32_t volatile* val, const int32_t oldVal, const int32_t newVal)
 {
