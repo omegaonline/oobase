@@ -27,7 +27,7 @@
 
 namespace OOBase
 {
-	class RefCounted : public OOBase::NonCopyable
+	class RefCounted : public NonCopyable
 	{
 	public:
 		RefCounted() : m_refcount(1)

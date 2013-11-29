@@ -28,8 +28,8 @@
 
 OOBase::Proactor* OOBase::Proactor::create(int& err)
 {
-	detail::ProactorWin32* proactor = new detail::ProactorWin32();
-	if (!proactor)
+	detail::ProactorWin32* proactor = NULL;
+	if (!OOBase::CrtAllocator::allocate_new(proactor))
 		err = ERROR_OUTOFMEMORY;
 	return proactor;
 }
@@ -39,7 +39,7 @@ void OOBase::Proactor::destroy(Proactor* proactor)
 	if (proactor)
 	{
 		proactor->stop();
-		delete static_cast<detail::ProactorWin32*>(proactor);
+		OOBase::CrtAllocator::delete_free(static_cast<detail::ProactorWin32*>(proactor));
 	}
 }
 
@@ -183,9 +183,7 @@ int OOBase::detail::ProactorWin32::restart()
 
 namespace
 {
-	class InternalWaitAcceptor :
-			public OOBase::RefCounted,
-			public OOBase::AllocatorNew<OOBase::CrtAllocator>
+	class InternalWaitAcceptor : public OOBase::RefCounted
 	{
 	public:
 		InternalWaitAcceptor(OOBase::detail::ProactorWin32* pProactor, HANDLE hObject, void* param, OOBase::Proactor::wait_object_callback_t callback, DWORD dwMilliseconds);
@@ -203,6 +201,11 @@ namespace
 
 		static void CALLBACK onWait(void* param, BOOLEAN TimerOrWaitFired);
 		static void onWait2(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detail::ProactorWin32::Overlapped* pOv);
+
+		virtual void destroy()
+		{
+			OOBase::CrtAllocator::delete_free(this);
+		}
 	};
 
 	class WaitAcceptor : public OOBase::Acceptor
@@ -235,8 +238,7 @@ WaitAcceptor::~WaitAcceptor()
 
 int WaitAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, HANDLE hObject, void* param, OOBase::Proactor::wait_object_callback_t callback, DWORD dwMilliseconds)
 {
-	m_pAcceptor = new InternalWaitAcceptor(pProactor,hObject,param,callback,dwMilliseconds);
-	if (!m_pAcceptor)
+	if (!OOBase::CrtAllocator::allocator_new(m_pAcceptor,pProactor,hObject,param,callback,dwMilliseconds))
 		return ERROR_OUTOFMEMORY;
 
 	int err = m_pAcceptor->start();

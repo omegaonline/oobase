@@ -34,8 +34,8 @@
 
 OOBase::Proactor* OOBase::Proactor::create(int& err)
 {
-	detail::ProactorPoll* proactor = new detail::ProactorPoll();
-	if (!proactor)
+	detail::ProactorPoll* proactor = NULL;
+	if (!OOBase::CrtAllocator::allocate_new(proactor))
 		err = ERROR_OUTOFMEMORY;
 	else
 	{
@@ -54,7 +54,7 @@ void OOBase::Proactor::destroy(Proactor* proactor)
 	if (proactor)
 	{
 		proactor->stop();
-		delete static_cast<detail::ProactorPoll*>(proactor);
+		OOBase::CrtAllocator::delete_free(static_cast<detail::ProactorPoll*>(proactor));
 	}
 }
 

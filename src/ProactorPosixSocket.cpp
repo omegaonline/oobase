@@ -41,9 +41,7 @@
 
 namespace
 {
-	class PosixAsyncSocket :
-			public OOBase::AsyncSocket,
-			public OOBase::AllocatorNew<OOBase::CrtAllocator>
+	class PosixAsyncSocket : public OOBase::AsyncSocket
 	{
 	public:
 		PosixAsyncSocket(OOBase::detail::ProactorPosix* pProactor, int fd);
@@ -126,6 +124,11 @@ namespace
 		int process_send_i(SendItem* item, bool& watch_again);
 		int process_send_v(SendItem* item, bool& watch_again);
 		int process_send_msg(SendItem* item, bool& watch_again);
+
+		virtual void destroy()
+		{
+			OOBase::CrtAllocator::delete_free(this);
+		}
 	};
 }
 
@@ -862,9 +865,7 @@ void PosixAsyncSocket::process_send(OOBase::Queue<SendNotify,OOBase::AllocatorIn
 
 namespace
 {
-	class SocketAcceptor :
-			public OOBase::Acceptor,
-			public OOBase::AllocatorNew<OOBase::CrtAllocator>
+	class SocketAcceptor : public OOBase::Acceptor
 	{
 	public:
 		SocketAcceptor(OOBase::detail::ProactorPosix* pProactor, void* param, OOBase::Proactor::accept_callback_t callback);
@@ -882,6 +883,11 @@ namespace
 		int                                      m_fd;
 
 		static void fd_callback(int fd, void* param, unsigned int events);
+
+		virtual void destroy()
+		{
+			OOBase::CrtAllocator::delete_free(this);
+		}
 	};
 }
 
@@ -1034,8 +1040,7 @@ void SocketAcceptor::fd_callback(int fd, void* param, unsigned int events)
 			if (err == 0)
 			{
 				// Wrap the handle
-				pSocket = new PosixAsyncSocket(pThis->m_pProactor,new_fd);
-				if (!pSocket)
+				if (!OOBase::CrtAllocator::allocate_new(pSocket,pThis->m_pProactor,new_fd))
 					err = ENOMEM;
 				else
 				{
@@ -1074,8 +1079,8 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_call
 		return NULL;
 	}
 
-	SocketAcceptor* pAcceptor = new SocketAcceptor(this,param,callback);
-	if (!pAcceptor)
+	SocketAcceptor* pAcceptor = NULL;
+	if (!OOBase::CrtAllocator::allocate_new(pAcceptor,this,param,callback))
 		err = ENOMEM;
 	else
 	{
@@ -1103,8 +1108,8 @@ OOBase::Acceptor* OOBase::detail::ProactorPosix::accept(void* param, accept_pipe
 		return NULL;
 	}
 
-	SocketAcceptor* pAcceptor = new SocketAcceptor(this,param,callback);
-	if (!pAcceptor)
+	SocketAcceptor* pAcceptor = NULL;
+	if (!OOBase::CrtAllocator::allocate_new(pAcceptor,this,param,callback))
 		err = ENOMEM;
 	else
 	{
@@ -1178,8 +1183,8 @@ OOBase::AsyncSocket* OOBase::detail::ProactorPosix::attach(socket_t sock, int& e
 	if (err)
 		return NULL;
 
-	PosixAsyncSocket* pSocket = new PosixAsyncSocket(this,sock);
-	if (!pSocket)
+	PosixAsyncSocket* pSocket = NULL;
+	if (!OOBase::CrtAllocator::allocate_new(pSocket,this,sock))
 		err = ENOMEM;
 	else
 	{
