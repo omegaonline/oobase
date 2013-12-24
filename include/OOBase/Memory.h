@@ -133,6 +133,14 @@ namespace OOBase
 		NonCopyable& operator = (const NonCopyable&);
 	};
 
+	struct SafeBoolean
+	{
+	protected:
+		typedef void (SafeBoolean::*bool_type)() const;
+		void this_type_does_not_support_comparisons() const
+		{}
+	};
+
 	template <typename Derived>
 	class AllocateNewStatic
 	{
