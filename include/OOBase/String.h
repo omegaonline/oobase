@@ -23,6 +23,7 @@
 #define OOBASE_STRING_H_INCLUDED_
 
 #include "Memory.h"
+#include "UniquePtr.h"
 #include "SmartPtr.h"
 #include "StackAllocator.h"
 
@@ -209,7 +210,7 @@ namespace OOBase
 				va_end(args);
 
 				if (!err)
-					assign(ptr);
+					assign(ptr.get());
 				return err;
 			}
 

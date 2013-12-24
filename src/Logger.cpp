@@ -449,7 +449,7 @@ void OOBase::Logger::log(Priority priority, const char* fmt, va_list args)
 	StackAllocator<512> allocator;
 	TempPtr<char> ptr(allocator);
 	if (temp_vprintf(ptr,fmt,args) == 0)
-		LoggerInstance().log(priority,static_cast<char*>(ptr));
+		LoggerInstance().log(priority,ptr.get());
 	else
 		LoggerInstance().log(priority,fmt);
 }
@@ -493,7 +493,7 @@ void OOBase::Logger::filenum_t::log(const char* fmt, ...)
 		}
 
 		TempPtr<char> header(allocator);
-		if (OOBase::temp_printf(header,"%s(%u): %s",m_pszFilename,m_nLine,static_cast<const char*>(msg)) == 0)
-			LoggerInstance().log(m_priority,header);
+		if (OOBase::temp_printf(header,"%s(%u): %s",m_pszFilename,m_nLine,msg.get()) == 0)
+			LoggerInstance().log(m_priority,header.get());
 	}
 }

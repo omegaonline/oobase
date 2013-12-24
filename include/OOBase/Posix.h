@@ -22,6 +22,7 @@
 #ifndef OOBASE_POSIX_H_INCLUDED_
 #define OOBASE_POSIX_H_INCLUDED_
 
+#include "UniquePtr.h"
 #include "SmartPtr.h"
 
 #if defined(HAVE_UNISTD_H) || defined(DOXYGEN)

@@ -318,7 +318,7 @@ int OOBase::Environment::get_envp(const env_table_t& tabEnv, TempPtr<char*>& ptr
 	if (!ptr.reallocate(len))
 		return ERROR_OUTOFMEMORY;
 
-	char** envp = ptr;
+	char** envp = ptr.get();
 	char* char_data = reinterpret_cast<char*>(envp) + ((tabEnv.size()+1) * sizeof(char*));
 
 	for (size_t idx = 0; idx < tabEnv.size(); ++idx)

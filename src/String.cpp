@@ -117,7 +117,7 @@ int OOBase::temp_vprintf(TempPtr<char>& ptr, const char* format, va_list args)
 		va_list args_copy;
 		va_copy(args_copy,args);
 
-		r = vsnprintf_s(ptr,len,format,args_copy);
+		r = vsnprintf_s(ptr.get(),len,format,args_copy);
 
 		va_end(args_copy);
 

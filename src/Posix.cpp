@@ -219,7 +219,7 @@ int OOBase::POSIX::close_file_descriptors(int* except, size_t ex_count)
 		if (err != 0)
 			return err;
 
-		DIR* pdir = opendir(str);
+		DIR* pdir = opendir(str.get());
 		if (!pdir)
 			return errno;
 
@@ -294,14 +294,14 @@ OOBase::POSIX::pw_info::pw_info(AllocatorInstance& allocator, uid_t uid) : m_pwd
 {
 	size_t size = get_size();
 	if (m_data.reallocate(size))
-		::getpwuid_r(uid,&m_pwd2,m_data,size,&m_pwd);
+		::getpwuid_r(uid,&m_pwd2,m_data.get(),size,&m_pwd);
 }
 
 OOBase::POSIX::pw_info::pw_info(AllocatorInstance& allocator, const char* uname) : m_pwd(NULL), m_data(allocator)
 {
 	size_t size = get_size();
 	if (m_data.reallocate(size))
-		::getpwnam_r(uname,&m_pwd2,m_data,size,&m_pwd);
+		::getpwnam_r(uname,&m_pwd2,m_data.get(),size,&m_pwd);
 }
 
 const size_t OOBase::POSIX::pw_info::get_size()
