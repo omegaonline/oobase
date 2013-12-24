@@ -311,9 +311,14 @@ namespace
 				err = str.printf("%d",getpid());
 				if (!err)
 				{
-					ftruncate(fd,0);
+					do
+					{
+						if (ftruncate(fd,0) == -1)
+							err = errno;
+					}
+					while (err == EINTR);
 
-					if (OOBase::POSIX::write(fd,str.c_str(),str.length()) == -1)
+					if (!err && OOBase::POSIX::write(fd,str.c_str(),str.length()) == -1)
 						err = errno;
 				}
 			}
