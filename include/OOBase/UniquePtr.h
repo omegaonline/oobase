@@ -58,6 +58,11 @@ namespace OOBase
 			A::delete_free(ptr);
 		}
 
+		static void destroy(void* ptr)
+		{
+			A::free(ptr);
+		}
+
 		template <typename T>
 		static T* reallocate(T* ptr, size_t count)
 		{
@@ -91,6 +96,11 @@ namespace OOBase
 		void destroy(T* ptr)
 		{
 			m_alloc.delete_free(ptr);
+		}
+
+		void destroy(void* ptr)
+		{
+			m_alloc.free(ptr);
 		}
 
 		template <typename T>
@@ -213,7 +223,7 @@ namespace OOBase
 
 		bool reallocate(size_t bytes, size_t align)
 		{
-			reset(D::reallocate(baseClass::m_ptr,bytes,align));
+			reset(Deleter::reallocate(baseClass::m_ptr,bytes,align));
 			return (baseClass::m_ptr != NULL);
 		}
 	};
