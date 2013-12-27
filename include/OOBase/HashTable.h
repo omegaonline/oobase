@@ -227,7 +227,7 @@ namespace OOBase
 		{
 			if (m_count+(m_size/7) >= m_size)
 			{
-				if ((err = clone()))
+				if ((err = clone()) != 0)
 					return end();
 			}
 
