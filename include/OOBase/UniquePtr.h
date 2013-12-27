@@ -26,6 +26,69 @@
 
 namespace OOBase
 {
+	class StdDeleter
+	{
+	public:
+		template <typename T>
+		static void destroy(T* ptr)
+		{
+			delete ptr;
+		}
+	};
+
+	class StdArrayDeleter
+	{
+	public:
+		template <typename T>
+		static void destroy(T* ptr)
+		{
+			delete [] ptr;
+		}
+	};
+
+	template <typename A>
+	class Deleter
+	{
+	public:
+		typedef A Allocator;
+
+		template <typename T>
+		static void destroy(T* ptr)
+		{
+			A::delete_free(ptr);
+		}
+
+		template <typename T>
+		static T* reallocate(T* ptr, size_t count)
+		{
+			return static_cast<T*>(A::reallocate(ptr,sizeof(T)*count,alignment_of<T>::value));
+		}
+	};
+
+	class DeleterInstance
+	{
+	public:
+		typedef AllocatorInstance Allocator;
+
+		DeleterInstance(AllocatorInstance& alloc) : m_alloc(alloc)
+		{}
+
+		template <typename T>
+		void destroy(T* ptr)
+		{
+			m_alloc.delete_free(ptr);
+		}
+
+		template <typename T>
+		T* reallocate(T* ptr, size_t count)
+		{
+			return static_cast<T*>(m_alloc.reallocate(ptr,sizeof(T)*count,alignment_of<T>::value));
+		}
+
+	private:
+		AllocatorInstance& m_alloc;
+	};
+
 	namespace detail
 	{
 		template <typename T>
@@ -67,7 +130,7 @@ namespace OOBase
 		};
 	}
 
-	template <typename T, typename Allocator = CrtAllocator>
+	template <typename T, typename Deleter>
 	class UniquePtr : public detail::UniquePtrBase<T>
 	{
 		typedef detail::UniquePtrBase<T> baseClass;
@@ -83,29 +146,32 @@ namespace OOBase
 
 		void reset(T* ptr = NULL)
 		{
-			T* old = baseClass::m_ptr;
-			baseClass::m_ptr = ptr;
-			if (old)
-				Allocator::delete_free(old);
+			if (baseClass::m_ptr != ptr)
+			{
+				T* old = baseClass::m_ptr;
+				baseClass::m_ptr = ptr;
+				if (old)
+					Deleter::destroy(old);
+			}
 		}
 
 		bool reallocate(size_t count)
 		{
-			reset(static_cast<T*>(Allocator::reallocate(baseClass::m_ptr,sizeof(T)*count,alignment_of<T>::value)));
-			return *this;
+			reset(Deleter::reallocate(baseClass::m_ptr,count));
+			return (baseClass::m_ptr != NULL);
 		}
 	};
 
 	template <typename T>
-	class UniquePtr<T,AllocatorInstance> : public detail::UniquePtrBase<T>
+	class UniquePtr<T,DeleterInstance> : public detail::UniquePtrBase<T>
 	{
 		typedef detail::UniquePtrBase<T> baseClass;
 
 	public:
-		UniquePtr(AllocatorInstance& alloc) : baseClass(), m_alloc(alloc)
+		UniquePtr(AllocatorInstance& alloc) : baseClass(), m_deleter(alloc)
 		{}
 
-		explicit UniquePtr(T* ptr, AllocatorInstance& alloc) : baseClass(ptr), m_alloc(alloc)
+		explicit UniquePtr(T* ptr, AllocatorInstance& alloc) : baseClass(ptr), m_deleter(alloc)
 		{}
 
 		~UniquePtr()
@@ -115,20 +181,23 @@ namespace OOBase
 
 		void reset(T* ptr = NULL)
 		{
-			T* old = baseClass::m_ptr;
-			baseClass::m_ptr = ptr;
-			if (old)
-				m_alloc.delete_free(old);
+			if (baseClass::m_ptr != ptr)
+			{
+				T* old = baseClass::m_ptr;
+				baseClass::m_ptr = ptr;
+				if (old)
+					m_deleter.destroy(old);
+			}
 		}
 
 		bool reallocate(size_t count)
 		{
-			reset(static_cast<T*>(m_alloc.reallocate(baseClass::m_ptr,sizeof(T)*count,alignment_of<T>::value)));
-			return *this;
+			reset(m_deleter.reallocate(baseClass::m_ptr,count));
+			return (baseClass::m_ptr != NULL);
 		}
 
-	private:
-		AllocatorInstance& m_alloc;
+	protected:
+		DeleterInstance m_deleter;
 	};
 
 	template <typename T, typename Allocator>
@@ -142,13 +211,14 @@ namespace OOBase
 	};
 
 	template <class T>
-	class TempPtr : public UniquePtr<T,AllocatorInstance>
+	class TempPtr : public UniquePtr<T,DeleterInstance>
 	{
+		typedef UniquePtr<T,DeleterInstance> baseClass;
 	public:
-		TempPtr(AllocatorInstance& alloc) : UniquePtr<T,AllocatorInstance>(NULL,alloc)
+		TempPtr(AllocatorInstance& alloc) : baseClass(NULL,alloc)
 		{}
 
-		explicit TempPtr(T* ptr, AllocatorInstance& alloc) : UniquePtr<T,AllocatorInstance>(ptr,alloc)
+		explicit TempPtr(T* ptr, AllocatorInstance& alloc) : baseClass(ptr,alloc)
 		{}
 	};
 

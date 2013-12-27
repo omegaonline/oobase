@@ -23,83 +23,11 @@
 #define OOBASE_SMARTPTR_H_INCLUDED_
 
 #include "RefCount.h"
+#include "UniquePtr.h"
 
 namespace OOBase
 {
-	class StdDeleteDestructor
-	{
-	public:
-		typedef CrtAllocator Allocator;
 
-		template <typename T>
-		static void destroy(T* ptr)
-		{
-			delete ptr;
-		}
-	};
-
-	class StdArrayDeleteDestructor
-	{
-	public:
-		typedef CrtAllocator Allocator;
-
-		template <typename T>
-		static void destroy(T* ptr)
-		{
-			delete [] ptr;
-		}
-	};
-
-	template <typename A>
-	class DeleteDestructor
-	{
-	public:
-		typedef A Allocator;
-
-		template <typename T>
-		static void destroy(T* ptr)
-		{
-			ptr->~T();
-			A::free(ptr);
-		}
-	};
-
-	template <>
-	class DeleteDestructor<AllocatorInstance>
-	{
-	public:
-		typedef AllocatorInstance Allocator;
-
-		template <typename T>
-		static void destroy(AllocatorInstance& allocator, T* ptr)
-		{
-			allocator.delete_free(ptr);
-		}
-	};
-
-	template <typename A>
-	class FreeDestructor
-	{
-	public:
-		typedef A Allocator;
-
-		static void destroy(void* ptr)
-		{
-			A::free(ptr);
-		}
-	};
-
-	template <>
-	class FreeDestructor<AllocatorInstance>
-	{
-	public:
-		typedef AllocatorInstance Allocator;
-
-		static void destroy(AllocatorInstance& allocator, void* ptr)
-		{
-			allocator.free(ptr);
-		}
-	};
 
 	namespace detail
 	{
@@ -208,7 +136,7 @@ namespace OOBase
 		};
 	}
 
-	template <typename T, typename T_Destructor = StdDeleteDestructor >
+	template <typename T, typename T_Destructor = Deleter<CrtAllocator> >
 	class SmartPtr : public detail::SmartPtrImpl<T,T_Destructor,typename T_Destructor::Allocator>
 	{
 		typedef detail::SmartPtrImpl<T,T_Destructor,typename T_Destructor::Allocator> baseClass;
@@ -269,160 +197,6 @@ namespace OOBase
 		operator const T2*() const
 		{
 			return static_cast<const T2*>(baseClass::value());
-		}
-	};
-
-	namespace detail
-	{
-		template <typename T>
-		class LocalPtrBase : public NonCopyable
-		{
-		public:
-			LocalPtrBase(T* p) : m_data(p)
-			{}
-
-			T* detach()
-			{
-				T* p = m_data;
-				m_data = NULL;
-				return p;
-			}
-
-			operator T*()
-			{
-				return m_data;
-			}
-
-			operator const T*() const
-			{
-				return m_data;
-			}
-
-		protected:
-			T* m_data;
-		};
-
-		template <typename T, typename T_Destructor, typename Allocator>
-		class LocalPtrImpl : public LocalPtrBase<T>
-		{
-		public:
-			LocalPtrImpl(T* p) : LocalPtrBase<T>(p)
-			{}
-
-			~LocalPtrImpl()
-			{
-				if (LocalPtrBase<T>::m_data)
-					T_Destructor::destroy(LocalPtrBase<T>::m_data);
-			}
-
-		protected:
-			void assign(T* p)
-			{
-				if (p != LocalPtrBase<T>::m_data)
-				{
-					if (LocalPtrBase<T>::m_data)
-						T_Destructor::destroy(LocalPtrBase<T>::m_data);
-
-					LocalPtrBase<T>::m_data = p;
-				}
-			}
-		};
-
-		template <typename T, typename T_Destructor>
-		class LocalPtrImpl<T,T_Destructor,AllocatorInstance> : public LocalPtrBase<T>
-		{
-		public:
-			LocalPtrImpl(AllocatorInstance& allocator, T* p) : LocalPtrBase<T>(p), m_allocator(allocator)
-			{}
-
-			~LocalPtrImpl()
-			{
-				if (LocalPtrBase<T>::m_data)
-					T_Destructor::destroy(m_allocator,LocalPtrBase<T>::m_data);
-			}
-
-			AllocatorInstance& get_allocator() const
-			{
-				return m_allocator;
-			}
-
-		protected:
-			AllocatorInstance& m_allocator;
-
-			void assign(T* p)
-			{
-				if (p != LocalPtrBase<T>::m_data)
-				{
-					if (LocalPtrBase<T>::m_data)
-						T_Destructor::destroy(m_allocator,LocalPtrBase<T>::m_data);
-
-					LocalPtrBase<T>::m_data = p;
-				}
-			}
-		};
-	}
-
-	template <typename T, typename Destructor = StdDeleteDestructor >
-	class LocalPtr : public detail::LocalPtrImpl<T,Destructor,typename Destructor::Allocator>
-	{
-		typedef detail::LocalPtrImpl<T,Destructor,typename Destructor::Allocator> baseClass;
-
-	public:
-		LocalPtr(T* p = NULL) : baseClass(p)
-		{}
-
-		LocalPtr(AllocatorInstance& allocator, T* p = NULL) : baseClass(allocator,p)
-		{}
-
-		LocalPtr& operator = (T* p)
-		{
-			baseClass::assign(p);
-			return *this;
-		}
-
-		T* operator ->()
-		{
-			assert(baseClass::m_data != NULL);
-
-			return baseClass::m_data;
-		}
-
-		const T* operator ->() const
-		{
-			assert(baseClass::m_data != NULL);
-
-			return baseClass::m_data;
-		}
-	};
-
-	template <typename Destructor>
-	class LocalPtr<void,Destructor> : public detail::LocalPtrImpl<void,Destructor,typename Destructor::Allocator>
-	{
-		typedef detail::LocalPtrImpl<void,Destructor,typename Destructor::Allocator> baseClass;
-
-	public:
-		LocalPtr(void* p = NULL) : baseClass(p)
-		{}
-
-		LocalPtr(AllocatorInstance& allocator, void* p = NULL) : baseClass(allocator,p)
-		{}
-
-		LocalPtr& operator = (void* p)
-		{
-			baseClass::assign(p);
-			return *this;
-		}
-
-		template <typename T2>
-		operator T2*()
-		{
-			return static_cast<T2*>(baseClass::m_data);
-		}
-
-		template <typename T2>
-		operator const T2*() const
-		{
-			return static_cast<T2*>(baseClass::m_data);
 		}
 	};
 }

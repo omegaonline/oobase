@@ -22,7 +22,7 @@
 #ifndef OOBASE_STACK_ALLOCATOR_H_INCLUDED_
 #define OOBASE_STACK_ALLOCATOR_H_INCLUDED_
 
-#include "SmartPtr.h"
+#include "UniquePtr.h"
 
 //#define OOBASE_STACK_ALLOC_CHECK 1
 
@@ -147,15 +147,16 @@ namespace OOBase
 
 		bool reallocate(size_t count)
 		{
-			if (count > COUNT)
+			if (count > m_count)
 			{
-				m_data = m_dynamic = static_cast<T*>(Allocator::allocate(count * sizeof(T),alignment_of<T>::value));
-				if (!m_data)
+				if (!m_dynamic.reallocate(count))
 				{
 					m_count = 0;
+					m_data = NULL;
 					return false;
 				}
 
+				m_data = m_dynamic.get();
 				m_count = count;
 			}
 			return true;
@@ -186,7 +187,7 @@ namespace OOBase
 		T*          m_data;
 		size_t      m_count;
 
-		LocalPtr<T,FreeDestructor<Allocator> > m_dynamic;
+		UniquePtr<T,Deleter<Allocator> > m_dynamic;
 	};
 }
 
