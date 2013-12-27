@@ -72,11 +72,11 @@ int OOBase::CmdArgs::error(results_t& results, int retval, const char* key, cons
 int OOBase::CmdArgs::parse(results_t& results, int skip) const
 {
 	int argc = 0;
-	LocalPtr<LPWSTR,Win32::LocalAllocDestructor> argvw = CommandLineToArgvW(GetCommandLineW(),&argc);
+	UniquePtr<LPWSTR[],Win32::LocalAllocDeleter> argvw(CommandLineToArgvW(GetCommandLineW(),&argc));
 	if (!argvw)
 		return GetLastError();
 
-	TempPtr<const char*> argv(results.get_allocator());
+	UniquePtr<const char*[],DeleterInstance> argv(results.get_allocator());
 	if (!argv.reallocate(argc))
 		return ERROR_OUTOFMEMORY;
 
@@ -91,7 +91,7 @@ int OOBase::CmdArgs::parse(results_t& results, int skip) const
 		argv[i] = s.c_str();
 	}
 
-	return parse(argc,argv,results,skip);
+	return parse(argc,argv.get(),results,skip);
 }
 #endif
 

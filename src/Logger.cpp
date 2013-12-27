@@ -228,7 +228,7 @@ namespace
 				break;
 			}
 
-			OOBase::LocalPtr<TOKEN_USER,OOBase::FreeDestructor<OOBase::AllocatorInstance> > ptrSIDProcess(allocator);
+			OOBase::UniquePtr<TOKEN_USER,OOBase::DeleterInstance> ptrSIDProcess(allocator);
 			PSID psid = NULL;
 			OOBase::Win32::SmartHandle hProcessToken;
 
@@ -240,7 +240,7 @@ namespace
 
 			if (wmsg)
 			{
-				const wchar_t* arrBufs[2] = { static_cast<wchar_t*>(wmsg), NULL };
+				const wchar_t* arrBufs[2] = { wmsg.get(), NULL };
 				ReportEventW(m_hLog,wType,0,0,psid,1,0,arrBufs,NULL);
 			}
 			else
@@ -252,7 +252,7 @@ namespace
 
 		if (wmsg)
 		{
-			OutputDebugStringW(wmsg);
+			OutputDebugStringW(wmsg.get());
 			OutputDebugStringW(L"\n");
 		}
 		else
@@ -269,7 +269,7 @@ namespace
 			set_console_attrs(true,FOREGROUND_RED);
 			OOBase::stderr_write("Error: ");
 			if (wmsg)
-				OOBase::stderr_write(wmsg);
+				OOBase::stderr_write(wmsg.get());
 			else
 				OOBase::stderr_write(msg);
 			OOBase::stderr_write("\n");
@@ -281,7 +281,7 @@ namespace
 			set_console_attrs(false,FOREGROUND_RED | FOREGROUND_GREEN);
 			OOBase::stdout_write("Warning: ");
 			if (wmsg)
-				OOBase::stdout_write(wmsg);
+				OOBase::stdout_write(wmsg.get());
 			else
 				OOBase::stdout_write(msg);
 			OOBase::stdout_write("\n");
@@ -290,7 +290,7 @@ namespace
 
 		case OOBase::Logger::Information:
 			if (wmsg)
-				OOBase::stdout_write(wmsg);
+				OOBase::stdout_write(wmsg.get());
 			else
 				OOBase::stdout_write(msg);
 			OOBase::stdout_write("\n");
@@ -302,7 +302,7 @@ namespace
 			set_console_attrs(false,FOREGROUND_GREEN);
 			OOBase::stdout_write("Debug: ");
 			if (wmsg)
-				OOBase::stdout_write(wmsg);
+				OOBase::stdout_write(wmsg.get());
 			else
 				OOBase::stdout_write(msg);
 			OOBase::stdout_write("\n");

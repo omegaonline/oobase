@@ -115,8 +115,8 @@ namespace OOBase
 			}
 
 		private:
-			SmartPtr<ACL,Win32::LocalAllocDestructor>  m_pACL;
-			SmartPtr<void,Win32::LocalAllocDestructor> m_psd;
+			SmartPtr<ACL,Win32::LocalAllocDeleter>  m_pACL;
+			SmartPtr<void,Win32::LocalAllocDeleter> m_psd;
 
 			void copy(PSECURITY_DESCRIPTOR other);
 		};
@@ -131,7 +131,7 @@ namespace OOBase
 		bool MatchPrivileges(ULONG count, PLUID_AND_ATTRIBUTES Privs1, PLUID_AND_ATTRIBUTES Privs2);
 
 		template <typename T>
-		DWORD GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls, LocalPtr<T,FreeDestructor<AllocatorInstance> >& info)
+		DWORD GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls, UniquePtr<T,DeleterInstance>& info)
 		{
 			DWORD dwLen = 0;
 			if (GetTokenInformation(hToken,cls,NULL,0,&dwLen))
@@ -141,11 +141,11 @@ namespace OOBase
 			if (dwErr != ERROR_INSUFFICIENT_BUFFER)
 				return dwErr;
 
-			info = static_cast<T*>(info.get_allocator().allocate(dwLen,16));
+			info.reset(static_cast<T*>(info.get_allocator().allocate(dwLen,16)));
 			if (!info)
 				return ERROR_OUTOFMEMORY;
 
-			if (GetTokenInformation(hToken,cls,info,dwLen,&dwLen))
+			if (GetTokenInformation(hToken,cls,info.get(),dwLen,&dwLen))
 				return ERROR_SUCCESS;
 
 			return GetLastError();
@@ -163,7 +163,7 @@ namespace OOBase
 			return err;
 		}
 
-		DWORD StringToSID(const char* pszSID, SmartPtr<void,LocalAllocDestructor>& pSID);
+		DWORD StringToSID(const char* pszSID, SmartPtr<void,LocalAllocDeleter>& pSID);
 	}
 }
 

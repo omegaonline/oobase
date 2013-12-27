@@ -72,7 +72,7 @@ void OOBase::Win32::sec_descript_t::copy(PSECURITY_DESCRIPTOR other)
 		OOBase_CallCriticalFailure("Invalid SECURITY_DESCRIPTOR");
 
 	DWORD dwLen = GetSecurityDescriptorLength(other);
-	SmartPtr<void,Win32::LocalAllocDestructor> ours = LocalAlloc(LPTR,dwLen);
+	SmartPtr<void,Win32::LocalAllocDeleter> ours = LocalAlloc(LPTR,dwLen);
 	if (!ours)
 		OOBase_CallCriticalFailure(GetLastError());
 
@@ -138,7 +138,7 @@ DWORD OOBase::Win32::sec_descript_t::SetEntriesInAcl(ULONG cCountOfExplicitEntri
 DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, TempPtr<wchar_t>& strUserName, TempPtr<wchar_t>& strDomainName)
 {
 	// Find out all about the user associated with hToken
-	LocalPtr<TOKEN_USER,FreeDestructor<AllocatorInstance> > ptrUserInfo(strUserName.get_allocator());
+	UniquePtr<TOKEN_USER,DeleterInstance> ptrUserInfo(strUserName.get_allocator());
 	DWORD dwErr = GetTokenInfo(hToken,TokenUser,ptrUserInfo);
 	if (dwErr)
 		return dwErr;
@@ -159,7 +159,7 @@ DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, TempPtr<wchar_t>& strUserNa
 			return ERROR_OUTOFMEMORY;
 	}
 
-	if (!LookupAccountSidW(NULL,ptrUserInfo->User.Sid,strUserName,&dwUNameSize,strDomainName,&dwDNameSize,&name_use))
+	if (!LookupAccountSidW(NULL,ptrUserInfo->User.Sid,strUserName.get(),&dwUNameSize,strDomainName.get(),&dwDNameSize,&name_use))
 		return GetLastError();
 
 	return ERROR_SUCCESS;
@@ -176,25 +176,25 @@ DWORD OOBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile)
 
 	// Lookup a DC for pszDomain
 	LPBYTE v = NULL;
-	NetGetAnyDCName(NULL,strDomainName,&v);
-	LocalPtr<wchar_t,NetApiDestructor> ptrDCName(reinterpret_cast<wchar_t*>(v));
+	NetGetAnyDCName(NULL,strDomainName.get(),&v);
+	UniquePtr<wchar_t,NetApiDestructor> ptrDCName(reinterpret_cast<wchar_t*>(v));
 
 	// Try to find the user's profile path...
 	v = NULL;
-	NetUserGetInfo(ptrDCName,strUserName,3,&v);
-	LocalPtr<USER_INFO_3,NetApiDestructor> pInfo(reinterpret_cast<USER_INFO_3*>(v));
+	NetUserGetInfo(ptrDCName.get(),strUserName.get(),3,&v);
+	UniquePtr<USER_INFO_3,NetApiDestructor> pInfo(reinterpret_cast<USER_INFO_3*>(v));
 
 	// Load the Users Profile
 	PROFILEINFOW profile_info = {0};
 	profile_info.dwSize = sizeof(PROFILEINFOW);
 	profile_info.dwFlags = PI_NOUI;
-	profile_info.lpUserName = strUserName;
+	profile_info.lpUserName = strUserName.get();
 
 	if (pInfo->usri3_profile != NULL)
 		profile_info.lpProfilePath = pInfo->usri3_profile;
 
 	if (ptrDCName != NULL)
-		profile_info.lpServerName = ptrDCName;
+		profile_info.lpServerName = ptrDCName.get();
 
 	if (!LoadUserProfileW(hToken,&profile_info))
 		return GetLastError();
@@ -206,7 +206,7 @@ DWORD OOBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile)
 DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, TempPtr<void>& pSIDLogon)
 {
 	// Get the logon SID of the Token
-	LocalPtr<TOKEN_GROUPS,FreeDestructor<AllocatorInstance> > ptrGroups(pSIDLogon.get_allocator());
+	UniquePtr<TOKEN_GROUPS,DeleterInstance> ptrGroups(pSIDLogon.get_allocator());
 	DWORD dwErr = GetTokenInfo(hToken,TokenGroups,ptrGroups);
 	if (dwErr)
 		return dwErr;
@@ -224,7 +224,7 @@ DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, TempPtr<void>& pSIDLogon)
 				if (!pSIDLogon.reallocate(dwLen,16))
 					return ERROR_OUTOFMEMORY;
 
-				if (!CopySid(dwLen,pSIDLogon,ptrGroups->Groups[dwIndex].Sid))
+				if (!CopySid(dwLen,pSIDLogon.get(),ptrGroups->Groups[dwIndex].Sid))
 					return GetLastError();
 
 				return ERROR_SUCCESS;
@@ -239,7 +239,7 @@ DWORD OOBase::Win32::SetTokenDefaultDACL(HANDLE hToken)
 {
 	// Get the current Default DACL
 	StackAllocator<256> allocator;
-	LocalPtr<TOKEN_DEFAULT_DACL,FreeDestructor<AllocatorInstance> > ptrDef_dacl(allocator);
+	UniquePtr<TOKEN_DEFAULT_DACL,DeleterInstance> ptrDef_dacl(allocator);
 	DWORD dwErr = GetTokenInfo(hToken,TokenDefaultDacl,ptrDef_dacl);
 	if (dwErr)
 		return dwErr;
@@ -258,7 +258,7 @@ DWORD OOBase::Win32::SetTokenDefaultDACL(HANDLE hToken)
 	ea.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
 	ea.Trustee.TrusteeForm = TRUSTEE_IS_SID;
 	ea.Trustee.TrusteeType = TRUSTEE_IS_USER;
-	ea.Trustee.ptstrName = (LPWSTR)ptrSIDLogon;
+	ea.Trustee.ptstrName = (LPWSTR)ptrSIDLogon.get();
 
 	TOKEN_DEFAULT_DACL def_dacl = {0};
 	dwErr = SetEntriesInAclW(1,&ea,ptrDef_dacl->DefaultDacl,&def_dacl.DefaultDacl);
@@ -286,7 +286,7 @@ DWORD OOBase::Win32::EnableUserAccessToDir(const wchar_t* pszPath, const TOKEN_U
 	if (dwRes != ERROR_SUCCESS)
 		return dwRes;
 
-	LocalPtr<void,Win32::LocalAllocDestructor> ptrSD(pSD);
+	UniquePtr<void,Win32::LocalAllocDeleter> ptrSD(pSD);
 
 	EXPLICIT_ACCESSW ea = {0};
 
@@ -303,7 +303,7 @@ DWORD OOBase::Win32::EnableUserAccessToDir(const wchar_t* pszPath, const TOKEN_U
 	if (dwRes != ERROR_SUCCESS)
 		return dwRes;
 
-	LocalPtr<ACL,Win32::LocalAllocDestructor> ptrACLNew(pACLNew);
+	UniquePtr<ACL,Win32::LocalAllocDeleter> ptrACLNew(pACLNew);
 
 	return SetNamedSecurityInfoW(szPath,SE_FILE_OBJECT,DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,NULL,NULL,pACLNew,NULL);
 }
@@ -403,7 +403,7 @@ bool OOBase::Win32::MatchPrivileges(ULONG count, PLUID_AND_ATTRIBUTES Privs1, PL
 	return true;
 }
 
-DWORD OOBase::Win32::StringToSID(const char* pszSID, SmartPtr<void,LocalAllocDestructor>& pSID)
+DWORD OOBase::Win32::StringToSID(const char* pszSID, SmartPtr<void,LocalAllocDeleter>& pSID)
 {
 	PSID pSID2 = NULL;
 	// Duff declaration in mingw 3.4.5

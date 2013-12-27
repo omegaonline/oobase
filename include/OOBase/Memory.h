@@ -135,7 +135,7 @@ namespace OOBase
 
 	struct SafeBoolean
 	{
-	protected:
+	public:
 		typedef void (SafeBoolean::*bool_type)() const;
 		void this_type_does_not_support_comparisons() const
 		{}

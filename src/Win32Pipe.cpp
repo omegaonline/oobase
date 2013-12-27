@@ -500,7 +500,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* path, int& err, const Timeou
 	Win32::SmartHandle hPipe;
 	for (;;)
 	{
-		hPipe = CreateFileW(wname,
+		hPipe = CreateFileW(wname.get(),
 							PIPE_ACCESS_DUPLEX,
 							0,
 							NULL,
@@ -526,7 +526,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* path, int& err, const Timeou
 				dwWait = 1;
 		}
 
-		if (!WaitNamedPipeW(wname,dwWait))
+		if (!WaitNamedPipeW(wname.get(),dwWait))
 		{
 			err = GetLastError();
 			if (err == ERROR_SEM_TIMEOUT)

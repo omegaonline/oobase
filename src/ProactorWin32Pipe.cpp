@@ -31,9 +31,7 @@
 
 namespace
 {
-	class AsyncPipe :
-			public OOBase::AsyncSocket,
-			public OOBase::AllocatorNew<OOBase::CrtAllocator>
+	class AsyncPipe : public OOBase::AsyncSocket
 	{
 	public:
 		explicit AsyncPipe(OOBase::detail::ProactorWin32* pProactor, HANDLE hPipe);
@@ -442,9 +440,7 @@ namespace
 		int do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, bool bFirst);
 	};
 
-	class PipeAcceptor :
-			public OOBase::Acceptor,
-			public OOBase::AllocatorNew<OOBase::CrtAllocator>
+	class PipeAcceptor : public OOBase::Acceptor
 	{
 	public:
 		PipeAcceptor();
@@ -554,7 +550,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 			bFirst = false;
 		}
 
-		OOBase::Win32::SmartHandle hPipe(CreateNamedPipeW(wname,dwFlags,
+		OOBase::Win32::SmartHandle hPipe(CreateNamedPipeW(wname.get(),dwFlags,
 												PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
 												PIPE_UNLIMITED_INSTANCES,
 												0,0,0,m_null_sa ? NULL : &m_sa));
@@ -767,7 +763,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const char* path, in
 	Win32::SmartHandle hPipe;
 	for (;;)
 	{
-		hPipe = ::CreateFileW(wname,
+		hPipe = ::CreateFileW(wname.get(),
 							PIPE_ACCESS_DUPLEX,
 							0,
 							NULL,
@@ -792,7 +788,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const char* path, in
 				dwWait = 1;
 		}
 
-		if (!::WaitNamedPipeW(wname,dwWait))
+		if (!::WaitNamedPipeW(wname.get(),dwWait))
 		{
 			err = GetLastError();
 			return NULL;
@@ -818,9 +814,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const char* path, in
 
 namespace
 {
-	class InternalUniqueAcceptor :
-			public OOBase::RefCounted,
-			public OOBase::AllocatorNew<OOBase::CrtAllocator>
+	class InternalUniqueAcceptor : public OOBase::RefCounted
 	{
 	public:
 		InternalUniqueAcceptor(OOBase::detail::ProactorWin32* pProactor, void* param, OOBase::Proactor::accept_pipe_callback_t callback, const OOBase::String& pipe_name, SECURITY_ATTRIBUTES* psa);
@@ -846,9 +840,7 @@ namespace
 		void on_accept(HANDLE hPipe, DWORD dwErr, OOBase::Guard<OOBase::Condition::Mutex>& guard);
 	};
 
-	class UniqueAcceptor :
-			public OOBase::Acceptor,
-			public OOBase::AllocatorNew<OOBase::CrtAllocator>
+	class UniqueAcceptor : public OOBase::Acceptor
 	{
 	public:
 		UniqueAcceptor();
@@ -921,7 +913,7 @@ int InternalUniqueAcceptor::start()
 	if (dwErr)
 		return dwErr;
 
-	m_hPipe = CreateNamedPipeW(wname,
+	m_hPipe = CreateNamedPipeW(wname.get(),
 				PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED | FILE_FLAG_FIRST_PIPE_INSTANCE,
 				PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
 				1,
@@ -1086,7 +1078,7 @@ OOBase::Acceptor* OOBase::Proactor::accept_unique_pipe(void* param, accept_pipe_
 		return accept_unique_pipe(param,callback,path,err);
 
 	// Get the logon SID of the Token
-	SmartPtr<void,Win32::LocalAllocDestructor> ptrSIDLogon;
+	SmartPtr<void,Win32::LocalAllocDeleter> ptrSIDLogon;
 	err = Win32::StringToSID(pszSID,ptrSIDLogon);
 	if (err)
 		return NULL;
@@ -1102,7 +1094,7 @@ OOBase::Acceptor* OOBase::Proactor::accept_unique_pipe(void* param, accept_pipe_
 		err = GetLastError();
 		return NULL;
 	}
-	LocalPtr<void,Win32::SIDDestructor> pSIDOwner(pSID);
+	UniquePtr<void,Win32::SIDDestructor> pSIDOwner(pSID);
 
 	// Create a SID for the Network group.
 	SID_IDENTIFIER_AUTHORITY SIDAuthNT = {SECURITY_NT_AUTHORITY};
@@ -1114,7 +1106,7 @@ OOBase::Acceptor* OOBase::Proactor::accept_unique_pipe(void* param, accept_pipe_
 		err = GetLastError();
 		return NULL;
 	}
-	LocalPtr<void,Win32::SIDDestructor> pSIDNetwork(pSID);
+	UniquePtr<void,Win32::SIDDestructor> pSIDNetwork(pSID);
 
 	static const int NUM_ACES = 3;
 	EXPLICIT_ACCESSW ea[NUM_ACES] = { {0}, {0} };
@@ -1125,7 +1117,7 @@ OOBase::Acceptor* OOBase::Proactor::accept_unique_pipe(void* param, accept_pipe_
 	ea[0].grfInheritance = NO_INHERITANCE;
 	ea[0].Trustee.TrusteeForm = TRUSTEE_IS_SID;
 	ea[0].Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
-	ea[0].Trustee.ptstrName = (LPWSTR)pSIDOwner;
+	ea[0].Trustee.ptstrName = (LPWSTR)pSIDOwner.get();
 
 	// Set read/write control for Specific logon.
 	ea[1].grfAccessPermissions = FILE_GENERIC_READ | FILE_WRITE_DATA;
@@ -1141,7 +1133,7 @@ OOBase::Acceptor* OOBase::Proactor::accept_unique_pipe(void* param, accept_pipe_
 	ea[2].grfInheritance = NO_INHERITANCE;
 	ea[2].Trustee.TrusteeForm = TRUSTEE_IS_SID;
 	ea[2].Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
-	ea[2].Trustee.ptstrName = (LPWSTR)pSIDNetwork;
+	ea[2].Trustee.ptstrName = (LPWSTR)pSIDNetwork.get();
 
 	Win32::sec_descript_t sd;
 	err = sd.SetEntriesInAcl(NUM_ACES,ea);

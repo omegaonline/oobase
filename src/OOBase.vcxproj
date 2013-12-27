@@ -204,6 +204,7 @@
     <ClInclude Include="..\include\OOBase\Set.h" />
     <ClInclude Include="..\include\OOBase\StackAllocator.h" />
     <ClInclude Include="..\include\OOBase\tr24731.h" />
+    <ClInclude Include="..\include\OOBase\UniquePtr.h" />
     <ClInclude Include="..\include\OOBase\Vector.h" />
     <ClInclude Include="..\include\OOBase\Win32Security.h" />
     <ClInclude Include="BSDSocket.h" />

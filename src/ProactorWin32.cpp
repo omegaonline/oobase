@@ -238,7 +238,7 @@ WaitAcceptor::~WaitAcceptor()
 
 int WaitAcceptor::bind(OOBase::detail::ProactorWin32* pProactor, HANDLE hObject, void* param, OOBase::Proactor::wait_object_callback_t callback, DWORD dwMilliseconds)
 {
-	if (!OOBase::CrtAllocator::allocator_new(m_pAcceptor,pProactor,hObject,param,callback,dwMilliseconds))
+	if (!OOBase::CrtAllocator::allocate_new(m_pAcceptor,pProactor,hObject,param,callback,dwMilliseconds))
 		return ERROR_OUTOFMEMORY;
 
 	int err = m_pAcceptor->start();

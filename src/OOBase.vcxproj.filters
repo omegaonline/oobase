@@ -258,6 +258,9 @@
     <ClInclude Include="..\include\OOBase\File.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\OOBase\UniquePtr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">

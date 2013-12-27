@@ -767,7 +767,7 @@ int OOBase::Win32::wchar_t_to_utf8(const wchar_t* wsz, OOBase::TempPtr<char>& pt
 	if (!ptrBuf.reallocate(len))
 		return ERROR_OUTOFMEMORY;
 
-	len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,ptrBuf,len,NULL,NULL);
+	len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,ptrBuf.get(),len,NULL,NULL);
 	if (len <= 0)
 		return GetLastError();
 
@@ -783,7 +783,7 @@ int OOBase::Win32::utf8_to_wchar_t(const char* sz, OOBase::TempPtr<wchar_t>& wsz
 	if (!wsz.reallocate(len))
 		return ERROR_OUTOFMEMORY;
 
-	len = MultiByteToWideChar(CP_UTF8,0,sz,-1,wsz,len);
+	len = MultiByteToWideChar(CP_UTF8,0,sz,-1,wsz.get(),len);
 	if (len <= 0)
 		return GetLastError();
 

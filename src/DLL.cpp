@@ -54,7 +54,7 @@ int OOBase::DLL::load(const char* full_path)
 	if (err)
 		return err;
 
-	m_module = LoadLibraryW(wide_path);
+	m_module = LoadLibraryW(wide_path.get());
 	if (!m_module)
 		return GetLastError();
 

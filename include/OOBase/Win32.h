@@ -32,7 +32,7 @@ namespace OOBase
 {
 	namespace Win32
 	{
-		class LocalAllocator
+		class LocalAllocator : public AllocateNewStatic<LocalAllocator>
 		{
 		public:
 			static void* allocate(size_t bytes, size_t)
@@ -47,7 +47,7 @@ namespace OOBase
 			}
 		};
 
-		typedef FreeDestructor<LocalAllocator> LocalAllocDestructor;
+		typedef Deleter<LocalAllocator> LocalAllocDeleter;
 
 		class SmartHandle : public NonCopyable
 		{
@@ -187,7 +187,7 @@ namespace OOBase
 
 			int err = wchar_t_to_utf8(wsz,ptrBuf);
 			if (!err)
-				err = str.assign(ptrBuf);
+				err = str.assign(ptrBuf.get());
 			return err;
 		}
 
@@ -197,7 +197,7 @@ namespace OOBase
 
 			int err = wchar_t_to_utf8(wsz,ptrBuf);
 			if (!err)
-				err = str.assign(ptrBuf);
+				err = str.assign(ptrBuf.get());
 			return err;
 		}
 

@@ -56,7 +56,7 @@ namespace
 		return err;
 	}
 
-	bool env_sort(const OOBase::SmartPtr<wchar_t,OOBase::FreeDestructor<OOBase::AllocatorInstance> >& s1, const OOBase::SmartPtr<wchar_t,OOBase::FreeDestructor<OOBase::AllocatorInstance> >& s2)
+	bool env_sort(const OOBase::SmartPtr<wchar_t,OOBase::DeleterInstance>& s1, const OOBase::SmartPtr<wchar_t,OOBase::DeleterInstance>& s2)
 	{
 		return (_wcsicmp(s1,s2) < 0);
 	}
@@ -94,7 +94,7 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, TempPtr<wchar_t>& 
 	if (tabEnv.empty())
 		return 0;
 
-	typedef SmartPtr<wchar_t,FreeDestructor<AllocatorInstance> > temp_wchar_t;
+	typedef SmartPtr<wchar_t,DeleterInstance> temp_wchar_t;
 
 	AllocatorInstance& allocator = tabEnv.get_allocator();
 
@@ -110,20 +110,20 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, TempPtr<wchar_t>& 
 		if (!err)
 			err = Win32::utf8_to_wchar_t(tabEnv.at(i)->c_str(),val);
 		if (!err)
-			err = wenv.insert(temp_wchar_t(allocator,key),temp_wchar_t(allocator,val));
+			err = wenv.insert(temp_wchar_t(allocator,key.get()),temp_wchar_t(allocator,val.get()));
 		
 		if (err)
 			return err;
 
 		// Include \0 and optionally '=' length
-		total_size += wcslen(key) + 1;
-		size_t val_len = wcslen(val);
+		total_size += wcslen(key.get()) + 1;
+		size_t val_len = wcslen(val.get());
 		if (val_len)
 			total_size += val_len + 1;
 
 		// Key and val now owned by SmartPtr in wenv
-		key.detach();
-		val.detach();
+		key.release();
+		val.release();
 	}
 	++total_size;
 
@@ -134,7 +134,7 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, TempPtr<wchar_t>& 
 	if (!ptr.reallocate(total_size + 2))
 		return ERROR_OUTOFMEMORY;
 
-	wchar_t* pout = ptr;
+	wchar_t* pout = ptr.get();
 	for (size_t i=0;i<wenv.size();++i)
 	{
 		const wchar_t* p = *wenv.key_at(i);
@@ -172,7 +172,7 @@ int OOBase::Environment::getenv(const char* envvar, LocalString& strValue)
 		if (!wenv.reallocate(dwLen))
 			return ERROR_OUTOFMEMORY;
 
-		DWORD dwActualLen = GetEnvironmentVariableW(wenvvar,wenv,dwLen);
+		DWORD dwActualLen = GetEnvironmentVariableW(wenvvar.get(),wenv.get(),dwLen);
 		if (dwActualLen < dwLen)
 		{
 			if (dwActualLen == 0)
@@ -182,7 +182,7 @@ int OOBase::Environment::getenv(const char* envvar, LocalString& strValue)
 					err = 0;
 			}
 			else if (dwActualLen > 1)
-				err = Win32::wchar_t_to_utf8(wenv,strValue,strValue.get_allocator());
+				err = Win32::wchar_t_to_utf8(wenv.get(),strValue,strValue.get_allocator());
 			
 			break;
 		}

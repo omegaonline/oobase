@@ -27,11 +27,9 @@
 
 namespace OOBase
 {
-
-
 	namespace detail
 	{
-		template <typename T, typename T_Destructor, typename Allocator>
+		template <typename T, typename T_Deleter, typename Allocator>
 		struct SmartPtrNode : public RefCounted
 		{
 			T* m_data;
@@ -41,7 +39,7 @@ namespace OOBase
 
 			~SmartPtrNode()
 			{
-				T_Destructor::destroy(m_data);
+				T_Deleter::destroy(m_data);
 			}
 
 			static SmartPtrNode* create(T* data)
@@ -58,18 +56,18 @@ namespace OOBase
 			}
 		};
 
-		template <typename T, typename T_Destructor>
-		struct SmartPtrNode<T,T_Destructor,AllocatorInstance> : public RefCounted
+		template <typename T>
+		struct SmartPtrNode<T,DeleterInstance,AllocatorInstance> : public RefCounted
 		{
 			T* m_data;
-			AllocatorInstance& m_allocator;
+			DeleterInstance m_deleter;
 
-			SmartPtrNode(AllocatorInstance& allocator, T* p) : m_data(p), m_allocator(allocator)
+			SmartPtrNode(AllocatorInstance& allocator, T* p) : m_data(p), m_deleter(allocator)
 			{}
 
 			~SmartPtrNode()
 			{
-				T_Destructor::destroy(m_allocator,m_data);
+				m_deleter.destroy(m_data);
 			}
 
 			static SmartPtrNode* create(AllocatorInstance& allocator, T* data)
@@ -82,15 +80,15 @@ namespace OOBase
 
 			virtual void destroy()
 			{
-				AllocatorInstance& allocator = m_allocator;
-				allocator.delete_free(this);
+				DeleterInstance deleter(m_deleter);
+				deleter.destroy(this);
 			}
 		};
 
-		template <typename T, typename T_Destructor, typename Allocator>
+		template <typename T, typename T_Deleter, typename Allocator>
 		class SmartPtrImpl
 		{
-			typedef SmartPtrNode<T,T_Destructor,Allocator> nodeType;
+			typedef SmartPtrNode<T,T_Deleter,Allocator> nodeType;
 
 		public:
 			SmartPtrImpl(T* ptr) : m_node(NULL)
@@ -136,10 +134,10 @@ namespace OOBase
 		};
 	}
 
-	template <typename T, typename T_Destructor = Deleter<CrtAllocator> >
-	class SmartPtr : public detail::SmartPtrImpl<T,T_Destructor,typename T_Destructor::Allocator>
+	template <typename T, typename T_Deleter = Deleter<CrtAllocator> >
+	class SmartPtr : public detail::SmartPtrImpl<T,T_Deleter,typename T_Deleter::Allocator>
 	{
-		typedef detail::SmartPtrImpl<T,T_Destructor,typename T_Destructor::Allocator> baseClass;
+		typedef detail::SmartPtrImpl<T,T_Deleter,typename T_Deleter::Allocator> baseClass;
 
 	public:
 		SmartPtr(T* ptr = NULL) : baseClass(ptr)

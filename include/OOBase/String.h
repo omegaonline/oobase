@@ -98,7 +98,7 @@ namespace OOBase
 				va_end(args);
 
 				if (!err)
-					assign(ptr);
+					assign(ptr.get());
 
 				return err;
 			}

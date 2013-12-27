@@ -51,7 +51,7 @@ int OOBase::File::open(const char* filename, bool writeable)
 		dwDisp = OPEN_ALWAYS;
 	}
 
-	m_fd = ::CreateFileW(wname,dwAccess,FILE_SHARE_READ,NULL,dwDisp,FILE_ATTRIBUTE_NORMAL,NULL);
+	m_fd = ::CreateFileW(wname.get(),dwAccess,FILE_SHARE_READ,NULL,dwDisp,FILE_ATTRIBUTE_NORMAL,NULL);
 	if (!m_fd.is_valid())
 		return ::GetLastError();
 

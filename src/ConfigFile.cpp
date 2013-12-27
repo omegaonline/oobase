@@ -292,7 +292,7 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 
 	// Read from registry
 	HKEY hKey = 0;
-	lRes = RegOpenKeyExW(hRootKey,wszKey,0,KEY_READ,&hKey);
+	lRes = RegOpenKeyExW(hRootKey,wszKey.get(),0,KEY_READ,&hKey);
 	if (lRes != ERROR_SUCCESS)
 		return lRes;
 
@@ -346,7 +346,7 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 			}
 
 			dwNameLen = sizeof(szName)/sizeof(szName[0]);
-			lRes = RegEnumValueW(hKey,dwIndex,szName,&dwNameLen,NULL,NULL,(LPBYTE)(wchar_t*)ptrBuf,&dwValLen);
+			lRes = RegEnumValueW(hKey,dwIndex,szName,&dwNameLen,NULL,NULL,(LPBYTE)ptrBuf.get(),&dwValLen);
 			if (lRes != ERROR_SUCCESS)
 				break;
 
@@ -361,7 +361,7 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 						break;
 					}
 
-					DWORD dwNewLen = ExpandEnvironmentStringsW(ptrBuf,ptrEnv,dwExpLen);
+					DWORD dwNewLen = ExpandEnvironmentStringsW(ptrBuf.get(),ptrEnv.get(),dwExpLen);
 					if (!dwNewLen)
 						lRes = ::GetLastError();
 
@@ -372,10 +372,10 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 				}
 
 				if (lRes == ERROR_SUCCESS)
-					lRes = Win32::wchar_t_to_utf8(ptrEnv,value,allocator);
+					lRes = Win32::wchar_t_to_utf8(ptrEnv.get(),value,allocator);
 			}
 			else
-				lRes = Win32::wchar_t_to_utf8(ptrBuf,value,allocator);
+				lRes = Win32::wchar_t_to_utf8(ptrBuf.get(),value,allocator);
 
 			if (lRes)
 				break;

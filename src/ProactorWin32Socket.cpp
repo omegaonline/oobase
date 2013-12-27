@@ -32,9 +32,7 @@
 
 namespace
 {
-	class Win32AsyncSocket :
-			public OOBase::AsyncSocket,
-			public OOBase::AllocatorNew<OOBase::CrtAllocator>
+	class Win32AsyncSocket : public OOBase::AsyncSocket
 	{
 	public:
 		Win32AsyncSocket(OOBase::detail::ProactorWin32* pProactor, SOCKET hSocket);
@@ -564,9 +562,7 @@ namespace
 		int do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard);
 	};
 
-	class SocketAcceptor :
-			public OOBase::Acceptor,
-			public OOBase::AllocatorNew<OOBase::CrtAllocator>
+	class SocketAcceptor : public OOBase::Acceptor
 	{
 	public:
 		SocketAcceptor();

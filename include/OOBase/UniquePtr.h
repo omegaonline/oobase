@@ -63,6 +63,11 @@ namespace OOBase
 		{
 			return static_cast<T*>(A::reallocate(ptr,sizeof(T)*count,alignment_of<T>::value));
 		}
+
+		static void* reallocate(void* ptr, size_t bytes, size_t align)
+		{
+			return A::reallocate(ptr,bytes,align);
+		}
 	};
 
 	class DeleterInstance
@@ -72,6 +77,15 @@ namespace OOBase
 
 		DeleterInstance(AllocatorInstance& alloc) : m_alloc(alloc)
 		{}
+
+		DeleterInstance(const DeleterInstance& rhs) : m_alloc(rhs.m_alloc)
+		{}
+
+		DeleterInstance& operator = (const DeleterInstance& rhs)
+		{
+			m_alloc = rhs.m_alloc;
+			return *this;
+		}
 
 		template <typename T>
 		void destroy(T* ptr)
@@ -83,6 +97,16 @@ namespace OOBase
 		T* reallocate(T* ptr, size_t count)
 		{
 			return static_cast<T*>(m_alloc.reallocate(ptr,sizeof(T)*count,alignment_of<T>::value));
+		}
+
+		void* reallocate(void* ptr, size_t bytes, size_t align)
+		{
+			return m_alloc.reallocate(ptr,bytes,align);
+		}
+
+		AllocatorInstance& get_allocator() const
+		{
+			return m_alloc;
 		}
 
 	private:
@@ -107,16 +131,6 @@ namespace OOBase
 				return m_ptr;
 			}
 
-			T& operator *() const
-			{
-				return *m_ptr;
-			}
-
-			T* operator ->() const
-			{
-				return m_ptr;
-			}
-
 			operator bool_type() const
 			{
 				return m_ptr ? &SafeBoolean::this_type_does_not_support_comparisons : NULL;
@@ -130,7 +144,7 @@ namespace OOBase
 		};
 	}
 
-	template <typename T, typename Deleter>
+	template <typename T, typename D = Deleter<CrtAllocator> >
 	class UniquePtr : public detail::UniquePtrBase<T>
 	{
 		typedef detail::UniquePtrBase<T> baseClass;
@@ -144,6 +158,16 @@ namespace OOBase
 			reset();
 		}
 
+		T& operator *() const
+		{
+			return *baseClass::m_ptr;
+		}
+
+		T* operator ->() const
+		{
+			return baseClass::m_ptr;
+		}
+
 		void reset(T* ptr = NULL)
 		{
 			if (baseClass::m_ptr != ptr)
@@ -151,13 +175,45 @@ namespace OOBase
 				T* old = baseClass::m_ptr;
 				baseClass::m_ptr = ptr;
 				if (old)
-					Deleter::destroy(old);
+					D::destroy(old);
 			}
 		}
 
 		bool reallocate(size_t count)
 		{
-			reset(Deleter::reallocate(baseClass::m_ptr,count));
+			reset(D::reallocate(baseClass::m_ptr,count));
+			return (baseClass::m_ptr != NULL);
+		}
+	};
+
+	template <typename Deleter>
+	class UniquePtr<void,Deleter> : public detail::UniquePtrBase<void>
+	{
+		typedef detail::UniquePtrBase<void> baseClass;
+
+	public:
+		explicit UniquePtr(void* ptr = NULL) : baseClass(ptr)
+		{}
+
+		~UniquePtr()
+		{
+			reset();
+		}
+
+		void reset(void* ptr = NULL)
+		{
+			if (baseClass::m_ptr != ptr)
+			{
+				void* old = baseClass::m_ptr;
+				baseClass::m_ptr = ptr;
+				if (old)
+					Deleter::destroy(old);
+			}
+		}
+
+		bool reallocate(size_t bytes, size_t align)
+		{
+			reset(D::reallocate(baseClass::m_ptr,bytes,align));
 			return (baseClass::m_ptr != NULL);
 		}
 	};
@@ -179,6 +235,16 @@ namespace OOBase
 			reset();
 		}
 
+		T& operator *() const
+		{
+			return *baseClass::m_ptr;
+		}
+
+		T* operator ->() const
+		{
+			return baseClass::m_ptr;
+		}
+
 		void reset(T* ptr = NULL)
 		{
 			if (baseClass::m_ptr != ptr)
@@ -196,14 +262,81 @@ namespace OOBase
 			return (baseClass::m_ptr != NULL);
 		}
 
+		AllocatorInstance& get_allocator() const
+		{
+			return m_deleter.get_allocator();
+		}
+
 	protected:
 		DeleterInstance m_deleter;
 	};
 
-	template <typename T, typename Allocator>
-	class UniquePtr<T[],Allocator> : public UniquePtr<T,Allocator>
+	template <>
+	class UniquePtr<void,DeleterInstance> : public detail::UniquePtrBase<void>
+	{
+		typedef detail::UniquePtrBase<void> baseClass;
+
+	public:
+		UniquePtr(AllocatorInstance& alloc) : baseClass(), m_deleter(alloc)
+		{}
+
+		explicit UniquePtr(void* ptr, AllocatorInstance& alloc) : baseClass(ptr), m_deleter(alloc)
+		{}
+
+		~UniquePtr()
+		{
+			reset();
+		}
+
+		void reset(void* ptr = NULL)
+		{
+			if (baseClass::m_ptr != ptr)
+			{
+				void* old = baseClass::m_ptr;
+				baseClass::m_ptr = ptr;
+				if (old)
+					m_deleter.destroy(old);
+			}
+		}
+
+		bool reallocate(size_t bytes, size_t align)
+		{
+			reset(m_deleter.reallocate(baseClass::m_ptr,bytes,align));
+			return (baseClass::m_ptr != NULL);
+		}
+
+		AllocatorInstance& get_allocator() const
+		{
+			return m_deleter.get_allocator();
+		}
+
+	protected:
+		DeleterInstance m_deleter;
+	};
+
+	template <typename T, typename Deleter>
+	class UniquePtr<T[],Deleter> : public UniquePtr<T,Deleter>
 	{
 	public:
+		explicit UniquePtr(T* ptr) : UniquePtr<T,Deleter>(ptr)
+		{}
+
+		T& operator [](size_t i) const
+		{
+			return detail::UniquePtrBase<T>::m_ptr[i];
+		}
+	};
+
+	template <typename T>
+	class UniquePtr<T[],DeleterInstance> : public UniquePtr<T,DeleterInstance>
+	{
+	public:
+		UniquePtr(AllocatorInstance& alloc) : UniquePtr<T,DeleterInstance>(alloc)
+		{}
+
+		explicit UniquePtr(T* ptr, AllocatorInstance& alloc) : UniquePtr<T,DeleterInstance>(ptr,alloc)
+		{}
+
 		T& operator [](size_t i) const
 		{
 			return detail::UniquePtrBase<T>::m_ptr[i];
@@ -219,6 +352,28 @@ namespace OOBase
 		{}
 
 		explicit TempPtr(T* ptr, AllocatorInstance& alloc) : baseClass(ptr,alloc)
+		{}
+
+		T& operator *() const
+		{
+			return *baseClass::m_ptr;
+		}
+
+		T* operator ->() const
+		{
+			return baseClass::m_ptr;
+		}
+	};
+
+	template <>
+	class TempPtr<void> : public UniquePtr<void,DeleterInstance>
+	{
+		typedef UniquePtr<void,DeleterInstance> baseClass;
+	public:
+		TempPtr(AllocatorInstance& alloc) : baseClass(NULL,alloc)
+		{}
+
+		explicit TempPtr(void* ptr, AllocatorInstance& alloc) : baseClass(ptr,alloc)
 		{}
 	};
 
