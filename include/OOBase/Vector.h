@@ -28,7 +28,7 @@ namespace OOBase
 {
 	namespace detail
 	{
-		template <typename Allocator, typename T, bool POD = false>
+		template <typename Allocator, typename T>
 		class VectorBase : public Allocating<Allocator>, public NonCopyable
 		{
 			typedef Allocating<Allocator> baseClass;
@@ -42,30 +42,95 @@ namespace OOBase
 
 			~VectorBase()
 			{
-				clear();
 				baseClass::free(m_data);
 			}
 
-			void clear()
+			T* data()
 			{
-				while (m_size > 0)
-					m_data[--m_size].~T();
+				return m_data;
+			}
+
+			const T* data() const
+			{
+				return m_data;
+			}
+
+			bool empty() const
+			{
+				return (m_size == 0);
+			}
+
+			size_t size() const
+			{
+				return m_size;
 			}
 
 		protected:
 			T*     m_data;
 			size_t m_size;
+			size_t m_capacity;
 
+			T* at(size_t pos)
+			{
+				return (pos >= m_size ? NULL : &m_data[pos]);
+			}
+
+			const T* at(size_t pos) const
+			{
+				return (pos >= m_size ? NULL : &m_data[pos]);
+			}
+
+			void next(size_t& pos) const
+			{
+				if (pos < m_size - 1)
+					++pos;
+				else
+					pos = size_t(-1);
+			}
+
+			void prev(size_t& pos) const
+			{
+				if (pos >= m_size)
+					pos = m_size-1;
+				else
+					--pos;
+			}
+		};
+
+		template <typename Allocator, typename T, bool POD = false>
+		class VectorPODBase : public VectorBase<Allocator,T>
+		{
+			typedef VectorBase<Allocator,T> baseClass;
+
+		public:
+			VectorPODBase() : baseClass()
+			{}
+
+			VectorPODBase(AllocatorInstance& allocator) : baseClass(allocator)
+			{}
+
+			~VectorPODBase()
+			{
+				clear();
+			}
+
+			void clear()
+			{
+				while (this->m_size > 0)
+					this->m_data[--this->m_size].~T();
+			}
+
+		protected:
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 			template <typename T1>
 			int insert_at(size_t pos, T1 value)
 			{
-				if (m_size >= m_capacity || pos < m_size)
+				if (this->m_size >= this->m_capacity || pos < this->m_size)
 				{
 					// Copy buffer, inserting in the gap...
-					size_t capacity = m_capacity;
-					if (m_size+1 > m_capacity)
-						capacity = (m_capacity == 0 ? 4 : m_capacity*2);
+					size_t capacity = this->m_capacity;
+					if (this->m_size+1 > this->m_capacity)
+						capacity = (this->m_capacity == 0 ? 2 : this->m_capacity*2);
 
 					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
@@ -74,8 +139,8 @@ namespace OOBase
 					size_t i = 0;
 					try
 					{
-						for (;i<m_size;++i)
-							::new (&new_data[i + (i<pos ? 0 : 1)]) T(m_data[i]);
+						for (;i<this->m_size;++i)
+							::new (&new_data[i + (i<pos ? 0 : 1)]) T(this->m_data[i]);
 
 						::new (&new_data[pos]) T(value);
 					}
@@ -90,165 +155,146 @@ namespace OOBase
 						throw;
 					}
 
-					for (i=0;i<m_size;++i)
-						m_data[i].~T();
+					for (i=0;i<this->m_size;++i)
+						this->m_data[i].~T();
 
-					baseClass::free(m_data);
-					m_data = new_data;
-					m_capacity = capacity;
+					baseClass::free(this->m_data);
+					this->m_data = new_data;
+					this->m_capacity = capacity;
 				}
 				else
-					::new (&m_data[m_size]) T(value);
+					::new (&this->m_data[this->m_size]) T(value);
 
-				++m_size;
+				++this->m_size;
 				return 0;
 			}
 #else
 			template <typename T1>
 			int insert_at(size_t pos, T1 value)
 			{
-				if (m_size >= m_capacity)
+				if (this->m_size >= this->m_capacity)
 				{
-					size_t capacity = (m_capacity == 0 ? 4 : m_capacity*2);
+					size_t capacity = (this->m_capacity == 0 ? 2 : this->m_capacity*2);
 					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
 						return ERROR_OUTOFMEMORY;
 
-					for (size_t i = 0;i<m_size;++i)
+					for (size_t i = 0;i<this->m_size;++i)
 					{
-						::new (&new_data[i + (i<pos ? 0 : 1)]) T(m_data[i]);
-						m_data[i].~T();
+						::new (&new_data[i + (i<pos ? 0 : 1)]) T(this->m_data[i]);
+						this->m_data[i].~T();
 					}
 
 					::new (&new_data[pos]) T(value);
 
-					baseClass::free(m_data);
-					m_data = new_data;
-					m_capacity = capacity;
+					baseClass::free(this->m_data);
+					this->m_data = new_data;
+					this->m_capacity = capacity;
 				}
-				else if (pos < m_size)
+				else if (pos < this->m_size)
 				{
 					// Shuffle the contents down the buffer
-					::new (&m_data[m_size]) T(m_data[m_size-1]);
-					for (size_t i = m_size-1; i > pos; --i)
-						m_data[i] = m_data[i-1];
+					::new (&this->m_data[this->m_size]) T(this->m_data[this->m_size-1]);
+					for (size_t i = this->m_size-1; i > pos; --i)
+						this->m_data[i] = this->m_data[i-1];
 
-					m_data[pos] = value;
+					this->m_data[pos] = value;
 				}
 				else
-					::new (&m_data[m_size]) T(value);
+					::new (&this->m_data[this->m_size]) T(value);
 
-				++m_size;
+				++this->m_size;
 				return 0;
 			}
 #endif
 			bool remove_at(size_t pos, T* pval)
 			{
-				if (m_data && pos < m_size)
+				if (this->m_data && pos < this->m_size)
 				{
 					if (pval)
-						*pval = m_data[pos];
+						*pval = this->m_data[pos];
 
-					for(--m_size;pos < m_size;++pos)
-						m_data[pos] = m_data[pos+1];
+					for(--this->m_size;pos < this->m_size;++pos)
+						this->m_data[pos] = this->m_data[pos+1];
 
-					m_data[m_size].~T();
+					this->m_data[this->m_size].~T();
 
 					return true;
 				}
 
 				return false;
 			}
-
-		private:
-			size_t m_capacity;
 		};
 
 		template <typename Allocator, typename T>
-		class VectorBase<Allocator,T,true> : public Allocating<Allocator>, public NonCopyable
+		class VectorPODBase<Allocator,T,true> : public VectorBase<Allocator,T>
 		{
-			typedef Allocating<Allocator> baseClass;
+			typedef VectorBase<Allocator,T> baseClass;
 
 		public:
-			VectorBase() : baseClass(), m_data(NULL), m_size(0), m_capacity(0)
+			VectorPODBase() : baseClass()
 			{}
 
-			VectorBase(AllocatorInstance& allocator) : baseClass(allocator), m_data(NULL), m_size(0), m_capacity(0)
+			VectorPODBase(AllocatorInstance& allocator) : baseClass(allocator)
 			{}
-
-			~VectorBase()
-			{
-				baseClass::free(m_data);
-			}
-
-			void clear()
-			{
-				m_size = 0;
-			}
 
 		protected:
-			T*     m_data;
-			size_t m_size;
-
 			template <typename T1>
 			int insert_at(size_t pos, T1 value)
 			{
-				if (m_size >= m_capacity)
+				if (this->m_size >= this->m_capacity)
 				{
-					size_t capacity = (m_capacity == 0 ? 4 : m_capacity*2);
+					size_t capacity = (this->m_capacity == 0 ? 2 : this->m_capacity*2);
 
 					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
 						return ERROR_OUTOFMEMORY;
 
-					if (pos < m_size)
-						memcpy(&new_data[pos + 1],&m_data[pos],(m_size - pos) * sizeof(T));
+					if (pos < this->m_size)
+						memcpy(&new_data[pos + 1],&this->m_data[pos],(this->m_size - pos) * sizeof(T));
 					else
-						pos = m_size;
+						pos = this->m_size;
 
 					if (pos > 0)
-						memcpy(new_data,&m_data,pos * sizeof(T));
+						memcpy(new_data,&this->m_data,pos * sizeof(T));
 
 					new_data[pos] = value;
 
-					baseClass::free(m_data);
-					m_data = new_data;
-					m_capacity = capacity;
+					baseClass::free(this->m_data);
+					this->m_data = new_data;
+					this->m_capacity = capacity;
 				}
 				else
 				{
-					if (pos < m_size)
-						memmove(&m_data[pos + 1],&m_data[pos],(m_size - pos) * sizeof(T));
+					if (pos < this->m_size)
+						memmove(&this->m_data[pos + 1],&this->m_data[pos],(this->m_size - pos) * sizeof(T));
 					else
-						pos = m_size;
+						pos = this->m_size;
 
-					m_data[pos] = value;
+					this->m_data[pos] = value;
 				}
-				++m_size;
+				++this->m_size;
 				return 0;
 			}
 
 			void remove_at(size_t pos, T* pval)
 			{
-				if (m_data && pos < m_size)
+				if (this->m_data && pos < this->m_size)
 				{
 					if (pval)
-						*pval = m_data[pos];
+						*pval = this->m_data[pos];
 
-					--m_size;
-					if (pos < m_size)
-						memmove(&m_data[pos],&m_data[pos+1],(m_size - pos) * sizeof(T));
+					--this->m_size;
+					if (pos < this->m_size)
+						memmove(&this->m_data[pos],&this->m_data[pos+1],(this->m_size - pos) * sizeof(T));
 				}
 			}
-
-		private:
-			size_t m_capacity;
 		};
 
 		template <typename T, typename Allocator>
-		class VectorImpl : public VectorBase<Allocator,T,is_pod<T>::value>
+		class VectorImpl : public VectorPODBase<Allocator,T,is_pod<T>::value>
 		{
-			typedef VectorBase<Allocator,T,is_pod<T>::value> baseClass;
+			typedef VectorPODBase<Allocator,T,is_pod<T>::value> baseClass;
 
 		public:
 			VectorImpl() : baseClass()
@@ -257,53 +303,17 @@ namespace OOBase
 			VectorImpl(AllocatorInstance& allocator) : baseClass(allocator)
 			{}
 
-			bool empty() const
-			{
-				return (this->m_size == 0);
-			}
-
-			size_t size() const
-			{
-				return this->m_size;
-			}
-
 		protected:
 			template <typename T1>
 			int push_back(T1 value)
 			{
-				return baseClass::insert_at(this->m_size,value);
+				return this->insert_at(this->m_size,value);
 			}
 
 			bool pop_back(T* pval = NULL)
 			{
-				baseClass::remove_at(this->m_size - 1,pval);
-				return !empty();
-			}
-
-			T* at(size_t pos)
-			{
-				return (pos >= this->m_size ? NULL : &this->m_data[pos]);
-			}
-
-			const T* at(size_t pos) const
-			{
-				return (pos >= this->m_size ? NULL : &this->m_data[pos]);
-			}
-
-			void next(size_t& pos) const
-			{
-				if (pos < this->m_size - 1)
-					++pos;
-				else
-					pos = size_t(-1);
-			}
-
-			void prev(size_t& pos) const
-			{
-				if (pos >= this->m_size)
-					pos = this->m_size-1;
-				else
-					--pos;
+				this->remove_at(this->m_size - 1,pval);
+				return !this->empty();
 			}
 		};
 	}
@@ -353,32 +363,32 @@ namespace OOBase
 		template <typename T1>
 		int push_back(T1 value)
 		{
-			return baseClass::push_back(value);
+			return this->push_back(value);
 		}
 
 		bool pop_back(T* pval = NULL)
 		{
-			return baseClass::pop_back(pval);
+			return this->pop_back(pval);
 		}
 
 		template <typename T1>
 		int insert(T1 value, const iterator& before)
 		{
 			assert(before.check(this));
-			return baseClass::insert_at(before.deref(),value);
+			return this->insert_at(before.deref(),value);
 		}
 
 		template <typename T1>
 		iterator insert(T1 value, const iterator& before, int& err)
 		{
-			err = baseClass::insert_at(before.deref(),value);
+			err = this->insert_at(before.deref(),value);
 			return (!err ? before : end());
 		}
 
 		void remove_at(iterator& iter)
 		{
 			assert(iter.check(this));
-			baseClass::remove_at(iter.deref(),NULL);
+			this->remove_at(iter.deref(),NULL);
 		}
 
 		template <typename T1>
@@ -394,12 +404,12 @@ namespace OOBase
 
 		T* at(size_t pos)
 		{
-			return baseClass::at(pos);
+			return this->at(pos);
 		}
 
 		const T* at(size_t pos) const
 		{
-			return baseClass::at(pos);
+			return this->at(pos);
 		}
 
 		T& operator [](size_t pos)
@@ -417,9 +427,14 @@ namespace OOBase
 			return iterator(this,0);
 		}
 
-		const_iterator begin() const
+		const_iterator cbegin() const
 		{
 			return const_iterator(this,0);
+		}
+
+		const_iterator begin() const
+		{
+			return cbegin();
 		}
 
 		iterator back()
@@ -437,9 +452,14 @@ namespace OOBase
 			return iterator(this,size_t(-1));
 		}
 
-		const_iterator end() const
+		const_iterator cend() const
 		{
 			return const_iterator(this,size_t(-1));
+		}
+
+		const_iterator end() const
+		{
+			return cend();
 		}
 	};
 }
