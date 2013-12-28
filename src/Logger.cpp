@@ -228,7 +228,7 @@ namespace
 				break;
 			}
 
-			OOBase::UniquePtr<TOKEN_USER,OOBase::DeleterInstance> ptrSIDProcess(allocator);
+			OOBase::TempPtr<TOKEN_USER> ptrSIDProcess(allocator);
 			PSID psid = NULL;
 			OOBase::Win32::SmartHandle hProcessToken;
 

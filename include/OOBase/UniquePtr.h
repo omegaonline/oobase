@@ -324,35 +324,6 @@ namespace OOBase
 		DeleterInstance m_deleter;
 	};
 
-	template <typename T, typename Deleter>
-	class UniquePtr<T[],Deleter> : public UniquePtr<T,Deleter>
-	{
-	public:
-		explicit UniquePtr(T* ptr) : UniquePtr<T,Deleter>(ptr)
-		{}
-
-		T& operator [](size_t i) const
-		{
-			return detail::UniquePtrBase<T>::m_ptr[i];
-		}
-	};
-
-	template <typename T>
-	class UniquePtr<T[],DeleterInstance> : public UniquePtr<T,DeleterInstance>
-	{
-	public:
-		UniquePtr(AllocatorInstance& alloc) : UniquePtr<T,DeleterInstance>(alloc)
-		{}
-
-		explicit UniquePtr(T* ptr, AllocatorInstance& alloc) : UniquePtr<T,DeleterInstance>(ptr,alloc)
-		{}
-
-		T& operator [](size_t i) const
-		{
-			return detail::UniquePtrBase<T>::m_ptr[i];
-		}
-	};
-
 	template <class T>
 	class TempPtr : public UniquePtr<T,DeleterInstance>
 	{
