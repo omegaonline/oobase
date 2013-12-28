@@ -373,7 +373,7 @@ namespace OOBase
 			return end();
 		}
 
-		const_iterator begin() const
+		const_iterator cbegin() const
 		{
 			for (size_t i=0;i<m_size;++i)
 			{
@@ -384,14 +384,24 @@ namespace OOBase
 			return end();
 		}
 
+		const_iterator begin() const
+		{
+			return cbegin();
+		}
+
 		iterator end()
 		{
 			return iterator(this,size_t(-1));
 		}
 
-		const_iterator end() const
+		const_iterator cend() const
 		{
 			return const_iterator(this,size_t(-1));
+		}
+
+		const_iterator end() const
+		{
+			return cend();
 		}
 
 	protected:

@@ -154,9 +154,14 @@ namespace OOBase
 			return iterator(this,0);
 		}
 
-		const_iterator begin() const
+		const_iterator cbegin() const
 		{
 			return const_iterator(this,0);
+		}
+
+		const_iterator begin() const
+		{
+			return cbegin();
 		}
 
 		iterator back()
@@ -174,9 +179,14 @@ namespace OOBase
 			return iterator(this,size_t(-1));
 		}
 
-		const_iterator end() const
+		const_iterator cend() const
 		{
 			return const_iterator(this,size_t(-1));
+		}
+
+		const_iterator end() const
+		{
+			return cend();
 		}
 
 	private:

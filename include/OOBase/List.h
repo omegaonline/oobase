@@ -140,7 +140,7 @@ namespace OOBase
 		template <typename T1>
 		const_iterator find(T1 value) const
 		{
-			const_iterator i = begin();
+			const_iterator i = cbegin();
 			for (;i != end();++i)
 			{
 				if (*i == value)
@@ -154,9 +154,14 @@ namespace OOBase
 			return iterator(this,m_head);
 		}
 
-		const_iterator begin() const
+		const_iterator cbegin() const
 		{
 			return const_iterator(this,m_head);
+		}
+
+		const_iterator begin() const
+		{
+			return cbegin();
 		}
 
 		iterator end()
@@ -164,9 +169,14 @@ namespace OOBase
 			return iterator(this,NULL);
 		}
 
-		const_iterator end() const
+		const_iterator cend() const
 		{
 			return const_iterator(this,NULL);
+		}
+
+		const_iterator end() const
+		{
+			return cend();
 		}
 
 	private:
