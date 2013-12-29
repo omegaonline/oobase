@@ -49,10 +49,10 @@ namespace OOBase
 	class Buffer : public RefCounted
 	{
 	public:
-		/// The factory function allocates the internal buffer to size \p cbSize using allocator \p allocator.
+		/// The factory function allocates the internal buffer to size \p cbSize.
 		static Buffer* create(size_t cbSize = 256, size_t align = 1);
 
-		/// The factory function allocates the internal buffer to size \p cbSize.
+		/// The factory function allocates the internal buffer to size \p cbSize using allocator \p allocator.
 		template <typename Allocator>
 		static Buffer* create(size_t cbSize = 256, size_t align = 1);
 
@@ -136,32 +136,6 @@ namespace OOBase
 					baseClass(allocator)
 			{}
 
-			static Buffer* create(size_t cbSize, size_t align)
-			{
-				void* buf = baseClass::allocate(cbSize,align);
-				if (!buf)
-					return NULL;
-
-				BufferImpl* buffer = NULL;
-				if (!baseClass::allocate_new(buffer,buf,cbSize,align))
-					baseClass::free(buf);
-
-				return buffer;
-			}
-
-			static Buffer* create(AllocatorInstance& allocator, size_t cbSize, size_t align)
-			{
-				void* buf = allocator.allocate(cbSize,align);
-				if (!buf)
-					return NULL;
-
-				BufferImpl* buffer = NULL;
-				if (!allocator.allocate_new(buffer,allocator,buf,cbSize,align))
-					allocator.free(buf);
-
-				return buffer;
-			}
-
 		private:
 			void destroy()
 			{
@@ -180,12 +154,20 @@ namespace OOBase
 template <typename Allocator>
 inline OOBase::Buffer* OOBase::Buffer::create(size_t cbSize, size_t align)
 {
-	return detail::BufferImpl<Allocator>::create(cbSize,align);
+	void* buf = Allocator::allocate(cbSize,align);
+	if (!buf)
+		return NULL;
+
+	detail::BufferImpl<Allocator>* buffer = NULL;
+	if (!Allocator::allocate_new(buffer,buf,cbSize,align))
+		Allocator::free(buf);
+
+	return buffer;
 }
 
 inline OOBase::Buffer* OOBase::Buffer::create(size_t cbSize, size_t align)
 {
-	return detail::BufferImpl<CrtAllocator>::create(cbSize,align);
+	return create<CrtAllocator>(cbSize,align);
 }
 
 #endif // OOBASE_BUFFER_H_INCLUDED_

@@ -72,15 +72,14 @@ int OOBase::CmdArgs::error(results_t& results, int retval, const char* key, cons
 int OOBase::CmdArgs::parse(results_t& results, int skip) const
 {
 	int argc = 0;
-	UniquePtr<LPWSTR,Win32::LocalAllocDeleter> argvw(CommandLineToArgvW(GetCommandLineW(),&argc));
+	UniquePtr<LPWSTR,Win32::LocalAllocator> argvw(CommandLineToArgvW(GetCommandLineW(),&argc));
 	if (!argvw)
 		return GetLastError();
 
-	TempPtr<const char*> argv(results.get_allocator());
+	StackArrayPtr<const char*> argv;
 	if (!argv.reallocate(argc))
 		return ERROR_OUTOFMEMORY;
 
-	Vector<LocalString,AllocatorInstance> vecArgv(results.get_allocator());
 	for (int i=0;i<argc;++i)
 	{
 		OOBase::LocalString s(results.get_allocator());

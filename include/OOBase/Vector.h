@@ -361,6 +361,22 @@ namespace OOBase
 		}
 
 		template <typename T1>
+		int resize(size_t new_size, T1 value)
+		{
+			int err = 0;
+			while (this->m_size < new_size && !err)
+				err = this->push_back(value);
+			while (this->m_size > new_size && !err)
+				err = this->pop_back(NULL);
+			return err;
+		}
+
+		int resize(size_t new_size)
+		{
+			return resize(new_size,T());
+		}
+
+		template <typename T1>
 		int push_back(T1 value)
 		{
 			return this->push_back(value);

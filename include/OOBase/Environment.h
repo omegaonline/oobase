@@ -24,7 +24,6 @@
 
 #include "String.h"
 #include "Table.h"
-#include "SmartPtr.h"
 
 namespace OOBase
 {
@@ -34,13 +33,13 @@ namespace OOBase
 
 		int get_current(env_table_t& tabEnv);
 		int substitute(env_table_t& tabEnv, const env_table_t& tabSrc);
-		int get_envp(const env_table_t& tabEnv, TempPtr<char*>& envp);
 
+		int get_envp(const env_table_t& tabEnv, StackArrayPtr<char*>& envp);
 		int getenv(const char* envvar, LocalString& strVal);
 
 #if defined(_WIN32)
 		int get_user(HANDLE hToken, env_table_t& tabEnv);
-		int get_block(const env_table_t& tabEnv, TempPtr<wchar_t>& env_block);
+		int get_block(const env_table_t& tabEnv, StackArrayPtr<wchar_t>& env_block);
 #endif
 	}
 }

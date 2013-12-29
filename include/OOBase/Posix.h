@@ -22,8 +22,7 @@
 #ifndef OOBASE_POSIX_H_INCLUDED_
 #define OOBASE_POSIX_H_INCLUDED_
 
-#include "UniquePtr.h"
-#include "SmartPtr.h"
+#include "Vector.h"
 
 #if defined(HAVE_UNISTD_H) || defined(DOXYGEN)
 
@@ -132,7 +131,8 @@ namespace OOBase
 
 			struct passwd*    m_pwd;
 			struct passwd     m_pwd2;
-			TempPtr<char>     m_data;
+
+			Vector<char,AllocatorInstance> m_data;
 		};
 	}
 }

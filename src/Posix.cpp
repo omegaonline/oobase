@@ -213,8 +213,7 @@ int OOBase::POSIX::close_file_descriptors(int* except, size_t ex_count)
 		 * work on anything with a proc filesystem i.e. a OSx/BSD */
 		/* walk proc, closing all descriptors from stderr onwards for our pid */
 
-		StackAllocator<128> allocator;
-		TempPtr<char> str(allocator);
+		StackArrayPtr<char> str;
 		int err = OOBase::temp_printf(str,"/proc/%u/fd/",getpid());
 		if (err != 0)
 			return err;
@@ -293,15 +292,15 @@ int OOBase::POSIX::random_chars(char* buffer, size_t len)
 OOBase::POSIX::pw_info::pw_info(AllocatorInstance& allocator, uid_t uid) : m_pwd(NULL), m_data(allocator)
 {
 	size_t size = get_size();
-	if (m_data.reallocate(size))
-		::getpwuid_r(uid,&m_pwd2,m_data.get(),size,&m_pwd);
+	if (m_data.resize(size) == 0)
+		::getpwuid_r(uid,&m_pwd2,m_data.data(),size,&m_pwd);
 }
 
 OOBase::POSIX::pw_info::pw_info(AllocatorInstance& allocator, const char* uname) : m_pwd(NULL), m_data(allocator)
 {
 	size_t size = get_size();
-	if (m_data.reallocate(size))
-		::getpwnam_r(uname,&m_pwd2,m_data.get(),size,&m_pwd);
+	if (m_data.resize(size) == 0)
+		::getpwnam_r(uname,&m_pwd2,m_data.data(),size,&m_pwd);
 }
 
 const size_t OOBase::POSIX::pw_info::get_size()

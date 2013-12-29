@@ -29,8 +29,8 @@ namespace OOBase
 {
 	namespace detail
 	{
-		template <typename T, typename T_Deleter, typename Allocator>
-		struct SmartPtrNode : public RefCounted
+		template <typename T, typename Allocator>
+		struct SmartPtrNode : public RefCounted, public Allocating<Allocator>
 		{
 			T* m_data;
 
@@ -39,56 +39,27 @@ namespace OOBase
 
 			~SmartPtrNode()
 			{
-				T_Deleter::destroy(m_data);
+				Allocating<Allocator>::delete_free(m_data);
 			}
 
 			static SmartPtrNode* create(T* data)
 			{
 				SmartPtrNode* p = NULL;
-				if (!Allocator::allocate_new(p,data))
+				if (!Allocating<Allocator>::allocate_new(p,data))
 					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 				return p;
 			}
 
 			virtual void destroy()
 			{
-				Allocator::delete_free(this);
+				Allocating<Allocator>::delete_this(this);
 			}
 		};
 
-		template <typename T>
-		struct SmartPtrNode<T,DeleterInstance,AllocatorInstance> : public RefCounted
+		template <typename T, typename Allocator>
+		class SmartPtrImpl : public SafeBoolean
 		{
-			T* m_data;
-			DeleterInstance m_deleter;
-
-			SmartPtrNode(AllocatorInstance& allocator, T* p) : m_data(p), m_deleter(allocator)
-			{}
-
-			~SmartPtrNode()
-			{
-				m_deleter.destroy(m_data);
-			}
-
-			static SmartPtrNode* create(AllocatorInstance& allocator, T* data)
-			{
-				SmartPtrNode* p = NULL;
-				if (!allocator.allocate_new(p,allocator,data))
-					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-				return p;
-			}
-
-			virtual void destroy()
-			{
-				DeleterInstance deleter(m_deleter);
-				deleter.destroy(this);
-			}
-		};
-
-		template <typename T, typename T_Deleter, typename Allocator>
-		class SmartPtrImpl
-		{
-			typedef SmartPtrNode<T,T_Deleter,Allocator> nodeType;
+			typedef SmartPtrNode<T,Allocator> nodeType;
 
 		public:
 			SmartPtrImpl(T* ptr) : m_node(NULL)
@@ -100,27 +71,22 @@ namespace OOBase
 			SmartPtrImpl(AllocatorInstance& allocator, T* ptr) : m_node(nodeType::create(allocator,ptr))
 			{}
 
-			operator T*()
+			T* get()
 			{
-				return value();
+				return (m_node ? m_node->m_data : NULL);
 			}
 
-			operator const T*() const
+			const T* get() const
 			{
-				return value();
+				return (m_node ? m_node->m_data : NULL);
+			}
+
+			operator bool_type() const
+			{
+				return get() != NULL ? &SafeBoolean::this_type_does_not_support_comparisons : NULL;
 			}
 
 		protected:
-			T* value()
-			{
-				return (m_node ? m_node->m_data : NULL);
-			}
-
-			const T* value() const
-			{
-				return (m_node ? m_node->m_data : NULL);
-			}
-
 			void assign(T* ptr)
 			{
 				if (ptr)
@@ -134,10 +100,10 @@ namespace OOBase
 		};
 	}
 
-	template <typename T, typename T_Deleter = Deleter<CrtAllocator> >
-	class SmartPtr : public detail::SmartPtrImpl<T,T_Deleter,typename T_Deleter::Allocator>
+	template <typename T, typename Allocator = CrtAllocator>
+	class SmartPtr : public detail::SmartPtrImpl<T,Allocator>
 	{
-		typedef detail::SmartPtrImpl<T,T_Deleter,typename T_Deleter::Allocator> baseClass;
+		typedef detail::SmartPtrImpl<T,Allocator> baseClass;
 
 	public:
 		SmartPtr(T* ptr = NULL) : baseClass(ptr)
@@ -152,25 +118,31 @@ namespace OOBase
 			return *this;
 		}
 
+		T& operator *()
+		{
+			return *baseClass::get();
+		}
+
+		const T& operator *() const
+		{
+			return *baseClass::get();
+		}
+
 		T* operator ->()
 		{
-			assert(baseClass::value() != NULL);
-
-			return baseClass::value();
+			return baseClass::get();
 		}
 
 		const T* operator ->() const
 		{
-			assert(baseClass::value() != NULL);
-
-			return baseClass::value();
+			return baseClass::get();
 		}
 	};
 
-	template <typename Destructor>
-	class SmartPtr<void,Destructor> : public detail::SmartPtrImpl<void,Destructor,typename Destructor::Allocator>
+	template <typename Allocator>
+	class SmartPtr<void,Allocator> : public detail::SmartPtrImpl<void,Allocator>
 	{
-		typedef detail::SmartPtrImpl<void,Destructor,typename Destructor::Allocator> baseClass;
+		typedef detail::SmartPtrImpl<void,Allocator> baseClass;
 
 	public:
 		SmartPtr(void* ptr = NULL) : baseClass(ptr)
@@ -183,18 +155,6 @@ namespace OOBase
 		{
 			baseClass::assign(p);
 			return *this;
-		}
-
-		template <typename T2>
-		operator T2*()
-		{
-			return static_cast<T2*>(baseClass::value());
-		}
-
-		template <typename T2>
-		operator const T2*() const
-		{
-			return static_cast<const T2*>(baseClass::value());
 		}
 	};
 }

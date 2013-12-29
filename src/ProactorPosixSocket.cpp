@@ -694,13 +694,13 @@ int PosixAsyncSocket::process_send_v(SendItem* item, bool& watch_again)
 	int err = 0;
 	if (first_buffer < item->m_count)
 	{
-		OOBase::StackArrayPtr<struct iovec,8> iovecs(item->m_count - first_buffer);
+		OOBase::StackArrayPtr<struct iovec> iovecs(item->m_count - first_buffer);
 		if (!iovecs)
 			err = ERROR_OUTOFMEMORY;
 		else
 		{
 			struct msghdr msg = {0};
-			msg.msg_iov = iovecs;
+			msg.msg_iov = iovecs.get();
 			msg.msg_iovlen = item->m_count - first_buffer;
 
 			for (size_t i=0;i<msg.msg_iovlen;++i)

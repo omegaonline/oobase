@@ -47,8 +47,6 @@ namespace OOBase
 			}
 		};
 
-		typedef Deleter<LocalAllocator> LocalAllocDeleter;
-
 		class SmartHandle : public NonCopyable
 		{
 		public:
@@ -177,14 +175,16 @@ namespace OOBase
 			} u;
 		};
 
-		int wchar_t_to_utf8(const wchar_t* wsz, OOBase::TempPtr<char>& ptrBuf);
-		int utf8_to_wchar_t(const char* sz, OOBase::TempPtr<wchar_t>& wsz);
+		int utf8_to_wchar_t(const char* sz, StackArrayPtr<wchar_t>& ptrBuf);
+		int utf8_to_wchar_t(const char* sz, StackArrayPtr<wchar_t,AllocatorInstance>& ptrBuf);
+
+		int wchar_t_to_utf8(const wchar_t* wsz, StackArrayPtr<char>& ptrBuf);
+		int wchar_t_to_utf8(const wchar_t* wsz, StackArrayPtr<char,AllocatorInstance>& ptrBuf);
 
 		template <typename S>
-		inline int wchar_t_to_utf8(const wchar_t* wsz, S& str, AllocatorInstance& allocator)
+		inline int wchar_t_to_utf8(const wchar_t* wsz, S& str)
 		{
-			OOBase::TempPtr<char> ptrBuf(allocator);
-
+			StackArrayPtr<char> ptrBuf;
 			int err = wchar_t_to_utf8(wsz,ptrBuf);
 			if (!err)
 				err = str.assign(ptrBuf.get());
@@ -193,8 +193,7 @@ namespace OOBase
 
 		inline int wchar_t_to_utf8(const wchar_t* wsz, OOBase::LocalString& str)
 		{
-			OOBase::TempPtr<char> ptrBuf(str.get_allocator());
-
+			StackArrayPtr<char,AllocatorInstance> ptrBuf(str.get_allocator());
 			int err = wchar_t_to_utf8(wsz,ptrBuf);
 			if (!err)
 				err = str.assign(ptrBuf.get());

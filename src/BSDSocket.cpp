@@ -461,12 +461,12 @@ int BSDSocket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 	if (!buffers)
 		return EINVAL;
 
-	OOBase::StackArrayPtr<struct iovec,8> iovecs(count);
+	OOBase::StackArrayPtr<struct iovec> iovecs(count);
 	if (!iovecs)
 		return ERROR_OUTOFMEMORY;
 
 	struct msghdr msg = {0};
-	msg.msg_iov = iovecs;
+	msg.msg_iov = iovecs.get();
 	msg.msg_iovlen = 0;
 
 	for (size_t i=0;i<count;++i)
@@ -674,12 +674,12 @@ int BSDSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 	if (!buffers)
 		return EINVAL;
 
-	OOBase::StackArrayPtr<struct iovec,8> iovecs(count);
+	OOBase::StackArrayPtr<struct iovec> iovecs(count);
 	if (!iovecs)
 		return ERROR_OUTOFMEMORY;
 
 	struct msghdr msg = {0};
-	msg.msg_iov = iovecs;
+	msg.msg_iov = iovecs.get();
 	msg.msg_iovlen = 0;
 
 	for (size_t i=0;i<count;++i)

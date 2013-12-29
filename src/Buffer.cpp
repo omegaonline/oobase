@@ -24,7 +24,15 @@
 
 OOBase::Buffer* OOBase::Buffer::create(AllocatorInstance& allocator, size_t cbSize, size_t align)
 {
-	return detail::BufferImpl<AllocatorInstance>::create(allocator,cbSize,align);
+	void* buf = allocator.allocate(cbSize,align);
+	if (!buf)
+		return NULL;
+
+	detail::BufferImpl<AllocatorInstance>* buffer = NULL;
+	if (!allocator.allocate_new(buffer,allocator,buf,cbSize,align))
+		allocator.free(buf);
+
+	return buffer;
 }
 
 OOBase::Buffer::Buffer(uint8_t* buffer, size_t cbSize, size_t align) :

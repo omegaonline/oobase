@@ -447,7 +447,9 @@ namespace OOBase
 	template <typename Allocator = CrtAllocator>
 	class Allocating : protected AllocateNewStatic<Allocating<Allocator> >
 	{
-	public:
+		friend class AllocateNewStatic<Allocating<Allocator> >;
+
+	protected:
 		Allocating()
 		{}
 
@@ -477,7 +479,15 @@ namespace OOBase
 	template <>
 	class Allocating<AllocatorInstance> : protected AllocateNew<Allocating<AllocatorInstance> >
 	{
+		friend class AllocateNew<Allocating<AllocatorInstance> >;
+
 	public:
+		AllocatorInstance& get_allocator() const
+		{
+			return m_allocator;
+		}
+
+	protected:
 		Allocating(AllocatorInstance& allocator) : m_allocator(allocator)
 		{}
 
@@ -489,11 +499,6 @@ namespace OOBase
 			if (&rhs != this)
 				 m_allocator = rhs.m_allocator;
 			return *this;
-		}
-
-		AllocatorInstance& get_allocator() const
-		{
-			return m_allocator;
 		}
 
 		void* allocate(size_t bytes, size_t align)
@@ -519,7 +524,6 @@ namespace OOBase
 			a.free(p);
 		}
 
-	protected:
 		AllocatorInstance& m_allocator;
 	};
 }

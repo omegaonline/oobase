@@ -23,8 +23,7 @@
 #define OOBASE_STRING_H_INCLUDED_
 
 #include "Memory.h"
-#include "UniquePtr.h"
-#include "SmartPtr.h"
+#include "Atomic.h"
 #include "StackAllocator.h"
 
 #include <string.h>
@@ -32,11 +31,13 @@
 namespace OOBase
 {
 #if defined(__GNUC__)
-	int temp_printf(TempPtr<char>& ptr, const char* format, ...) __attribute__((format(printf,2,3)));
+	int temp_printf(StackArrayPtr<char>& ptr, const char* format, ...) __attribute__((format(printf,2,3)));
 #else
-	int temp_printf(TempPtr<char>& ptr, const char* format, ...);
+	int temp_printf(StackArrayPtr<char>& ptr, const char* format, ...);
 #endif
-	int temp_vprintf(TempPtr<char>& ptr, const char* format, va_list args);
+
+	int temp_vprintf(StackArrayPtr<char>& ptr, const char* format, va_list args);
+	int temp_vprintf(StackArrayPtr<char,AllocatorInstance>& ptr, const char* format, va_list args);
 
 	namespace detail
 	{
@@ -91,8 +92,7 @@ namespace OOBase
 				va_list args;
 				va_start(args,format);
 
-				StackAllocator<128> allocator;
-				TempPtr<char> ptr(allocator);
+				StackArrayPtr<char> ptr;
 				int err = OOBase::temp_vprintf(ptr,format,args);
 
 				va_end(args);
@@ -204,7 +204,7 @@ namespace OOBase
 				va_list args;
 				va_start(args,format);
 
-				TempPtr<char> ptr(*m_node->m_allocator);
+				StackArrayPtr<char,AllocatorInstance> ptr(*m_node->m_allocator);
 				int err = OOBase::temp_vprintf(ptr,format,args);
 
 				va_end(args);

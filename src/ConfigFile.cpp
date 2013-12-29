@@ -284,8 +284,7 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 #if defined(_WIN32)
 int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, results_t& results)
 {
-	OOBase::StackAllocator<512> allocator;
-	OOBase::TempPtr<wchar_t> wszKey(allocator);
+	StackArrayPtr<wchar_t> wszKey;
 	LONG lRes = Win32::utf8_to_wchar_t(key_name,wszKey);
 	if (lRes != ERROR_SUCCESS)
 		return lRes;
@@ -319,7 +318,7 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 		String value,key;
 
 		szName[dwNameLen-1] = L'\0';
-		lRes = Win32::wchar_t_to_utf8(szName,key,allocator);
+		lRes = Win32::wchar_t_to_utf8(szName,key);
 		if (lRes)
 			break;
 
@@ -338,44 +337,41 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 		}
 		else if (dwType == REG_SZ || dwType == REG_EXPAND_SZ)
 		{
-			OOBase::TempPtr<wchar_t> ptrBuf(allocator);
-			if (!ptrBuf.reallocate(dwValLen/sizeof(wchar_t)))
+			if (!wszKey.reallocate(dwValLen/sizeof(wchar_t)))
 			{
 				lRes = ERROR_OUTOFMEMORY;
 				break;
 			}
 
 			dwNameLen = sizeof(szName)/sizeof(szName[0]);
-			lRes = RegEnumValueW(hKey,dwIndex,szName,&dwNameLen,NULL,NULL,(LPBYTE)ptrBuf.get(),&dwValLen);
+			lRes = RegEnumValueW(hKey,dwIndex,szName,&dwNameLen,NULL,NULL,(LPBYTE)wszKey.get(),&dwValLen);
 			if (lRes != ERROR_SUCCESS)
 				break;
 
 			if (dwType == REG_EXPAND_SZ)
 			{
-				OOBase::TempPtr<wchar_t> ptrEnv(allocator);
-				for (DWORD dwExpLen = 128;;)
+				StackArrayPtr<wchar_t> ptrEnv;
+				for (;;)
 				{
-					if (!ptrEnv.reallocate(dwExpLen))
+					DWORD dwNewLen = ExpandEnvironmentStringsW(wszKey.get(),ptrEnv.get(),ptrEnv.count());
+					if (!dwNewLen)
+						lRes = ::GetLastError();
+
+					if (dwNewLen < ptrEnv.count())
+						break;
+
+					if (!ptrEnv.reallocate(dwNewLen + 1))
 					{
 						lRes = ERROR_OUTOFMEMORY;
 						break;
 					}
-
-					DWORD dwNewLen = ExpandEnvironmentStringsW(ptrBuf.get(),ptrEnv.get(),dwExpLen);
-					if (!dwNewLen)
-						lRes = ::GetLastError();
-
-					if (dwNewLen < dwExpLen)
-						break;
-
-					dwExpLen = dwNewLen + 1;
 				}
 
 				if (lRes == ERROR_SUCCESS)
-					lRes = Win32::wchar_t_to_utf8(ptrEnv.get(),value,allocator);
+					lRes = Win32::wchar_t_to_utf8(ptrEnv.get(),value);
 			}
 			else
-				lRes = Win32::wchar_t_to_utf8(ptrBuf.get(),value,allocator);
+				lRes = Win32::wchar_t_to_utf8(wszKey.get(),value);
 
 			if (lRes)
 				break;

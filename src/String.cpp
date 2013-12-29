@@ -94,37 +94,50 @@ int OOBase::detail::strings::grow(size_t inc, StringNodeAllocator*& node)
 	return 0;
 }
 
-int OOBase::temp_printf(TempPtr<char>& ptr, const char* format, ...)
+namespace
+{
+	template <typename P>
+	int temp_vprintf_impl(P& ptr, const char* format, va_list args)
+	{
+		for (;;)
+		{
+			va_list args_copy;
+			va_copy(args_copy,args);
+
+			int r = vsnprintf_s(ptr.get(),ptr.count(),format,args_copy);
+
+			va_end(args_copy);
+
+			if (r == -1)
+				return errno;
+
+			if (static_cast<size_t>(r) < ptr.count())
+				return 0;
+
+			if (!ptr.reallocate(static_cast<size_t>(r) + 1))
+				return ERROR_OUTOFMEMORY;
+		}
+	}
+}
+
+int OOBase::temp_printf(StackArrayPtr<char>& ptr, const char* format, ...)
 {
 	va_list args;
 	va_start(args,format);
 
-	int err = OOBase::temp_vprintf(ptr,format,args);
+	int err = temp_vprintf_impl(ptr,format,args);
 
 	va_end(args);
 
 	return err;
 }
 
-int OOBase::temp_vprintf(TempPtr<char>& ptr, const char* format, va_list args)
+int OOBase::temp_vprintf(StackArrayPtr<char>& ptr, const char* format, va_list args)
 {
-	for (int r = 30;;)
-	{
-		size_t len = static_cast<size_t>(r) + 1;
-		if (!ptr.reallocate(len))
-			return ERROR_OUTOFMEMORY;
+	return temp_vprintf_impl(ptr,format,args);
+}
 
-		va_list args_copy;
-		va_copy(args_copy,args);
-
-		r = vsnprintf_s(ptr.get(),len,format,args_copy);
-
-		va_end(args_copy);
-
-		if (r == -1)
-			return errno;
-
-		if (static_cast<size_t>(r) < len)
-			return 0;
-	}
+int OOBase::temp_vprintf(StackArrayPtr<char,AllocatorInstance>& ptr, const char* format, va_list args)
+{
+	return temp_vprintf_impl(ptr,format,args);
 }
