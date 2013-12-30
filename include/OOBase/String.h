@@ -24,20 +24,20 @@
 
 #include "Memory.h"
 #include "Atomic.h"
-#include "StackAllocator.h"
+#include "ScopedArrayPtr.h"
 
 #include <string.h>
 
 namespace OOBase
 {
 #if defined(__GNUC__)
-	int temp_printf(StackArrayPtr<char>& ptr, const char* format, ...) __attribute__((format(printf,2,3)));
+	int temp_printf(ScopedArrayPtr<char>& ptr, const char* format, ...) __attribute__((format(printf,2,3)));
 #else
-	int temp_printf(StackArrayPtr<char>& ptr, const char* format, ...);
+	int temp_printf(ScopedArrayPtr<char>& ptr, const char* format, ...);
 #endif
 
-	int temp_vprintf(StackArrayPtr<char>& ptr, const char* format, va_list args);
-	int temp_vprintf(StackArrayPtr<char,AllocatorInstance>& ptr, const char* format, va_list args);
+	int temp_vprintf(ScopedArrayPtr<char>& ptr, const char* format, va_list args);
+	int temp_vprintf(ScopedArrayPtr<char,AllocatorInstance>& ptr, const char* format, va_list args);
 
 	namespace detail
 	{
@@ -92,7 +92,7 @@ namespace OOBase
 				va_list args;
 				va_start(args,format);
 
-				StackArrayPtr<char> ptr;
+				ScopedArrayPtr<char> ptr;
 				int err = OOBase::temp_vprintf(ptr,format,args);
 
 				va_end(args);
@@ -204,7 +204,7 @@ namespace OOBase
 				va_list args;
 				va_start(args,format);
 
-				StackArrayPtr<char,AllocatorInstance> ptr(*m_node->m_allocator);
+				ScopedArrayPtr<char,AllocatorInstance> ptr(*m_node->m_allocator);
 				int err = OOBase::temp_vprintf(ptr,format,args);
 
 				va_end(args);

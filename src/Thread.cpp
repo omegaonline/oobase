@@ -394,13 +394,12 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 {
 	for (size_t i=0;i<threads;++i)
 	{
-		SmartPtr<Thread> ptrThread;
-		bool f = false;
-
 		Thread* pThread = NULL;
+		bool f = false;
 		if (!CrtAllocator::allocate_new(pThread,f))
 			return ERROR_OUTOFMEMORY;
-		ptrThread = pThread;
+
+		SmartPtr<Thread> ptrThread(pThread);
 
 		Guard<Mutex> guard(m_lock);
 

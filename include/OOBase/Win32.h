@@ -175,16 +175,16 @@ namespace OOBase
 			} u;
 		};
 
-		int utf8_to_wchar_t(const char* sz, StackArrayPtr<wchar_t>& ptrBuf);
-		int utf8_to_wchar_t(const char* sz, StackArrayPtr<wchar_t,AllocatorInstance>& ptrBuf);
+		int utf8_to_wchar_t(const char* sz, ScopedArrayPtr<wchar_t>& ptrBuf);
+		int utf8_to_wchar_t(const char* sz, ScopedArrayPtr<wchar_t,AllocatorInstance>& ptrBuf);
 
-		int wchar_t_to_utf8(const wchar_t* wsz, StackArrayPtr<char>& ptrBuf);
-		int wchar_t_to_utf8(const wchar_t* wsz, StackArrayPtr<char,AllocatorInstance>& ptrBuf);
+		int wchar_t_to_utf8(const wchar_t* wsz, ScopedArrayPtr<char>& ptrBuf);
+		int wchar_t_to_utf8(const wchar_t* wsz, ScopedArrayPtr<char,AllocatorInstance>& ptrBuf);
 
 		template <typename S>
 		inline int wchar_t_to_utf8(const wchar_t* wsz, S& str)
 		{
-			StackArrayPtr<char> ptrBuf;
+			ScopedArrayPtr<char> ptrBuf;
 			int err = wchar_t_to_utf8(wsz,ptrBuf);
 			if (!err)
 				err = str.assign(ptrBuf.get());
@@ -193,7 +193,7 @@ namespace OOBase
 
 		inline int wchar_t_to_utf8(const wchar_t* wsz, OOBase::LocalString& str)
 		{
-			StackArrayPtr<char,AllocatorInstance> ptrBuf(str.get_allocator());
+			ScopedArrayPtr<char,AllocatorInstance> ptrBuf(str.get_allocator());
 			int err = wchar_t_to_utf8(wsz,ptrBuf);
 			if (!err)
 				err = str.assign(ptrBuf.get());

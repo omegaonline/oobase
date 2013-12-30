@@ -120,7 +120,7 @@ namespace
 	}
 }
 
-int OOBase::temp_printf(StackArrayPtr<char>& ptr, const char* format, ...)
+int OOBase::temp_printf(ScopedArrayPtr<char>& ptr, const char* format, ...)
 {
 	va_list args;
 	va_start(args,format);
@@ -132,12 +132,12 @@ int OOBase::temp_printf(StackArrayPtr<char>& ptr, const char* format, ...)
 	return err;
 }
 
-int OOBase::temp_vprintf(StackArrayPtr<char>& ptr, const char* format, va_list args)
+int OOBase::temp_vprintf(ScopedArrayPtr<char>& ptr, const char* format, va_list args)
 {
 	return temp_vprintf_impl(ptr,format,args);
 }
 
-int OOBase::temp_vprintf(StackArrayPtr<char,AllocatorInstance>& ptr, const char* format, va_list args)
+int OOBase::temp_vprintf(ScopedArrayPtr<char,AllocatorInstance>& ptr, const char* format, va_list args)
 {
 	return temp_vprintf_impl(ptr,format,args);
 }

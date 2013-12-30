@@ -76,7 +76,7 @@ int OOBase::CmdArgs::parse(results_t& results, int skip) const
 	if (!argvw)
 		return GetLastError();
 
-	StackArrayPtr<const char*> argv;
+	ScopedArrayPtr<const char*> argv;
 	if (!argv.reallocate(argc))
 		return ERROR_OUTOFMEMORY;
 

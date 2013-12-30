@@ -308,7 +308,7 @@ int Win32AsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Bu
 	if (count > DWORD(-1))
 		return ERROR_BUFFER_OVERFLOW;
 
-	OOBase::StackArrayPtr<WSABUF,8> wsa_bufs(count);
+	OOBase::ScopedArrayPtr<WSABUF,8> wsa_bufs(count);
 	if (!wsa_bufs)
 		return ERROR_OUTOFMEMORY;
 	

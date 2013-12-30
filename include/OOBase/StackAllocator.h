@@ -22,7 +22,7 @@
 #ifndef OOBASE_STACK_ALLOCATOR_H_INCLUDED_
 #define OOBASE_STACK_ALLOCATOR_H_INCLUDED_
 
-#include "Vector.h"
+#include "Memory.h"
 
 //#define OOBASE_STACK_ALLOC_CHECK 1
 
@@ -128,76 +128,6 @@ namespace OOBase
 
 	private:
 		char m_buffer[((SIZE / sizeof(index_t))+(SIZE % sizeof(index_t) ? 1 : 0)) * sizeof(index_t)];
-	};
-
-	template <typename T, typename Allocator = ThreadLocalAllocator, size_t COUNT = 256/sizeof(T)>
-	class StackArrayPtr : public NonCopyable, public SafeBoolean
-	{
-	public:
-		StackArrayPtr() : m_data(m_static), m_count(COUNT)
-		{}
-
-		StackArrayPtr(AllocatorInstance& alloc) : m_data(m_static), m_count(COUNT), m_dynamic(alloc)
-		{}
-
-		StackArrayPtr(size_t count) : m_data(m_static), m_count(COUNT)
-		{
-			reallocate(count);
-		}
-
-		StackArrayPtr(size_t count, AllocatorInstance& alloc) : m_data(m_static), m_count(COUNT), m_dynamic(alloc)
-		{
-			reallocate(count);
-		}
-
-		~StackArrayPtr()
-		{
-			static_assert(detail::is_pod<T>::value,"StackArrayPtr must be of a POD type");
-		}
-
-		bool reallocate(size_t count)
-		{
-			if (count > m_count)
-			{
-				if (m_dynamic.resize(count) == 0)
-				{
-					m_count = 0;
-					m_data = NULL;
-					return false;
-				}
-
-				m_data = m_dynamic.data();
-				m_count = count;
-			}
-			return true;
-		}
-
-		T* get() const
-		{
-			return m_data;
-		}
-
-		size_t size() const
-		{
-			return m_count * sizeof(T);
-		}
-
-		size_t count() const
-		{
-			return m_count;
-		}
-
-		operator bool_type() const
-		{
-			return m_data ? &SafeBoolean::this_type_does_not_support_comparisons : NULL;
-		}
-
-	private:
-		T           m_static[COUNT];
-		T*          m_data;
-		size_t      m_count;
-
-		Vector<T,Allocator> m_dynamic;
 	};
 }
 

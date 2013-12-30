@@ -22,8 +22,8 @@
 #include "../include/OOBase/Memory.h"
 #include "../include/OOBase/ConfigFile.h"
 #include "../include/OOBase/Buffer.h"
+#include "../include/OOBase/StackAllocator.h"
 #include "../include/OOBase/File.h"
-
 #include "../include/OOBase/Posix.h"
 #include "../include/OOBase/Win32.h"
 
@@ -284,7 +284,7 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 #if defined(_WIN32)
 int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, results_t& results)
 {
-	StackArrayPtr<wchar_t> wszKey;
+	ScopedArrayPtr<wchar_t> wszKey;
 	LONG lRes = Win32::utf8_to_wchar_t(key_name,wszKey);
 	if (lRes != ERROR_SUCCESS)
 		return lRes;
@@ -350,7 +350,7 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 
 			if (dwType == REG_EXPAND_SZ)
 			{
-				StackArrayPtr<wchar_t> ptrEnv;
+				ScopedArrayPtr<wchar_t> ptrEnv;
 				for (;;)
 				{
 					DWORD dwNewLen = ExpandEnvironmentStringsW(wszKey.get(),ptrEnv.get(),ptrEnv.count());

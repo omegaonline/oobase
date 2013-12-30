@@ -472,7 +472,7 @@ int WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 
 	void* TODO; // Make this loop until all buffers are read...
 
-	OOBase::StackArrayPtr<WSABUF,8> wsa_bufs(count);
+	OOBase::ScopedArrayPtr<WSABUF,8> wsa_bufs(count);
 	if (!wsa_bufs)
 		return ERROR_OUTOFMEMORY;
 

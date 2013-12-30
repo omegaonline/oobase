@@ -23,6 +23,7 @@
 #define OOBASE_MUTEX_H_INCLUDED_
 
 #include "Timeout.h"
+#include "StackAllocator.h"
 #include "Win32.h"
 
 namespace OOBase

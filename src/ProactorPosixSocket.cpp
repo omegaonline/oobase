@@ -694,7 +694,7 @@ int PosixAsyncSocket::process_send_v(SendItem* item, bool& watch_again)
 	int err = 0;
 	if (first_buffer < item->m_count)
 	{
-		OOBase::StackArrayPtr<struct iovec> iovecs(item->m_count - first_buffer);
+		OOBase::ScopedArrayPtr<struct iovec> iovecs(item->m_count - first_buffer);
 		if (!iovecs)
 			err = ERROR_OUTOFMEMORY;
 		else

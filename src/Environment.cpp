@@ -89,7 +89,7 @@ int OOBase::Environment::get_user(HANDLE hToken, env_table_t& tabEnv)
 	return err;
 }
 
-int OOBase::Environment::get_block(const env_table_t& tabEnv, StackArrayPtr<wchar_t>& ptr)
+int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wchar_t,AllocatorInstance>& ptr)
 {
 	if (tabEnv.empty())
 		return 0;
@@ -97,34 +97,51 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, StackArrayPtr<wcha
 	typedef SmartPtr<wchar_t,AllocatorInstance> temp_wchar_t;
 
 	AllocatorInstance& allocator = tabEnv.get_allocator();
-	StackArrayPtr<wchar_t,AllocatorInstance> key(allocator);
-	StackArrayPtr<wchar_t,AllocatorInstance> val(allocator);
 
 	// Copy and widen to UNICODE
 	size_t total_size = 0;
 	Table<temp_wchar_t,temp_wchar_t,AllocatorInstance> wenv(allocator);
 	for (size_t i=0;i<tabEnv.size();++i)
 	{
-		int err = Win32::utf8_to_wchar_t(tabEnv.key_at(i)->c_str(),key);
+		int err = Win32::utf8_to_wchar_t(tabEnv.key_at(i)->c_str(),ptr);
 		if (!err)
-			err = Win32::utf8_to_wchar_t(tabEnv.at(i)->c_str(),val);
-		if (!err)
-			err = wenv.insert(temp_wchar_t(allocator,key.get()),temp_wchar_t(allocator,val.get()));
+		{
+			// Include \0 and optionally '=' length
+			size_t len = wcslen(ptr.get());
+			total_size += len + 1;
+
+			temp_wchar_t key(static_cast<wchar_t*>(allocator.allocate(len+1,alignment_of<wchar_t>::value)),allocator);
+			if (!key)
+				err = ERROR_OUTOFMEMORY;
+			else
+			{
+				wcscpy(key.get(),ptr.get());
+
+				if (!(err = Win32::utf8_to_wchar_t(tabEnv.at(i)->c_str(),ptr)))
+				{
+					temp_wchar_t value;
+
+					len = wcslen(ptr.get());
+					if (len)
+					{
+						total_size += len + 1;
+
+						value = temp_wchar_t(static_cast<wchar_t*>(allocator.allocate(len+1,alignment_of<wchar_t>::value)),allocator);
+						if (!value)
+							err = ERROR_OUTOFMEMORY;
+						else
+							wcscpy(value.get(),ptr.get());
+					}
+
+					if (!err)
+						err = wenv.insert(key,value);
+				}
+			}
+		}
 		
 		if (err)
 			return err;
-
-		// Include \0 and optionally '=' length
-		total_size += wcslen(key.get()) + 1;
-		size_t val_len = wcslen(val.get());
-		if (val_len)
-			total_size += val_len + 1;
-
-		// Key and val now owned by SmartPtr in wenv
-		key.release();
-		val.release();
 	}
-	++total_size;
 
 	// Sort environment block - UNICODE, no-locale, case-insensitive (from MSDN)
 	wenv.sort(&env_sort);
@@ -136,13 +153,13 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, StackArrayPtr<wcha
 	wchar_t* pout = ptr.get();
 	for (size_t i=0;i<wenv.size();++i)
 	{
-		const wchar_t* p = *wenv.key_at(i);
+		const wchar_t* p = wenv.key_at(i)->get();
 
 		while (*p != L'\0')
 			*pout++ = *p++;
 
-		p = *wenv.at(i);
-		if (*p != L'\0')
+		p = wenv.at(i)->get();
+		if (p && *p != L'\0')
 		{
 			*pout++ = L'=';
 
@@ -162,8 +179,8 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, StackArrayPtr<wcha
 
 int OOBase::Environment::getenv(const char* envvar, LocalString& strValue)
 {
-	TempPtr<wchar_t> wenvvar(strValue.get_allocator());
-	TempPtr<wchar_t> wenv(strValue.get_allocator());
+	ScopedArrayPtr<wchar_t,AllocatorInstance> wenvvar(strValue.get_allocator());
+	ScopedArrayPtr<wchar_t,AllocatorInstance> wenv(strValue.get_allocator());
 
 	int err = Win32::utf8_to_wchar_t(envvar,wenvvar);
 	for (DWORD dwLen = 128;!err;)
@@ -181,7 +198,7 @@ int OOBase::Environment::getenv(const char* envvar, LocalString& strValue)
 					err = 0;
 			}
 			else if (dwActualLen > 1)
-				err = Win32::wchar_t_to_utf8(wenv.get(),strValue,strValue.get_allocator());
+				err = Win32::wchar_t_to_utf8(wenv.get(),strValue);
 			
 			break;
 		}
@@ -302,7 +319,7 @@ int OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tabS
 	return 0;
 }
 
-int OOBase::Environment::get_envp(const env_table_t& tabEnv, StackArrayPtr<char*>& ptr)
+int OOBase::Environment::get_envp(const env_table_t& tabEnv, ScopedArrayPtr<char*,AllocatorInstance>& ptr)
 {
 	if (tabEnv.empty())
 		return 0;
