@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2012 Rick Taylor
+// Copyright (C) 2013 Rick Taylor
 //
 // This file is part of OOBase, the Omega Online Base library.
 //
