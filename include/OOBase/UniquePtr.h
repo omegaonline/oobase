@@ -176,6 +176,30 @@ namespace OOBase
 	{
 		return u1.get() != u2.get();
 	}
+
+	template<class T1, class A1, class T2, class A2>
+	bool operator < (const UniquePtr<T1, A1>& u1, const UniquePtr<T2, A2>& u2)
+	{
+		return u1.get() < u2.get();
+	}
+
+	template<class T1, class A1, class T2, class A2>
+	bool operator <= (const UniquePtr<T1, A1>& u1, const UniquePtr<T2, A2>& u2)
+	{
+		return u1.get() <= u2.get();
+	}
+
+	template<class T1, class A1, class T2, class A2>
+	bool operator > (const UniquePtr<T1, A1>& u1, const UniquePtr<T2, A2>& u2)
+	{
+		return u1.get() > u2.get();
+	}
+
+	template<class T1, class A1, class T2, class A2>
+	bool operator >= (const UniquePtr<T1, A1>& u1, const UniquePtr<T2, A2>& u2)
+	{
+		return u1.get() >= u2.get();
+	}
 }
 
 #endif // OOBASE_UNIQUEPTR_H_INCLUDED_
