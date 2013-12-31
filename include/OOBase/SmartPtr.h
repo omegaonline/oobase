@@ -37,6 +37,9 @@ namespace OOBase
 			SmartPtrNode(T* p) : m_data(p)
 			{}
 
+			SmartPtrNode(T* p, AllocatorInstance& allocator) : Allocating<Allocator>(allocator), m_data(p)
+			{}
+
 			~SmartPtrNode()
 			{
 				Allocating<Allocator>::delete_free(m_data);
@@ -65,18 +68,26 @@ namespace OOBase
 			SmartPtrImpl(T* ptr) : m_node(NULL)
 			{
 				if (ptr)
-					m_node = nodeType::create(ptr);
+				{
+					nodeType* node = NULL;
+					if (!Allocator::allocate_new(node,ptr))
+						OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+					m_node = node;
+				}
 			}
 
-			SmartPtrImpl(AllocatorInstance& allocator, T* ptr) : m_node(nodeType::create(allocator,ptr))
-			{}
-
-			T* get()
+			SmartPtrImpl(T* ptr, AllocatorInstance& allocator) : m_node(NULL)
 			{
-				return (m_node ? m_node->m_data : NULL);
+				if (ptr)
+				{
+					nodeType* node = NULL;
+					if (!allocator.allocate_new(node,ptr,allocator))
+						OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+					m_node = node;
+				}
 			}
 
-			const T* get() const
+			T* get() const
 			{
 				return (m_node ? m_node->m_data : NULL);
 			}
@@ -84,15 +95,6 @@ namespace OOBase
 			operator bool_type() const
 			{
 				return get() != NULL ? &SafeBoolean::this_type_does_not_support_comparisons : NULL;
-			}
-
-		protected:
-			void assign(T* ptr)
-			{
-				if (ptr)
-					m_node = nodeType::create(ptr);
-				else
-					m_node = NULL;
 			}
 
 		private:
@@ -106,34 +108,21 @@ namespace OOBase
 		typedef detail::SmartPtrImpl<T,Allocator> baseClass;
 
 	public:
-		SmartPtr(T* ptr = NULL) : baseClass(ptr)
+		explicit SmartPtr(T* ptr = NULL) : baseClass(ptr)
 		{}
 
-		SmartPtr(AllocatorInstance& allocator, T* ptr = NULL) : baseClass(allocator,ptr)
+		explicit SmartPtr(T* ptr, AllocatorInstance& allocator) : baseClass(ptr,allocator)
 		{}
 
-		SmartPtr& operator = (T* p)
-		{
-			baseClass::assign(p);
-			return *this;
-		}
+		SmartPtr(AllocatorInstance& allocator) : baseClass(NULL,allocator)
+		{}
 
-		T& operator *()
+		T& operator *() const
 		{
 			return *baseClass::get();
 		}
 
-		const T& operator *() const
-		{
-			return *baseClass::get();
-		}
-
-		T* operator ->()
-		{
-			return baseClass::get();
-		}
-
-		const T* operator ->() const
+		T* operator ->() const
 		{
 			return baseClass::get();
 		}
@@ -145,18 +134,51 @@ namespace OOBase
 		typedef detail::SmartPtrImpl<void,Allocator> baseClass;
 
 	public:
-		SmartPtr(void* ptr = NULL) : baseClass(ptr)
+		explicit SmartPtr(void* ptr = NULL) : baseClass(ptr)
 		{}
 
-		SmartPtr(AllocatorInstance& allocator, void* ptr = NULL) : baseClass(allocator,ptr)
+		explicit SmartPtr(void* ptr, AllocatorInstance& allocator) : baseClass(ptr,allocator)
 		{}
 
-		SmartPtr& operator = (void* p)
-		{
-			baseClass::assign(p);
-			return *this;
-		}
+		SmartPtr(AllocatorInstance& allocator) : baseClass(NULL,allocator)
+		{}
 	};
+
+	template<class T1, class A1, class T2, class A2>
+	bool operator == (const SmartPtr<T1, A1>& u1, const SmartPtr<T2, A2>& u2)
+	{
+		return u1.get() == u2.get();
+	}
+
+	template<class T1, class A1, class T2, class A2>
+	bool operator != (const SmartPtr<T1, A1>& u1, const SmartPtr<T2, A2>& u2)
+	{
+		return u1.get() != u2.get();
+	}
+
+	template<class T1, class A1, class T2, class A2>
+	bool operator < (const SmartPtr<T1, A1>& u1, const SmartPtr<T2, A2>& u2)
+	{
+		return u1.get() < u2.get();
+	}
+
+	template<class T1, class A1, class T2, class A2>
+	bool operator <= (const SmartPtr<T1, A1>& u1, const SmartPtr<T2, A2>& u2)
+	{
+		return u1.get() <= u2.get();
+	}
+
+	template<class T1, class A1, class T2, class A2>
+	bool operator > (const SmartPtr<T1, A1>& u1, const SmartPtr<T2, A2>& u2)
+	{
+		return u1.get() > u2.get();
+	}
+
+	template<class T1, class A1, class T2, class A2>
+	bool operator >= (const SmartPtr<T1, A1>& u1, const SmartPtr<T2, A2>& u2)
+	{
+		return u1.get() >= u2.get();
+	}
 }
 
 #endif // OOBASE_SMARTPTR_H_INCLUDED_

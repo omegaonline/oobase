@@ -132,10 +132,10 @@ namespace OOBase
 		explicit UniquePtr(T* ptr = NULL) : baseClass(ptr)
 		{}
 
-		explicit UniquePtr(T* ptr, AllocatorInstance& alloc) : baseClass(ptr,alloc)
+		explicit UniquePtr(AllocatorInstance& alloc) : baseClass(NULL,alloc)
 		{}
 
-		UniquePtr(AllocatorInstance& alloc) : baseClass(NULL,alloc)
+		UniquePtr(T* ptr, AllocatorInstance& alloc) : baseClass(ptr,alloc)
 		{}
 
 		T& operator *() const
@@ -158,10 +158,10 @@ namespace OOBase
 		explicit UniquePtr(void* ptr = NULL) : baseClass(ptr)
 		{}
 
-		explicit UniquePtr(void* ptr, AllocatorInstance& alloc) : baseClass(ptr,alloc)
+		explicit UniquePtr(AllocatorInstance& alloc) : baseClass(NULL,alloc)
 		{}
 
-		UniquePtr(AllocatorInstance& alloc) : baseClass(NULL,alloc)
+		UniquePtr(void* ptr, AllocatorInstance& alloc) : baseClass(ptr,alloc)
 		{}
 	};
 
