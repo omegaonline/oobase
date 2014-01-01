@@ -83,7 +83,7 @@ namespace OOBase
 			return m_data;
 		}
 
-		T& operator [](size_t i) const
+		T& operator [](ptrdiff_t i) const
 		{
 			return m_data[i];
 		}

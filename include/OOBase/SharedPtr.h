@@ -201,9 +201,12 @@ namespace OOBase
 
 			void swap(SharedCount& other)
 			{
-				SharedCountBase* t = other.m_impl;
-				other.m_impl = m_impl;
-				m_impl = t;
+				OOBase::swap(m_impl,other.m_impl);
+			}
+
+			bool empty() const
+			{
+				return (m_impl == NULL);
 			}
 
 			size_t use_count() const
@@ -275,9 +278,7 @@ namespace OOBase
 
 			void swap(WeakCount& other)
 			{
-				SharedCountBase* t = other.m_impl;
-				other.m_impl = m_impl;
-				m_impl = t;
+				OOBase::swap(m_impl,other.m_impl);
 			}
 
 			size_t use_count() const
@@ -297,18 +298,18 @@ namespace OOBase
 
 		namespace shared
 		{
+			class template_friend;
+
 			// SFINAE
 			template <typename X, typename Y, typename T>
-			inline void enable_shared_from_this(const SharedPtr<X>& px, const Y* y, const EnableSharedFromThis<T>* pe)
-			{
-				pe->internal_accept_owner(px,const_cast<Y*>(y));
-			}
+			inline void enable_shared_from_this(const SharedPtr<X>& px, const Y* y, const EnableSharedFromThis<T>* pe);
+			inline void enable_shared_from_this(...) { }
 
-			inline void enable_shared_from_this(...)
+			template <typename A, typename B>
+			inline void assert_convertible()
 			{
+				(void)static_cast<A*>(static_cast<B*>(NULL));
 			}
-
-			class template_friend;
 		}
 	}
 
@@ -316,6 +317,7 @@ namespace OOBase
 	class SharedPtr : public SafeBoolean
 	{
 		friend class detail::shared::template_friend;
+		template <typename T1> friend class WeakPtr;
 
 	public:
 		SharedPtr() : m_ptr(NULL), m_sc()
@@ -331,11 +333,47 @@ namespace OOBase
 			}
 		}
 
-		template <typename Y>
-		SharedPtr& operator =(const SharedPtr<Y>& rhs)
+		SharedPtr(const SharedPtr& rhs) : m_ptr(rhs.m_ptr), m_sc(rhs.m_sc)
+		{}
+
+		template <typename T1>
+		SharedPtr(const SharedPtr<T1>& rhs) : m_ptr(rhs.m_ptr), m_sc(rhs.m_sc)
+		{
+			detail::shared::assert_convertible<T,T1>();
+		}
+
+		template <typename T1>
+		explicit SharedPtr(const WeakPtr<T1>& rhs) : m_ptr(NULL), m_sc(rhs.m_wc)
+		{
+			detail::shared::assert_convertible<T,T1>();
+
+			if (!m_sc.empty())
+				m_ptr = rhs.m_ptr;
+		}
+
+		SharedPtr& operator =(const SharedPtr& rhs)
 		{
 			SharedPtr<T>(rhs).swap(*this);
 			return *this;
+		}
+
+		template <typename T1>
+		SharedPtr& operator =(const SharedPtr<T1>& rhs)
+		{
+			detail::shared::assert_convertible<T,T1>();
+			SharedPtr<T>(rhs).swap(*this);
+			return *this;
+		}
+
+		void reset()
+		{
+			SharedPtr().swap(*this);
+		}
+
+		template <typename T1>
+		void reset(T1* p, AllocatorInstance& alloc)
+		{
+			SharedPtr(p,alloc).swap(*this);
 		}
 
 		T* get() const
@@ -358,16 +396,20 @@ namespace OOBase
 			return *m_ptr;
 		}
 
+		size_t use_count() const
+		{
+			return m_sc.use_count();
+		}
+
+		bool unique() const
+		{
+			return m_sc.use_count() == 1;
+		}
+
 		void swap(SharedPtr& other)
 		{
 			OOBase::swap(m_ptr,other.m_ptr);
 			m_sc.swap(other.m_sc);
-		}
-
-		template <typename Allocator>
-		static SharedPtr make(T* p)
-		{
-			return SharedPtr(p,static_cast<const Allocator*>(NULL));
 		}
 
 	private:
@@ -377,12 +419,87 @@ namespace OOBase
 		template <typename T1, typename Allocator>
 		SharedPtr(T1* p, const Allocator* a) : m_ptr(p)
 		{
+			detail::shared::assert_convertible<T,T1>();
 			if (p)
 			{
 				detail::SharedCount(a,p).swap(m_sc);
 				detail::shared::enable_shared_from_this(this,p,p);
 			}
 		}
+	};
+
+	template <typename T>
+	class WeakPtr
+	{
+		friend class detail::shared::template_friend;
+
+		template <typename T1> friend class SharedPtr;
+
+	public:
+		WeakPtr() : m_ptr(NULL), m_wc()
+		{}
+
+		// Default copy constructor, assignment and destructor are OK
+
+		template<class T1>
+		WeakPtr(const WeakPtr<T1>& rhs) : m_ptr(rhs.lock().get()), m_wc(rhs.m_wc)
+		{
+			detail::shared::assert_convertible<T,T1>();
+		}
+
+		template <class T1>
+		WeakPtr(const SharedPtr<T1>& rhs) : m_ptr(rhs.m_ptr), m_wc(rhs.m_sc)
+		{
+			detail::shared::assert_convertible<T,T1>();
+		}
+
+		template<class T1>
+		WeakPtr& operator = (const WeakPtr<T1>& rhs)
+		{
+			detail::shared::assert_convertible<T,T1>();
+			m_ptr = rhs.lock().get();
+			m_wc = rhs.m_wc;
+			return *this;
+		}
+
+		template<class T1>
+		WeakPtr& operator = (const SharedPtr<T1>& rhs)
+		{
+			detail::shared::assert_convertible<T,T1>();
+			m_ptr = rhs.m_ptr;
+			m_wc = rhs.m_sc;
+			return *this;
+		}
+
+		SharedPtr<T> lock() const
+		{
+			return SharedPtr<T>(*this);
+		}
+
+		bool expired() const
+		{
+			return m_wc.use_count() == 0;
+		}
+
+		void reset()
+		{
+			WeakPtr().swap(*this);
+		}
+
+		void swap(WeakPtr& rhs)
+		{
+			OOBase::swap(m_ptr,rhs.m_ptr);
+			m_wc.swap(rhs.m_wc);
+		}
+
+		size_t use_count() const
+		{
+			return m_wc.use_count();
+		}
+
+	private:
+		T*                m_ptr;
+		detail::WeakCount m_wc;
 	};
 
 	namespace detail
@@ -397,42 +514,94 @@ namespace OOBase
 				{
 					return SharedPtr<T>(p,a);
 				}
+
+				template <typename X, typename Y, typename T>
+				static void enable_shared_from_this(const SharedPtr<X>& px, const Y* y, const EnableSharedFromThis<T>* pe)
+				{
+					pe->internal_accept_owner(px,const_cast<Y*>(y));
+				}
 			};
+
+			template <typename X, typename Y, typename T>
+			void enable_shared_from_this(const SharedPtr<X>& px, const Y* y, const EnableSharedFromThis<T>* pe)
+			{
+				template_friend::enable_shared_from_this(px,y,pe);
+			}
 		}
 	}
 
+	template <typename T, typename T1>
+	inline SharedPtr<T> static_pointer_cast(const SharedPtr<T1>& rhs)
+	{
+		(void)static_cast<T*>(static_cast<T1*>(NULL));
+		return SharedPtr<T>(rhs,static_cast<T*>(rhs.get()));
+	}
+
+	template <typename T, typename T1>
+	inline SharedPtr<T> const_pointer_cast(const SharedPtr<T1>& rhs)
+	{
+		(void)const_cast<T*>(static_cast<T1*>(NULL));
+		return SharedPtr<T>(rhs,const_cast<T*>(rhs.get()));
+	}
+
+	template <typename T, typename T1>
+	inline SharedPtr<T> dynamic_pointer_cast(const SharedPtr<T1>& rhs)
+	{
+		(void)dynamic_cast<T*>(static_cast<T1*>(NULL));
+		return SharedPtr<T>(rhs,dynamic_cast<T*>(rhs.get()));
+	}
+
+	template <typename T, typename T1>
+	inline SharedPtr<T> reinterpret_pointer_cast(const SharedPtr<T1>& rhs)
+	{
+		(void)reinterpret_cast<T*>(static_cast<T1*>(NULL));
+		return SharedPtr<T>(rhs,reinterpret_cast<T*>(rhs.get()));
+	}
+
+	template <typename T>
+	inline void swap(SharedPtr<T>& a, SharedPtr<T>& b)
+	{
+		a.swap(b);
+	}
+
+	template <typename T>
+	inline void swap(WeakPtr<T>& a, WeakPtr<T>& b)
+	{
+		a.swap(b);
+	}
+
 	template<class T1, class T2>
-	bool operator == (const SharedPtr<T1>& s1, const SharedPtr<T2>& s2)
+	inline bool operator == (const SharedPtr<T1>& s1, const SharedPtr<T2>& s2)
 	{
 		return s1.get() == s2.get();
 	}
 
 	template<class T1, class T2>
-	bool operator != (const SharedPtr<T1>& s1, const SharedPtr<T2>& s2)
+	inline bool operator != (const SharedPtr<T1>& s1, const SharedPtr<T2>& s2)
 	{
 		return s1.get() != s2.get();
 	}
 
 	template<class T1, class T2>
-	bool operator < (const SharedPtr<T1>& s1, const SharedPtr<T2>& s2)
+	inline bool operator < (const SharedPtr<T1>& s1, const SharedPtr<T2>& s2)
 	{
 		return s1.get() < s2.get();
 	}
 
 	template<class T1, class T2>
-	bool operator <= (const SharedPtr<T1>& s1, const SharedPtr<T2>& s2)
+	inline bool operator <= (const SharedPtr<T1>& s1, const SharedPtr<T2>& s2)
 	{
 		return s1.get() <= s2.get();
 	}
 
 	template<class T1, class T2>
-	bool operator > (const SharedPtr<T1>& s1, const SharedPtr<T2>& s2)
+	inline bool operator > (const SharedPtr<T1>& s1, const SharedPtr<T2>& s2)
 	{
 		return s1.get() > s2.get();
 	}
 
 	template<class T1, class T2>
-	bool operator >= (const SharedPtr<T1>& s1, const SharedPtr<T2>& s2)
+	inline bool operator >= (const SharedPtr<T1>& s1, const SharedPtr<T2>& s2)
 	{
 		return s1.get() >= s2.get();
 	}
@@ -502,6 +671,8 @@ namespace OOBase
 	template <typename T>
 	class EnableSharedFromThis
 	{
+		friend class detail::shared::template_friend;
+
 	protected:
 		EnableSharedFromThis()
 		{}
@@ -523,16 +694,15 @@ namespace OOBase
 			return SharedPtr<const T>(m_weak_this);
 		}
 
-	public:
+	private:
+		mutable WeakPtr<T> m_weak_this;
+
 		template <typename X, typename Y>
 		void internal_accept_owner(const SharedPtr<X>& px, Y* y) const
 		{
 			if (m_weak_this.expired())
 				m_weak_this = SharedPtr<T>(px,y);
 		}
-
-	private:
-		mutable WeakPtr<T> m_weak_this;
 	};
 }
 

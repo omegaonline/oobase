@@ -24,7 +24,7 @@
 
 #include "Mutex.h"
 #include "List.h"
-#include "SmartPtr.h"
+#include "SharedPtr.h"
 
 namespace OOBase
 {
@@ -65,7 +65,7 @@ namespace OOBase
 
 	private:
 		mutable Mutex m_lock;
-		List<SmartPtr<Thread>,CrtAllocator> m_threads;
+		List<SharedPtr<Thread>,CrtAllocator> m_threads;
 	};
 }
 

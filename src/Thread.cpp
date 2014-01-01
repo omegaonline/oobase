@@ -394,17 +394,15 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 {
 	for (size_t i=0;i<threads;++i)
 	{
-		Thread* pThread = NULL;
 		bool f = false;
-		if (!CrtAllocator::allocate_new(pThread,f))
+		SharedPtr<Thread> ptrThread = allocate_shared<Thread,CrtAllocator>(f);
+		if (!ptrThread)
 			return ERROR_OUTOFMEMORY;
-
-		SmartPtr<Thread> ptrThread(pThread);
 
 		Guard<Mutex> guard(m_lock);
 
 		bool bAdd = true;
-		for (List<SmartPtr<Thread>,CrtAllocator>::iterator j = m_threads.begin();j != m_threads.end();++j)
+		for (List<SharedPtr<Thread>,CrtAllocator>::iterator j = m_threads.begin();j != m_threads.end();++j)
 		{
 			if (!(*j)->is_running())
 			{
@@ -423,7 +421,7 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 
 		guard.release();
 
-		int err = pThread->run(thread_fn,param);
+		int err = ptrThread->run(thread_fn,param);
 		if (err != 0)
 			return err;
 	}
@@ -435,7 +433,7 @@ void OOBase::ThreadPool::join()
 {
 	Guard<Mutex> guard(m_lock);
 
-	for (SmartPtr<Thread> ptrThread;!m_threads.pop_back(&ptrThread);)
+	for (SharedPtr<Thread> ptrThread;!m_threads.pop_back(&ptrThread);)
 	{
 		guard.release();
 
@@ -449,7 +447,7 @@ void OOBase::ThreadPool::abort()
 {
 	Guard<Mutex> guard(m_lock);
 
-	for (SmartPtr<Thread> ptrThread;!m_threads.pop_back(&ptrThread);)
+	for (SharedPtr<Thread> ptrThread;!m_threads.pop_back(&ptrThread);)
 	{
 		guard.release();
 
@@ -464,7 +462,7 @@ size_t OOBase::ThreadPool::number_running() const
 	Guard<Mutex> guard(m_lock);
 
 	size_t count = 0;
-	for (List<SmartPtr<Thread>,CrtAllocator>::const_iterator i=m_threads.begin();i != m_threads.end();++i)
+	for (List<SharedPtr<Thread>,CrtAllocator>::const_iterator i=m_threads.begin();i != m_threads.end();++i)
 	{
 		if ((*i)->is_running())
 			++count;
