@@ -21,12 +21,11 @@
 
 #include "config-base.h"
 
-#include "../include/OOBase/Memory.h"
+#include "../include/OOBase/Logger.h"
 #include "../include/OOBase/Once.h"
 #include "../include/OOBase/Mutex.h"
 #include "../include/OOBase/Win32Security.h"
 #include "../include/OOBase/String.h"
-#include "../include/OOBase/Logger.h"
 #include "../include/OOBase/Environment.h"
 #include "../include/OOBase/tr24731.h"
 

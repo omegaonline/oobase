@@ -19,7 +19,6 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Buffer.h"
 
 OOBase::Buffer* OOBase::Buffer::create(AllocatorInstance& allocator, size_t cbSize, size_t align)

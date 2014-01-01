@@ -28,23 +28,6 @@ namespace OOBase
 {
 	namespace detail
 	{
-		namespace Table
-		{
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable: 4610 4510)
-#endif
-			template <typename K, typename V>
-			struct PODCheck
-			{
-				K k;
-				V v;
-			};
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-		}
-
 		template <typename K, typename V, bool POD = false>
 		struct TableNode
 		{
@@ -94,10 +77,10 @@ namespace OOBase
 	}
 
 	template <typename K, typename V, typename Allocator = CrtAllocator>
-	class Table : public detail::VectorImpl<detail::TableNode<K,V,detail::is_pod<detail::Table::PODCheck<K,V> >::value>,Allocator>
+	class Table : public detail::VectorImpl<detail::TableNode<K,V,detail::is_pod<K>::value && detail::is_pod<V>::value>,Allocator>
 	{
-		typedef detail::TableNode<K,V,detail::is_pod<detail::Table::PODCheck<K,V> >::value> Node;
-		typedef detail::VectorImpl<detail::TableNode<K,V,detail::is_pod<detail::Table::PODCheck<K,V> >::value>,Allocator> baseClass;
+		typedef detail::TableNode<K,V,detail::is_pod<K>::value && detail::is_pod<V>::value> Node;
+		typedef detail::VectorImpl<detail::TableNode<K,V,detail::is_pod<K>::value && detail::is_pod<V>::value>,Allocator> baseClass;
 
 	public:
 		static const size_t npos = size_t(-1);

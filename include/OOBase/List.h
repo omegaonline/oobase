@@ -22,6 +22,7 @@
 #ifndef OOBASE_LIST_H_INCLUDED_
 #define OOBASE_LIST_H_INCLUDED_
 
+#include "Memory.h"
 #include "Iterator.h"
 
 namespace OOBase

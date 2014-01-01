@@ -19,7 +19,6 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Memory.h"
 #include "../include/OOBase/ConfigFile.h"
 #include "../include/OOBase/Buffer.h"
 #include "../include/OOBase/StackAllocator.h"

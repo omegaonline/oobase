@@ -19,10 +19,9 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Memory.h"
-#include "../include/OOBase/Thread.h"
-
 #include "ProactorWin32.h"
+
+#include "../include/OOBase/Thread.h"
 
 #if defined(_WIN32)
 

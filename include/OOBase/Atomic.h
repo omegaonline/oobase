@@ -22,7 +22,7 @@
 #ifndef OOBASE_ATOMIC_H_INCLUDED_
 #define OOBASE_ATOMIC_H_INCLUDED_
 
-#include "Memory.h"
+#include "Base.h"
 
 namespace OOBase
 {

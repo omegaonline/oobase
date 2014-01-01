@@ -19,10 +19,9 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Memory.h"
-#include "../include/OOBase/Destructor.h"
-
 #include "Win32Impl.h"
+
+#include "../include/OOBase/Destructor.h"
 
 #if defined(_WIN32)
 

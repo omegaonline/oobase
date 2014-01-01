@@ -19,12 +19,11 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "../include/OOBase/Server.h"
 #include "../include/OOBase/Logger.h"
-#include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Singleton.h"
 #include "../include/OOBase/String.h"
 #include "../include/OOBase/Posix.h"
-#include "../include/OOBase/Server.h"
 
 #include "Win32Impl.h"
 

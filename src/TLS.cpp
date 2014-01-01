@@ -19,7 +19,6 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Memory.h"
 #include "../include/OOBase/TLSSingleton.h"
 #include "../include/OOBase/Singleton.h"
 #include "../include/OOBase/HashTable.h"
