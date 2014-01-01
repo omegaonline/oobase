@@ -24,8 +24,8 @@
 
 #if defined(_WIN32)
 
-#include "SmartPtr.h"
 #include "Win32.h"
+#include "UniquePtr.h"
 
 #include <userenv.h>
 #include <lm.h>
@@ -90,9 +90,7 @@ namespace OOBase
 		class SIDDestructor
 		{
 		public:
-			typedef CrtAllocator Allocator;
-
-			static void destroy(PSID ptr)
+			static void free(PSID ptr)
 			{
 				FreeSid(ptr);
 			}
@@ -111,12 +109,12 @@ namespace OOBase
 
 			PSECURITY_DESCRIPTOR descriptor()
 			{
-				return m_psd;
+				return m_psd.get();
 			}
 
 		private:
-			SmartPtr<ACL,Win32::LocalAllocDeleter>  m_pACL;
-			SmartPtr<void,Win32::LocalAllocDeleter> m_psd;
+			SharedPtr<ACL>  m_pACL;
+			SharedPtr<SECURITY_DESCRIPTOR> m_psd;
 
 			void copy(PSECURITY_DESCRIPTOR other);
 		};
@@ -124,14 +122,14 @@ namespace OOBase
 		DWORD RestrictToken(HANDLE hToken, HANDLE* hNewToken);
 		DWORD SetTokenDefaultDACL(HANDLE hToken);
 		DWORD LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile);
-		DWORD GetNameFromToken(HANDLE hToken, TempPtr<wchar_t>& strUserName, TempPtr<wchar_t>& strDomainName);
-		DWORD GetLogonSID(HANDLE hToken, TempPtr<void>& pSIDLogon);
+		DWORD GetNameFromToken(HANDLE hToken, ScopedArrayPtr<wchar_t>& strUserName, ScopedArrayPtr<wchar_t>& strDomainName);
+		DWORD GetLogonSID(HANDLE hToken, UniquePtr<SID,AllocatorInstance>& pSIDLogon);
 		DWORD EnableUserAccessToDir(const wchar_t* pszPath, const TOKEN_USER* pUser);
 		bool MatchSids(ULONG count, PSID_AND_ATTRIBUTES pSids1, PSID_AND_ATTRIBUTES pSids2);
 		bool MatchPrivileges(ULONG count, PLUID_AND_ATTRIBUTES Privs1, PLUID_AND_ATTRIBUTES Privs2);
 
 		template <typename T>
-		DWORD GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls, TempPtr<T>& info)
+		DWORD GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls, UniquePtr<T,AllocatorInstance>& info)
 		{
 			DWORD dwLen = 0;
 			if (GetTokenInformation(hToken,cls,NULL,0,&dwLen))
@@ -163,7 +161,7 @@ namespace OOBase
 			return err;
 		}
 
-		DWORD StringToSID(const char* pszSID, SmartPtr<void,LocalAllocDeleter>& pSID);
+		DWORD StringToSID(const char* pszSID, UniquePtr<SID,AllocatorInstance>& pSID);
 	}
 }
 

@@ -24,7 +24,6 @@
 #include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Once.h"
 #include "../include/OOBase/Mutex.h"
-#include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/Win32Security.h"
 #include "../include/OOBase/String.h"
 #include "../include/OOBase/Logger.h"
@@ -203,8 +202,7 @@ namespace
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
-		OOBase::StackAllocator<512> allocator;
-		OOBase::TempPtr<wchar_t> wmsg(allocator);
+		OOBase::ScopedArrayPtr<wchar_t> wmsg;
 		OOBase::Win32::utf8_to_wchar_t(msg,wmsg);
 
 		if (m_hLog && priority != OOBase::Logger::Debug)
@@ -228,7 +226,8 @@ namespace
 				break;
 			}
 
-			OOBase::TempPtr<TOKEN_USER> ptrSIDProcess(allocator);
+			OOBase::StackAllocator<256> allocator;
+			OOBase::UniquePtr<TOKEN_USER,OOBase::AllocatorInstance> ptrSIDProcess(allocator);
 			PSID psid = NULL;
 			OOBase::Win32::SmartHandle hProcessToken;
 

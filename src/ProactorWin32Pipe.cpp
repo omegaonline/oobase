@@ -531,8 +531,7 @@ int InternalAcceptor::stop()
 
 int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, bool bFirst)
 {
-	OOBase::StackAllocator<256> allocator;
-	OOBase::TempPtr<wchar_t> wname(allocator);
+	OOBase::ScopedArrayPtr<wchar_t> wname;
 	int err = OOBase::Win32::utf8_to_wchar_t(m_pipe_name.c_str(),wname);
 	if (err)
 		return err;
@@ -755,7 +754,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const char* path, in
 	if (err)
 		return NULL;
 	
-	TempPtr<wchar_t> wname(allocator);
+	ScopedArrayPtr<wchar_t> wname;
 	err = Win32::utf8_to_wchar_t(strPipe.c_str(),wname);
 	if (err)
 		return NULL;
@@ -907,8 +906,7 @@ int InternalUniqueAcceptor::start()
 {
 	OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 
-	OOBase::StackAllocator<256> allocator;
-	OOBase::TempPtr<wchar_t> wname(allocator);
+	OOBase::ScopedArrayPtr<wchar_t> wname;
 	DWORD dwErr = OOBase::Win32::utf8_to_wchar_t(m_pipe_name.c_str(),wname);
 	if (dwErr)
 		return dwErr;
@@ -1078,7 +1076,8 @@ OOBase::Acceptor* OOBase::Proactor::accept_unique_pipe(void* param, accept_pipe_
 		return accept_unique_pipe(param,callback,path,err);
 
 	// Get the logon SID of the Token
-	SmartPtr<void,Win32::LocalAllocDeleter> ptrSIDLogon;
+	StackAllocator<256> allocator;
+	UniquePtr<SID,AllocatorInstance> ptrSIDLogon(allocator);
 	err = Win32::StringToSID(pszSID,ptrSIDLogon);
 	if (err)
 		return NULL;
@@ -1125,7 +1124,7 @@ OOBase::Acceptor* OOBase::Proactor::accept_unique_pipe(void* param, accept_pipe_
 	ea[1].grfInheritance = NO_INHERITANCE;
 	ea[1].Trustee.TrusteeForm = TRUSTEE_IS_SID;
 	ea[1].Trustee.TrusteeType = TRUSTEE_IS_USER;
-	ea[1].Trustee.ptstrName = (LPWSTR)ptrSIDLogon;
+	ea[1].Trustee.ptstrName = (LPWSTR)ptrSIDLogon.get();
 
 	// Deny all to NETWORK
 	ea[2].grfAccessPermissions = FILE_ALL_ACCESS;

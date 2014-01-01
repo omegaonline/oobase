@@ -19,8 +19,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../include/OOBase/Memory.h"
 #include "../include/OOBase/Win32Security.h"
+#include "../include/OOBase/StackAllocator.h"
 
 #if defined(_WIN32)
 
@@ -31,9 +31,7 @@ namespace
 	class NetApiDestructor
 	{
 	public:
-		typedef OOBase::CrtAllocator Allocator;
-
-		static void destroy(void* ptr)
+		static void free(void* ptr)
 		{
 			NetApiBufferFree(ptr);
 		}
@@ -48,13 +46,13 @@ OOBase::Win32::sec_descript_t::sec_descript_t(PSECURITY_DESCRIPTOR pSD)
 
 OOBase::Win32::sec_descript_t::sec_descript_t(const sec_descript_t& rhs)
 {
-	copy((PSECURITY_DESCRIPTOR)(static_cast<const void*>(rhs.m_psd)));
+	copy(rhs.m_psd.get());
 }
 
 OOBase::Win32::sec_descript_t& OOBase::Win32::sec_descript_t::operator = (const sec_descript_t& rhs)
 {
 	if (this != &rhs)
-		copy((PSECURITY_DESCRIPTOR)(static_cast<const void*>(rhs.m_psd)));
+		copy(rhs.m_psd.get());
 
 	return *this;
 }
@@ -72,7 +70,8 @@ void OOBase::Win32::sec_descript_t::copy(PSECURITY_DESCRIPTOR other)
 		OOBase_CallCriticalFailure("Invalid SECURITY_DESCRIPTOR");
 
 	DWORD dwLen = GetSecurityDescriptorLength(other);
-	SmartPtr<void,Win32::LocalAllocDeleter> ours = LocalAlloc(LPTR,dwLen);
+
+	SharedPtr<SECURITY_DESCRIPTOR> ours = make_shared<SECURITY_DESCRIPTOR,LocalAllocator>((SECURITY_DESCRIPTOR*)LocalAlloc(LPTR,dwLen));
 	if (!ours)
 		OOBase_CallCriticalFailure(GetLastError());
 
@@ -83,20 +82,20 @@ void OOBase::Win32::sec_descript_t::copy(PSECURITY_DESCRIPTOR other)
 
 	if (control & SE_SELF_RELATIVE)
 	{
-		memcpy(ours,other,dwLen);
+		memcpy(ours.get(),other,dwLen);
 		m_psd = ours;
 	}
 	else
 	{
-		if (MakeSelfRelativeSD(other,ours,&dwLen))
+		if (MakeSelfRelativeSD(other,ours.get(),&dwLen))
 			m_psd = ours;
 		else if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
 		{
-			ours = LocalAlloc(LPTR,dwLen);
+			ours = make_shared<SECURITY_DESCRIPTOR,LocalAllocator>((SECURITY_DESCRIPTOR*)LocalAlloc(LPTR,dwLen));
 			if (!ours)
 				OOBase_CallCriticalFailure(GetLastError());
 
-			if (!MakeSelfRelativeSD(other,ours,&dwLen))
+			if (!MakeSelfRelativeSD(other,ours.get(),&dwLen))
 				OOBase_CallCriticalFailure(GetLastError());
 
 			m_psd = ours;
@@ -111,42 +110,43 @@ DWORD OOBase::Win32::sec_descript_t::SetEntriesInAcl(ULONG cCountOfExplicitEntri
 	if (!m_psd)
 	{
 		// Create a new security descriptor
-		m_psd = (PSECURITY_DESCRIPTOR)LocalAlloc(LPTR,SECURITY_DESCRIPTOR_MIN_LENGTH);
+		m_psd = make_shared<SECURITY_DESCRIPTOR,LocalAllocator>((SECURITY_DESCRIPTOR*)LocalAlloc(LPTR,SECURITY_DESCRIPTOR_MIN_LENGTH));
 		if (!m_psd)
 			OOBase_CallCriticalFailure(GetLastError());
 
 		// Initialize a security descriptor.
-		if (!InitializeSecurityDescriptor((PSECURITY_DESCRIPTOR)m_psd,SECURITY_DESCRIPTOR_REVISION))
+		if (!InitializeSecurityDescriptor(m_psd.get(),SECURITY_DESCRIPTOR_REVISION))
 			OOBase_CallCriticalFailure(GetLastError());
 	}
 
 	PACL pACL = NULL;
-	DWORD dwErr = ::SetEntriesInAclW(cCountOfExplicitEntries,pListOfExplicitEntries,m_pACL,&pACL);
+	DWORD dwErr = ::SetEntriesInAclW(cCountOfExplicitEntries,pListOfExplicitEntries,m_pACL.get(),&pACL);
 	if (dwErr)
 		return dwErr;
 
-	if (pACL != m_pACL)
-		m_pACL = pACL;
+	if (pACL != m_pACL.get())
+		m_pACL = make_shared<ACL,LocalAllocator>(pACL);
 
 	// Add the ACL to the SD
-	if (!SetSecurityDescriptorDacl((PSECURITY_DESCRIPTOR)m_psd,TRUE,m_pACL,FALSE))
+	if (!SetSecurityDescriptorDacl(m_psd.get(),TRUE,m_pACL.get(),FALSE))
 		return GetLastError();
 
 	return ERROR_SUCCESS;
 }
 
-DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, TempPtr<wchar_t>& strUserName, TempPtr<wchar_t>& strDomainName)
+DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, ScopedArrayPtr<wchar_t>& strUserName, ScopedArrayPtr<wchar_t>& strDomainName)
 {
 	// Find out all about the user associated with hToken
-	TempPtr<TOKEN_USER> ptrUserInfo(strUserName.get_allocator());
+	StackAllocator<128> allocator;
+	UniquePtr<TOKEN_USER,AllocatorInstance> ptrUserInfo(allocator);
 	DWORD dwErr = GetTokenInfo(hToken,TokenUser,ptrUserInfo);
 	if (dwErr)
 		return dwErr;
 
 	SID_NAME_USE name_use;
-	DWORD dwUNameSize = 0;
-	DWORD dwDNameSize = 0;
-	LookupAccountSidW(NULL,ptrUserInfo->User.Sid,NULL,&dwUNameSize,NULL,&dwDNameSize,&name_use);
+	DWORD dwUNameSize = strUserName.count();
+	DWORD dwDNameSize = strDomainName.count();
+	LookupAccountSidW(NULL,ptrUserInfo->User.Sid,strUserName.get(),&dwUNameSize,strDomainName.get(),&dwDNameSize,&name_use);
 	if (dwUNameSize == 0)
 		return GetLastError();
 
@@ -168,8 +168,7 @@ DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, TempPtr<wchar_t>& strUserNa
 DWORD OOBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile)
 {
 	// Get the names associated with the user SID
-	StackAllocator<256> allocator;
-	TempPtr<wchar_t> strUserName(allocator),strDomainName(allocator);
+	ScopedArrayPtr<wchar_t> strUserName,strDomainName;
 	DWORD dwErr = GetNameFromToken(hToken,strUserName,strDomainName);
 	if (dwErr)
 		return dwErr;
@@ -203,10 +202,10 @@ DWORD OOBase::Win32::LoadUserProfileFromToken(HANDLE hToken, HANDLE& hProfile)
 	return ERROR_SUCCESS;
 }
 
-DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, TempPtr<void>& pSIDLogon)
+DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, UniquePtr<SID,AllocatorInstance>& pSIDLogon)
 {
 	// Get the logon SID of the Token
-	TempPtr<TOKEN_GROUPS> ptrGroups(pSIDLogon.get_allocator());
+	UniquePtr<TOKEN_GROUPS,AllocatorInstance> ptrGroups(pSIDLogon.get_allocator());
 	DWORD dwErr = GetTokenInfo(hToken,TokenGroups,ptrGroups);
 	if (dwErr)
 		return dwErr;
@@ -221,7 +220,8 @@ DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, TempPtr<void>& pSIDLogon)
 			{
 				DWORD dwLen = GetLengthSid(ptrGroups->Groups[dwIndex].Sid);
 
-				if (!pSIDLogon.reallocate(dwLen,16))
+				pSIDLogon.reset(static_cast<SID*>(pSIDLogon.get_allocator().allocate(dwLen,16)));
+				if (!pSIDLogon)
 					return ERROR_OUTOFMEMORY;
 
 				if (!CopySid(dwLen,pSIDLogon.get(),ptrGroups->Groups[dwIndex].Sid))
@@ -239,13 +239,13 @@ DWORD OOBase::Win32::SetTokenDefaultDACL(HANDLE hToken)
 {
 	// Get the current Default DACL
 	StackAllocator<256> allocator;
-	TempPtr<TOKEN_DEFAULT_DACL> ptrDef_dacl(allocator);
+	UniquePtr<TOKEN_DEFAULT_DACL,AllocatorInstance> ptrDef_dacl(allocator);
 	DWORD dwErr = GetTokenInfo(hToken,TokenDefaultDacl,ptrDef_dacl);
 	if (dwErr)
 		return dwErr;
 
 	// Get the logon SID of the Token
-	TempPtr<void> ptrSIDLogon(allocator);
+	UniquePtr<SID,AllocatorInstance> ptrSIDLogon(allocator);
 	dwErr = GetLogonSID(hToken,ptrSIDLogon);
 	if (dwErr)
 		return dwErr;
@@ -286,7 +286,7 @@ DWORD OOBase::Win32::EnableUserAccessToDir(const wchar_t* pszPath, const TOKEN_U
 	if (dwRes != ERROR_SUCCESS)
 		return dwRes;
 
-	UniquePtr<void,Win32::LocalAllocDeleter> ptrSD(pSD);
+	UniquePtr<void,Win32::LocalAllocator> ptrSD(pSD);
 
 	EXPLICIT_ACCESSW ea = {0};
 
@@ -303,7 +303,7 @@ DWORD OOBase::Win32::EnableUserAccessToDir(const wchar_t* pszPath, const TOKEN_U
 	if (dwRes != ERROR_SUCCESS)
 		return dwRes;
 
-	UniquePtr<ACL,Win32::LocalAllocDeleter> ptrACLNew(pACLNew);
+	UniquePtr<ACL,Win32::LocalAllocator> ptrACLNew(pACLNew);
 
 	return SetNamedSecurityInfoW(szPath,SE_FILE_OBJECT,DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,NULL,NULL,pACLNew,NULL);
 }
@@ -403,14 +403,15 @@ bool OOBase::Win32::MatchPrivileges(ULONG count, PLUID_AND_ATTRIBUTES Privs1, PL
 	return true;
 }
 
-DWORD OOBase::Win32::StringToSID(const char* pszSID, SmartPtr<void,LocalAllocDeleter>& pSID)
+DWORD OOBase::Win32::StringToSID(const char* pszSID, UniquePtr<SID,AllocatorInstance>& pSID)
 {
 	PSID pSID2 = NULL;
+
 	// Duff declaration in mingw 3.4.5
 	if (!ConvertStringSidToSidA((CHAR*)pszSID,&pSID2))
 		return GetLastError();
 
-	pSID = pSID2;
+	pSID.reset((SID*)pSID2);
 	return 0;
 }
 

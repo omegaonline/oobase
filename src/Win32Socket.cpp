@@ -472,7 +472,7 @@ int WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 
 	void* TODO; // Make this loop until all buffers are read...
 
-	OOBase::ScopedArrayPtr<WSABUF,8> wsa_bufs(count);
+	OOBase::ScopedArrayPtr<WSABUF> wsa_bufs(count);
 	if (!wsa_bufs)
 		return ERROR_OUTOFMEMORY;
 
@@ -500,7 +500,7 @@ int WinSocket::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 		return 0;
 
 	int err = 0;
-	DWORD dwWritten = send_i(wsa_bufs,actual_count,err,timeout);
+	DWORD dwWritten = send_i(wsa_bufs.get(),actual_count,err,timeout);
 
 	// Update buffers...
 	for (size_t idx = 0;dwWritten;++idx)
@@ -705,7 +705,7 @@ int WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 
 	void* TODO; // Make this loop until all buffers are read...
 
-	OOBase::StackArrayPtr<WSABUF,8> wsa_bufs(count);
+	OOBase::ScopedArrayPtr<WSABUF> wsa_bufs(count);
 	if (!wsa_bufs)
 		return ERROR_OUTOFMEMORY;
 
@@ -733,7 +733,7 @@ int WinSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 		return 0;
 
 	int err = 0;
-	DWORD dwRead = recv_i(wsa_bufs,actual_count,true,err,timeout);
+	DWORD dwRead = recv_i(wsa_bufs.get(),actual_count,true,err,timeout);
 
 	// Update buffers...
 	for (size_t idx = 0;dwRead;++idx)

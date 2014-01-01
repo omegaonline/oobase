@@ -141,6 +141,14 @@ namespace OOBase
 		{}
 	};
 
+	template <typename T>
+	inline void swap(T& a, T& b)
+	{
+		T c(a);
+		a = b;
+		b = c;
+	}
+
 	template <typename Derived>
 	class AllocateNewStatic
 	{

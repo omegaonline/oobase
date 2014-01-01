@@ -22,7 +22,7 @@
 #ifndef OOBASE_WIN32_H_INCLUDED_
 #define OOBASE_WIN32_H_INCLUDED_
 
-#include "SmartPtr.h"
+#include "SharedPtr.h"
 #include "String.h"
 #include "Timeout.h"
 

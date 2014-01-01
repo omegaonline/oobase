@@ -24,6 +24,7 @@
 
 #include "Mutex.h"
 #include "List.h"
+#include "SmartPtr.h"
 
 namespace OOBase
 {

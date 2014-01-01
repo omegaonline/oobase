@@ -21,7 +21,6 @@
 
 #include "config-base.h"
 
-#include "../include/OOBase/SmartPtr.h"
 #include "../include/OOBase/Posix.h"
 #include "../include/OOBase/Atomic.h"
 #include "../include/OOBase/tr24731.h"

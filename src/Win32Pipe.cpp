@@ -492,7 +492,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* path, int& err, const Timeou
 	if (err != 0)
 		return NULL;
 
-	OOBase::TempPtr<wchar_t> wname(allocator);
+	OOBase::ScopedArrayPtr<wchar_t> wname;
 	err = OOBase::Win32::utf8_to_wchar_t(pipe_name.c_str(),wname);
 	if (err)
 		return NULL;

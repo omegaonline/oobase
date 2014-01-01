@@ -758,7 +758,7 @@ void OOBase::Win32::condition_variable_t::broadcast()
 		LeaveCriticalSection(&m_waiters_lock);
 }
 
-int OOBase::Win32::wchar_t_to_utf8(const wchar_t* wsz, OOBase::TempPtr<char>& ptrBuf)
+int OOBase::Win32::wchar_t_to_utf8(const wchar_t* wsz, OOBase::ScopedArrayPtr<char>& ptrBuf)
 {
 	int len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,NULL,0,NULL,NULL);
 	if (len <= 0)
@@ -774,7 +774,7 @@ int OOBase::Win32::wchar_t_to_utf8(const wchar_t* wsz, OOBase::TempPtr<char>& pt
 	return ERROR_SUCCESS;
 }
 
-int OOBase::Win32::utf8_to_wchar_t(const char* sz, OOBase::TempPtr<wchar_t>& wsz)
+int OOBase::Win32::utf8_to_wchar_t(const char* sz, OOBase::ScopedArrayPtr<wchar_t>& wsz)
 {
 	int len = MultiByteToWideChar(CP_UTF8,0,sz,-1,NULL,0);
 	if (len <= 0)

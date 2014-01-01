@@ -83,6 +83,11 @@ namespace OOBase
 			return m_data;
 		}
 
+		T& operator [](size_t i) const
+		{
+			return m_data[i];
+		}
+
 		size_t size() const
 		{
 			return count() * sizeof(T);

@@ -22,6 +22,7 @@
 #include "../include/OOBase/Memory.h"
 #include "../include/OOBase/CmdArgs.h"
 #include "../include/OOBase/Win32.h"
+#include "../include/OOBase/UniquePtr.h"
 
 #if defined(_WIN32)
 #include <shellapi.h>

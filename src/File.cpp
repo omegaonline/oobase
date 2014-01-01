@@ -37,8 +37,7 @@ int OOBase::File::open(const char* filename, bool writeable)
 		return EINVAL;
 
 #if defined(_WIN32)
-	StackAllocator<512> allocator;
-	TempPtr<wchar_t> wname(allocator);
+	ScopedArrayPtr<wchar_t> wname;
 	int err = Win32::utf8_to_wchar_t(filename,wname);
 	if (err)
 		return err;

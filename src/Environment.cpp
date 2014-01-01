@@ -26,6 +26,7 @@
 
 #if defined(_WIN32)
 
+#include "../include/OOBase/SharedPtr.h"
 #include <userenv.h>
 
 namespace
@@ -56,7 +57,7 @@ namespace
 		return err;
 	}
 
-	bool env_sort(const OOBase::SmartPtr<wchar_t,OOBase::AllocatorInstance>& s1, const OOBase::SmartPtr<wchar_t,OOBase::AllocatorInstance>& s2)
+	bool env_sort(const OOBase::SharedPtr<wchar_t>& s1, const OOBase::SharedPtr<wchar_t>& s2)
 	{
 		return (_wcsicmp(s1.get(),s2.get()) < 0);
 	}
@@ -94,13 +95,14 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 	if (tabEnv.empty())
 		return 0;
 
-	typedef SmartPtr<wchar_t,AllocatorInstance> temp_wchar_t;
-
 	AllocatorInstance& allocator = tabEnv.get_allocator();
 
 	// Copy and widen to UNICODE
 	size_t total_size = 0;
+
+	typedef SharedPtr<wchar_t> temp_wchar_t;
 	Table<temp_wchar_t,temp_wchar_t,AllocatorInstance> wenv(allocator);
+
 	for (size_t i=0;i<tabEnv.size();++i)
 	{
 		int err = Win32::utf8_to_wchar_t(tabEnv.key_at(i)->c_str(),ptr);

@@ -308,7 +308,7 @@ int Win32AsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Bu
 	if (count > DWORD(-1))
 		return ERROR_BUFFER_OVERFLOW;
 
-	OOBase::ScopedArrayPtr<WSABUF,8> wsa_bufs(count);
+	OOBase::ScopedArrayPtr<WSABUF> wsa_bufs(count);
 	if (!wsa_bufs)
 		return ERROR_OUTOFMEMORY;
 	
@@ -363,7 +363,7 @@ int Win32AsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Bu
 	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(ov_buffers);
 	pOv->m_extras[3] = buf_count;
 
-	if (WSASend(m_hSocket,wsa_bufs,buf_count,NULL,0,pOv,NULL) == SOCKET_ERROR)
+	if (WSASend(m_hSocket,wsa_bufs.get(),buf_count,NULL,0,pOv,NULL) == SOCKET_ERROR)
 	{
 		err = GetLastError();
 		if (err == WSA_IO_PENDING)
