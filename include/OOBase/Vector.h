@@ -308,13 +308,13 @@ namespace OOBase
 			template <typename T1>
 			int push_back(T1 value)
 			{
-				return this->insert_at(this->m_size,value);
+				return baseClass::insert_at(this->m_size,value);
 			}
 
 			bool pop_back(T* pval = NULL)
 			{
-				this->remove_at(this->m_size - 1,pval);
-				return !this->empty();
+				baseClass::remove_at(this->m_size - 1,pval);
+				return !baseClass::empty();
 			}
 		};
 	}
@@ -366,9 +366,9 @@ namespace OOBase
 		{
 			int err = 0;
 			while (this->m_size < new_size && !err)
-				err = this->push_back(value);
+				err = baseClass::push_back(value);
 			while (this->m_size > new_size && !err)
-				err = this->pop_back(NULL);
+				err = baseClass::pop_back(NULL);
 			return err;
 		}
 
@@ -380,32 +380,32 @@ namespace OOBase
 		template <typename T1>
 		int push_back(T1 value)
 		{
-			return this->push_back(value);
+			return baseClass::push_back(value);
 		}
 
 		bool pop_back(T* pval = NULL)
 		{
-			return this->pop_back(pval);
+			return baseClass::pop_back(pval);
 		}
 
 		template <typename T1>
 		int insert(T1 value, const iterator& before)
 		{
 			assert(before.check(this));
-			return this->insert_at(before.deref(),value);
+			return baseClass::insert_at(before.deref(),value);
 		}
 
 		template <typename T1>
 		iterator insert(T1 value, const iterator& before, int& err)
 		{
-			err = this->insert_at(before.deref(),value);
+			err = baseClass::insert_at(before.deref(),value);
 			return (!err ? before : end());
 		}
 
 		void remove_at(iterator& iter)
 		{
 			assert(iter.check(this));
-			this->remove_at(iter.deref(),NULL);
+			baseClass::remove_at(iter.deref(),NULL);
 		}
 
 		template <typename T1>
@@ -421,12 +421,12 @@ namespace OOBase
 
 		T* at(size_t pos)
 		{
-			return this->at(pos);
+			return baseClass::at(pos);
 		}
 
 		const T* at(size_t pos) const
 		{
-			return this->at(pos);
+			return baseClass::at(pos);
 		}
 
 		T& operator [](size_t pos)

@@ -317,6 +317,8 @@ namespace OOBase
 	class SharedPtr : public SafeBoolean
 	{
 		friend class detail::shared::template_friend;
+
+		template <typename T1> friend class SharedPtr;
 		template <typename T1> friend class WeakPtr;
 
 	public:
@@ -338,6 +340,12 @@ namespace OOBase
 
 		template <typename T1>
 		SharedPtr(const SharedPtr<T1>& rhs) : m_ptr(rhs.m_ptr), m_sc(rhs.m_sc)
+		{
+			detail::shared::assert_convertible<T,T1>();
+		}
+
+		template <typename T1>
+		SharedPtr(const SharedPtr<T1>& rhs, T* p) : m_ptr(p), m_sc(rhs.m_sc)
 		{
 			detail::shared::assert_convertible<T,T1>();
 		}
@@ -434,6 +442,7 @@ namespace OOBase
 		friend class detail::shared::template_friend;
 
 		template <typename T1> friend class SharedPtr;
+		template <typename T1> friend class WeakPtr;
 
 	public:
 		WeakPtr() : m_ptr(NULL), m_wc()

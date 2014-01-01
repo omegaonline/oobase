@@ -175,11 +175,39 @@ namespace OOBase
 			} u;
 		};
 
-		int utf8_to_wchar_t(const char* sz, ScopedArrayPtr<wchar_t>& ptrBuf);
-		int utf8_to_wchar_t(const char* sz, ScopedArrayPtr<wchar_t,AllocatorInstance>& ptrBuf);
+		namespace detail
+		{
+			int wchar_t_to_utf8(const wchar_t* wsz, char* sz, int& len);
+			int utf8_to_wchar_t(const char* sz, wchar_t* wsz, int& len);
+		}
 
-		int wchar_t_to_utf8(const wchar_t* wsz, ScopedArrayPtr<char>& ptrBuf);
-		int wchar_t_to_utf8(const wchar_t* wsz, ScopedArrayPtr<char,AllocatorInstance>& ptrBuf);
+		template <typename A, size_t S>
+		int utf8_to_wchar_t(const char* sz, ScopedArrayPtr<wchar_t,A,S>& ptrBuf)
+		{
+			int len = ptrBuf.count();
+			int err = detail::utf8_to_wchar_t(sz,ptrBuf.get(),len);
+			if (!err)
+				return 0;
+
+			if (!ptrBuf.reallocate(len))
+				return ERROR_OUTOFMEMORY;
+
+			return detail::utf8_to_wchar_t(sz,ptrBuf.get(),len);
+		}
+
+		template <typename A, size_t S>
+		int wchar_t_to_utf8(const wchar_t* wsz, ScopedArrayPtr<char,A,S>& ptrBuf)
+		{
+			int len = ptrBuf.count();
+			int err = detail::wchar_t_to_utf8(wsz,ptrBuf.get(),len);
+			if (!err)
+				return 0;
+
+			if (!ptrBuf.reallocate(len))
+				return ERROR_OUTOFMEMORY;
+
+			return detail::wchar_t_to_utf8(wsz,ptrBuf.get(),len);
+		}
 
 		template <typename S>
 		inline int wchar_t_to_utf8(const wchar_t* wsz, S& str)

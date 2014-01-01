@@ -757,36 +757,28 @@ void OOBase::Win32::condition_variable_t::broadcast()
 		LeaveCriticalSection(&m_waiters_lock);
 }
 
-int OOBase::Win32::wchar_t_to_utf8(const wchar_t* wsz, OOBase::ScopedArrayPtr<char>& ptrBuf)
+int OOBase::Win32::detail::wchar_t_to_utf8(const wchar_t* wsz, char* sz, int& len)
 {
-	int len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,NULL,0,NULL,NULL);
-	if (len <= 0)
+	int len2 = WideCharToMultiByte(CP_UTF8,0,wsz,-1,sz,len,NULL,NULL);
+	if (len2 <= 0 && GetLastError() != ERROR_INSUFFICIENT_BUFFER)
 		return GetLastError();
+	else if (len2 < len)
+		return 0;
 
-	if (!ptrBuf.reallocate(len))
-		return ERROR_OUTOFMEMORY;
-
-	len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,ptrBuf.get(),len,NULL,NULL);
-	if (len <= 0)
-		return GetLastError();
-
-	return ERROR_SUCCESS;
+	len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,NULL,0,NULL,NULL);
+	return GetLastError();
 }
 
-int OOBase::Win32::utf8_to_wchar_t(const char* sz, OOBase::ScopedArrayPtr<wchar_t>& wsz)
+int OOBase::Win32::detail::utf8_to_wchar_t(const char* sz, wchar_t* wsz, int& len)
 {
-	int len = MultiByteToWideChar(CP_UTF8,0,sz,-1,NULL,0);
-	if (len <= 0)
+	int len2 = MultiByteToWideChar(CP_UTF8,0,sz,-1,wsz,len);
+	if (len2 <= 0 && GetLastError() != ERROR_INSUFFICIENT_BUFFER)
 		return GetLastError();
+	else if (len2 < len)
+		return 0;
 	
-	if (!wsz.reallocate(len))
-		return ERROR_OUTOFMEMORY;
-
-	len = MultiByteToWideChar(CP_UTF8,0,sz,-1,wsz.get(),len);
-	if (len <= 0)
-		return GetLastError();
-
-	return ERROR_SUCCESS;
+	len = MultiByteToWideChar(CP_UTF8,0,sz,-1,NULL,0);
+	return GetLastError();
 }
 
 #if 0
