@@ -197,7 +197,8 @@ namespace
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
-		OOBase::ScopedArrayPtr<wchar_t> wmsg;
+		OOBase::StackAllocator<512> allocator;
+		OOBase::ScopedArrayPtr<wchar_t,OOBase::AllocatorInstance> wmsg(allocator);
 		OOBase::Win32::utf8_to_wchar_t(msg,wmsg);
 
 		if (m_hLog && priority != OOBase::Logger::Debug)
@@ -221,7 +222,6 @@ namespace
 				break;
 			}
 
-			OOBase::StackAllocator<256> allocator;
 			OOBase::UniquePtr<TOKEN_USER,OOBase::AllocatorInstance> ptrSIDProcess(allocator);
 			PSID psid = NULL;
 			OOBase::Win32::SmartHandle hProcessToken;

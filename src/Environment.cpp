@@ -19,6 +19,10 @@
 //
 ///////////////////////////////////////////////////////////////////////////////////
 
+#if defined(_MSC_VER)
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include "../include/OOBase/Environment.h"
 #include "../include/OOBase/Win32.h"
 
@@ -120,7 +124,8 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 			{
 				wcscpy(key.get(),ptr.get());
 
-				if (!(err = Win32::utf8_to_wchar_t(tabEnv.at(i)->c_str(),ptr)))
+				err = Win32::utf8_to_wchar_t(tabEnv.at(i)->c_str(),ptr);
+				if (!err)
 				{
 					temp_wchar_t value;
 
