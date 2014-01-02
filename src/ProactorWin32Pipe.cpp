@@ -746,16 +746,13 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::attach(HANDLE hPipe, int& er
 
 OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const char* path, int& err, const Timeout& timeout)
 {
-	StackAllocator<256> allocator;
-	LocalString strPipe(allocator);
-	err = strPipe.assign("\\\\.\\pipe\\");
-	if (!err)
-		err = strPipe.append(path);
+	ScopedArrayPtr<char> strPipe;
+	err = temp_printf(strPipe,"\\\\.\\pipe\\%s",path);
 	if (err)
 		return NULL;
 	
 	ScopedArrayPtr<wchar_t> wname;
-	err = Win32::utf8_to_wchar_t(strPipe.c_str(),wname);
+	err = Win32::utf8_to_wchar_t(strPipe.get(),wname);
 	if (err)
 		return NULL;
 

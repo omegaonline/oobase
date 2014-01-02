@@ -289,32 +289,48 @@ int OOBase::POSIX::random_chars(char* buffer, size_t len)
 	return 0;
 }
 
-OOBase::POSIX::pw_info::pw_info(AllocatorInstance& allocator, uid_t uid) : m_pwd(NULL), m_data(allocator)
+OOBase::POSIX::pw_info::pw_info(uid_t uid) : m_pwd(NULL)
 {
 	size_t size = get_size();
-	if (m_data.resize(size) == 0)
-		::getpwuid_r(uid,&m_pwd2,m_data.data(),size,&m_pwd);
+	if (!m_data.reallocate(size))
+		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+
+	int err = 0;
+	do
+	{
+		err = ::getpwuid_r(uid,&m_pwd2,m_data.get(),m_data.size(),&m_pwd);
+	} while (err == EINTR);
+
+	if (err)
+		errno = err;
 }
 
-OOBase::POSIX::pw_info::pw_info(AllocatorInstance& allocator, const char* uname) : m_pwd(NULL), m_data(allocator)
+OOBase::POSIX::pw_info::pw_info(const char* uname) : m_pwd(NULL)
 {
 	size_t size = get_size();
-	if (m_data.resize(size) == 0)
-		::getpwnam_r(uname,&m_pwd2,m_data.data(),size,&m_pwd);
+	if (!m_data.reallocate(size))
+		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+
+	int err = 0;
+	do
+	{
+		err = ::getpwnam_r(uname,&m_pwd2,m_data.get(),m_data.size(),&m_pwd);
+	} while (err == EINTR);
+
+	if (err)
+		errno = err;
 }
 
 const size_t OOBase::POSIX::pw_info::get_size()
 {
-#if defined(_SC_GETPW_R_SIZE_MAX)
-	long buf_len = sysconf(_SC_GETPW_R_SIZE_MAX);
-#else
-	long buf_len = 0;
-#endif
-
 	// _SC_GETPW_R_SIZE_MAX is defined on Mac OS X. However,
 	// sysconf(_SC_GETPW_R_SIZE_MAX) returns an error. Therefore, the
 	// constant is used as below when error was returned.
-	return (buf_len <= 0 ? 1024 : buf_len);
+	long buf_len = sysconf(_SC_GETPW_R_SIZE_MAX);
+	if (buf_len <= 0)
+		buf_len = 1024;
+
+	return buf_len;
 }
 
 #endif

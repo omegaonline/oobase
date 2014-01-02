@@ -22,7 +22,7 @@
 #ifndef OOBASE_POSIX_H_INCLUDED_
 #define OOBASE_POSIX_H_INCLUDED_
 
-#include "Vector.h"
+#include "ScopedArrayPtr.h"
 
 #if defined(HAVE_UNISTD_H) || defined(DOXYGEN)
 
@@ -110,20 +110,25 @@ namespace OOBase
 
 		int socketpair(int type, SmartFD fds[2]);
 
-		class pw_info : public NonCopyable
+		class pw_info : public NonCopyable, public SafeBoolean
 		{
 		public:
-			pw_info(AllocatorInstance& allocator, uid_t uid);
-			pw_info(AllocatorInstance& allocator, const char* uname);
+			pw_info(uid_t uid);
+			pw_info(const char* uname);
 
-			inline struct passwd* operator ->()
+			const struct passwd* operator ->() const
 			{
 				return m_pwd;
 			}
 
-			inline bool operator !() const
+			const struct passwd& operator *() const
 			{
-				return (m_pwd == NULL);
+				return *m_pwd;
+			}
+
+			operator bool_type() const
+			{
+				return m_pwd != NULL ? &SafeBoolean::this_type_does_not_support_comparisons : NULL;
 			}
 
 		private:
@@ -132,7 +137,7 @@ namespace OOBase
 			struct passwd*    m_pwd;
 			struct passwd     m_pwd2;
 
-			Vector<char,AllocatorInstance> m_data;
+			ScopedArrayPtr<char,CrtAllocator,1024> m_data;
 		};
 	}
 }

@@ -26,7 +26,9 @@
 
 #if defined(_WIN32)
 
+#include "../include/OOBase/StackAllocator.h"
 #include "../include/OOBase/SharedPtr.h"
+
 #include <userenv.h>
 
 namespace
@@ -36,16 +38,16 @@ namespace
 		int err = 0;
 		for (const wchar_t* e=env;!err && e != NULL && *e != L'\0';e += wcslen(e)+1)
 		{
-			OOBase::LocalString str(tabEnv.get_allocator());
+			OOBase::String str;
 			err = OOBase::Win32::wchar_t_to_utf8(e,str);
 			if (!err)
 			{
 				size_t eq = str.find('=');
-				if (eq == OOBase::LocalString::npos)
-					err = tabEnv.insert(str,OOBase::LocalString(tabEnv.get_allocator()));
+				if (eq == OOBase::String::npos)
+					err = tabEnv.insert(str,OOBase::String());
 				else
 				{
-					OOBase::LocalString strLeft(tabEnv.get_allocator()),strRight(tabEnv.get_allocator());
+					OOBase::String strLeft,strRight;
 					err = strLeft.assign(str.c_str(),eq);
 					if (!err)
 						err = strRight.assign(str.c_str()+eq+1);
@@ -90,19 +92,18 @@ int OOBase::Environment::get_user(HANDLE hToken, env_table_t& tabEnv)
 	return err;
 }
 
-int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wchar_t,AllocatorInstance>& ptr)
+int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wchar_t>& ptr)
 {
 	if (tabEnv.empty())
 		return 0;
 
-	AllocatorInstance& allocator = tabEnv.get_allocator();
-
 	// Copy and widen to UNICODE
-	size_t total_size = 0;
-
 	typedef SharedPtr<wchar_t> temp_wchar_t;
+
+	StackAllocator<1024> allocator;
 	Table<temp_wchar_t,temp_wchar_t,AllocatorInstance> wenv(allocator);
 
+	size_t total_size = 0;
 	for (size_t i=0;i<tabEnv.size();++i)
 	{
 		int err = Win32::utf8_to_wchar_t(tabEnv.key_at(i)->c_str(),ptr);
@@ -179,10 +180,10 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 	return 0;
 }
 
-int OOBase::Environment::getenv(const char* envvar, LocalString& strValue)
+int OOBase::Environment::getenv(const char* envvar, ScopedArrayPtr<char>& strValue)
 {
-	ScopedArrayPtr<wchar_t,AllocatorInstance> wenvvar(strValue.get_allocator());
-	ScopedArrayPtr<wchar_t,AllocatorInstance> wenv(strValue.get_allocator());
+	ScopedArrayPtr<wchar_t> wenvvar;
+	ScopedArrayPtr<wchar_t> wenv;
 
 	int err = Win32::utf8_to_wchar_t(envvar,wenvvar);
 	for (DWORD dwLen = 128;!err;)
@@ -217,7 +218,7 @@ int OOBase::Environment::get_current(env_table_t& tabEnv)
 {
 	for (const char** env = (const char**)environ;*env != NULL;++env)
 	{
-		LocalString str(tabEnv.get_allocator());
+		String str;
 		int err = str.assign(*env);
 		if (err)
 			return err;
@@ -228,11 +229,11 @@ int OOBase::Environment::get_current(env_table_t& tabEnv)
 			if (tabEnv.exists(str))
 				continue;
 
-			err = tabEnv.insert(LocalString(tabEnv.get_allocator()),str);
+			err = tabEnv.insert(String(),str);
 		}
 		else
 		{
-			LocalString strK(tabEnv.get_allocator()),strV(tabEnv.get_allocator());
+			String strK,strV;
 			err = strK.assign(str.c_str(),eq);
 			if (err)
 				return err;
@@ -252,9 +253,20 @@ int OOBase::Environment::get_current(env_table_t& tabEnv)
 	return 0;
 }
 
-int OOBase::Environment::getenv(const char* envvar, LocalString& strValue)
+int OOBase::Environment::getenv(const char* envvar, ScopedArrayPtr<char>& strValue)
 {
-	return strValue.assign(::getenv(envvar));
+	const char* e = ::getenv(envvar);
+	size_t len = strlen(e);
+
+	if (!strValue.reallocate(len+1))
+		return ERROR_OUTOFMEMORY;
+
+	if (len)
+		memcpy(strValue.get(),e,len+1);
+	else
+		strValue[0] = '\0';
+
+	return 0;
 }
 
 #endif
@@ -266,20 +278,20 @@ int OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tabS
 	// Substitute any ${VAR} in tabEnv with values from tabSrc
 	for (size_t idx = 0; idx < tabEnv.size(); ++idx)
 	{
-		LocalString* pVal = tabEnv.at(idx);
+		String* pVal = tabEnv.at(idx);
 
 		// Loop finding ${VAR}
 		for (size_t offset = 0;;)
 		{
 			size_t start = pVal->find("${",offset);
-			if (start == LocalString::npos)
+			if (start == String::npos)
 				break;
 
 			size_t end = pVal->find('}',start+2);
-			if (end == LocalString::npos)
+			if (end == String::npos)
 				break;
 
-			LocalString strPrefix(tabEnv.get_allocator()), strSuffix(tabEnv.get_allocator()), strParam(tabEnv.get_allocator());
+			String strPrefix,strSuffix,strParam;
 			int err = strPrefix.assign(pVal->c_str(),start);
 			if (!err)
 				err = strSuffix.assign(pVal->c_str()+end+1);
@@ -290,7 +302,7 @@ int OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tabS
 
 			*pVal = strPrefix;
 
-			const LocalString* pRepl = tabSrc.find(strParam);
+			const String* pRepl = tabSrc.find(strParam);
 			if (pRepl)
 			{
 				err = pVal->append(*pRepl);
@@ -309,7 +321,7 @@ int OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tabS
 	// Now add any values in tabSrc not in tabEnv
 	for (size_t idx = 0; idx < tabSrc.size(); ++idx)
 	{
-		const LocalString* key = tabSrc.key_at(idx);
+		const String* key = tabSrc.key_at(idx);
 		if (!tabEnv.exists(*key))
 		{
 			int err = tabEnv.insert(*key,*tabSrc.at(idx));
@@ -321,7 +333,7 @@ int OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tabS
 	return 0;
 }
 
-int OOBase::Environment::get_envp(const env_table_t& tabEnv, ScopedArrayPtr<char*,AllocatorInstance>& ptr)
+int OOBase::Environment::get_envp(const env_table_t& tabEnv, ScopedArrayPtr<char*>& ptr)
 {
 	if (tabEnv.empty())
 		return 0;
@@ -343,8 +355,8 @@ int OOBase::Environment::get_envp(const env_table_t& tabEnv, ScopedArrayPtr<char
 	{
 		*envp++ = char_data;
 
-		const LocalString* key = tabEnv.key_at(idx);
-		const LocalString* val = tabEnv.at(idx);
+		const String* key = tabEnv.key_at(idx);
+		const String* val = tabEnv.at(idx);
 		memcpy(char_data,key->c_str(),key->length());
 		char_data += key->length();
 		*char_data++ = '=';

@@ -30,12 +30,9 @@ namespace OOBase
 	class CmdArgs
 	{
 	public:
-		CmdArgs(AllocatorInstance& allocator) : m_map_opts(allocator)
-		{}
+		typedef Table<String,String> results_t;
 
 		int add_option(const char* id, char short_opt = 0, bool has_value = false, const char* long_opt = NULL);
-		
-		typedef Table<LocalString,LocalString,AllocatorInstance> results_t;
 		int parse(int argc, char* argv[], results_t& results, int skip = 1) const;
 		int parse(int argc, const char* argv[], results_t& results, int skip = 1) const;
 #if defined(_WIN32)
@@ -45,15 +42,12 @@ namespace OOBase
 	private:
 		struct Option
 		{
-			Option(AllocatorInstance& allocator) : m_long_opt(allocator)
-			{}
-
-			char       m_short_opt;
-			LocalString m_long_opt;
-			bool       m_has_value;
+			char   m_short_opt;
+			String m_long_opt;
+			bool   m_has_value;
 		};
 
-		Table<LocalString,Option,AllocatorInstance> m_map_opts;
+		Table<String,Option> m_map_opts;
 		
 		int parse_long_option(results_t& results, const char** argv, int& arg, int argc) const;
 		int parse_short_options(results_t& results, const char** argv, int& arg, int argc) const;

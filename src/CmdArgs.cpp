@@ -29,7 +29,7 @@
 
 int OOBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, const char* long_opt)
 {
-	LocalString strId(m_map_opts.get_allocator()),strLongOpt(m_map_opts.get_allocator());
+	String strId,strLongOpt;
 	int err = strId.assign(id);
 	if (err == 0)
 		err = strLongOpt.assign(long_opt);
@@ -40,7 +40,7 @@ int OOBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, 
 	if (strId.empty())
 		return EINVAL;
 	
-	Option opt(m_map_opts.get_allocator());
+	Option opt;
 	opt.m_short_opt = short_opt;
 	if (long_opt)
 		opt.m_long_opt = strLongOpt;
@@ -56,7 +56,7 @@ int OOBase::CmdArgs::error(results_t& results, int retval, const char* key, cons
 {
 	results.clear();
 
-	LocalString strErr(results.get_allocator()),strVal(results.get_allocator());
+	String strErr,strVal;
 	int err = strErr.assign(key);
 	if (err == 0)
 		err = strVal.assign(value);
@@ -82,7 +82,7 @@ int OOBase::CmdArgs::parse(results_t& results, int skip) const
 
 	for (int i=0;i<argc;++i)
 	{
-		OOBase::LocalString s(results.get_allocator());
+		String s;
 		int err = Win32::wchar_t_to_utf8(argvw.get()[i],s);
 		if (err)
 			return err;
@@ -139,7 +139,7 @@ int OOBase::CmdArgs::parse(int argc, const char* argv[], results_t& results, int
 
 int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, int& arg, int argc) const
 {
-	LocalString strKey(results.get_allocator()),strVal(results.get_allocator());
+	String strKey,strVal;
 	for (size_t i=0; i < m_map_opts.size(); ++i)
 	{
 		const Option& opt = *m_map_opts.at(i);
@@ -188,7 +188,7 @@ int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, in
 
 int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, int& arg, int argc) const
 {
-	LocalString strKey(results.get_allocator()),strVal(results.get_allocator());
+	String strKey,strVal;
 	for (const char* c = argv[arg]+1; *c!='\0'; ++c)
 	{
 		size_t i;
@@ -262,12 +262,12 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 
 int OOBase::CmdArgs::parse_arg(results_t& results, const char* arg, unsigned int position) const
 {
-	LocalString strArg(results.get_allocator());
+	String strArg;
 	int err = strArg.assign(arg);
 	if (err != 0)
 		return err;
 
-	LocalString strResult(results.get_allocator());
+	String strResult;
 	if ((err = strResult.printf("@%u",position)) != 0)
 		return err;
 

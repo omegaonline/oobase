@@ -154,18 +154,14 @@ namespace
 			return;
 
 		// Create the relevant registry keys if they don't already exist
-		OOBase::StackAllocator<256> allocator;
-		OOBase::LocalString strName(allocator);
-		int err = strName.assign("SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\");
-		if (err == 0)
-			err = strName.append(name);
-
+		OOBase::ScopedArrayPtr<char> strName;
+		int err = OOBase::temp_printf(strName,"SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\%s",name);
 		if (err != 0)
 			OOBase_CallCriticalFailure(err);
 
 		HKEY hk;
 		DWORD dwDisp;
-		if (RegCreateKeyExA(HKEY_LOCAL_MACHINE,strName.c_str(),0,NULL,REG_OPTION_NON_VOLATILE,KEY_WRITE,NULL,&hk,&dwDisp) == ERROR_SUCCESS)
+		if (RegCreateKeyExA(HKEY_LOCAL_MACHINE,strName.get(),0,NULL,REG_OPTION_NON_VOLATILE,KEY_WRITE,NULL,&hk,&dwDisp) == ERROR_SUCCESS)
 		{
 			RegSetValueExW(hk,L"EventMessageFile",0,REG_SZ,(LPBYTE)szPath,(DWORD)(wcslen(szPath)+1)*sizeof(wchar_t));
 

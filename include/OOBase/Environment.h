@@ -29,17 +29,17 @@ namespace OOBase
 {
 	namespace Environment
 	{
-		typedef Table<LocalString,LocalString,AllocatorInstance> env_table_t;
+		typedef Table<String,String> env_table_t;
 
 		int get_current(env_table_t& tabEnv);
 		int substitute(env_table_t& tabEnv, const env_table_t& tabSrc);
 
-		int get_envp(const env_table_t& tabEnv, ScopedArrayPtr<char*,AllocatorInstance>& envp);
-		int getenv(const char* envvar, LocalString& strVal);
+		int get_envp(const env_table_t& tabEnv, ScopedArrayPtr<char*>& envp);
+		int getenv(const char* envvar, ScopedArrayPtr<char>& strVal);
 
 #if defined(_WIN32)
 		int get_user(HANDLE hToken, env_table_t& tabEnv);
-		int get_block(const env_table_t& tabEnv, ScopedArrayPtr<wchar_t,AllocatorInstance>& env_block);
+		int get_block(const env_table_t& tabEnv, ScopedArrayPtr<wchar_t>& env_block);
 #endif
 	}
 }

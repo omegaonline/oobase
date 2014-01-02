@@ -435,7 +435,7 @@ int OOBase::Net::accept(HANDLE hPipe, const Timeout& timeout)
 		return GetLastError();
 
 	// Control handle lifetime
-	OOBase::Win32::SmartHandle ev(ov.hEvent);
+	Win32::SmartHandle ev(ov.hEvent);
 
 	DWORD dwErr = 0;
 	if (ConnectNamedPipe(hPipe,&ov))
@@ -476,7 +476,7 @@ int OOBase::Net::accept(HANDLE hPipe, const Timeout& timeout)
 OOBase::Socket* OOBase::Socket::attach(HANDLE hPipe, int& err)
 {
 	Pipe* pSocket = NULL;
-	if (!OOBase::CrtAllocator::allocate_new(pSocket,hPipe))
+	if (!CrtAllocator::allocate_new(pSocket,hPipe))
 		err = ERROR_OUTOFMEMORY;
 
 	return pSocket;
@@ -484,16 +484,13 @@ OOBase::Socket* OOBase::Socket::attach(HANDLE hPipe, int& err)
 
 OOBase::Socket* OOBase::Socket::connect(const char* path, int& err, const Timeout& timeout)
 {
-	OOBase::StackAllocator<256> allocator;
-	OOBase::LocalString pipe_name(allocator);
-	err = pipe_name.assign("\\\\.\\pipe\\");
-	if (err == 0)
-		err = pipe_name.append(path);
+	ScopedArrayPtr<char> pipe_name;
+	err = temp_printf(pipe_name,"\\\\.\\pipe\\%s",path);
 	if (err != 0)
 		return NULL;
 
-	OOBase::ScopedArrayPtr<wchar_t> wname;
-	err = OOBase::Win32::utf8_to_wchar_t(pipe_name.c_str(),wname);
+	ScopedArrayPtr<wchar_t> wname;
+	err = Win32::utf8_to_wchar_t(pipe_name.get(),wname);
 	if (err)
 		return NULL;
 
@@ -537,7 +534,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* path, int& err, const Timeou
 	}
 	
 	Pipe* pPipe = NULL;
-	if (!OOBase::CrtAllocator::allocate_new(pPipe,hPipe))
+	if (!CrtAllocator::allocate_new(pPipe,hPipe))
 		err = ERROR_OUTOFMEMORY;
 	else
 		hPipe.detach();
