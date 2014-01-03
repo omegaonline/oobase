@@ -25,21 +25,56 @@
 #include "Memory.h"
 #include "Atomic.h"
 #include "ScopedArrayPtr.h"
+#include "tr24731.h"
 
 #include <string.h>
 
-namespace OOBase
-{
-#if defined(__GNUC__)
-	int printf(ScopedArrayPtr<char>& ptr, const char* format, ...) __attribute__((format(printf,2,3)));
-	int printf(ScopedArrayPtr<char,AllocatorInstance>& ptr, const char* format, ...) __attribute__((format(printf,2,3)));
-#else
-	int printf(ScopedArrayPtr<char>& ptr, const char* format, ...);
-	int printf(ScopedArrayPtr<char,AllocatorInstance>& ptr, const char* format, ...);
+#if !defined(va_copy)
+#define va_copy(a,b) ((a) = (b))
 #endif
 
-	int vprintf(ScopedArrayPtr<char>& ptr, const char* format, va_list args);
-	int vprintf(ScopedArrayPtr<char,AllocatorInstance>& ptr, const char* format, va_list args);
+namespace OOBase
+{
+	template <typename A, size_t S>
+	inline int vprintf(ScopedArrayPtr<char,A,S>& ptr, const char* format, va_list args)
+	{
+		for (;;)
+		{
+			va_list args_copy;
+			va_copy(args_copy,args);
+
+			int r = vsnprintf_s(ptr.get(),ptr.count(),format,args_copy);
+
+			va_end(args_copy);
+
+			if (r == -1)
+				return errno;
+
+			if (static_cast<size_t>(r) < ptr.count())
+				return 0;
+
+			if (!ptr.reallocate(static_cast<size_t>(r) + 1))
+				return ERROR_OUTOFMEMORY;
+		}
+	}
+
+#if defined(__GNUC__)
+	template <typename A, size_t S>
+	int printf(ScopedArrayPtr<char,A,S>& ptr, const char* format, ...) __attribute__((format(printf,2,3)));
+#endif
+
+	template <typename A, size_t S>
+	inline int printf(ScopedArrayPtr<char,A,S>& ptr, const char* format, ...)
+	{
+		va_list args;
+		va_start(args,format);
+
+		int err = OOBase::vprintf(ptr,format,args);
+
+		va_end(args);
+
+		return err;
+	}
 
 	namespace detail
 	{
@@ -517,6 +552,130 @@ namespace OOBase
 	}
 
 	typedef detail::StringImpl<CrtAllocator> String;
+
+	template <typename Allocator = ThreadLocalAllocator>
+	class ScopedString : public NonCopyable
+	{
+	public:
+		static const size_t npos = size_t(-1);
+
+		ScopedString() : m_data()
+		{}
+
+		ScopedString(AllocatorInstance& allocator) : m_data(allocator)
+		{}
+
+		int assign(const char* sz, size_t len = npos)
+		{
+			if (len == npos)
+				len = strlen(sz);
+
+			if (!m_data.reallocate(len + 1))
+				return ERROR_OUTOFMEMORY;
+
+			if (len)
+				memcpy(m_data.get(),sz,len);
+			m_data[len] = '\0';
+			return 0;
+		}
+
+		int append(const char* sz, size_t len = npos)
+		{
+			if (len == npos)
+				len = strlen(sz);
+
+			if (len)
+			{
+				size_t orig_len = length();
+				if (!m_data.reallocate(orig_len + len + 1))
+					return ERROR_OUTOFMEMORY;
+
+				memcpy(m_data.get() + orig_len,sz,len);
+				m_data[orig_len + len] = '\0';
+			}
+			return 0;
+		}
+
+		const char* c_str() const
+		{
+			return m_data && m_data.count() ? m_data.get() : NULL;
+		}
+
+		char& operator [](ptrdiff_t i) const
+		{
+			return m_data[i];
+		}
+
+		bool empty() const
+		{
+			return !m_data || m_data.count() == 0 || m_data[0] == '\0';
+		}
+
+		void clear()
+		{
+			if (m_data)
+				m_data[0] = '\0';
+		}
+
+		size_t length() const
+		{
+			return empty() ? 0 : strlen(m_data.get());
+		}
+
+		size_t find(char c, size_t start = 0) const
+		{
+			if (empty())
+				return npos;
+
+			const char* f = strchr(m_data.get() + start,c);
+			return f ? size_t(f - m_data.get()) : npos;
+		}
+
+		size_t find(const char* sz, size_t start = 0) const
+		{
+			if (empty())
+				return npos;
+
+			const char* f = strstr(m_data.get() + start,sz);
+			return f ? size_t(f - m_data.get()) : npos;
+		}
+
+#if defined(__GNUC__)
+		int printf(const char* format, ...) __attribute__((format(printf,2,3)))
+#else
+		int printf(const char* format, ...)
+#endif
+		{
+			va_list args;
+			va_start(args,format);
+
+			int err = OOBase::vprintf(m_data,format,args);
+
+			va_end(args);
+
+			return err;
+		}
+
+		int vprintf(const char* format, va_list args)
+		{
+			return OOBase::vprintf(m_data,format,args);
+		}
+
+		AllocatorInstance& get_allocator() const
+		{
+			return m_data.get_allocator();
+		}
+
+#if defined(_WIN32)
+		int wchar_t_to_utf8(const wchar_t* wsz)
+		{
+			return wchar_t_to_utf8(wsz,m_data);
+		}
+#endif
+
+	private:
+		ScopedArrayPtr<char,Allocator,24> m_data;
+	};
 }
 
 #endif // OOBASE_STRING_H_INCLUDED_

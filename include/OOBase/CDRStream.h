@@ -255,34 +255,6 @@ namespace OOBase
 			return (m_last_error == 0);
 		}
 
-		template <typename A, size_t S>
-		bool read_string(ScopedArrayPtr<char,A,S>& val)
-		{
-			if (m_last_error != 0)
-				return false;
-
-			if (!m_buffer)
-				return error_eof();
-
-			size_t len = 0;
-			if (!read_dyn_int(len))
-				return false;
-
-			if (len > m_buffer->length())
-				return error_too_big();
-
-			if (!val.reallocate(len+1))
-				m_last_error = ERROR_OUTOFMEMORY;
-			else
-			{
-				memcpy(val.get(),m_buffer->rd_ptr(),len);
-				val[len] = '\0';
-				m_buffer->rd_ptr(len);
-			}
-
-			return (m_last_error == 0);
-		}
-
 		size_t read_bytes(uint8_t* buffer, size_t count)
 		{
 			if (m_last_error != 0)
@@ -331,7 +303,7 @@ namespace OOBase
 		}
 
 		/// A specialization of write() for type \p const char*.
-		bool write(const char* pszText, size_t len = (size_t)-1)
+		bool write(const char* pszText, size_t len = size_t(-1))
 		{
 			if (m_last_error != 0)
 				return false;
@@ -341,7 +313,7 @@ namespace OOBase
 
 			if (!pszText)
 				len = 0;
-			else if (len == (size_t)-1)
+			else if (len == size_t(-1))
 				len = strlen(pszText);
 
 			if (!write_dyn_int(len))

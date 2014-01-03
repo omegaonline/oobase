@@ -20,11 +20,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/String.h"
-#include "../include/OOBase/tr24731.h"
-
-#if !defined(va_copy)
-#define va_copy(a,b) ((a) = (b))
-#endif
 
 int OOBase::detail::strings::grow(size_t inc, StringNode*& node, void* (*pfnAllocate)(size_t,size_t), void (*pfnFree)(void*))
 {
@@ -92,64 +87,4 @@ int OOBase::detail::strings::grow(size_t inc, StringNodeAllocator*& node)
 	node = new_node;
 
 	return 0;
-}
-
-namespace
-{
-	template <typename P>
-	int vprintf_impl(P& ptr, const char* format, va_list args)
-	{
-		for (;;)
-		{
-			va_list args_copy;
-			va_copy(args_copy,args);
-
-			int r = vsnprintf_s(ptr.get(),ptr.count(),format,args_copy);
-
-			va_end(args_copy);
-
-			if (r == -1)
-				return errno;
-
-			if (static_cast<size_t>(r) < ptr.count())
-				return 0;
-
-			if (!ptr.reallocate(static_cast<size_t>(r) + 1))
-				return ERROR_OUTOFMEMORY;
-		}
-	}
-}
-
-int OOBase::printf(ScopedArrayPtr<char>& ptr, const char* format, ...)
-{
-	va_list args;
-	va_start(args,format);
-
-	int err = vprintf_impl(ptr,format,args);
-
-	va_end(args);
-
-	return err;
-}
-
-int OOBase::printf(ScopedArrayPtr<char,AllocatorInstance>& ptr, const char* format, ...)
-{
-	va_list args;
-	va_start(args,format);
-
-	int err = vprintf_impl(ptr,format,args);
-
-	va_end(args);
-
-	return err;
-}
-
-int OOBase::vprintf(ScopedArrayPtr<char>& ptr, const char* format, va_list args)
-{
-	return vprintf_impl(ptr,format,args);
-}
-
-int OOBase::vprintf(ScopedArrayPtr<char,AllocatorInstance>& ptr, const char* format, va_list args)
-{
-	return vprintf_impl(ptr,format,args);
 }

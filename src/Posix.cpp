@@ -213,12 +213,12 @@ int OOBase::POSIX::close_file_descriptors(int* except, size_t ex_count)
 		 * work on anything with a proc filesystem i.e. a OSx/BSD */
 		/* walk proc, closing all descriptors from stderr onwards for our pid */
 
-		ScopedArrayPtr<char> str;
-		int err = printf(str,"/proc/%u/fd/",getpid());
+		ScopedString<> str;
+		int err = str.printf("/proc/%u/fd/",getpid());
 		if (err != 0)
 			return err;
 
-		DIR* pdir = opendir(str.get());
+		DIR* pdir = opendir(str.c_str());
 		if (!pdir)
 			return errno;
 

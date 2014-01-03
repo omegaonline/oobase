@@ -188,7 +188,7 @@ int OOBase::Server::create_pid_file(const char* szPidFile, bool& already)
 	// Create a global event named pszPidFile
 	// If it exists, then we are already running
 
-	ScopedArrayPtr<char> strFullPidFile;
+	ScopedString<> strFullPidFile;
 	int err = printf(strFullPidFile,"Global\\%s",szPidFile);
 	if (err)
 		return err;
@@ -312,8 +312,8 @@ namespace
 			QUIT::instance().set_pid_file(strPidFile,fd);
 
 			// Write our pid to the file
-			OOBase::ScopedArrayPtr<char> str;
-			err = OOBase::printf(str,"%d",getpid());
+			OOBase::ScopedString<> str;
+			err = str.printf("%d",getpid());
 			if (!err)
 			{
 				do
@@ -323,7 +323,7 @@ namespace
 				}
 				while (err == EINTR);
 
-				if (!err && OOBase::POSIX::write(fd,str.get(),strlen(str.get())) == -1)
+				if (!err && OOBase::POSIX::write(fd,str.c_str(),str.length()) == -1)
 					err = errno;
 			}
 		}
