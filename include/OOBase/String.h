@@ -31,13 +31,15 @@
 namespace OOBase
 {
 #if defined(__GNUC__)
-	int temp_printf(ScopedArrayPtr<char>& ptr, const char* format, ...) __attribute__((format(printf,2,3)));
+	int printf(ScopedArrayPtr<char>& ptr, const char* format, ...) __attribute__((format(printf,2,3)));
+	int printf(ScopedArrayPtr<char,AllocatorInstance>& ptr, const char* format, ...) __attribute__((format(printf,2,3)));
 #else
-	int temp_printf(ScopedArrayPtr<char>& ptr, const char* format, ...);
+	int printf(ScopedArrayPtr<char>& ptr, const char* format, ...);
+	int printf(ScopedArrayPtr<char,AllocatorInstance>& ptr, const char* format, ...);
 #endif
 
-	int temp_vprintf(ScopedArrayPtr<char>& ptr, const char* format, va_list args);
-	int temp_vprintf(ScopedArrayPtr<char,AllocatorInstance>& ptr, const char* format, va_list args);
+	int vprintf(ScopedArrayPtr<char>& ptr, const char* format, va_list args);
+	int vprintf(ScopedArrayPtr<char,AllocatorInstance>& ptr, const char* format, va_list args);
 
 	namespace detail
 	{
@@ -93,7 +95,7 @@ namespace OOBase
 				va_start(args,format);
 
 				ScopedArrayPtr<char> ptr;
-				int err = OOBase::temp_vprintf(ptr,format,args);
+				int err = OOBase::vprintf(ptr,format,args);
 
 				va_end(args);
 
@@ -205,7 +207,7 @@ namespace OOBase
 				va_start(args,format);
 
 				ScopedArrayPtr<char,AllocatorInstance> ptr(*m_node->m_allocator);
-				int err = OOBase::temp_vprintf(ptr,format,args);
+				int err = OOBase::vprintf(ptr,format,args);
 
 				va_end(args);
 
@@ -515,7 +517,6 @@ namespace OOBase
 	}
 
 	typedef detail::StringImpl<CrtAllocator> String;
-	typedef detail::StringImpl<AllocatorInstance> LocalString;
 }
 
 #endif // OOBASE_STRING_H_INCLUDED_

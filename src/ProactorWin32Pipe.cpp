@@ -747,7 +747,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::attach(HANDLE hPipe, int& er
 OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const char* path, int& err, const Timeout& timeout)
 {
 	ScopedArrayPtr<char> strPipe;
-	err = temp_printf(strPipe,"\\\\.\\pipe\\%s",path);
+	err = printf(strPipe,"\\\\.\\pipe\\%s",path);
 	if (err)
 		return NULL;
 	

@@ -137,8 +137,7 @@ DWORD OOBase::Win32::sec_descript_t::SetEntriesInAcl(ULONG cCountOfExplicitEntri
 DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, ScopedArrayPtr<wchar_t>& strUserName, ScopedArrayPtr<wchar_t>& strDomainName)
 {
 	// Find out all about the user associated with hToken
-	StackAllocator<128> allocator;
-	UniquePtr<TOKEN_USER,AllocatorInstance> ptrUserInfo(allocator);
+	UniquePtr<TOKEN_USER,ThreadLocalAllocator> ptrUserInfo;
 	DWORD dwErr = GetTokenInfo(hToken,TokenUser,ptrUserInfo);
 	if (dwErr)
 		return dwErr;

@@ -485,7 +485,7 @@ OOBase::Socket* OOBase::Socket::attach(HANDLE hPipe, int& err)
 OOBase::Socket* OOBase::Socket::connect(const char* path, int& err, const Timeout& timeout)
 {
 	ScopedArrayPtr<char> pipe_name;
-	err = temp_printf(pipe_name,"\\\\.\\pipe\\%s",path);
+	err = printf(pipe_name,"\\\\.\\pipe\\%s",path);
 	if (err != 0)
 		return NULL;
 

@@ -214,7 +214,7 @@ int OOBase::POSIX::close_file_descriptors(int* except, size_t ex_count)
 		/* walk proc, closing all descriptors from stderr onwards for our pid */
 
 		ScopedArrayPtr<char> str;
-		int err = OOBase::temp_printf(str,"/proc/%u/fd/",getpid());
+		int err = printf(str,"/proc/%u/fd/",getpid());
 		if (err != 0)
 			return err;
 

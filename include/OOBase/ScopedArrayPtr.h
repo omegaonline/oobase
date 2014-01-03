@@ -103,6 +103,11 @@ namespace OOBase
 			return m_data != NULL ? &SafeBoolean::this_type_does_not_support_comparisons : NULL;
 		}
 
+		AllocatorInstance& get_allocator() const
+		{
+			return m_dynamic.get_allocator();
+		}
+
 	private:
 		T           m_static[COUNT];
 		T*          m_data;
@@ -110,6 +115,5 @@ namespace OOBase
 		Vector<T,Allocator> m_dynamic;
 	};
 }
-
 
 #endif // OOBASE_SCOPED_ARRAY_PTR_H_INCLUDED_

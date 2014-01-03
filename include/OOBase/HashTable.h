@@ -129,15 +129,6 @@ namespace OOBase
 			return Hash<const char*>::hash(v.c_str());
 		}
 	};
-
-	template <>
-	struct Hash<LocalString>
-	{
-		static size_t hash(const LocalString& v)
-		{
-			return Hash<const char*>::hash(v.c_str());
-		}
-	};
 #endif
 
 	namespace detail

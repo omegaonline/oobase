@@ -20,7 +20,6 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/File.h"
-#include "../include/OOBase/StackAllocator.h"
 #include "../include/OOBase/Win32.h"
 
 OOBase::File::File()

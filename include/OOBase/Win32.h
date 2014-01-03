@@ -219,15 +219,6 @@ namespace OOBase
 			return err;
 		}
 
-		inline int wchar_t_to_utf8(const wchar_t* wsz, OOBase::LocalString& str)
-		{
-			ScopedArrayPtr<char,AllocatorInstance> ptrBuf(str.get_allocator());
-			int err = wchar_t_to_utf8(wsz,ptrBuf);
-			if (!err)
-				err = str.assign(ptrBuf.get());
-			return err;
-		}
-
 		void AttachDebugger(DWORD pid);
 	}
 }

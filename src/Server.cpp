@@ -189,7 +189,7 @@ int OOBase::Server::create_pid_file(const char* szPidFile, bool& already)
 	// If it exists, then we are already running
 
 	ScopedArrayPtr<char> strFullPidFile;
-	int err = temp_printf(strFullPidFile,"Global\\%s",szPidFile);
+	int err = printf(strFullPidFile,"Global\\%s",szPidFile);
 	if (err)
 		return err;
 
@@ -234,7 +234,7 @@ namespace
 	{
 		~QuitData();
 
-		int set_pid_file(const char* szPidFile, int fd);
+		void set_pid_file(const OOBase::String& strPidFile, int fd);
 
 	private:
 		OOBase::POSIX::SmartFD m_fd;
@@ -248,13 +248,13 @@ namespace
 			::unlink(m_strPidFile.c_str());
 	}
 
-	int QuitData::set_pid_file(const char* szPidFile, int fd)
+	void QuitData::set_pid_file(const OOBase::String& strPidFile, int fd)
 	{
 		m_fd = fd;
-		return m_strPidFile.assign(szPidFile);
+		m_strPidFile = strPidFile;
 	}
 
-	int concat_pidname(OOBase::LocalString& strPidFile, const char* pszPidFile)
+	int concat_pidname(OOBase::String& strPidFile, const char* pszPidFile)
 	{
 		if (!pszPidFile)
 			return EINVAL;
@@ -263,11 +263,14 @@ namespace
 		if (*pszPidFile != '/')
 		{
 			// Relative path, prepend cwd
-			char cwd[PATH_MAX] = {0};
-			if (!getcwd(cwd,sizeof(cwd)))
+			char* cwd = get_current_dir_name();
+			if (!cwd)
 				return errno;
 
 			err = strPidFile.assign(cwd);
+
+			::free(cwd);
+
 			if (!err)
 			{
 				if (strPidFile[strPidFile.length()-1] != '/')
@@ -283,9 +286,9 @@ namespace
 		return err;
 	}
 
-	int lock_pidfile(const char* szPidFile, int& fd, bool& already)
+	int lock_pidfile(const OOBase::String& strPidFile, int& fd, bool& already)
 	{
-		fd = OOBase::POSIX::open(szPidFile, O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP);
+		fd = OOBase::POSIX::open(strPidFile.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP);
 		if (fd == -1)
 			return errno;
 
@@ -306,24 +309,22 @@ namespace
 			already = false;
 
 			// Make sure the file gets unlinked at the end
-			err = QUIT::instance().set_pid_file(szPidFile,fd);
+			QUIT::instance().set_pid_file(strPidFile,fd);
+
+			// Write our pid to the file
+			OOBase::ScopedArrayPtr<char> str;
+			err = OOBase::printf(str,"%d",getpid());
 			if (!err)
 			{
-				// Write our pid to the file
-				OOBase::ScopedArrayPtr<char> str;
-				err = OOBase::temp_printf(str,"%d",getpid());
-				if (!err)
+				do
 				{
-					do
-					{
-						if (ftruncate(fd,0) == -1)
-							err = errno;
-					}
-					while (err == EINTR);
-
-					if (!err && OOBase::POSIX::write(fd,str.get(),strlen(str.get())) == -1)
+					if (ftruncate(fd,0) == -1)
 						err = errno;
 				}
+				while (err == EINTR);
+
+				if (!err && OOBase::POSIX::write(fd,str.get(),strlen(str.get())) == -1)
+					err = errno;
 			}
 		}
 
@@ -368,20 +369,18 @@ void OOBase::Server::quit()
 
 int OOBase::Server::create_pid_file(const char* szPidFile, bool& already)
 {
-	StackAllocator<512> allocator;
-	LocalString strFullPidFile(allocator);
+	String strFullPidFile;
 	int err = concat_pidname(strFullPidFile,szPidFile);
 	if (err)
 		return err;
 
 	int fd;
-	return lock_pidfile(strFullPidFile.c_str(),fd,already);
+	return lock_pidfile(strFullPidFile,fd,already);
 }
 
 int OOBase::Server::daemonize(const char* szPidFile, bool& already)
 {
-	StackAllocator<512> allocator;
-	LocalString strFullPidFile(allocator);
+	String strFullPidFile;
 	int err = concat_pidname(strFullPidFile,szPidFile);
 	if (err)
 		return err;
@@ -439,7 +438,7 @@ int OOBase::Server::daemonize(const char* szPidFile, bool& already)
 
 	// Open the pid file
 	int fd;
-	err = lock_pidfile(strFullPidFile.c_str(),fd,already);
+	err = lock_pidfile(strFullPidFile,fd,already);
 	if (err)
 		return err;
 

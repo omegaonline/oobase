@@ -24,6 +24,7 @@
 
 #include "String.h"
 #include "Table.h"
+#include "SharedPtr.h"
 
 namespace OOBase
 {
@@ -34,8 +35,8 @@ namespace OOBase
 		int get_current(env_table_t& tabEnv);
 		int substitute(env_table_t& tabEnv, const env_table_t& tabSrc);
 
-		int get_envp(const env_table_t& tabEnv, ScopedArrayPtr<char*>& envp);
-		int getenv(const char* envvar, ScopedArrayPtr<char>& strVal);
+		int get_envp(const env_table_t& tabEnv, SharedPtr<char*>& envp);
+		int getenv(const char* envvar, String& strVal);
 
 #if defined(_WIN32)
 		int get_user(HANDLE hToken, env_table_t& tabEnv);

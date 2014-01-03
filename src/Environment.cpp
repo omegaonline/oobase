@@ -185,7 +185,7 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 	return 0;
 }
 
-int OOBase::Environment::getenv(const char* envvar, ScopedArrayPtr<char>& strValue)
+int OOBase::Environment::getenv(const char* envvar, String& strValue)
 {
 	ScopedArrayPtr<wchar_t> wenvvar;
 	ScopedArrayPtr<wchar_t> wenv;
@@ -258,20 +258,9 @@ int OOBase::Environment::get_current(env_table_t& tabEnv)
 	return 0;
 }
 
-int OOBase::Environment::getenv(const char* envvar, ScopedArrayPtr<char>& strValue)
+int OOBase::Environment::getenv(const char* envvar, String& strValue)
 {
-	const char* e = ::getenv(envvar);
-	size_t len = strlen(e);
-
-	if (!strValue.reallocate(len+1))
-		return ERROR_OUTOFMEMORY;
-
-	if (len)
-		memcpy(strValue.get(),e,len+1);
-	else
-		strValue[0] = '\0';
-
-	return 0;
+	return strValue.assign(::getenv(envvar));
 }
 
 #endif
@@ -338,7 +327,7 @@ int OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tabS
 	return 0;
 }
 
-int OOBase::Environment::get_envp(const env_table_t& tabEnv, ScopedArrayPtr<char*>& ptr)
+int OOBase::Environment::get_envp(const env_table_t& tabEnv, SharedPtr<char*>& ptr)
 {
 	if (tabEnv.empty())
 		return 0;
@@ -350,7 +339,8 @@ int OOBase::Environment::get_envp(const env_table_t& tabEnv, ScopedArrayPtr<char
 	for (size_t idx = 0; idx < tabEnv.size(); ++idx)
 		len += tabEnv.key_at(idx)->length() + tabEnv.at(idx)->length() + 2; // = and NUL
 
-	if (!ptr.reallocate(len))
+	ptr = make_shared<char*,CrtAllocator>(static_cast<char**>(CrtAllocator::allocate(len,16)));
+	if (!ptr)
 		return ERROR_OUTOFMEMORY;
 
 	char** envp = ptr.get();

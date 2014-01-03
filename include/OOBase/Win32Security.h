@@ -128,6 +128,27 @@ namespace OOBase
 		bool MatchSids(ULONG count, PSID_AND_ATTRIBUTES pSids1, PSID_AND_ATTRIBUTES pSids2);
 		bool MatchPrivileges(ULONG count, PLUID_AND_ATTRIBUTES Privs1, PLUID_AND_ATTRIBUTES Privs2);
 
+		template <typename T, typename Allocator>
+		DWORD GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls, UniquePtr<T,Allocator>& info)
+		{
+			DWORD dwLen = 0;
+			if (GetTokenInformation(hToken,cls,NULL,0,&dwLen))
+				return ERROR_SUCCESS;
+
+			DWORD dwErr = GetLastError();
+			if (dwErr != ERROR_INSUFFICIENT_BUFFER)
+				return dwErr;
+
+			info.reset(static_cast<T*>(Allocator::allocate(dwLen,16)));
+			if (!info)
+				return ERROR_OUTOFMEMORY;
+
+			if (GetTokenInformation(hToken,cls,info.get(),dwLen,&dwLen))
+				return ERROR_SUCCESS;
+
+			return GetLastError();
+		}
+
 		template <typename T>
 		DWORD GetTokenInfo(HANDLE hToken, TOKEN_INFORMATION_CLASS cls, UniquePtr<T,AllocatorInstance>& info)
 		{

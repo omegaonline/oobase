@@ -97,7 +97,7 @@ int OOBase::detail::strings::grow(size_t inc, StringNodeAllocator*& node)
 namespace
 {
 	template <typename P>
-	int temp_vprintf_impl(P& ptr, const char* format, va_list args)
+	int vprintf_impl(P& ptr, const char* format, va_list args)
 	{
 		for (;;)
 		{
@@ -120,24 +120,36 @@ namespace
 	}
 }
 
-int OOBase::temp_printf(ScopedArrayPtr<char>& ptr, const char* format, ...)
+int OOBase::printf(ScopedArrayPtr<char>& ptr, const char* format, ...)
 {
 	va_list args;
 	va_start(args,format);
 
-	int err = temp_vprintf_impl(ptr,format,args);
+	int err = vprintf_impl(ptr,format,args);
 
 	va_end(args);
 
 	return err;
 }
 
-int OOBase::temp_vprintf(ScopedArrayPtr<char>& ptr, const char* format, va_list args)
+int OOBase::printf(ScopedArrayPtr<char,AllocatorInstance>& ptr, const char* format, ...)
 {
-	return temp_vprintf_impl(ptr,format,args);
+	va_list args;
+	va_start(args,format);
+
+	int err = vprintf_impl(ptr,format,args);
+
+	va_end(args);
+
+	return err;
 }
 
-int OOBase::temp_vprintf(ScopedArrayPtr<char,AllocatorInstance>& ptr, const char* format, va_list args)
+int OOBase::vprintf(ScopedArrayPtr<char>& ptr, const char* format, va_list args)
 {
-	return temp_vprintf_impl(ptr,format,args);
+	return vprintf_impl(ptr,format,args);
+}
+
+int OOBase::vprintf(ScopedArrayPtr<char,AllocatorInstance>& ptr, const char* format, va_list args)
+{
+	return vprintf_impl(ptr,format,args);
 }

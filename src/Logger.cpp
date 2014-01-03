@@ -155,7 +155,7 @@ namespace
 
 		// Create the relevant registry keys if they don't already exist
 		OOBase::ScopedArrayPtr<char> strName;
-		int err = OOBase::temp_printf(strName,"SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\%s",name);
+		int err = OOBase::printf(strName,"SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\%s",name);
 		if (err != 0)
 			OOBase_CallCriticalFailure(err);
 
@@ -197,8 +197,7 @@ namespace
 	{
 		OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
-		OOBase::StackAllocator<512> allocator;
-		OOBase::ScopedArrayPtr<wchar_t,OOBase::AllocatorInstance> wmsg(allocator);
+		OOBase::ScopedArrayPtr<wchar_t> wmsg;
 		OOBase::Win32::utf8_to_wchar_t(msg,wmsg);
 
 		if (m_hLog && priority != OOBase::Logger::Debug)
@@ -222,7 +221,7 @@ namespace
 				break;
 			}
 
-			OOBase::UniquePtr<TOKEN_USER,OOBase::AllocatorInstance> ptrSIDProcess(allocator);
+			OOBase::UniquePtr<TOKEN_USER,OOBase::ThreadLocalAllocator> ptrSIDProcess;
 			PSID psid = NULL;
 			OOBase::Win32::SmartHandle hProcessToken;
 
@@ -441,7 +440,7 @@ void OOBase::Logger::log(Priority priority, const char* fmt, ...)
 void OOBase::Logger::log(Priority priority, const char* fmt, va_list args)
 {
 	ScopedArrayPtr<char> ptr;
-	if (temp_vprintf(ptr,fmt,args) == 0)
+	if (vprintf(ptr,fmt,args) == 0)
 		LoggerInstance().log(priority,ptr.get());
 	else
 		LoggerInstance().log(priority,fmt);
@@ -460,7 +459,7 @@ void OOBase::Logger::filenum_t::log(const char* fmt, ...)
 	va_start(args,fmt);
 
 	ScopedArrayPtr<char> msg;
-	int err = temp_vprintf(msg,fmt,args);
+	int err = vprintf(msg,fmt,args);
 
 	va_end(args);
 
@@ -485,7 +484,7 @@ void OOBase::Logger::filenum_t::log(const char* fmt, ...)
 		}
 
 		ScopedArrayPtr<char> header;
-		if (OOBase::temp_printf(header,"%s(%u): %s",m_pszFilename,m_nLine,msg.get()) == 0)
+		if (printf(header,"%s(%u): %s",m_pszFilename,m_nLine,msg.get()) == 0)
 			LoggerInstance().log(m_priority,header.get());
 	}
 }

@@ -181,7 +181,7 @@ namespace
 	void PromptForDebugger(DWORD pid)
 	{
 		OOBase::ScopedArrayPtr<char> str;
-		if (OOBase::temp_printf(str,"Attach the debugger to process id %ld now if you want!",pid) == 0)
+		if (OOBase::printf(str,"Attach the debugger to process id %ld now if you want!",pid) == 0)
 			MessageBoxA(NULL,str.get(),"Break",MB_ICONEXCLAMATION | MB_OK | MB_SERVICE_NOTIFICATION);
 	}
 }
