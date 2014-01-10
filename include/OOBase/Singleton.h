@@ -27,7 +27,14 @@
 
 namespace OOBase
 {
-	template <typename T, typename DLL>
+	namespace detail
+	{
+		struct default_module
+		{
+		};
+	}
+
+	template <typename T, typename DLL = detail::default_module>
 	class Singleton : public NonCopyable
 	{
 	public:
