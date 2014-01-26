@@ -208,7 +208,7 @@ namespace OOBase
 				return 0;
 			}
 #endif
-			bool remove_at(size_t pos, T* pval)
+			size_t remove_at(size_t pos, T* pval)
 			{
 				if (this->m_data && pos < this->m_size)
 				{
@@ -219,11 +219,8 @@ namespace OOBase
 						this->m_data[pos] = this->m_data[pos+1];
 
 					this->m_data[this->m_size].~T();
-
-					return true;
 				}
-
-				return false;
+				return pos < this->m_size ? pos : this->m_size;
 			}
 		};
 
@@ -278,7 +275,7 @@ namespace OOBase
 				return 0;
 			}
 
-			void remove_at(size_t pos, T* pval)
+			size_t remove_at(size_t pos, T* pval)
 			{
 				if (this->m_data && pos < this->m_size)
 				{
@@ -289,6 +286,7 @@ namespace OOBase
 					if (pos < this->m_size)
 						memmove(&this->m_data[pos],&this->m_data[pos+1],(this->m_size - pos) * sizeof(T));
 				}
+				return pos < this->m_size ? pos : this->m_size;
 			}
 		};
 
@@ -402,10 +400,10 @@ namespace OOBase
 			return (!err ? before : end());
 		}
 
-		void remove_at(iterator& iter)
+		iterator remove_at(iterator& iter)
 		{
 			assert(iter.check(this));
-			baseClass::remove_at(iter.deref(),NULL);
+			return iterator(this,baseClass::remove_at(iter.deref(),NULL));
 		}
 
 		template <typename T1>
