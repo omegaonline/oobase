@@ -91,8 +91,8 @@ namespace OOBase
 		Table(AllocatorInstance& allocator) : baseClass(allocator), m_sorted(true)
 		{}
 
-		template <typename V1>
-		int insert(K key, V1 value)
+		template <typename K1, typename V1>
+		int insert(K1 key, V1 value)
 		{
 			int err = baseClass::push_back(Node::build(key,value));
 			if (!err)
@@ -106,10 +106,10 @@ namespace OOBase
 			return err;
 		}
 
-		bool remove_at(size_t pos, K* key = NULL, V* value = NULL)
+		bool erase(size_t pos, K* key = NULL, V* value = NULL)
 		{
 			Node node;
-			if (!baseClass::remove_at(pos,&node))
+			if (!baseClass::erase(pos,&node))
 				return false;
 
 			if (key)
@@ -128,7 +128,7 @@ namespace OOBase
 			if (pos == npos)
 				return false;
 
-			return remove_at(pos,NULL,value);
+			return erase(pos,NULL,value);
 		}
 
 		bool pop_back(K* key = NULL, V* value = NULL)

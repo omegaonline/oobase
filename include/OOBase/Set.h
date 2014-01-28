@@ -31,12 +31,18 @@ namespace OOBase
 	{
 		typedef detail::VectorImpl<T,Allocator> baseClass;
 
-		friend class detail::IteratorImpl<Set,T,size_t>;
-		friend class detail::IteratorImpl<const Set,const T,size_t>;
-
 	public:
-		typedef detail::IteratorImpl<Set,T,size_t> iterator;
-		typedef detail::IteratorImpl<const Set,const T,size_t> const_iterator;
+		typedef T value_type;
+		typedef Allocator allocator_type;
+		typedef T& reference;
+		typedef typename add_const<reference>::type const_reference;
+		typedef T* pointer;
+		typedef typename add_const<pointer>::type const_pointer;
+
+		typedef detail::IteratorImpl<Set,value_type,size_t> iterator;
+		friend class detail::IteratorImpl<Set,value_type,size_t>;
+		typedef detail::IteratorImpl<const Set,const value_type,size_t> const_iterator;
+		friend class detail::IteratorImpl<const Set,const value_type,size_t>;
 
 		static const size_t npos = size_t(-1);
 
@@ -46,7 +52,8 @@ namespace OOBase
 		Set(AllocatorInstance& allocator) : baseClass(allocator), m_sorted(true)
 		{}
 
-		int insert(const T& value)
+		template <typename T1>
+		int insert(T1 value)
 		{
 			int err = baseClass::push_back(value);
 			if (!err)
@@ -59,10 +66,10 @@ namespace OOBase
 			return err;
 		}
 
-		void remove_at(iterator& iter)
+		iterator erase(iterator iter)
 		{
 			assert(iter.check(this));
-			remove_at(iter.deref());
+			return iterator(this,erase(iter.deref()));
 		}
 
 		template <typename T1>
@@ -72,13 +79,13 @@ namespace OOBase
 			if (i == end())
 				return false;
 
-			remove_at(i);
+			erase(i);
 			return true;
 		}
 
-		bool pop_back(T* pval = NULL)
+		bool pop_back()
 		{
-			return baseClass::pop_back(pval);
+			return baseClass::pop_back();
 		}
 
 		template <typename T1>
@@ -192,15 +199,17 @@ namespace OOBase
 	private:
 		bool m_sorted;
 
-		void remove_at(size_t pos)
+		size_t erase(size_t pos)
 		{
 			if (m_sorted)
-				baseClass::remove_at(pos,NULL);
-			else if (this->m_data && pos < this->m_size)
+				return baseClass::erase(pos);
+
+			if (this->m_data && pos < this->m_size)
 			{
 				this->m_data[pos] = this->m_data[--this->m_size];
 				this->m_data[this->m_size].~T();
 			}
+			return pos < this->m_size ? pos : this->m_size;
 		}
 
 		template <typename T1>

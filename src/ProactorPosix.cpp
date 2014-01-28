@@ -322,7 +322,7 @@ int OOBase::detail::ProactorPosix::remove_timer(void* param)
 	{
 		if (i->m_param == param)
 		{
-			m_timers.remove_at(i);
+			m_timers.erase(i);
 			return 0;
 		}
 	}

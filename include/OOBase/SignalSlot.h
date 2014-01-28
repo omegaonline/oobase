@@ -22,11 +22,12 @@
 #ifndef OOBASE_SIGNALSLOT_H_INCLUDED_
 #define OOBASE_SIGNALSLOT_H_INCLUDED_
 
-#include <SharedPtr.h>
-#include <Vector.h>
+#include "SharedPtr.h"
+#include "Vector.h"
 
 namespace OOBase
 {
+	template <typename Allocator = CrtAllocator>
 	class Signal0 : public NonCopyable
 	{
 	private:
@@ -47,7 +48,7 @@ namespace OOBase
 		private:
 			WeakPtr<void> m_ptr;
 			void* m_fn;
-			void (*m_adaptor)(const Slot*);
+			bool (*m_adaptor)(const Slot*);
 
 			template<typename T>
 			static bool adaptor(const Slot* pThis)
@@ -60,9 +61,15 @@ namespace OOBase
 				return true;
 			}
 		};
-		mutable Vector<Slot> m_slots;
+		mutable Vector<Slot,Allocator> m_slots;
 
 	public:
+		Signal0()
+		{}
+
+		Signal0(AllocatorInstance& a) : m_slots(a)
+		{}
+
 		template <typename T>
 		int connect(WeakPtr<T>& ptr, void (T::*slot)())
 		{
@@ -71,7 +78,7 @@ namespace OOBase
 
 		void fire() const
 		{
-			for (Vector<Slot>::const_iterator i=m_slots.begin();i!=m_slots.end();)
+			for (typename Vector<Slot,Allocator>::iterator i=m_slots.begin();i!=m_slots.end();)
 			{
 				if (!i->invoke())
 					i = m_slots.remove_at(i);

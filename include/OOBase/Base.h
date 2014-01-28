@@ -208,6 +208,78 @@ namespace OOBase
 		a = b;
 		b = c;
 	}
+
+	template <typename T>
+	struct add_const
+	{
+		typedef T const type;
+	};
+
+	template <typename T>
+	struct add_const<T const>
+	{
+		typedef T const type;
+	};
+
+	template <typename T>
+	struct remove_const
+	{
+		typedef T type;
+	};
+
+	template <typename T>
+	struct remove_const<T const>
+	{
+		typedef T type;
+	};
+
+	template <typename T>
+	struct add_reference
+	{
+		typedef T& type;
+	};
+
+	template <typename T>
+	struct add_reference<T&>
+	{
+		typedef T& type;
+	};
+
+	template <typename T>
+	struct remove_reference
+	{
+		typedef T type;
+	};
+
+	template <typename T>
+	struct remove_reference<T&>
+	{
+		typedef T type;
+	};
+
+	template <typename T>
+	struct add_pointer
+	{
+		typedef T* type;
+	};
+
+	template <typename T>
+	struct add_pointer<T&>
+	{
+		typedef T* type;
+	};
+
+	template <typename T>
+	struct remove_pointer
+	{
+		typedef T type;
+	};
+
+	template <typename T>
+	struct remove_pointer<T*>
+	{
+		typedef T type;
+	};
 }
 
 #if defined(DOXYGEN)

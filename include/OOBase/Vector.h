@@ -35,6 +35,8 @@ namespace OOBase
 			typedef Allocating<Allocator> baseClass;
 
 		public:
+			typedef typename add_const<T*>::type const_pointer;
+
 			VectorBase() : baseClass(), m_data(NULL), m_size(0), m_capacity(0)
 			{}
 
@@ -44,16 +46,6 @@ namespace OOBase
 			~VectorBase()
 			{
 				baseClass::free(m_data);
-			}
-
-			T* data()
-			{
-				return m_data;
-			}
-
-			const T* data() const
-			{
-				return m_data;
 			}
 
 			bool empty() const
@@ -76,7 +68,7 @@ namespace OOBase
 				return (pos >= m_size ? NULL : &m_data[pos]);
 			}
 
-			const T* at(size_t pos) const
+			const_pointer at(size_t pos) const
 			{
 				return (pos >= m_size ? NULL : &m_data[pos]);
 			}
@@ -208,15 +200,12 @@ namespace OOBase
 				return 0;
 			}
 #endif
-			size_t remove_at(size_t pos, T* pval)
+			size_t erase(size_t pos)
 			{
 				if (this->m_data && pos < this->m_size)
 				{
-					if (pval)
-						*pval = this->m_data[pos];
-
 					for(--this->m_size;pos < this->m_size;++pos)
-						this->m_data[pos] = this->m_data[pos+1];
+						swap(this->m_data[pos],this->m_data[pos+1]);
 
 					this->m_data[this->m_size].~T();
 				}
@@ -275,13 +264,10 @@ namespace OOBase
 				return 0;
 			}
 
-			size_t remove_at(size_t pos, T* pval)
+			size_t erase(size_t pos)
 			{
 				if (this->m_data && pos < this->m_size)
 				{
-					if (pval)
-						*pval = this->m_data[pos];
-
 					--this->m_size;
 					if (pos < this->m_size)
 						memmove(&this->m_data[pos],&this->m_data[pos+1],(this->m_size - pos) * sizeof(T));
@@ -303,15 +289,52 @@ namespace OOBase
 			{}
 
 		protected:
+			typedef typename add_const<T&>::type const_reference;
+			typedef typename add_const<T*>::type const_pointer;
+
+			T* data()
+			{
+				return this->m_data;
+			}
+
+			const_pointer data() const
+			{
+				return this->m_data;
+			}
+
+			T& front()
+			{
+				assert(baseClass::at(0));
+				return *baseClass::at(0);
+			}
+
+			const_reference front() const
+			{
+				assert(baseClass::at(0));
+				return *baseClass::at(0);
+			}
+
+			T& back()
+			{
+				assert(baseClass::at(this->m_size-1));
+				return *baseClass::at(this->m_size-1);
+			}
+
+			const_reference back() const
+			{
+				assert(baseClass::at(this->m_size-1));
+				return *baseClass::at(this->m_size-1);
+			}
+
 			template <typename T1>
 			int push_back(T1 value)
 			{
 				return baseClass::insert_at(this->m_size,value);
 			}
 
-			bool pop_back(T* pval = NULL)
+			bool pop_back()
 			{
-				baseClass::remove_at(this->m_size - 1,pval);
+				baseClass::erase(this->m_size - 1);
 				return !baseClass::empty();
 			}
 		};
@@ -322,18 +345,55 @@ namespace OOBase
 	{
 		typedef detail::VectorImpl<T,Allocator> baseClass;
 
-		friend class detail::IteratorImpl<Vector,T,size_t>;
-		friend class detail::IteratorImpl<const Vector,const T,size_t>;
-
 	public:
-		typedef detail::IteratorImpl<Vector,T,size_t> iterator;
-		typedef detail::IteratorImpl<const Vector,const T,size_t> const_iterator;
+		typedef T value_type;
+		typedef Allocator allocator_type;
+		typedef T& reference;
+		typedef typename add_const<reference>::type const_reference;
+		typedef T* pointer;
+		typedef typename add_const<pointer>::type const_pointer;
+
+		typedef detail::IteratorImpl<Vector,value_type,size_t> iterator;
+		friend class detail::IteratorImpl<Vector,value_type,size_t>;
+
+		typedef detail::IteratorImpl<const Vector,const value_type,size_t> const_iterator;
+		friend class detail::IteratorImpl<const Vector,const value_type,size_t>;
 
 		Vector() : baseClass()
 		{}
 
 		Vector(AllocatorInstance& allocator) : baseClass(allocator)
 		{}
+
+		T* data()
+		{
+			return baseClass::data();
+		}
+
+		const_pointer data() const
+		{
+			return baseClass::data();
+		}
+
+		T& front()
+		{
+			return baseClass::front();
+		}
+
+		const_reference front() const
+		{
+			return baseClass::front();
+		}
+
+		T& back()
+		{
+			return baseClass::back();
+		}
+
+		const_reference back() const
+		{
+			return baseClass::back();
+		}
 
 		template <typename T1>
 		iterator find(T1 value)
@@ -366,7 +426,7 @@ namespace OOBase
 			while (this->m_size < new_size && !err)
 				err = baseClass::push_back(value);
 			while (this->m_size > new_size && !err)
-				err = baseClass::pop_back(NULL);
+				err = baseClass::pop_back();
 			return err;
 		}
 
@@ -381,9 +441,9 @@ namespace OOBase
 			return baseClass::push_back(value);
 		}
 
-		bool pop_back(T* pval = NULL)
+		bool pop_back()
 		{
-			return baseClass::pop_back(pval);
+			return baseClass::pop_back();
 		}
 
 		template <typename T1>
@@ -400,10 +460,10 @@ namespace OOBase
 			return (!err ? before : end());
 		}
 
-		iterator remove_at(iterator& iter)
+		iterator erase(iterator iter)
 		{
 			assert(iter.check(this));
-			return iterator(this,baseClass::remove_at(iter.deref(),NULL));
+			return iterator(this,baseClass::erase(iter.deref()));
 		}
 
 		template <typename T1>
@@ -413,27 +473,29 @@ namespace OOBase
 			if (i == end())
 				return false;
 
-			remove_at(i);
+			erase(i);
 			return true;
 		}
 
-		T* at(size_t pos)
+		pointer at(size_t pos)
 		{
 			return baseClass::at(pos);
 		}
 
-		const T* at(size_t pos) const
+		const_pointer at(size_t pos) const
 		{
 			return baseClass::at(pos);
 		}
 
-		T& operator [](size_t pos)
+		reference operator [](size_t pos)
 		{
+			assert(at(pos));
 			return *at(pos);
 		}
 
-		const T& operator [](size_t pos) const
+		const_reference operator [](size_t pos) const
 		{
+			assert(at(pos));
 			return *at(pos);
 		}
 
@@ -450,16 +512,6 @@ namespace OOBase
 		const_iterator begin() const
 		{
 			return cbegin();
-		}
-
-		iterator back()
-		{
-			return (this->m_size ? iterator(this,this->m_size-1) : end());
-		}
-
-		const_iterator back() const
-		{
-			return (this->m_size ? const_iterator(this,this->m_size-1) : end());
 		}
 
 		iterator end()

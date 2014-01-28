@@ -100,7 +100,8 @@ int OOBase::detail::ProactorPoll::do_unbind_fd(int fd)
 		// Replace current with top of stack
 		pollfd* pfd = m_poll_fds.at(item.m_poll_pos);
 
-		m_poll_fds.pop_back(pfd);
+		*pfd = m_poll_fds.back();
+		m_poll_fds.pop_back();
 
 		// Reassign index
 		i = m_items.find(pfd->fd);
@@ -215,7 +216,8 @@ bool OOBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count
 						else
 						{
 							// Replace current with top of stack
-							m_poll_fds.pop_back(pfd);
+							*pfd = m_poll_fds.back();
+							m_poll_fds.pop_back();
 
 							// Reassign index
 							i = m_items.find(pfd->fd);
