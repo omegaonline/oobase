@@ -24,6 +24,7 @@
 
 #include "Buffer.h"
 #include "SharedPtr.h"
+#include "RefCount.h"
 #include "Timeout.h"
 
 #if defined(_WIN32)

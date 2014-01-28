@@ -60,7 +60,7 @@ namespace OOBase
 	};
 
 	template <typename T>
-	class RefPtr
+	class RefPtr : public SafeBoolean
 	{
 	public:
 		RefPtr(T* ptr = NULL) : m_data(ptr)
@@ -110,24 +110,24 @@ namespace OOBase
 			return m_data;
 		}
 
-		T* operator ->()
+		T* operator ->() const
 		{
 			return m_data;
 		}
 
-		const T* operator ->() const
+		T& operator *() const
+		{
+			return *m_data;
+		}
+
+		T* get() const
 		{
 			return m_data;
 		}
 
-		operator T*()
+		operator bool_type() const
 		{
-			return m_data;
-		}
-
-		operator const T*() const
-		{
-			return m_data;
+			return m_data != NULL ? &SafeBoolean::this_type_does_not_support_comparisons : NULL;
 		}
 
 	private:

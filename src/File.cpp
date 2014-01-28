@@ -78,7 +78,7 @@ long OOBase::File::read(void* p, unsigned long size)
 #endif
 }
 
-size_t OOBase::File::read(Buffer* buffer, int& err, size_t len)
+size_t OOBase::File::read(const RefPtr<Buffer>& buffer, int& err, size_t len)
 {
 	if (!buffer)
 	{
@@ -126,7 +126,7 @@ long OOBase::File::write(const void* p, unsigned long size)
 #endif
 }
 
-int OOBase::File::write(Buffer* buffer, size_t len)
+int OOBase::File::write(const RefPtr<Buffer>& buffer, size_t len)
 {
 	if (!buffer)
 		return EINVAL;

@@ -64,12 +64,17 @@ namespace OOBase
 				m_buffer->addref();
 		}
 
+		CDRStream(RefPtr<Buffer> buffer) :
+				m_buffer(buffer),
+				m_endianess(OOBASE_BYTE_ORDER),
+				m_last_error(0)
+		{ }
+
 		CDRStream(const CDRStream& rhs) :
 				m_buffer(rhs.m_buffer),
 				m_endianess(rhs.m_endianess),
 				m_last_error(rhs.m_last_error)
-		{
-		}
+		{ }
 
 		CDRStream& operator = (const CDRStream& rhs)
 		{
@@ -86,12 +91,12 @@ namespace OOBase
 		{ 
 		}
 
-		const Buffer* buffer() const
+		const RefPtr<Buffer>& buffer() const
 		{
 			return m_buffer;
 		}
 
-		Buffer* buffer()
+		RefPtr<Buffer>& buffer()
 		{
 			return m_buffer;
 		}

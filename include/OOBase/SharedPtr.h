@@ -54,11 +54,12 @@ namespace OOBase
 				{
 					size_t t = m_ref_count;
 					if (t == 0)
-						return false;
+						break;
 
 					if (m_ref_count.CompareAndSwap(t+1,t) == t)
 						return true;
 				}
+				return false;
 			}
 
 			void release()

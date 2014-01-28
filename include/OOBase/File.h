@@ -37,10 +37,10 @@ namespace OOBase
 		int open(const char* filename, bool writeable = false);
 
 		long read(void* p, unsigned long size);
-		size_t read(Buffer* buffer, int& err, size_t len = 0);
+		size_t read(const RefPtr<Buffer>& buffer, int& err, size_t len = 0);
 
 		long write(const void* p, unsigned long size);
-		int write(Buffer* buffer, size_t len = 0);
+		int write(const RefPtr<Buffer>& buffer, size_t len = 0);
 
 	private:
 #if defined(_WIN32)
