@@ -28,7 +28,7 @@
 namespace OOBase
 {
 	template <typename Allocator = CrtAllocator>
-	class Signal0 : public NonCopyable
+	class Signal0
 	{
 	private:
 		class Slot
@@ -37,7 +37,13 @@ namespace OOBase
 			template<typename T>
 			Slot(WeakPtr<T> ptr, void (T::*fn)()) :
 					m_ptr(ptr), m_fn(fn), m_adaptor(&Slot::adaptor<T>)
+			{}
+
+			bool operator == (const Slot& rhs) const
 			{
+				if (this == &rhs)
+					return true;
+				return m_ptr == rhs.m_ptr && m_fn == rhs.m_fn;
 			}
 
 			bool invoke() const
@@ -76,12 +82,18 @@ namespace OOBase
 			return m_slots.push_back(Slot(ptr,slot));
 		}
 
+		template <typename T>
+		bool disconnect(WeakPtr<T>& ptr, void (T::*slot)())
+		{
+			return m_slots.remove(Slot(ptr,slot));
+		}
+
 		void fire() const
 		{
 			for (typename Vector<Slot,Allocator>::iterator i=m_slots.begin();i!=m_slots.end();)
 			{
 				if (!i->invoke())
-					i = m_slots.remove_at(i);
+					i = m_slots.erase(i);
 				else
 					++i;
 			}
