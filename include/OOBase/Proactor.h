@@ -42,7 +42,7 @@ namespace OOBase
 
 	public:
 		template <typename T>
-		int recv(T* param, void (T::*callback)(Buffer* buffer, int err), Buffer* buffer, size_t bytes = 0)
+		int recv(T* param, void (T::*callback)(const RefPtr<Buffer>& buffer, int err), const RefPtr<Buffer>& buffer, size_t bytes = 0)
 		{
 			Thunk<T>* thunk = NULL;
 			if (!thunk_allocate(thunk,param,callback))
@@ -52,7 +52,7 @@ namespace OOBase
 		}
 
 		template <typename T>
-		int recv_msg(T* param, void (T::*callback)(Buffer* data_buffer, Buffer* ctl_buffer, int err), Buffer* data_buffer, Buffer* ctl_buffer, size_t data_bytes)
+		int recv_msg(T* param, void (T::*callback)(const RefPtr<Buffer>& data_buffer, const RefPtr<Buffer>& ctl_buffer, int err), const RefPtr<Buffer>& data_buffer, const RefPtr<Buffer>& ctl_buffer, size_t data_bytes)
 		{
 			ThunkM<T>* thunk = NULL;
 			if (!thunk_allocate(thunk,param,callback))
@@ -62,7 +62,7 @@ namespace OOBase
 		}
 
 		template <typename T>
-		int send(T* param, void (T::*callback)(Buffer* buffer, int err), Buffer* buffer)
+		int send(T* param, void (T::*callback)(const RefPtr<Buffer>& buffer, int err), const RefPtr<Buffer>& buffer)
 		{
 			Thunk<T>* thunk = NULL;
 			if (!thunk_allocate(thunk,param,callback))
@@ -82,7 +82,7 @@ namespace OOBase
 		}
 
 		template <typename T>
-		int send_msg(T* param, void (T::*callback)(Buffer* data_buffer, Buffer* ctl_buffer, int err), Buffer* data_buffer, Buffer* ctl_buffer)
+		int send_msg(T* param, void (T::*callback)(const RefPtr<Buffer>& data_buffer, const RefPtr<Buffer>& ctl_buffer, int err), const RefPtr<Buffer>& data_buffer, const RefPtr<Buffer>& ctl_buffer)
 		{
 			ThunkM<T>* thunk = NULL;
 			if (!thunk_allocate(thunk,param,callback))
@@ -92,25 +92,25 @@ namespace OOBase
 		}
 
 		// These are blocking calls
-		int recv(Buffer* buffer, size_t bytes = 0);
-		int recv_msg(Buffer* buffer, Buffer* ctl_buffer, size_t bytes);
-		int send(Buffer* buffer);
-		int send_msg(Buffer* buffer, Buffer* ctl_buffer);
+		int recv(const RefPtr<Buffer>& buffer, size_t bytes = 0);
+		int recv_msg(const RefPtr<Buffer>& buffer, const RefPtr<Buffer>& ctl_buffer, size_t bytes);
+		int send(const RefPtr<Buffer>& buffer);
+		int send_msg(const RefPtr<Buffer>& buffer, const RefPtr<Buffer>& ctl_buffer);
 
-		typedef void (*recv_callback_t)(void* param, Buffer* buffer, int err);
-		virtual int recv(void* param, recv_callback_t callback, Buffer* buffer, size_t bytes = 0) = 0;
+		typedef void (*recv_callback_t)(void* param, const RefPtr<Buffer>& buffer, int err);
+		virtual int recv(void* param, recv_callback_t callback, const RefPtr<Buffer>& buffer, size_t bytes = 0) = 0;
 
-		typedef void (*recv_msg_callback_t)(void* param, Buffer* data_buffer, Buffer* ctl_buffer, int err);
-		virtual int recv_msg(void* param, recv_msg_callback_t callback, Buffer* data_buffer, Buffer* ctl_buffer, size_t data_bytes) = 0;
+		typedef void (*recv_msg_callback_t)(void* param, const RefPtr<Buffer>& data_buffer, const RefPtr<Buffer>& ctl_buffer, int err);
+		virtual int recv_msg(void* param, recv_msg_callback_t callback, const RefPtr<Buffer>& data_buffer, const RefPtr<Buffer>& ctl_buffer, size_t data_bytes) = 0;
 
-		typedef void (*send_callback_t)(void* param, Buffer* buffer, int err);
-		virtual int send(void* param, send_callback_t callback, Buffer* buffer) = 0;
+		typedef void (*send_callback_t)(void* param, const RefPtr<Buffer>& buffer, int err);
+		virtual int send(void* param, send_callback_t callback, const RefPtr<Buffer>& buffer) = 0;
 
 		typedef void (*send_v_callback_t)(void* param, Buffer* buffers[], size_t count, int err);
 		virtual int send_v(void* param, send_v_callback_t callback, Buffer* buffers[], size_t count) = 0;
 
-		typedef void (*send_msg_callback_t)(void* param, Buffer* data_buffer, Buffer* ctl_buffer, int err);
-		virtual int send_msg(void* param, send_msg_callback_t callback, Buffer* data_buffer, Buffer* ctl_buffer) = 0;
+		typedef void (*send_msg_callback_t)(void* param, const RefPtr<Buffer>& data_buffer, const RefPtr<Buffer>& ctl_buffer, int err);
+		virtual int send_msg(void* param, send_msg_callback_t callback, const RefPtr<Buffer>& data_buffer, const RefPtr<Buffer>& ctl_buffer) = 0;
 
 		virtual int shutdown(bool bSend = true, bool bRecv = true) = 0;
 
@@ -134,7 +134,7 @@ namespace OOBase
 		template <typename T>
 		struct Thunk
 		{
-			Thunk(T* param, void (T::*callback)(Buffer*,int), AllocatorInstance& allocator) :
+			Thunk(T* param, void (T::*callback)(const RefPtr<Buffer>&,int), AllocatorInstance& allocator) :
 				m_param(param),m_callback(callback),m_allocator(allocator)
 			{}
 
@@ -153,10 +153,10 @@ namespace OOBase
 			}
 
 			T* m_param;
-			void (T::*m_callback)(Buffer*,int);
+			void (T::*m_callback)(const RefPtr<Buffer>&,int);
 			AllocatorInstance& m_allocator;
 
-			static void fn(void* param, Buffer* buffer, int err)
+			static void fn(void* param, const RefPtr<Buffer>& buffer, int err)
 			{
 				Thunk thunk = *static_cast<Thunk*>(param);
 				thunk.m_allocator.delete_free(static_cast<Thunk*>(param));
@@ -167,7 +167,7 @@ namespace OOBase
 		template <typename T>
 		struct ThunkM
 		{
-			ThunkM(T* param, void (T::*callback)(Buffer*,Buffer*,int), AllocatorInstance& allocator) :
+			ThunkM(T* param, void (T::*callback)(const RefPtr<Buffer>&,const RefPtr<Buffer>&,int), AllocatorInstance& allocator) :
 				m_param(param),m_callback(callback),m_allocator(allocator)
 			{}
 
@@ -186,10 +186,10 @@ namespace OOBase
 			}
 
 			T* m_param;
-			void (T::*m_callback)(Buffer*,Buffer*,int);
+			void (T::*m_callback)(const RefPtr<Buffer>&,const RefPtr<Buffer>&,int);
 			AllocatorInstance& m_allocator;
 
-			static void fn(void* param, Buffer* data_buffer, Buffer* ctl_buffer, int err)
+			static void fn(void* param, const RefPtr<Buffer>& data_buffer, const RefPtr<Buffer>& ctl_buffer, int err)
 			{
 				ThunkM thunk = *static_cast<ThunkM*>(param);
 				thunk.m_allocator.delete_free(static_cast<ThunkM*>(param));

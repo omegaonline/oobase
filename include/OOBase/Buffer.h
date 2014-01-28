@@ -50,14 +50,14 @@ namespace OOBase
 	{
 	public:
 		/// The factory function allocates the internal buffer to size \p cbSize.
-		static Buffer* create(size_t cbSize = 256, size_t align = 1);
+		static RefPtr<Buffer> create(size_t cbSize = 256, size_t align = 1);
 
 		/// The factory function allocates the internal buffer to size \p cbSize using allocator \p allocator.
 		template <typename Allocator>
-		static Buffer* create(size_t cbSize = 256, size_t align = 1);
+		static RefPtr<Buffer> create(size_t cbSize = 256, size_t align = 1);
 
 		/// The factory function allocates the internal buffer to size \p cbSize using allocator \p allocator.
-		static Buffer* create(AllocatorInstance& allocator, size_t cbSize = 256, size_t align = 1);
+		static RefPtr<Buffer> create(AllocatorInstance& allocator, size_t cbSize = 256, size_t align = 1);
 
 		/// Get the current read pointer value.
 		const uint8_t* rd_ptr() const;
@@ -152,20 +152,23 @@ namespace OOBase
 }
 
 template <typename Allocator>
-inline OOBase::Buffer* OOBase::Buffer::create(size_t cbSize, size_t align)
+inline OOBase::RefPtr<OOBase::Buffer> OOBase::Buffer::create(size_t cbSize, size_t align)
 {
+	RefPtr<Buffer> ptr;
+
 	void* buf = Allocator::allocate(cbSize,align);
-	if (!buf)
-		return NULL;
+	if (buf)
+	{
+		detail::BufferImpl<Allocator>* buffer = NULL;
+		if (!Allocator::allocate_new(buffer,buf,cbSize,align))
+			Allocator::free(buf);
 
-	detail::BufferImpl<Allocator>* buffer = NULL;
-	if (!Allocator::allocate_new(buffer,buf,cbSize,align))
-		Allocator::free(buf);
-
-	return buffer;
+		ptr = buffer;
+	}
+	return ptr;
 }
 
-inline OOBase::Buffer* OOBase::Buffer::create(size_t cbSize, size_t align)
+inline OOBase::RefPtr<OOBase::Buffer> OOBase::Buffer::create(size_t cbSize, size_t align)
 {
 	return create<CrtAllocator>(cbSize,align);
 }

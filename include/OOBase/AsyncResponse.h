@@ -26,21 +26,6 @@
 
 namespace OOBase
 {
-	namespace detail
-	{
-		template <typename T>
-		struct non_ref
-		{
-			typedef T value;
-		};
-
-		template <typename T>
-		struct non_ref<T&>
-		{
-			typedef T value;
-		};
-	}
-
 	template <typename H, typename Allocator = CrtAllocator>
 	class AsyncResponseDispatcher : public Allocating<Allocator>
 	{
@@ -64,7 +49,7 @@ namespace OOBase
 				{
 					guard.release();
 
-					OOBase::CDRStream stream(static_cast<OOBase::Buffer*>(NULL));
+					OOBase::CDRStream stream(0);
 					resp->call(stream);
 
 					resp->destroy(this);
@@ -135,7 +120,7 @@ namespace OOBase
 			{
 				guard.release();
 
-				OOBase::CDRStream stream(static_cast<OOBase::Buffer*>(NULL));
+				OOBase::CDRStream stream(0);
 				resp->call(stream);
 
 				resp->destroy(this);
@@ -212,7 +197,7 @@ namespace OOBase
 			typedef bool (T::*callback_t)(OOBase::CDRStream&, P1 p1);
 			T* m_this;
 			callback_t m_callback;
-			typename detail::non_ref<P1>::value m_p1;
+			typename remove_reference<P1>::type m_p1;
 
 			Delegate1(T* pThis, callback_t callback, PP1 p1) : m_this(pThis), m_callback(callback), m_p1(p1)
 			{}
@@ -243,8 +228,8 @@ namespace OOBase
 			typedef bool (T::*callback_t)(OOBase::CDRStream&, P1 p1, P2 p2);
 			T* m_this;
 			callback_t m_callback;
-			typename detail::non_ref<P1>::value m_p1;
-			typename detail::non_ref<P2>::value m_p2;
+			typename remove_reference<P1>::type m_p1;
+			typename remove_reference<P2>::type m_p2;
 
 			Delegate2(T* pThis, callback_t callback, PP1 p1, PP2 p2) : m_this(pThis), m_callback(callback), m_p1(p1), m_p2(p2)
 			{}
@@ -276,9 +261,9 @@ namespace OOBase
 			typedef bool (T::*callback_t)(OOBase::CDRStream&, P1 p1, P2 p2, P3 p3);
 			T* m_this;
 			callback_t m_callback;
-			typename detail::non_ref<P1>::value m_p1;
-			typename detail::non_ref<P2>::value m_p2;
-			typename detail::non_ref<P3>::value m_p3;
+			typename remove_reference<P1>::type m_p1;
+			typename remove_reference<P2>::type m_p2;
+			typename remove_reference<P3>::type m_p3;
 
 			Delegate3(T* pThis, callback_t callback, PP1 p1, PP2 p2, PP3 p3) : m_this(pThis), m_callback(callback), m_p1(p1), m_p2(p2), m_p3(p3)
 			{}

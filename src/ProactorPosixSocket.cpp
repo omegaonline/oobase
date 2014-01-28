@@ -49,11 +49,11 @@ namespace
 
 		int init();
 
-		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes);
-		int recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer, size_t data_bytes);
-		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
+		int recv(void* param, recv_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& buffer, size_t bytes);
+		int recv_msg(void* param, recv_msg_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& data_buffer, const OOBase::RefPtr<OOBase::Buffer>& ctl_buffer, size_t data_bytes);
+		int send(void* param, send_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& buffer);
 		int send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count);
-		int send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
+		int send_msg(void* param, send_msg_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& data_buffer, const OOBase::RefPtr<OOBase::Buffer>& ctl_buffer);
 		int shutdown(bool bSend, bool bRecv);
 		OOBase::socket_t get_handle() const;
 
@@ -182,7 +182,7 @@ int PosixAsyncSocket::init()
 	return m_pProactor->bind_fd(m_fd,this,&fd_callback);
 }
 
-int PosixAsyncSocket::recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
+int PosixAsyncSocket::recv(void* param, recv_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& buffer, size_t bytes)
 {
 	int err = 0;
 	if (bytes)
@@ -200,9 +200,8 @@ int PosixAsyncSocket::recv(void* param, recv_callback_t callback, OOBase::Buffer
 	if (!callback)
 		return EINVAL;
 
-	RecvItem item = { param, buffer, bytes, NULL };
+	RecvItem item = { param, buffer.addref(), bytes, NULL };
 	item.m_callback = callback;
-	item.m_buffer->addref();
 
 	OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
@@ -220,7 +219,7 @@ int PosixAsyncSocket::recv(void* param, recv_callback_t callback, OOBase::Buffer
 	return (watch ? m_pProactor->watch_fd(m_fd,OOBase::detail::eTXRecv) : 0);
 }
 
-int PosixAsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer, size_t data_bytes)
+int PosixAsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& data_buffer, const OOBase::RefPtr<OOBase::Buffer>& ctl_buffer, size_t data_bytes)
 {
 	int err = 0;
 	if (data_bytes)
@@ -238,10 +237,8 @@ int PosixAsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, OOBase
 	if (!data_buffer || !data_buffer->space() || !ctl_buffer || !ctl_buffer->space() || !callback)
 		return EINVAL;
 
-	RecvItem item = { param, data_buffer, data_bytes, ctl_buffer };
+	RecvItem item = { param, data_buffer.addref(), data_bytes, ctl_buffer.addref() };
 	item.m_msg_callback = callback;
-	item.m_buffer->addref();
-	item.m_ctl_buffer->addref();
 
 	OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
@@ -260,7 +257,7 @@ int PosixAsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, OOBase
 	return (watch ? m_pProactor->watch_fd(m_fd,OOBase::detail::eTXRecv) : 0);
 }
 
-int PosixAsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buffer)
+int PosixAsyncSocket::send(void* param, send_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& buffer)
 {
 	size_t bytes = (buffer ? buffer->length() : 0);
 	if (bytes == 0)
@@ -271,8 +268,7 @@ int PosixAsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer
 
 	SendItem item = { param, 1 };
 	item.m_callback = callback;
-	item.m_buffer = buffer;
-	item.m_buffer->addref();
+	item.m_buffer = buffer.addref();
 
 	OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
@@ -345,7 +341,7 @@ int PosixAsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Bu
 	return (watch ? m_pProactor->watch_fd(m_fd,OOBase::detail::eTXSend) : 0);
 }
 
-int PosixAsyncSocket::send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer)
+int PosixAsyncSocket::send_msg(void* param, send_msg_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& data_buffer, const OOBase::RefPtr<OOBase::Buffer>& ctl_buffer)
 {
 	size_t data_len = (data_buffer ? data_buffer->length() : 0);
 	size_t ctl_len = (ctl_buffer ? ctl_buffer->length() : 0);
@@ -358,10 +354,8 @@ int PosixAsyncSocket::send_msg(void* param, send_msg_callback_t callback, OOBase
 
 	SendItem item = { param, 1 };
 	item.m_msg_callback = callback;
-	item.m_ctl_buffer = ctl_buffer;
-	item.m_ctl_buffer->addref();
-	item.m_buffer = data_buffer;
-	item.m_buffer->addref();
+	item.m_ctl_buffer = ctl_buffer.addref();
+	item.m_buffer = data_buffer.addref();
 
 	OOBase::Guard<OOBase::Mutex> guard(m_lock);
 

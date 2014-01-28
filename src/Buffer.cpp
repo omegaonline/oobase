@@ -21,17 +21,20 @@
 
 #include "../include/OOBase/Buffer.h"
 
-OOBase::Buffer* OOBase::Buffer::create(AllocatorInstance& allocator, size_t cbSize, size_t align)
+OOBase::RefPtr<OOBase::Buffer> OOBase::Buffer::create(AllocatorInstance& allocator, size_t cbSize, size_t align)
 {
+	OOBase::RefPtr<OOBase::Buffer> ptr;
+
 	void* buf = allocator.allocate(cbSize,align);
-	if (!buf)
-		return NULL;
+	if (buf)
+	{
+		detail::BufferImpl<AllocatorInstance>* buffer = NULL;
+		if (!allocator.allocate_new(buffer,allocator,buf,cbSize,align))
+			allocator.free(buf);
 
-	detail::BufferImpl<AllocatorInstance>* buffer = NULL;
-	if (!allocator.allocate_new(buffer,allocator,buf,cbSize,align))
-		allocator.free(buf);
-
-	return buffer;
+		ptr = buffer;
+	}
+	return ptr;
 }
 
 OOBase::Buffer::Buffer(uint8_t* buffer, size_t cbSize, size_t align) :

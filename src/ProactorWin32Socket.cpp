@@ -38,11 +38,11 @@ namespace
 		Win32AsyncSocket(OOBase::detail::ProactorWin32* pProactor, SOCKET hSocket);
 		virtual ~Win32AsyncSocket();
 		
-		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes);
-		int recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer, size_t data_bytes);
-		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
+		int recv(void* param, recv_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& buffer, size_t bytes);
+		int recv_msg(void* param, recv_msg_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& data_buffer, const OOBase::RefPtr<OOBase::Buffer>& ctl_buffer, size_t data_bytes);
+		int send(void* param, send_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& buffer);
 		int send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count);
-		int send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
+		int send_msg(void* param, send_msg_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& data_buffer, const OOBase::RefPtr<OOBase::Buffer>& ctl_buffer);
 		int shutdown(bool bSend, bool bRecv);
 		OOBase::socket_t get_handle() const;
 
@@ -76,7 +76,7 @@ Win32AsyncSocket::~Win32AsyncSocket()
 	m_pProactor->unbind();
 }
 
-int Win32AsyncSocket::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
+int Win32AsyncSocket::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& buffer, size_t bytes)
 {
 	int err = 0;
 	if (bytes)
@@ -104,8 +104,7 @@ int Win32AsyncSocket::recv(void* param, OOBase::AsyncSocket::recv_callback_t cal
 	
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
-	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer);
-	buffer->addref();
+	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer.addref());
 	
 	WSABUF wsa_buf;
 	wsa_buf.buf = reinterpret_cast<char*>(buffer->wr_ptr());
@@ -148,7 +147,7 @@ void Win32AsyncSocket::on_recv(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OO
 	}
 }
 
-int Win32AsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer, size_t data_bytes)
+int Win32AsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& data_buffer, const OOBase::RefPtr<OOBase::Buffer>& ctl_buffer, size_t data_bytes)
 {
 	int err = 0;
 	if (data_bytes)
@@ -176,10 +175,8 @@ int Win32AsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, OOBase
 
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
-	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(data_buffer);
-	pOv->m_extras[3] = reinterpret_cast<ULONG_PTR>(ctl_buffer);
-	data_buffer->addref();
-	ctl_buffer->addref();
+	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(data_buffer.addref());
+	pOv->m_extras[3] = reinterpret_cast<ULONG_PTR>(ctl_buffer.addref());
 
 	WSABUF wsa_buf;
 	wsa_buf.buf = reinterpret_cast<char*>(data_buffer->wr_ptr());
@@ -234,7 +231,7 @@ void Win32AsyncSocket::on_recv_msg(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr
 	}
 }
 
-int Win32AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer* buffer)
+int Win32AsyncSocket::send(void* param, send_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& buffer)
 {
 	size_t bytes = (buffer ? buffer->length() : 0);
 	if (bytes == 0)
@@ -253,8 +250,7 @@ int Win32AsyncSocket::send(void* param, send_callback_t callback, OOBase::Buffer
 	
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
-	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer);
-	buffer->addref();
+	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer.addref());
 	
 	WSABUF wsa_buf;
 	wsa_buf.buf = (char*)(buffer->rd_ptr());
@@ -435,7 +431,7 @@ void Win32AsyncSocket::on_send_v(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, 
 	pOv->m_pProactor->delete_overlapped(pOv);
 }
 
-int Win32AsyncSocket::send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer)
+int Win32AsyncSocket::send_msg(void* param, send_msg_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& data_buffer, const OOBase::RefPtr<OOBase::Buffer>& ctl_buffer)
 {
 	size_t data_len = (data_buffer ? data_buffer->length() : 0);
 	size_t ctl_len = (ctl_buffer ? ctl_buffer->length() : 0);
@@ -456,10 +452,8 @@ int Win32AsyncSocket::send_msg(void* param, send_msg_callback_t callback, OOBase
 
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
-	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(data_buffer);
-	pOv->m_extras[3] = reinterpret_cast<ULONG_PTR>(ctl_buffer);
-	data_buffer->addref();
-	ctl_buffer->addref();
+	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(data_buffer.addref());
+	pOv->m_extras[3] = reinterpret_cast<ULONG_PTR>(ctl_buffer.addref());
 
 	WSABUF wsa_buf;
 	wsa_buf.buf = (char*)(data_buffer->rd_ptr());

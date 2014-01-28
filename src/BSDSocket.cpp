@@ -257,8 +257,7 @@ int OOBase::Net::accept(socket_t accept_sock, socket_t& new_sock, const Timeout&
 
 namespace
 {
-	class BSDSocket :
-			public OOBase::Socket
+	class BSDSocket : public OOBase::Socket
 	{
 	public:
 		BSDSocket(OOBase::socket_t sock);
@@ -269,7 +268,7 @@ namespace
 		size_t send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout);
 		size_t recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout);
 		int recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
-		size_t recv_msg(void* data_buf, size_t data_len, OOBase::Buffer* ctl_buffer, int& err, const OOBase::Timeout& timeout);
+		size_t recv_msg(void* data_buf, size_t data_len, const OOBase::RefPtr<OOBase::Buffer>& ctl_buffer, int& err, const OOBase::Timeout& timeout);
 
 		int shutdown(bool bSend, bool bRecv);
 		int close();
@@ -757,7 +756,7 @@ int BSDSocket::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Tim
 	return err;
 }
 
-size_t BSDSocket::recv_msg(void* data_buf, size_t data_len, OOBase::Buffer* ctl_buffer, int& err, const OOBase::Timeout& timeout)
+size_t BSDSocket::recv_msg(void* data_buf, size_t data_len, const OOBase::RefPtr<OOBase::Buffer>& ctl_buffer, int& err, const OOBase::Timeout& timeout)
 {
 	err = 0;
 	data_len = (data_buf ? data_len : 0);

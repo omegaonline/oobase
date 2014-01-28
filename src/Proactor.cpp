@@ -29,19 +29,19 @@ namespace
 		WaitCallback() : OOBase::Future<int>(0)
 		{}
 
-		static void callback(void* param, OOBase::Buffer*, int err)
+		static void callback(void* param, const OOBase::RefPtr<OOBase::Buffer>&, int err)
 		{
 			static_cast<WaitCallback*>(param)->signal(err);
 		}
 
-		static void callback_msg(void* param, OOBase::Buffer*, OOBase::Buffer*, int err)
+		static void callback_msg(void* param, const OOBase::RefPtr<OOBase::Buffer>&, const OOBase::RefPtr<OOBase::Buffer>&, int err)
 		{
 			static_cast<WaitCallback*>(param)->signal(err);
 		}
 	};
 }
 
-int OOBase::AsyncSocket::recv(Buffer* buffer, size_t bytes)
+int OOBase::AsyncSocket::recv(const RefPtr<Buffer>& buffer, size_t bytes)
 {
 	WaitCallback wait;
 	int err = recv(&wait,&WaitCallback::callback,buffer,bytes);
@@ -51,7 +51,7 @@ int OOBase::AsyncSocket::recv(Buffer* buffer, size_t bytes)
 	return err;
 }
 
-int OOBase::AsyncSocket::recv_msg(Buffer* data_buffer, Buffer* ctl_buffer, size_t data_len)
+int OOBase::AsyncSocket::recv_msg(const RefPtr<Buffer>& data_buffer, const RefPtr<Buffer>& ctl_buffer, size_t data_len)
 {
 	WaitCallback wait;
 	int err = recv_msg(&wait,&WaitCallback::callback_msg,data_buffer,ctl_buffer,data_len);
@@ -61,7 +61,7 @@ int OOBase::AsyncSocket::recv_msg(Buffer* data_buffer, Buffer* ctl_buffer, size_
 	return err;
 }
 
-int OOBase::AsyncSocket::send(Buffer* buffer)
+int OOBase::AsyncSocket::send(const RefPtr<Buffer>& buffer)
 {
 	WaitCallback wait;
 	int err = send(&wait,&WaitCallback::callback,buffer);
@@ -71,7 +71,7 @@ int OOBase::AsyncSocket::send(Buffer* buffer)
 	return err;
 }
 
-int OOBase::AsyncSocket::send_msg(Buffer* buffer, Buffer* ctl_buffer)
+int OOBase::AsyncSocket::send_msg(const RefPtr<Buffer>& buffer, const RefPtr<Buffer>& ctl_buffer)
 {
 	WaitCallback wait;
 	int err = send_msg(&wait,&WaitCallback::callback_msg,buffer,ctl_buffer);

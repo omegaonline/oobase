@@ -102,7 +102,7 @@ namespace OOBase
 				m_data->release();
 		}
 
-		T* addref()
+		T* addref() const
 		{
 			if (m_data)
 				m_data->addref();

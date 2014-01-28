@@ -386,7 +386,7 @@ namespace OOBase
 			return true;
 		}
 
-		size_t write_buffer(const Buffer* buffer)
+		size_t write_buffer(const RefPtr<Buffer>& buffer)
 		{
 			if (m_last_error != 0)
 				return 0;

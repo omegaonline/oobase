@@ -37,11 +37,11 @@ namespace
 		explicit AsyncPipe(OOBase::detail::ProactorWin32* pProactor, HANDLE hPipe);
 		virtual ~AsyncPipe();
 		
-		int recv(void* param, recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes);
-		int recv_msg(void* param, recv_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer, size_t data_bytes);
-		int send(void* param, send_callback_t callback, OOBase::Buffer* buffer);
+		int recv(void* param, recv_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& buffer, size_t bytes);
+		int recv_msg(void* param, recv_msg_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& data_buffer, const OOBase::RefPtr<OOBase::Buffer>& ctl_buffer, size_t data_bytes);
+		int send(void* param, send_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& buffer);
 		int send_v(void* param, send_v_callback_t callback, OOBase::Buffer* buffers[], size_t count);
-		int send_msg(void* param, send_msg_callback_t callback, OOBase::Buffer* data_buffer, OOBase::Buffer* ctl_buffer);
+		int send_msg(void* param, send_msg_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& data_buffer, const OOBase::RefPtr<OOBase::Buffer>& ctl_buffer);
 		int shutdown(bool bSend, bool bRecv);
 		OOBase::socket_t get_handle() const;
 	
@@ -96,7 +96,7 @@ int AsyncPipe::translate_error(DWORD dwErr)
 	}
 }
 
-int AsyncPipe::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, OOBase::Buffer* buffer, size_t bytes)
+int AsyncPipe::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& buffer, size_t bytes)
 {
 	int err = 0;
 	if (bytes)
@@ -127,9 +127,8 @@ int AsyncPipe::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, 
 	
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
-	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer);
+	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer.addref());
 	pOv->m_extras[3] = bytes;
-	buffer->addref();
 
 	DWORD dwToRead = static_cast<DWORD>(bytes ? bytes : buffer->space());
 	DWORD dwRead = 0;
@@ -143,7 +142,7 @@ int AsyncPipe::recv(void* param, OOBase::AsyncSocket::recv_callback_t callback, 
 	return 0;
 }
 
-int AsyncPipe::recv_msg(void*, recv_msg_callback_t, OOBase::Buffer*, OOBase::Buffer*, size_t)
+int AsyncPipe::recv_msg(void*, recv_msg_callback_t, const OOBase::RefPtr<OOBase::Buffer>&, const OOBase::RefPtr<OOBase::Buffer>&, size_t)
 {
 	return ERROR_NOT_SUPPORTED;
 }
@@ -182,7 +181,7 @@ void AsyncPipe::on_recv(HANDLE handle, DWORD dwBytes, DWORD dwErr, OOBase::detai
 	}
 }
 
-int AsyncPipe::send(void* param, send_callback_t callback, OOBase::Buffer* buffer)
+int AsyncPipe::send(void* param, send_callback_t callback, const OOBase::RefPtr<OOBase::Buffer>& buffer)
 {
 	size_t bytes = (buffer ? buffer->length() : 0);
 	if (bytes == 0)
@@ -204,9 +203,8 @@ int AsyncPipe::send(void* param, send_callback_t callback, OOBase::Buffer* buffe
 	
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
-	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer);
-	buffer->addref();
-	
+	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer.addref());
+
 	DWORD dwSent = 0;
 	if (!WriteFile(m_hPipe,buffer->rd_ptr(),static_cast<DWORD>(bytes),&dwSent,pOv))
 	{
@@ -270,7 +268,7 @@ int AsyncPipe::send_v(void* param, send_v_callback_t callback, OOBase::Buffer* b
 	if (total == 0)
 		return 0;
 
-	OOBase::Buffer* buffer = OOBase::Buffer::create(total);
+	OOBase::RefPtr<OOBase::Buffer> buffer = OOBase::Buffer::create(total);
 	if (!buffer)
 		return ERROR_OUTOFMEMORY;
 	
@@ -294,7 +292,7 @@ int AsyncPipe::send_v(void* param, send_v_callback_t callback, OOBase::Buffer* b
 	
 	pOv->m_extras[0] = reinterpret_cast<ULONG_PTR>(param);
 	pOv->m_extras[1] = reinterpret_cast<ULONG_PTR>(callback);
-	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer);
+	pOv->m_extras[2] = reinterpret_cast<ULONG_PTR>(buffer.addref());
 
 	if (callback)
 	{
@@ -384,7 +382,7 @@ void AsyncPipe::on_send_v(HANDLE /*handle*/, DWORD dwBytes, DWORD dwErr, OOBase:
 	pOv->m_pProactor->delete_overlapped(pOv);
 }
 
-int AsyncPipe::send_msg(void*, send_msg_callback_t, OOBase::Buffer*, OOBase::Buffer*)
+int AsyncPipe::send_msg(void*, send_msg_callback_t, const OOBase::RefPtr<OOBase::Buffer>&, const OOBase::RefPtr<OOBase::Buffer>&)
 {
 	return ERROR_NOT_SUPPORTED;
 }
