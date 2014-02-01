@@ -206,7 +206,7 @@ namespace OOBase
 				return false;
 
 			if (value)
-				*value = this->m_data[this->m_front];
+				swap(*value,this->m_data[this->m_front]);
 
 			this->m_data[this->m_front].~T();
 			this->m_front = (this->m_front + 1) % this->m_capacity;

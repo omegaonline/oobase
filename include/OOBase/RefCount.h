@@ -110,6 +110,16 @@ namespace OOBase
 			return m_data;
 		}
 
+		void reset()
+		{
+			RefPtr().swap(*this);
+		}
+
+		void swap(RefPtr& other)
+		{
+			OOBase::swap(m_data,other.m_data);
+		}
+
 		T* operator ->() const
 		{
 			return m_data;
@@ -133,6 +143,12 @@ namespace OOBase
 	private:
 		T* m_data;
 	};
+
+	template <typename T>
+	inline void swap(RefPtr<T>& a, RefPtr<T>& b)
+	{
+		a.swap(b);
+	}
 }
 
 #endif // OOBASE_REFCOUNT_H_INCLUDED_

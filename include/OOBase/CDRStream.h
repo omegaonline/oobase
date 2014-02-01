@@ -55,16 +55,7 @@ namespace OOBase
 				m_last_error = ERROR_OUTOFMEMORY;
 		}
 
-		CDRStream(Buffer* buffer) :
-				m_buffer(buffer),
-				m_endianess(OOBASE_BYTE_ORDER),
-				m_last_error(0)
-		{ 
-			if (m_buffer)
-				m_buffer->addref();
-		}
-
-		CDRStream(RefPtr<Buffer> buffer) :
+		CDRStream(const RefPtr<Buffer>& buffer) :
 				m_buffer(buffer),
 				m_endianess(OOBASE_BYTE_ORDER),
 				m_last_error(0)
