@@ -390,7 +390,7 @@ namespace OOBase
 				template <size_t> struct exists;
 
 				template <typename T>
-				static yes test(exists<sizeof(&T::swap)>*);
+				static yes test(exists<sizeof(static_cast<void (T::*)(T&)>(&T::swap))>*);
 
 				template <typename T>
 				static char test(...);
