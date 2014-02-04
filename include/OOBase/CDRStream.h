@@ -46,6 +46,19 @@ namespace OOBase
 			}
 		}
 
+		template <typename Allocator>
+		CDRStream(size_t len) :
+				m_endianess(OOBASE_BYTE_ORDER),
+				m_last_error(0)
+		{
+			if (len > 0)
+			{
+				m_buffer = Buffer::create<Allocator>(len,MaxAlignment);
+				if (!m_buffer)
+					m_last_error = ERROR_OUTOFMEMORY;
+			}
+		}
+
 		CDRStream(AllocatorInstance& allocator, size_t len = 256) :
 				m_endianess(OOBASE_BYTE_ORDER),
 				m_last_error(0)
@@ -413,6 +426,13 @@ namespace OOBase
 				write(val);
 				m_buffer->mark_wr_ptr(mark_cur);
 			}
+		}
+
+		void swap(CDRStream& rhs)
+		{
+			m_buffer.swap(rhs.m_buffer);
+			OOBase::swap(m_endianess,rhs.m_endianess);
+			OOBase::swap(m_last_error,rhs.m_last_error);
 		}
 
 	private:

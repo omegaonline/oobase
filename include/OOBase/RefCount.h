@@ -115,11 +115,6 @@ namespace OOBase
 			RefPtr().swap(*this);
 		}
 
-		void swap(RefPtr& other)
-		{
-			OOBase::swap(m_data,other.m_data);
-		}
-
 		T* operator ->() const
 		{
 			return m_data;
@@ -138,6 +133,11 @@ namespace OOBase
 		operator bool_type() const
 		{
 			return m_data != NULL ? &SafeBoolean::this_type_does_not_support_comparisons : NULL;
+		}
+
+		void swap(RefPtr& rhs)
+		{
+			OOBase::swap(m_data,rhs.m_data);
 		}
 
 	private:
