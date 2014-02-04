@@ -200,15 +200,60 @@ namespace OOBase
 
 	/// Override the default critical failure behaviour
 	OnCriticalFailure SetCriticalFailure(OnCriticalFailure pfn);
+}
 
-	template <typename T>
-	inline void swap(T& a, T& b)
-	{
-		T c(a);
-		a = b;
-		b = c;
-	}
+#if defined(DOXYGEN)
+/// Compile time assertion, assert that expr == true
+#define static_assert(expr,msg)
+#elif (_MSC_VER >= 1500)
+// Builtin static_assert
+#elif (__cplusplus <= 199711L)
+#define static_assert(expr,msg) \
+	{ struct oobase_static_assert { char static_check[expr ? 1 : -1]; }; }
+#endif
 
+#if defined(_MSC_VER)
+#define HAVE__IS_POD 1
+#define HAVE__ALIGNOF 1
+#define ALIGNOF(X) __alignof(X)
+#if (_MSC_VER == 1400)
+#include <type_traits>
+#define IS_POD(X) (std::tr1::is_pod<X>::value)
+#elif (_MSC_VER > 1400)
+#include <type_traits>
+#define IS_POD(X) (std::is_pod<X>::value)
+#else
+#include <limits>
+#define HAVE__IS_POD 1
+#define IS_POD(X) (std::numeric_limits<X>::is_specialized || __is_enum(X) || (__has_trivial_constructor(X) && __is_pod(X)))
+#endif
+#elif defined(__GNUC__) && (__GNUC__ >= 3)
+#define HAVE__ALIGNOF 1
+#define ALIGNOF(X) __alignof__(X)
+#endif
+
+#if defined(__clang__)
+#if __has_extension(is_pod)
+#define HAVE__IS_POD 1
+#define IS_POD(X) __is_pod(X)
+#endif
+#elif defined(__GNUG__) && ((__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
+#define HAVE__IS_POD 1
+#define IS_POD(X) __is_pod(X)
+#endif
+
+#if !defined(HAVE__IS_POD)
+#if defined(min)
+#undef min
+#endif
+#if defined(max)
+#undef max
+#endif
+#include <limits>
+#endif
+
+namespace OOBase
+{
 	template <typename T>
 	struct add_const
 	{
@@ -280,60 +325,7 @@ namespace OOBase
 	{
 		typedef T type;
 	};
-}
 
-#if defined(DOXYGEN)
-/// Compile time assertion, assert that expr == true
-#define static_assert(expr,msg)
-#elif (_MSC_VER >= 1500)
-// Builtin static_assert
-#elif (__cplusplus <= 199711L)
-#define static_assert(expr,msg) \
-	{ struct oobase_static_assert { char static_check[expr ? 1 : -1]; }; }
-#endif
-
-#if defined(_MSC_VER)
-#define HAVE__IS_POD 1
-#define HAVE__ALIGNOF 1
-#define ALIGNOF(X) __alignof(X)
-#if (_MSC_VER == 1400)
-#include <type_traits>
-#define IS_POD(X) (std::tr1::is_pod<X>::value)
-#elif (_MSC_VER > 1400)
-#include <type_traits>
-#define IS_POD(X) (std::is_pod<X>::value)
-#else
-#include <limits>
-#define HAVE__IS_POD 1
-#define IS_POD(X) (std::numeric_limits<X>::is_specialized || __is_enum(X) || (__has_trivial_constructor(X) && __is_pod(X)))
-#endif
-#elif defined(__GNUC__) && (__GNUC__ >= 3)
-#define HAVE__ALIGNOF 1
-#define ALIGNOF(X) __alignof__(X)
-#endif
-
-#if defined(__clang__)
-#if __has_extension(is_pod)
-#define HAVE__IS_POD 1
-#define IS_POD(X) __is_pod(X)
-#endif
-#elif defined(__GNUG__) && ((__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
-#define HAVE__IS_POD 1
-#define IS_POD(X) __is_pod(X)
-#endif
-
-#if !defined(HAVE__IS_POD)
-#if defined(min)
-#undef min
-#endif
-#if defined(max)
-#undef max
-#endif
-#include <limits>
-#endif
-
-namespace OOBase
-{
 	template <typename T>
 	struct alignment_of
 	{
@@ -385,6 +377,56 @@ namespace OOBase
 		{
 			static const bool value = is_pod<T>::value;
 		};
+
+		namespace swap
+		{
+			template <typename Type>
+			struct has_swap
+			{
+			private:
+				// SFINAE
+				typedef char (&yes)[2];
+
+				template <size_t> struct exists;
+
+				template <typename T>
+				static yes test(exists<sizeof(&T::swap)>*);
+
+				template <typename T>
+				static char test(...);
+
+			public:
+				static const bool value = (sizeof(test<Type>(NULL)) == sizeof(yes));
+			};
+
+			template <bool s = true>
+			struct swap_impl
+			{
+				template <typename T>
+				static void swap(T& lhs, T& rhs)
+				{
+					lhs.swap(rhs);
+				}
+			};
+
+			template <>
+			struct swap_impl<false>
+			{
+				template <typename T>
+				static void swap(T& lhs, T& rhs)
+				{
+					T temp(lhs);
+					lhs = rhs;
+					rhs = temp;
+				}
+			};
+		}
+	}
+
+	template <typename T>
+	inline void swap(T& lhs, T& rhs)
+	{
+		detail::swap::swap_impl<detail::swap::has_swap<T>::value>::swap(lhs,rhs);
 	}
 
 	struct NonCopyable

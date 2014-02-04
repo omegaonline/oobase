@@ -165,6 +165,8 @@ namespace OOBase
 #endif
 			return (t != NULL);
 		}
+
+		static void swap(AllocateNewStatic&) {};
 	};
 
 	// Allocator types

@@ -22,6 +22,11 @@
 #include "../include/OOBase/Mutex.h"
 #include "Win32Impl.h"
 
+void OOBase::Mutex::swap(Mutex& rhs)
+{
+	OOBase::swap(m_mutex,rhs.m_mutex);
+}
+
 #if defined(_WIN32)
 
 OOBase::SpinLock::SpinLock()

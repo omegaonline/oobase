@@ -49,6 +49,8 @@ namespace OOBase
 		void signal();
 		void broadcast();
 
+		void swap(Condition& mutex);
+
 	private:
 		/** \var m_var
 		 *  The platform specific condition variable.

@@ -52,6 +52,16 @@ namespace OOBase
 					m_data[m_front].~T();
 			}
 
+			void swap(QueueBase& rhs)
+			{
+				Allocating<Allocator>::swap(rhs);
+
+				OOBase::swap(m_data,rhs.m_data);
+				OOBase::swap(m_capacity,rhs.m_capacity);
+				OOBase::swap(m_front,rhs.m_front);
+				OOBase::swap(m_back,rhs.m_back);
+			}
+
 		protected:
 			T*     m_data;
 			size_t m_capacity;
@@ -130,6 +140,16 @@ namespace OOBase
 			void clear()
 			{
 				m_capacity = m_front = m_back = 0;
+			}
+
+			void swap(QueueBase& rhs)
+			{
+				Allocating<Allocator>::swap(rhs);
+
+				OOBase::swap(m_data,rhs.m_data);
+				OOBase::swap(m_capacity,rhs.m_capacity);
+				OOBase::swap(m_front,rhs.m_front);
+				OOBase::swap(m_back,rhs.m_back);
 			}
 
 		protected:
@@ -237,6 +257,12 @@ namespace OOBase
 			return (this->m_front == this->m_back);
 		}
 	};
+
+	template <typename T, typename A>
+	void swap(Queue<T,A>& lhs, Queue<T,A>& rhs)
+	{
+		lhs.swap(rhs);
+	}
 }
 
 #endif // OOBASE_QUEUE_H_INCLUDED_

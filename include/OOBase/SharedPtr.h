@@ -568,18 +568,6 @@ namespace OOBase
 		return SharedPtr<T>(rhs,reinterpret_cast<T*>(rhs.get()));
 	}
 
-	template <typename T>
-	inline void swap(SharedPtr<T>& a, SharedPtr<T>& b)
-	{
-		a.swap(b);
-	}
-
-	template <typename T>
-	inline void swap(WeakPtr<T>& a, WeakPtr<T>& b)
-	{
-		a.swap(b);
-	}
-
 	template<class T1, class T2>
 	inline bool operator == (const SharedPtr<T1>& s1, const SharedPtr<T2>& s2)
 	{

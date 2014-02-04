@@ -205,7 +205,7 @@ namespace OOBase
 				if (this->m_data && pos < this->m_size)
 				{
 					for(--this->m_size;pos < this->m_size;++pos)
-						swap(this->m_data[pos],this->m_data[pos+1]);
+						OOBase::swap(this->m_data[pos],this->m_data[pos+1]);
 
 					this->m_data[this->m_size].~T();
 				}

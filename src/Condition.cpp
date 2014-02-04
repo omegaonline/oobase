@@ -22,6 +22,11 @@
 #include "../include/OOBase/Condition.h"
 #include "Win32Impl.h"
 
+void OOBase::Condition::swap(Condition& rhs)
+{
+	OOBase::swap(m_var,rhs.m_var);
+}
+
 #if defined(_WIN32)
 
 OOBase::Condition::Condition()

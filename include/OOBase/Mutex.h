@@ -43,6 +43,8 @@ namespace OOBase
 		bool acquire(const Timeout& timeout);
 #endif
 
+		void swap(Mutex& mutex);
+
 	private:
 		/** \var m_mutex
 		 *  The platform specific mutex variable.

@@ -143,12 +143,6 @@ namespace OOBase
 	private:
 		T* m_data;
 	};
-
-	template <typename T>
-	inline void swap(RefPtr<T>& a, RefPtr<T>& b)
-	{
-		a.swap(b);
-	}
 }
 
 #endif // OOBASE_REFCOUNT_H_INCLUDED_
