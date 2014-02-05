@@ -51,12 +51,6 @@ namespace OOBase
 				return *this;
 			}
 
-			template <typename K1, typename V1>
-			static TableNode build(const K1& k, const V1& v)
-			{
-				return TableNode(k,v);
-			}
-
 			K m_key;
 			V m_value;
 		};
@@ -65,11 +59,8 @@ namespace OOBase
 		struct TableNode<K,V,true>
 		{
 			template <typename K1, typename V1>
-			static TableNode build(const K1& k, const V1& v)
-			{
-				TableNode n = { k, v };
-				return n;
-			}
+			TableNode(const K1& k, const V1& v) : m_key(k), m_value(v)
+			{}
 
 			K m_key;
 			V m_value;
@@ -92,9 +83,9 @@ namespace OOBase
 		{}
 
 		template <typename K1, typename V1>
-		int insert(K1 key, V1 value)
+		int insert(const K1& key, const V1& value)
 		{
-			int err = baseClass::push_back(Node::build(key,value));
+			int err = baseClass::push_back(Node(key,value));
 			if (!err)
 			{
 				// Only clear sorted flag if we are sorted, and have inserted an
@@ -122,7 +113,7 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		bool remove(K1 key, V* value = NULL)
+		bool remove(const K1& key, V* value = NULL)
 		{
 			size_t pos = find_i(key,false);
 			if (pos == npos)
@@ -147,13 +138,13 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		bool exists(K1 key) const
+		bool exists(const K1& key) const
 		{
 			return (find_i(key,false) != npos);
 		}
 
 		template <typename K1>
-		V* find(K1 key)
+		V* find(const K1& key)
 		{
 			size_t pos = find_i(key,false);
 			if (pos == npos)
@@ -163,7 +154,7 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		const V* find(K1 key) const
+		const V* find(const K1& key) const
 		{
 			size_t pos = find_i(key,false);
 			if (pos == npos)
@@ -173,7 +164,7 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		bool find(K1 key, V& value, bool first = false) const
+		bool find(const K1& key, V& value, bool first = false) const
 		{
 			size_t pos = find_i(key,first);
 			if (pos == npos)
@@ -184,13 +175,13 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		size_t find_first(K1 key) const
+		size_t find_first(const K1& key) const
 		{
 			return find_i(key,true);
 		}
 
 		template <typename K1>
-		size_t find_at(K1 key) const
+		size_t find_at(const K1& key) const
 		{
 			return find_i(key,false);
 		}
@@ -255,7 +246,7 @@ namespace OOBase
 		bool m_sorted;
 
 		template <typename K1>
-		size_t find_i(K1 key, bool first) const
+		size_t find_i(const K1& key, bool first) const
 		{
 			const Node* p = bsearch(key);
 
@@ -267,7 +258,7 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		const Node* bsearch(K1 key) const
+		const Node* bsearch(const K1& key) const
 		{
 			// Always sort first
 			const_cast<Table*>(this)->sort();
