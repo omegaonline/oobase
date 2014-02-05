@@ -38,7 +38,7 @@ namespace OOBase
 	class Atomic
 	{
 	public:
-		Atomic()
+		Atomic() : m_val()
 		{}
 
 		Atomic(const T& v) : m_val(v)
