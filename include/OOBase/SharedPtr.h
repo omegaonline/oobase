@@ -438,7 +438,7 @@ namespace OOBase
 	};
 
 	template <typename T>
-	class WeakPtr
+	class WeakPtr : public SafeBoolean
 	{
 		friend class detail::shared::template_friend;
 
@@ -505,6 +505,11 @@ namespace OOBase
 		size_t use_count() const
 		{
 			return m_wc.use_count();
+		}
+
+		operator bool_type() const
+		{
+			return m_ptr != NULL ? &SafeBoolean::this_type_does_not_support_comparisons : NULL;
 		}
 
 	private:
