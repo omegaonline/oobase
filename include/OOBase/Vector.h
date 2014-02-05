@@ -30,7 +30,7 @@ namespace OOBase
 	namespace detail
 	{
 		template <typename Allocator, typename T>
-		class VectorBase : public Allocating<Allocator>, public NonCopyable
+		class VectorBase : public Allocating<Allocator>
 		{
 			typedef Allocating<Allocator> baseClass;
 
@@ -43,9 +43,19 @@ namespace OOBase
 			VectorBase(AllocatorInstance& allocator) : baseClass(allocator), m_data(NULL), m_size(0), m_capacity(0)
 			{}
 
+			VectorBase(const VectorBase& rhs) : baseClass(rhs), m_data(NULL), m_size(0), m_capacity(0)
+			{}
+
 			~VectorBase()
 			{
 				baseClass::free(m_data);
+			}
+
+			void swap(VectorBase& rhs)
+			{
+				OOBase::swap(m_data,rhs.m_data);
+				OOBase::swap(m_size,rhs.m_size);
+				OOBase::swap(m_capacity,rhs.m_size);
 			}
 
 			bool empty() const
@@ -83,7 +93,7 @@ namespace OOBase
 
 			void prev(size_t& pos) const
 			{
-				if (pos >= m_size)
+				if (pos >= m_size || pos == 0)
 					pos = m_size-1;
 				else
 					--pos;
@@ -115,10 +125,84 @@ namespace OOBase
 
 		protected:
 #if defined(OOBASE_HAVE_EXCEPTIONS)
-			template <typename T1>
-			int insert_at(size_t pos, T1 value)
+			int assign(size_t n, const T& value = T())
 			{
-				if (this->m_size >= this->m_capacity || pos < this->m_size)
+				T* new_data = NULL;
+				size_t capacity = 0;
+				if (n)
+				{
+					capacity = (n/2 + 1) * 2;
+					new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
+					if (!new_data)
+						return ERROR_OUTOFMEMORY;
+
+					size_t i = 0;
+					try
+					{
+						for (;i<this->m_size;++i)
+							::new (&new_data[i]) T(value);
+					}
+					catch (...)
+					{
+						while (i-- > 0)
+							new_data[i].~T();
+
+						baseClass::free(new_data);
+						throw;
+					}
+				}
+
+				for (size_t i=0;i<this->m_size;++i)
+					this->m_data[i].~T();
+
+				baseClass::free(this->m_data);
+				this->m_data = new_data;
+				this->m_size = n;
+				this->m_capacity = capacity;
+				return 0;
+			}
+
+			int reserve(size_t n)
+			{
+				if (n > this->m_capacity)
+				{
+					size_t capacity = (n/2 + 1) * 2;
+					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
+					if (!new_data)
+						return ERROR_OUTOFMEMORY;
+
+					size_t i = 0;
+					try
+					{
+						for (;i<this->m_size;++i)
+							::new (&new_data[i]) T(this->m_data[i]);
+					}
+					catch (...)
+					{
+						while (i-- > 0)
+							new_data[i].~T();
+
+						baseClass::free(new_data);
+						throw;
+					}
+
+					for (i=0;i<this->m_size;++i)
+						this->m_data[i].~T();
+
+					baseClass::free(this->m_data);
+					this->m_data = new_data;
+					this->m_capacity = capacity;
+				}
+				return 0;
+			}
+
+			template <typename T1>
+			int insert_at(size_t pos, const T1& value)
+			{
+				if (pos > this->m_size)
+					pos = this->m_size;
+
+				if (this->m_size >= this->m_capacity)
 				{
 					// Copy buffer, inserting in the gap...
 					size_t capacity = this->m_capacity;
@@ -156,15 +240,70 @@ namespace OOBase
 					this->m_capacity = capacity;
 				}
 				else
+				{
 					::new (&this->m_data[this->m_size]) T(value);
+
+					for (size_t i = this->m_size; i > pos; --i)
+						OOBase::swap(this->m_data[i],this->m_data[i-1]);
+				}
 
 				++this->m_size;
 				return 0;
 			}
 #else
-			template <typename T1>
-			int insert_at(size_t pos, T1 value)
+			int assign(size_t n, const T& value = T())
 			{
+				T* new_data = NULL;
+				size_t capacity = 0;
+				if (n)
+				{
+					capacity = (n/2 + 1) * 2;
+					new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
+					if (!new_data)
+						return ERROR_OUTOFMEMORY;
+
+					for (size_t i=0;i<this->m_size;++i)
+						::new (&new_data[i]) T(value);
+				}
+
+				for (size_t i=0;i<this->m_size;++i)
+					this->m_data[i].~T();
+
+				baseClass::free(this->m_data);
+				this->m_data = new_data;
+				this->m_size = n;
+				this->m_capacity = capacity;
+				return 0;
+			}
+
+			int reserve(size_t n)
+			{
+				if (n > this->m_capacity)
+				{
+					size_t capacity = (n/2 + 1) * 2;
+					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
+					if (!new_data)
+						return ERROR_OUTOFMEMORY;
+
+					for (size_t i = 0;i<this->m_size;++i)
+					{
+						::new (&new_data[i]) T(this->m_data[i]);
+						this->m_data[i].~T();
+					}
+
+					baseClass::free(this->m_data);
+					this->m_data = new_data;
+					this->m_capacity = capacity;
+				}
+				return 0;
+			}
+
+			template <typename T1>
+			int insert_at(size_t pos, const T1& value)
+			{
+				if (pos > this->m_size)
+					pos = this->m_size;
+
 				if (this->m_size >= this->m_capacity)
 				{
 					size_t capacity = (this->m_capacity == 0 ? 2 : this->m_capacity*2);
@@ -184,17 +323,13 @@ namespace OOBase
 					this->m_data = new_data;
 					this->m_capacity = capacity;
 				}
-				else if (pos < this->m_size)
-				{
-					// Shuffle the contents down the buffer
-					::new (&this->m_data[this->m_size]) T(this->m_data[this->m_size-1]);
-					for (size_t i = this->m_size-1; i > pos; --i)
-						this->m_data[i] = this->m_data[i-1];
-
-					this->m_data[pos] = value;
-				}
 				else
+				{
 					::new (&this->m_data[this->m_size]) T(value);
+
+					for (size_t i = this->m_size; i > pos; --i)
+						OOBase::swap(this->m_data[i],this->m_data[i-1]);
+				}
 
 				++this->m_size;
 				return 0;
@@ -226,9 +361,51 @@ namespace OOBase
 			{}
 
 		protected:
-			template <typename T1>
-			int insert_at(size_t pos, T1 value)
+			int assign(size_t n, const T& value = T())
 			{
+				T* new_data = NULL;
+				size_t capacity = 0;
+				if (n)
+				{
+					capacity = (n/2 + 1) * 2;
+					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
+					if (!new_data)
+						return ERROR_OUTOFMEMORY;
+
+					for (size_t i=0; i<this->m_size; ++i)
+						new_data[i] = value;
+				}
+				baseClass::free(this->m_data);
+				this->m_data = new_data;
+				this->m_size = n;
+				this->m_capacity = capacity;
+				return 0;
+			}
+
+			int reserve(size_t n)
+			{
+				if (n > this->m_capacity)
+				{
+					size_t capacity = (n/2 + 1) * 2;
+					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
+					if (!new_data)
+						return ERROR_OUTOFMEMORY;
+
+					memcpy(new_data,this->m_data,this->m_size * sizeof(T));
+
+					baseClass::free(this->m_data);
+					this->m_data = new_data;
+					this->m_capacity = capacity;
+				}
+				return 0;
+			}
+
+			template <typename T1>
+			int insert_at(size_t pos, const T1& value)
+			{
+				if (pos > this->m_size)
+					pos = this->m_size;
+
 				if (this->m_size >= this->m_capacity)
 				{
 					size_t capacity = (this->m_capacity == 0 ? 2 : this->m_capacity*2);
@@ -237,13 +414,11 @@ namespace OOBase
 					if (!new_data)
 						return ERROR_OUTOFMEMORY;
 
+					if (pos > 0)
+						memcpy(new_data,this->m_data,pos * sizeof(T));
+
 					if (pos < this->m_size)
 						memcpy(&new_data[pos + 1],&this->m_data[pos],(this->m_size - pos) * sizeof(T));
-					else
-						pos = this->m_size;
-
-					if (pos > 0)
-						memcpy(new_data,&this->m_data,pos * sizeof(T));
 
 					new_data[pos] = value;
 
@@ -255,8 +430,6 @@ namespace OOBase
 				{
 					if (pos < this->m_size)
 						memmove(&this->m_data[pos + 1],&this->m_data[pos],(this->m_size - pos) * sizeof(T));
-					else
-						pos = this->m_size;
 
 					this->m_data[pos] = value;
 				}
@@ -288,9 +461,48 @@ namespace OOBase
 			VectorImpl(AllocatorInstance& allocator) : baseClass(allocator)
 			{}
 
+			VectorImpl(const VectorImpl& rhs) : baseClass(rhs)
+			{
+				baseClass::clear();
+				for (size_t i=0;i<rhs.m_size;++i)
+				{
+					int err = push_back(rhs.m_data[i]);
+					if (err)
+						OOBase_CallCriticalFailure(err);
+				}
+			}
+
+			VectorImpl& operator = (const VectorImpl& rhs)
+			{
+				if (this != &rhs)
+				{
+					baseClass::clear();
+					for (size_t i=0;i<rhs.m_size;++i)
+					{
+						int err = push_back(rhs.m_data[i]);
+						if (err)
+							OOBase_CallCriticalFailure(err);
+					}
+				}
+				return *this;
+			}
+
 		protected:
 			typedef typename add_const<T&>::type const_reference;
 			typedef typename add_const<T*>::type const_pointer;
+
+			template <typename It>
+			int assign(It first, It last)
+			{
+				baseClass::clear();
+				for (It i = first; i != last; ++i)
+				{
+					int err = push_back(*i);
+					if (err)
+						return err;
+				}
+				return 0;
+			}
 
 			T* data()
 			{
@@ -327,7 +539,7 @@ namespace OOBase
 			}
 
 			template <typename T1>
-			int push_back(T1 value)
+			int push_back(const T1& value)
 			{
 				return baseClass::insert_at(this->m_size,value);
 			}
@@ -365,6 +577,22 @@ namespace OOBase
 		Vector(AllocatorInstance& allocator) : baseClass(allocator)
 		{}
 
+		template <typename It>
+		int assign(It first, It last)
+		{
+			return baseClass::assign(first,last);
+		}
+
+		int assign(size_t n, const T& value = T())
+		{
+			return baseClass::assign(n,value);
+		}
+
+		int reserve(size_t n)
+		{
+			return baseClass::reserve(n);
+		}
+
 		T* data()
 		{
 			return baseClass::data();
@@ -396,19 +624,19 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		iterator find(T1 value)
+		iterator find(const T1& value)
 		{
 			size_t pos = 0;
 			for (;pos < this->m_size;++pos)
 			{
 				if (this->m_data[pos] == value)
-					iterator(this,pos);
+					return iterator(this,pos);
 			}
 			return end();
 		}
 
 		template <typename T1>
-		const_iterator find(T1 value) const
+		const_iterator find(const T1& value) const
 		{
 			size_t pos = 0;
 			for (;pos < this->m_size;++pos)
@@ -420,9 +648,12 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		int resize(size_t new_size, T1 value)
+		int resize(size_t new_size, const T1& value)
 		{
-			int err = 0;
+			int err = reserve(new_size);
+			if (err)
+				return err;
+
 			while (this->m_size < new_size && !err)
 				err = baseClass::push_back(value);
 			while (this->m_size > new_size && !err)
@@ -436,7 +667,7 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		int push_back(T1 value)
+		int push_back(const T1& value)
 		{
 			return baseClass::push_back(value);
 		}
@@ -447,14 +678,14 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		int insert(T1 value, const iterator& before)
+		int insert(const T1& value, const iterator& before)
 		{
 			assert(before.check(this));
 			return baseClass::insert_at(before.deref(),value);
 		}
 
 		template <typename T1>
-		iterator insert(T1 value, const iterator& before, int& err)
+		iterator insert(const T1& value, const iterator& before, int& err)
 		{
 			err = baseClass::insert_at(before.deref(),value);
 			return (!err ? before : end());
@@ -467,7 +698,7 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		bool remove(T1 value)
+		bool remove(const T1& value)
 		{
 			iterator i = find(value);
 			if (i == end())
@@ -501,12 +732,12 @@ namespace OOBase
 
 		iterator begin()
 		{
-			return iterator(this,0);
+			return iterator(this,baseClass::empty() ? size_t(-1) : 0);
 		}
 
 		const_iterator cbegin() const
 		{
-			return const_iterator(this,0);
+			return const_iterator(this,baseClass::empty() ? size_t(-1) : 0);
 		}
 
 		const_iterator begin() const
