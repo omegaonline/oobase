@@ -84,7 +84,6 @@ liboobase_la_SOURCES = \
 	src/Posix.cpp \
 	src/ScratchAllocator.cpp \
 	src/Server.cpp \
-	src/String.cpp \
 	src/Thread.cpp \
 	src/Timeout.cpp \
 	src/TLS.cpp \

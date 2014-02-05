@@ -213,7 +213,7 @@ int OOBase::POSIX::close_file_descriptors(int* except, size_t ex_count)
 		 * work on anything with a proc filesystem i.e. a OSx/BSD */
 		/* walk proc, closing all descriptors from stderr onwards for our pid */
 
-		ScopedString<> str;
+		ScopedString str;
 		int err = str.printf("/proc/%u/fd/",getpid());
 		if (err != 0)
 			return err;

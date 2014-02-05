@@ -159,11 +159,7 @@ int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, in
 			if (err != 0)
 				return err;
 
-			err = strKey.assign(*m_map_opts.key_at(i));
-			if (err)
-				return err;
-
-			return results.insert(strKey,strVal);
+			return results.insert(*m_map_opts.key_at(i),strVal);
 		}
 
 		if (strncmp(opt.m_long_opt.c_str(),argv[arg]+2,opt.m_long_opt.length())==0 && argv[arg][opt.m_long_opt.length()+2]=='=')
@@ -175,11 +171,7 @@ int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, in
 			if (err != 0)
 				return err;
 
-			err = strKey.assign(*m_map_opts.key_at(i));
-			if (err)
-				return err;
-
-			return results.insert(strKey,strVal);
+			return results.insert(*m_map_opts.key_at(i),strVal);
 		}
 	}
 
@@ -217,16 +209,12 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 					else
 						value = &c[1];
 
-					// No more for this arg...
 					int err = strVal.assign(value);
 					if (err != 0)
 						return err;
 
-					err = strKey.assign(*m_map_opts.key_at(i));
-					if (err)
-						return err;
-
-					return results.insert(strKey,strVal);
+					// No more for this arg...
+					return results.insert(*m_map_opts.key_at(i),strVal);
 				}
 				else
 				{
@@ -234,11 +222,7 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 					if (err != 0)
 						return err;
 
-					err = strKey.assign(*m_map_opts.key_at(i));
-					if (err)
-						return err;
-
-					err = results.insert(strKey,strVal);
+					err = results.insert(*m_map_opts.key_at(i),strVal);
 					if (err != 0)
 						return err;
 

@@ -154,7 +154,7 @@ namespace
 			return;
 
 		// Create the relevant registry keys if they don't already exist
-		OOBase::ScopedString<> strName;
+		OOBase::ScopedString strName;
 		int err = strName.printf("SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\%s",name);
 		if (err != 0)
 			OOBase_CallCriticalFailure(err);
