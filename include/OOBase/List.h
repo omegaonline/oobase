@@ -35,7 +35,7 @@ namespace OOBase
 		struct ListNode
 		{
 			template <typename T1>
-			ListNode(ListNode* prev, ListNode* next, T1 data) :
+			ListNode(ListNode* prev, ListNode* next, const T1& data) :
 				m_prev(prev), m_next(next), m_data(data)
 			{}
 
@@ -79,23 +79,23 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		iterator insert(T1 value, const iterator& before, int& err)
+		iterator insert(const T1& value, const iterator& before, int& err)
 		{
 			assert(before.check(this));
-			return iterator(this,insert(value,before.deref(),err));
+			return iterator(this,insert_before(value,before.deref(),err));
 		}
 
 		template <typename T1>
-		iterator push_back(T1 value, int& err)
+		iterator push_back(const T1& value, int& err)
 		{
-			return iterator(this,insert(value,NULL,err));
+			return iterator(this,insert_tail(value,err));
 		}
 
 		template <typename T1>
-		int push_front(T1 value)
+		int push_front(const T1& value)
 		{
 			int err = 0;
-			insert(value,m_head,err);
+			insert_head(value,err);
 			return err;
 		}
 
@@ -106,7 +106,7 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		bool remove(T1 value)
+		bool remove(const T1& value)
 		{
 			iterator i = find(value);
 			if (i == end())
@@ -127,7 +127,7 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		iterator find(T1 value)
+		iterator find(const T1& value)
 		{
 			iterator i = begin();
 			for (;i != end();++i)
@@ -139,7 +139,7 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		const_iterator find(T1 value) const
+		const_iterator find(const T1& value) const
 		{
 			const_iterator i = cbegin();
 			for (;i != end();++i)
@@ -224,19 +224,63 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		ListNode* insert(T1 value, ListNode* next, int& err)
+		ListNode* insert_before(const T1& value, ListNode* before, int& err)
 		{
-			ListNode* prev = (next ? next->m_prev : m_tail);
-
 			ListNode* new_node = NULL;
-			if (!baseClass::allocate_new(new_node,prev,next,value))
+			if (!baseClass::allocate_new(new_node,before->m_prev,before,value))
 			{
 				err = ERROR_OUTOFMEMORY;
 				return NULL;
 			}
 
-			(next ? next->m_prev : m_tail) = new_node;
-			(prev ? prev->m_next : m_head) = new_node;
+			if (!before->m_prev)
+				m_head = new_node;
+			else
+				before->m_prev->m_next = new_node;
+
+			before->m_prev = new_node;
+
+			++m_size;
+			return new_node;
+		}
+
+		template <typename T1>
+		ListNode* insert_head(const T1& value, int& err)
+		{
+			if (m_head)
+				return insert_before(value,m_head,err);
+
+			ListNode* null = NULL;
+			ListNode* new_node = NULL;
+			if (!baseClass::allocate_new(new_node,null,null,value))
+			{
+				err = ERROR_OUTOFMEMORY;
+				return NULL;
+			}
+
+			m_head = new_node;
+			m_tail = new_node;
+
+			++m_size;
+			return new_node;
+		}
+
+		template <typename T1>
+		ListNode* insert_tail(const T1& value, int& err)
+		{
+			if (!m_tail)
+				return insert_head(value,err);
+
+			ListNode* null = NULL;
+			ListNode* new_node = NULL;
+			if (!baseClass::allocate_new(new_node,m_tail,null,value))
+			{
+				err = ERROR_OUTOFMEMORY;
+				return NULL;
+			}
+
+			m_tail->m_next = new_node;
+			m_tail = new_node;
 
 			++m_size;
 			return new_node;
@@ -250,10 +294,19 @@ namespace OOBase
 			if (pval)
 				*pval = curr->m_data;
 
-			ListNode* next = curr->m_next;
-			(curr->m_next ? curr->m_next : m_tail) = curr->m_prev;
-			(curr->m_prev ? curr->m_prev : m_head) = next;
 
+
+			if (curr->m_prev)
+				curr->m_prev->m_next = curr->m_next;
+			else
+				m_head = curr->m_next;
+
+			if (curr->m_next)
+				curr->m_next->m_prev = curr->m_prev;
+			else
+				m_tail = curr->m_prev;
+
+			ListNode* next = curr->m_next;
 			baseClass::delete_free(curr);
 
 			--m_size;
