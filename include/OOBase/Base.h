@@ -81,7 +81,7 @@
 
 	// Check for obsolete windows versions
 	#if defined(_WIN32_WINDOWS)
-	#error You cannot build Omega Online for Windows 95/98/Me!
+	#error You cannot build OOBase for Windows 95/98/Me!
 	#endif
 
 	// Remove the unistd include - we are windows
