@@ -35,35 +35,55 @@ namespace OOBase
 		{
 		public:
 			template<typename T>
-			Slot(WeakPtr<T> ptr, void (T::*fn)()) :
-					m_ptr(ptr), m_fn(fn), m_adaptor(&Slot::adaptor<T>)
-			{}
+			Slot(WeakPtr<T> ptr, void (T::*fn)()) :	m_ptr(ptr)
+			{
+				assert(!!ptr);
+				d.m_adaptor = &Slot::adaptor<T,fn>;
+			}
+
+			Slot(void (*fn)()) : m_ptr()
+			{
+				d.m_static = fn;
+			}
 
 			bool operator == (const Slot& rhs) const
 			{
 				if (this == &rhs)
 					return true;
-				return m_ptr == rhs.m_ptr && m_fn == rhs.m_fn;
+				return m_ptr == rhs.m_ptr && d.m_adaptor == rhs.d.m_adaptor;
 			}
 
 			bool invoke() const
 			{
-				return (*m_adaptor)(this);
+				if (m_ptr)
+					return (*d.m_adaptor)(this);
+
+				(*d.m_static)();
+				return true;
+			}
+
+			void swap(Slot& rhs)
+			{
+				m_ptr.swap(rhs.m_ptr);
+				OOBase::swap(d,rhs.d);
 			}
 
 		private:
 			WeakPtr<void> m_ptr;
-			void* m_fn;
-			bool (*m_adaptor)(const Slot*);
+			union disc_t
+			{
+				bool (*m_adaptor)(const Slot*);
+				void (*m_static)();
+			} d;
 
-			template<typename T>
+			template<typename T, void (T::*fn)()>
 			static bool adaptor(const Slot* pThis)
 			{
 				SharedPtr<T> ptr(pThis->m_ptr);
 				if (!ptr)
 					return false;
 
-				ptr->*(pThis->m_fn)();
+				ptr->*(pThis->*fn)();
 				return true;
 			}
 		};
@@ -82,6 +102,11 @@ namespace OOBase
 			return m_slots.push_back(Slot(ptr,slot));
 		}
 
+		int connect(void (*slot)())
+		{
+			return m_slots.push_back(Slot(slot));
+		}
+
 		template <typename T>
 		bool disconnect(WeakPtr<T>& ptr, void (T::*slot)())
 		{
@@ -90,12 +115,11 @@ namespace OOBase
 
 		void fire() const
 		{
-			for (typename Vector<Slot,Allocator>::iterator i=m_slots.begin();i!=m_slots.end();)
+			Vector<Slot,Allocator> slots(m_slots);
+			for (typename Vector<Slot,Allocator>::iterator i=slots.begin();i!=slots.end();++i)
 			{
 				if (!i->invoke())
-					i = m_slots.erase(i);
-				else
-					++i;
+					m_slots.remove(*i);
 			}
 		}
 	};
