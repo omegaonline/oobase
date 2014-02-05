@@ -57,12 +57,13 @@ namespace OOBase
 			{
 				if (count > COUNT)
 				{
+					int err = m_dynamic.resize(count);
+					if (err)
+						return false;
+
 					for (size_t i=0;i<COUNT;++i)
-					{
-						int err = m_dynamic.push_back(m_static[i]);
-						if (err)
-							return false;
-					}
+						swap(m_dynamic[i],m_static[i]);
+
 					m_data = m_dynamic.data();
 				}
 			}
