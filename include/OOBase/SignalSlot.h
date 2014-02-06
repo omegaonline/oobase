@@ -123,6 +123,103 @@ namespace OOBase
 			}
 		}
 	};
+
+	template <typename P1, typename Allocator = CrtAllocator>
+	class Signal1
+	{
+	private:
+		class Slot
+		{
+		public:
+			template<typename T>
+			Slot(const WeakPtr<T>& ptr, void (T::*fn)(P1 p1)) :	m_ptr(ptr)
+			{
+				assert(!!ptr);
+				d.m_adaptor = &Slot::adaptor<T,fn>;
+			}
+
+			Slot(void (*fn)(P1 p1)) : m_ptr()
+			{
+				d.m_static = fn;
+			}
+
+			bool operator == (const Slot& rhs) const
+			{
+				if (this == &rhs)
+					return true;
+				return m_ptr == rhs.m_ptr && d.m_adaptor == rhs.d.m_adaptor;
+			}
+
+			bool invoke(P1 p1) const
+			{
+				if (m_ptr)
+					return (*d.m_adaptor)(this,p1);
+
+				(*d.m_static)(p1);
+				return true;
+			}
+
+			void swap(Slot& rhs)
+			{
+				m_ptr.swap(rhs.m_ptr);
+				OOBase::swap(d,rhs.d);
+			}
+
+		private:
+			WeakPtr<void> m_ptr;
+			union disc_t
+			{
+				bool (*m_adaptor)(const Slot*, P1 p1);
+				void (*m_static)(P1 p1);
+			} d;
+
+			template<typename T, void (T::*fn)(P1 p1)>
+			static bool adaptor(const Slot* pThis, P1 p1)
+			{
+				SharedPtr<T> ptr(pThis->m_ptr);
+				if (!ptr)
+					return false;
+
+				ptr->*(pThis->*fn)(p1);
+				return true;
+			}
+		};
+		mutable Vector<Slot,Allocator> m_slots;
+
+	public:
+		Signal1()
+		{}
+
+		Signal1(AllocatorInstance& a) : m_slots(a)
+		{}
+
+		template <typename T>
+		int connect(const WeakPtr<T>& ptr, void (T::*slot)(P1 p1))
+		{
+			return m_slots.push_back(Slot(ptr,slot));
+		}
+
+		int connect(void (*slot)(P1 p1))
+		{
+			return m_slots.push_back(Slot(slot));
+		}
+
+		template <typename T>
+		bool disconnect(WeakPtr<T>& ptr, void (T::*slot)(P1 p1))
+		{
+			return m_slots.remove(Slot(ptr,slot));
+		}
+
+		void fire(P1 p1) const
+		{
+			Vector<Slot,Allocator> slots(m_slots);
+			for (typename Vector<Slot,Allocator>::iterator i=slots.begin();i!=slots.end();++i)
+			{
+				if (!i->invoke(p1))
+					m_slots.remove(*i);
+			}
+		}
+	};
 }
 
 #endif // OOBASE_SIGNALSLOT_H_INCLUDED_
