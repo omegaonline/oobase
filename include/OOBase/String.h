@@ -241,7 +241,7 @@ namespace OOBase
 
 		String& operator = (const String& rhs)
 		{
-			m_ptr = rhs.m_ptr;
+			String(rhs).swap(*this);
 			return *this;
 		}
 

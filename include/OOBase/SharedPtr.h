@@ -181,16 +181,7 @@ namespace OOBase
 
 			SharedCount& operator = (const SharedCount& rhs)
 			{
-				if (rhs.m_impl != m_impl)
-				{
-					if (rhs.m_impl)
-						rhs.m_impl->addref();
-
-					if (m_impl)
-						m_impl->release();
-
-					m_impl = rhs.m_impl;
-				}
+				SharedCount(rhs).swap(*this);
 				return *this;
 			}
 
@@ -241,16 +232,7 @@ namespace OOBase
 
 			WeakCount& operator = (const WeakCount& rhs)
 			{
-				if (rhs.m_impl != m_impl)
-				{
-					if (rhs.m_impl)
-						rhs.m_impl->weak_addref();
-
-					if (m_impl)
-						m_impl->weak_release();
-
-					m_impl = rhs.m_impl;
-				}
+				WeakCount(rhs).swap(*this);
 				return *this;
 			}
 

@@ -49,18 +49,6 @@ OOBase::Win32::sec_descript_t::sec_descript_t(const sec_descript_t& rhs)
 	copy(rhs.m_psd.get());
 }
 
-OOBase::Win32::sec_descript_t& OOBase::Win32::sec_descript_t::operator = (const sec_descript_t& rhs)
-{
-	if (this != &rhs)
-		copy(rhs.m_psd.get());
-
-	return *this;
-}
-
-OOBase::Win32::sec_descript_t::~sec_descript_t()
-{
-}
-
 void OOBase::Win32::sec_descript_t::copy(PSECURITY_DESCRIPTOR other)
 {
 	if (!other)

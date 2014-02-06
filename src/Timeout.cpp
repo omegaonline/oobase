@@ -128,12 +128,14 @@ OOBase::Timeout::Timeout(unsigned long seconds, unsigned int microseconds) :
 
 OOBase::Timeout& OOBase::Timeout::operator = (const Timeout& rhs)
 {
-	if (this != &rhs)
-	{
-		m_null = rhs.m_null;
-		m_end = rhs.m_end;
-	}
+	Timeout(rhs).swap(*this);
 	return *this;
+}
+
+void OOBase::Timeout::swap(Timeout& rhs)
+{
+	OOBase::swap(m_null,rhs.m_null);
+	OOBase::swap(m_end,rhs.m_end);
 }
 
 bool OOBase::Timeout::has_expired() const

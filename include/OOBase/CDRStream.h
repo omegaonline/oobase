@@ -69,12 +69,7 @@ namespace OOBase
 
 		CDRStream& operator = (const CDRStream& rhs)
 		{
-			if (&rhs != this)
-			{
-				m_buffer = rhs.m_buffer;
-				m_endianess = rhs.m_endianess;
-				m_last_error = rhs.m_last_error;
-			}
+			CDRStream(rhs).swap(*this);
 			return *this;
 		}
 

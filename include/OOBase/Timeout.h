@@ -48,7 +48,10 @@ namespace OOBase
 		Timeout(unsigned long seconds, unsigned int microseconds);
 
 		Timeout(const Timeout&);
-		Timeout& operator = (const Timeout&);
+
+		Timeout& operator = (const Timeout& rhs);
+
+		void swap(Timeout& rhs);
 
 		bool has_expired() const;
 		bool is_infinite() const { return m_null; }

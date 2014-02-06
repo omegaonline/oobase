@@ -83,16 +83,7 @@ namespace OOBase
 
 		RefPtr& operator = (const RefPtr& rhs)
 		{
-			if (this != &rhs)
-			{
-				if (m_data)
-					m_data->release();
-
-				m_data = rhs.m_data;
-
-				if (m_data)
-					m_data->addref();
-			}
+			RefPtr(rhs).swap(*this);
 			return *this;
 		}
 
@@ -100,6 +91,11 @@ namespace OOBase
 		{
 			if (m_data)
 				m_data->release();
+		}
+
+		void swap(RefPtr& rhs)
+		{
+			OOBase::swap(m_data,rhs.m_data);
 		}
 
 		T* addref() const
@@ -133,11 +129,6 @@ namespace OOBase
 		operator bool_type() const
 		{
 			return m_data != NULL ? &SafeBoolean::this_type_does_not_support_comparisons : NULL;
-		}
-
-		void swap(RefPtr& rhs)
-		{
-			OOBase::swap(m_data,rhs.m_data);
 		}
 
 	private:

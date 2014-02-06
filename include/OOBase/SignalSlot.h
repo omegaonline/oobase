@@ -35,7 +35,7 @@ namespace OOBase
 		{
 		public:
 			template<typename T>
-			Slot(WeakPtr<T> ptr, void (T::*fn)()) :	m_ptr(ptr)
+			Slot(const WeakPtr<T>& ptr, void (T::*fn)()) :	m_ptr(ptr)
 			{
 				assert(!!ptr);
 				d.m_adaptor = &Slot::adaptor<T,fn>;
@@ -97,7 +97,7 @@ namespace OOBase
 		{}
 
 		template <typename T>
-		int connect(WeakPtr<T>& ptr, void (T::*slot)())
+		int connect(const WeakPtr<T>& ptr, void (T::*slot)())
 		{
 			return m_slots.push_back(Slot(ptr,slot));
 		}

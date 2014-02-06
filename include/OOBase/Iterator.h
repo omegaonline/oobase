@@ -49,12 +49,14 @@ namespace OOBase
 
 			IteratorImpl& operator = (const IteratorImpl& rhs)
 			{
-				if (this != &rhs)
-				{
-					m_cont = rhs.m_cont;
-					m_pos = rhs.m_pos;
-				}
+				IteratorImpl(rhs).swap(*this);
 				return *this;
+			}
+
+			void swap(IteratorImpl& rhs)
+			{
+				OOBase::swap(m_cont,rhs.m_cont);
+				OOBase::swap(m_pos,rhs.m_pos);
 			}
 
 			bool operator == (const IteratorImpl& rhs) const

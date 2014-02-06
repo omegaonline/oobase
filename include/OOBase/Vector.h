@@ -474,16 +474,7 @@ namespace OOBase
 
 			VectorImpl& operator = (const VectorImpl& rhs)
 			{
-				if (this != &rhs)
-				{
-					baseClass::clear();
-					for (size_t i=0;i<rhs.m_size;++i)
-					{
-						int err = push_back(rhs.m_data[i]);
-						if (err)
-							OOBase_CallCriticalFailure(err);
-					}
-				}
+				VectorImpl(rhs).swap(*this);
 				return *this;
 			}
 

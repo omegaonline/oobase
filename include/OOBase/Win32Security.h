@@ -101,9 +101,18 @@ namespace OOBase
 		public:
 			sec_descript_t(PSECURITY_DESCRIPTOR pSD = NULL);
 			sec_descript_t(const sec_descript_t& rhs);
-			sec_descript_t& operator = (const sec_descript_t& rhs);
 
-			~sec_descript_t();
+			sec_descript_t& operator = (const sec_descript_t& rhs)
+			{
+				sec_descript_t(rhs).swap(*this);
+				return *this;
+			}
+
+			void swap(sec_descript_t& rhs)
+			{
+				swap(m_pACL,rhs.m_pACL);
+				swap(m_psd,rhs.m_psd);
+			}
 
 			DWORD SetEntriesInAcl(ULONG cCountOfExplicitEntries, PEXPLICIT_ACCESSW pListOfExplicitEntries);
 
