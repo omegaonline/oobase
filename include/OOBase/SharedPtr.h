@@ -56,7 +56,8 @@ namespace OOBase
 					if (t == 0)
 						break;
 
-					if (m_ref_count.CompareAndSwap(t+1,t) == t)
+					m_ref_count.CompareAndSwap(t,t+1);
+					if (m_ref_count == t+1)
 						return true;
 				}
 				return false;
@@ -180,16 +181,15 @@ namespace OOBase
 
 			SharedCount& operator = (const SharedCount& rhs)
 			{
-				SharedCountBase* rhs_impl = rhs.m_impl;
-				if (rhs_impl != m_impl)
+				if (rhs.m_impl != m_impl)
 				{
-					if (rhs_impl)
-						rhs_impl->addref();
+					if (rhs.m_impl)
+						rhs.m_impl->addref();
 
 					if (m_impl)
 						m_impl->release();
 
-					m_impl = rhs_impl;
+					m_impl = rhs.m_impl;
 				}
 				return *this;
 			}
@@ -241,32 +241,30 @@ namespace OOBase
 
 			WeakCount& operator = (const WeakCount& rhs)
 			{
-				SharedCountBase* rhs_impl = rhs.m_impl;
-				if (rhs_impl != m_impl)
+				if (rhs.m_impl != m_impl)
 				{
-					if (rhs_impl)
-						rhs_impl->weak_addref();
+					if (rhs.m_impl)
+						rhs.m_impl->weak_addref();
 
 					if (m_impl)
 						m_impl->weak_release();
 
-					m_impl = rhs_impl;
+					m_impl = rhs.m_impl;
 				}
 				return *this;
 			}
 
 			WeakCount& operator = (const SharedCount& rhs)
 			{
-				SharedCountBase* rhs_impl = rhs.m_impl;
-				if (rhs_impl != m_impl)
+				if (rhs.m_impl != m_impl)
 				{
-					if (rhs_impl)
-						rhs_impl->weak_addref();
+					if (rhs.m_impl)
+						rhs.m_impl->weak_addref();
 
 					if (m_impl)
 						m_impl->weak_release();
 
-					m_impl = rhs_impl;
+					m_impl = rhs.m_impl;
 				}
 				return *this;
 			}
@@ -303,7 +301,7 @@ namespace OOBase
 
 			// SFINAE
 			template <typename X, typename Y, typename T>
-			inline void enable_shared_from_this(const SharedPtr<X>& px, const Y* y, const EnableSharedFromThis<T>* pe);
+			inline void enable_shared_from_this(const SharedPtr<X>* px, const Y* y, const EnableSharedFromThis<T>* pe);
 			inline void enable_shared_from_this(...) { }
 
 			template <typename A, typename B>
@@ -538,9 +536,9 @@ namespace OOBase
 			};
 
 			template <typename X, typename Y, typename T>
-			void enable_shared_from_this(const SharedPtr<X>& px, const Y* y, const EnableSharedFromThis<T>* pe)
+			void enable_shared_from_this(const SharedPtr<X>* px, const Y* y, const EnableSharedFromThis<T>* pe)
 			{
-				template_friend::enable_shared_from_this(px,y,pe);
+				template_friend::enable_shared_from_this(*px,y,pe);
 			}
 		}
 	}
@@ -624,7 +622,7 @@ namespace OOBase
 	}
 
 	template <typename T, typename Allocator, typename P1>
-	inline SharedPtr<T> allocate_shared(P1 p1)
+	inline SharedPtr<T> allocate_shared(const P1& p1)
 	{
 		T* p = NULL;
 		Allocator::allocate_new(p,p1);
@@ -632,7 +630,7 @@ namespace OOBase
 	}
 
 	template <typename T, typename Allocator, typename P1, typename P2>
-	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2)
+	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2)
 	{
 		T* p = NULL;
 		Allocator::allocate_new(p,p1,p2);
@@ -640,7 +638,7 @@ namespace OOBase
 	}
 
 	template <typename T, typename Allocator, typename P1, typename P2, typename P3>
-	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3)
+	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3)
 	{
 		T* p = NULL;
 		Allocator::allocate_new(p,p1,p2,p3);
@@ -648,7 +646,7 @@ namespace OOBase
 	}
 
 	template <typename T, typename Allocator, typename P1, typename P2, typename P3, typename P4>
-	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4)
+	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4)
 	{
 		T* p = NULL;
 		Allocator::allocate_new(p,p1,p2,p3,p4);
@@ -656,7 +654,7 @@ namespace OOBase
 	}
 
 	template <typename T, typename Allocator, typename P1, typename P2, typename P3, typename P4, typename P5>
-	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
+	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5)
 	{
 		T* p = NULL;
 		Allocator::allocate_new(p,p1,p2,p3,p4,p5);
@@ -664,7 +662,7 @@ namespace OOBase
 	}
 
 	template <typename T, typename Allocator, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
-	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6)
+	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6)
 	{
 		T* p = NULL;
 		Allocator::allocate_new(p,p1,p2,p3,p4,p5,p6);
