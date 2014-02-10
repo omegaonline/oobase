@@ -132,11 +132,8 @@ bool OOBase::detail::ProactorPosix::check_timers(TimerItem& active_timer, Timeou
 {
 	if (!m_timers.empty())
 	{
-		// Sort the timer set, so soonest is last
-		m_timers.sort();
-
 		// Check last entry
-		Set<TimerItem,AllocatorInstance>::iterator i = m_timers.back();
+		Set<TimerItem,Greater<TimerItem>,AllocatorInstance>::iterator i = m_timers.back();
 
 		// If the timer has expired, remove from set
 		if (i->m_timeout.has_expired())
@@ -318,7 +315,7 @@ int OOBase::detail::ProactorPosix::add_timer(void* param, timer_callback_t callb
 
 int OOBase::detail::ProactorPosix::remove_timer(void* param)
 {
-	for (Set<TimerItem,AllocatorInstance>::iterator i = m_timers.begin(); i != m_timers.end(); ++i)
+	for (Set<TimerItem,Greater<TimerItem>,AllocatorInstance>::iterator i = m_timers.begin(); i != m_timers.end(); ++i)
 	{
 		if (i->m_param == param)
 		{

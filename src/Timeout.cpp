@@ -268,22 +268,31 @@ bool OOBase::Timeout::get_timespec(::timespec& timeout) const
 
 #endif
 
-bool OOBase::Timeout::operator < (const Timeout& rhs) const
+bool OOBase::Timeout::operator == (const OOBase::Timeout& rhs) const
 {
-	if (!m_null)
-	{
-		if (rhs.m_null)
-			return true;
+	if (m_null)
+		return rhs.m_null;
 
 #if defined(_WIN32)
-		return (m_end < rhs.m_end);
+	return (m_end == rhs.m_end);
 #elif defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
-		if (m_end.tv_sec < rhs.m_end.tv_sec || (m_end.tv_sec == rhs.m_end.tv_sec && m_end.tv_nsec < rhs.m_end.tv_nsec))
-			return true;
+	return (m_end.tv_sec == rhs.m_end.tv_sec && m_end.tv_nsec == rhs.m_end.tv_nsec);
 #endif
-	}
+}
 
-	return false;
+bool OOBase::Timeout::operator < (const OOBase::Timeout& rhs) const
+{
+	if (m_null)
+		return false;
+
+	if (rhs.m_null)
+		return true;
+
+#if defined(_WIN32)
+	return (m_end < rhs.m_end);
+#elif defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
+	return (m_end.tv_sec < rhs.m_end.tv_sec || (m_end.tv_sec == rhs.m_end.tv_sec && m_end.tv_nsec < rhs.m_end.tv_nsec));
+#endif
 }
 
 bool OOBase::Timeout::read(CDRStream& stream)

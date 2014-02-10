@@ -26,52 +26,50 @@
 
 namespace OOBase
 {
-	namespace detail
+	template <typename T1, typename T2>
+	class Pair
 	{
-		template <typename K, typename V, bool POD = false>
-		struct TableNode
+	public:
+		typedef T1 first_type;
+		typedef T2 second_type;
+
+		Pair() : first(), second()
+		{}
+
+		template <typename U1, typename U2>
+		Pair(const Pair<U1,U2>& n) : first(n.first), second(n.second)
+		{}
+
+		Pair(const first_type& f, const second_type& s) : first(f), second(s)
+		{}
+
+		Pair& operator = (const Pair& rhs)
 		{
-			TableNode()
-			{}
+			Pair(rhs).swap(*this);
+			return *this;
+		}
 
-			TableNode(const TableNode& n) : m_key(n.m_key), m_value(n.m_value)
-			{}
-
-			template <typename K1, typename V1>
-			TableNode(const K1& k, const V1& v) : m_key(k), m_value(v)
-			{}
-
-			TableNode& operator = (const TableNode& rhs)
-			{
-				if (this != &rhs)
-				{
-					m_key = rhs.m_key;
-					m_value = rhs.m_value;
-				}
-				return *this;
-			}
-
-			K m_key;
-			V m_value;
-		};
-
-		template <typename K, typename V>
-		struct TableNode<K,V,true>
+		void swap(Pair& rhs)
 		{
-			template <typename K1, typename V1>
-			TableNode(const K1& k, const V1& v) : m_key(k), m_value(v)
-			{}
+			OOBase::swap(first,rhs.first);
+			OOBase::swap(second,rhs.second);
+		}
 
-			K m_key;
-			V m_value;
-		};
+		T1 first;
+		T2 second;
+	};
+
+	template <class T1,class T2>
+	Pair<T1,T2> make_pair(T1 x, T2 y)
+	{
+		return Pair<T1,T2>(x,y);
 	}
 
 	template <typename K, typename V, typename Allocator = CrtAllocator>
-	class Table : public detail::VectorImpl<detail::TableNode<K,V,detail::is_pod<K>::value && detail::is_pod<V>::value>,Allocator>
+	class Table : public detail::VectorImpl<Pair<K,V>,Allocator>
 	{
-		typedef detail::TableNode<K,V,detail::is_pod<K>::value && detail::is_pod<V>::value> Node;
-		typedef detail::VectorImpl<detail::TableNode<K,V,detail::is_pod<K>::value && detail::is_pod<V>::value>,Allocator> baseClass;
+		typedef Pair<K,V> Node;
+		typedef detail::VectorImpl<Pair<K,V>,Allocator> baseClass;
 
 	public:
 		static const size_t npos = size_t(-1);
@@ -82,10 +80,9 @@ namespace OOBase
 		Table(AllocatorInstance& allocator) : baseClass(allocator), m_sorted(true)
 		{}
 
-		template <typename K1, typename V1>
-		int insert(const K1& key, const V1& value)
+		int insert(const K& key, const V& value)
 		{
-			int err = baseClass::push_back(Node(key,value));
+			int err = baseClass::push_back(make_pair(key,value));
 			if (!err)
 			{
 				// Only clear sorted flag if we are sorted, and have inserted an
@@ -104,10 +101,10 @@ namespace OOBase
 				return false;
 
 			if (key)
-				*key = node.m_key;
+				*key = node.first;
 
 			if (value)
-				*value = node.m_value;
+				*value = node.second;
 
 			return true;
 		}
@@ -129,10 +126,10 @@ namespace OOBase
 				return false;
 
 			if (key)
-				*key = node.m_key;
+				*key = node.first;
 
 			if (value)
-				*value = node.m_value;
+				*value = node.second;
 
 			return true;
 		}
@@ -189,19 +186,19 @@ namespace OOBase
 		V* at(size_t pos)
 		{
 			Node* n = baseClass::at(pos);
-			return (n ? &n->m_value : NULL);
+			return (n ? &n->second : NULL);
 		}
 
 		const V* at(size_t pos) const
 		{
 			const Node* n = baseClass::at(pos);
-			return (n ? &n->m_value : NULL);
+			return (n ? &n->second : NULL);
 		}
 
 		const K* key_at(size_t pos) const
 		{
 			const Node* n = baseClass::at(pos);
-			return (n ? &n->m_key : NULL);
+			return (n ? &n->first : NULL);
 		}
 
 		void sort()
@@ -229,7 +226,7 @@ namespace OOBase
 					Node v = this->m_data[i];
 					size_t j = i;
 
-					while (j >= h && (*less_than)(v.m_key,this->m_data[j-h].m_key))
+					while (j >= h && (*less_than)(v.first,this->m_data[j-h].first))
 					{
 						this->m_data[j] = this->m_data[j-h];
 						j -= h;
@@ -251,7 +248,7 @@ namespace OOBase
 			const Node* p = bsearch(key);
 
 			// Scan for the first
-			while (p && first && p > this->m_data && (p-1)->m_key == p->m_key)
+			while (p && first && p > this->m_data && (p-1)->first == p->first)
 				--p;
 
 			return (p ? static_cast<size_t>(p - this->m_data) : npos);
@@ -267,10 +264,10 @@ namespace OOBase
 			for (size_t span = this->m_size; span > 0; span /= 2)
 			{
 				const Node* mid_point = base + (span / 2);
-				if (mid_point->m_key == key)
+				if (mid_point->first == key)
 					return mid_point;
 
-				if (mid_point->m_key < key)
+				if (mid_point->first < key)
 				{
 					base = mid_point + 1;
 					--span;
@@ -284,6 +281,42 @@ namespace OOBase
 			return (k1 < k2);
 		}
 	};
+}
+
+template <class T1, class T2>
+inline bool operator == (const OOBase::Pair<T1,T2>& lhs, const OOBase::Pair<T1,T2>& rhs)
+{
+	return lhs.first==rhs.first && lhs.second==rhs.second;
+}
+
+template <class T1, class T2>
+inline bool operator != (const OOBase::Pair<T1,T2>& lhs, const OOBase::Pair<T1,T2>& rhs)
+{
+	return !(lhs == rhs);
+}
+
+template <class T1, class T2>
+inline bool operator < (const OOBase::Pair<T1,T2>& lhs, const OOBase::Pair<T1,T2>& rhs)
+{
+	return lhs.first<rhs.first || (!(rhs.first<lhs.first) && lhs.second<rhs.second);
+}
+
+template <class T1, class T2>
+inline bool operator <= (const OOBase::Pair<T1,T2>& lhs, const OOBase::Pair<T1,T2>& rhs)
+{
+	return !(rhs < lhs);
+}
+
+template <class T1, class T2>
+inline bool operator > (const OOBase::Pair<T1,T2>& lhs, const OOBase::Pair<T1,T2>& rhs)
+{
+	return rhs < lhs;
+}
+
+template <class T1, class T2>
+inline bool operator >= (const OOBase::Pair<T1,T2>& lhs, const OOBase::Pair<T1,T2>& rhs)
+{
+	return !(lhs < rhs);
 }
 
 #endif // OOBASE_TABLE_H_INCLUDED_

@@ -79,10 +79,14 @@ namespace OOBase
 				timer_callback_t m_callback;
 				Timeout          m_timeout;
 
-				bool operator < (const TimerItem& rhs) const
+				bool operator > (const TimerItem& rhs) const
 				{
-					// Reversed sort order
-					return rhs.m_timeout < m_timeout;
+					return m_timeout > rhs.m_timeout;
+				}
+
+				bool operator == (const TimerItem& rhs) const
+				{
+					return m_timeout == rhs.m_timeout;
 				}
 			};
 
@@ -106,8 +110,8 @@ namespace OOBase
 			int                   m_read_fd;
 
 		private:
-			Set<TimerItem,AllocatorInstance> m_timers;
-			int                              m_write_fd;
+			Set<TimerItem,Greater<TimerItem>,AllocatorInstance> m_timers;
+			int                                                 m_write_fd;
 
 			int add_timer(void* param, timer_callback_t callback, const Timeout& timeout);
 			int remove_timer(void* param);

@@ -107,13 +107,6 @@ namespace OOBase
 			return this->compare(rhs.c_str());
 		}
 
-		template <typename T> bool operator == (T rhs) const { return (this->compare(rhs) == 0); }
-		template <typename T> bool operator < (T rhs) const { return (this->compare(rhs) < 0); }
-		template <typename T> bool operator <= (T rhs) const { return (this->compare(rhs) <= 0); }
-		template <typename T> bool operator > (T rhs) const { return (this->compare(rhs) > 0); }
-		template <typename T> bool operator >= (T rhs) const { return (this->compare(rhs) >= 0); }
-		template <typename T> bool operator != (T rhs) const { return (this->compare(rhs) != 0); }
-
 		int assign(const char* sz, size_t len = npos)
 		{
 			if (len == npos)
@@ -226,6 +219,42 @@ namespace OOBase
 		ScopedArrayPtr<char,Allocator,24> m_data;
 	};
 
+	template<typename A1, typename T>
+	bool operator == (const ScopedStringImpl<A1>& str1, T str2)
+	{
+		return str1.compare(str2) == 0;
+	}
+
+	template<typename A1, typename T>
+	bool operator != (const ScopedStringImpl<A1>& str1, T str2)
+	{
+		return str1.compare(str2) != 0;
+	}
+
+	template<typename A1, typename T>
+	bool operator < (const ScopedStringImpl<A1>& str1, T str2)
+	{
+		return str1.compare(str2) < 0;
+	}
+
+	template<typename A1, typename T>
+	bool operator <= (const ScopedStringImpl<A1>& str1, T str2)
+	{
+		return str1.compare(str2) <= 0;
+	}
+
+	template<typename A1, typename T>
+	bool operator > (const ScopedStringImpl<A1>& str1, T str2)
+	{
+		return str1.compare(str2) > 0;
+	}
+
+	template<typename A1, typename T>
+	bool operator >= (const ScopedStringImpl<A1>& str1, T str2)
+	{
+		return str1.compare(str2) >= 0;
+	}
+
 	class String
 	{
 		typedef SharedPtr<ScopedStringImpl<CrtAllocator> > node_t;
@@ -265,13 +294,6 @@ namespace OOBase
 
 			return compare(rhs.c_str());
 		}
-
-		template <typename T> bool operator == (T rhs) const { return (this->compare(rhs) == 0); }
-		template <typename T> bool operator < (T rhs) const { return (this->compare(rhs) < 0); }
-		template <typename T> bool operator <= (T rhs) const { return (this->compare(rhs) <= 0); }
-		template <typename T> bool operator > (T rhs) const { return (this->compare(rhs) > 0); }
-		template <typename T> bool operator >= (T rhs) const { return (this->compare(rhs) >= 0); }
-		template <typename T> bool operator != (T rhs) const { return (this->compare(rhs) != 0); }
 
 		int assign(const char* sz, size_t len = npos)
 		{
@@ -418,6 +440,42 @@ namespace OOBase
 
 		node_t m_ptr;
 	};
+
+	template <typename T>
+	bool operator == (const String& str1, T str2)
+	{
+		return str1.compare(str2) == 0;
+	}
+
+	template <typename T>
+	bool operator != (const String& str1, T str2)
+	{
+		return str1.compare(str2) != 0;
+	}
+
+	template <typename T>
+	bool operator < (const String& str1, T str2)
+	{
+		return str1.compare(str2) < 0;
+	}
+
+	template <typename T>
+	bool operator <= (const String& str1, T str2)
+	{
+		return str1.compare(str2) <= 0;
+	}
+
+	template <typename T>
+	bool operator > (const String& str1, T str2)
+	{
+		return str1.compare(str2) > 0;
+	}
+
+	template <typename T>
+	bool operator >= (const String& str1, T str2)
+	{
+		return str1.compare(str2) >= 0;
+	}
 
 	typedef ScopedStringImpl<ThreadLocalAllocator> ScopedString;
 }

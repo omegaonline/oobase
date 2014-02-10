@@ -119,7 +119,7 @@ namespace OOBase
 			for (typename Vector<Slot,Allocator>::iterator i=slots.begin();i!=slots.end();++i)
 			{
 				if (!i->invoke())
-					m_slots.remove(*i);
+					m_slots.erase(*i);
 			}
 		}
 	};
@@ -216,7 +216,7 @@ namespace OOBase
 			for (typename Vector<Slot,Allocator>::iterator i=slots.begin();i!=slots.end();++i)
 			{
 				if (!i->invoke(p1))
-					m_slots.remove(*i);
+					m_slots.erase(*i);
 			}
 		}
 	};

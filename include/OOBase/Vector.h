@@ -196,8 +196,7 @@ namespace OOBase
 				return 0;
 			}
 
-			template <typename T1>
-			int insert_at(size_t pos, const T1& value)
+			int insert_at(size_t pos, const T& value)
 			{
 				if (pos > this->m_size)
 					pos = this->m_size;
@@ -298,8 +297,7 @@ namespace OOBase
 				return 0;
 			}
 
-			template <typename T1>
-			int insert_at(size_t pos, const T1& value)
+			int insert_at(size_t pos, const T& value)
 			{
 				if (pos > this->m_size)
 					pos = this->m_size;
@@ -400,8 +398,7 @@ namespace OOBase
 				return 0;
 			}
 
-			template <typename T1>
-			int insert_at(size_t pos, const T1& value)
+			int insert_at(size_t pos, const T& value)
 			{
 				if (pos > this->m_size)
 					pos = this->m_size;
@@ -529,8 +526,7 @@ namespace OOBase
 				return *baseClass::at(this->m_size-1);
 			}
 
-			template <typename T1>
-			int push_back(const T1& value)
+			int push_back(const T& value)
 			{
 				return baseClass::insert_at(this->m_size,value);
 			}
@@ -614,32 +610,7 @@ namespace OOBase
 			return baseClass::back();
 		}
 
-		template <typename T1>
-		iterator find(const T1& value)
-		{
-			size_t pos = 0;
-			for (;pos < this->m_size;++pos)
-			{
-				if (this->m_data[pos] == value)
-					return iterator(this,pos);
-			}
-			return end();
-		}
-
-		template <typename T1>
-		const_iterator find(const T1& value) const
-		{
-			size_t pos = 0;
-			for (;pos < this->m_size;++pos)
-			{
-				if (this->m_data[pos] == value)
-					return const_iterator(this,pos);
-			}
-			return end();
-		}
-
-		template <typename T1>
-		int resize(size_t new_size, const T1& value)
+		int resize(size_t new_size, const T& value)
 		{
 			int err = reserve(new_size);
 			if (err)
@@ -657,8 +628,7 @@ namespace OOBase
 			return resize(new_size,T());
 		}
 
-		template <typename T1>
-		int push_back(const T1& value)
+		int push_back(const T& value)
 		{
 			return baseClass::push_back(value);
 		}
@@ -668,15 +638,13 @@ namespace OOBase
 			return baseClass::pop_back();
 		}
 
-		template <typename T1>
-		int insert(const T1& value, const iterator& before)
+		int insert(const T& value, const iterator& before)
 		{
 			assert(before.check(this));
 			return baseClass::insert_at(before.deref(),value);
 		}
 
-		template <typename T1>
-		iterator insert(const T1& value, const iterator& before, int& err)
+		iterator insert(const T& value, const iterator& before, int& err)
 		{
 			err = baseClass::insert_at(before.deref(),value);
 			return (!err ? before : end());
@@ -688,15 +656,20 @@ namespace OOBase
 			return iterator(this,baseClass::erase(iter.deref()));
 		}
 
-		template <typename T1>
-		bool remove(const T1& value)
+		size_t erase(const T& value)
 		{
-			iterator i = find(value);
-			if (i == end())
-				return false;
-
-			erase(i);
-			return true;
+			size_t ret = 0;
+			for (size_t pos = 0;pos < this->m_size;)
+			{
+				if (this->m_data[pos] == value)
+				{
+					baseClass::erase(pos);
+					++ret;
+				}
+				else
+					++pos;
+			}
+			return ret;
 		}
 
 		pointer at(size_t pos)

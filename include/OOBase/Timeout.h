@@ -51,6 +51,9 @@ namespace OOBase
 
 		Timeout& operator = (const Timeout& rhs);
 
+		bool operator == (const Timeout& rhs) const;
+		bool operator < (const Timeout& rhs) const;
+
 		void swap(Timeout& rhs);
 
 		bool has_expired() const;
@@ -58,8 +61,6 @@ namespace OOBase
 	
 		bool get_timeval(::timeval& timeout) const;
 		unsigned long millisecs() const;
-
-		bool operator < (const Timeout& rhs) const;
 
 		bool read(CDRStream& stream);
 		bool write(CDRStream& stream) const;
@@ -80,6 +81,26 @@ namespace OOBase
 #error Implement platform native time
 #endif
 	};
+
+	inline bool operator != (const Timeout& lhs, const Timeout& rhs)
+	{
+		return !(lhs == rhs);
+	}
+
+	inline bool operator <= (const Timeout& lhs, const Timeout& rhs)
+	{
+		return !(rhs < lhs);
+	}
+
+	inline bool operator > (const Timeout& lhs, const Timeout& rhs)
+	{
+		return rhs < lhs;
+	}
+
+	inline bool operator >= (const Timeout& lhs, const Timeout& rhs)
+	{
+		return !(lhs < rhs);
+	}
 }
 
 #endif // OOBASE_TIME_H_INCLUDED_

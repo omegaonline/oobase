@@ -26,13 +26,32 @@
 
 namespace OOBase
 {
-	template <typename T, typename Allocator = CrtAllocator>
+	template <typename T>
+	struct Less
+	{
+		bool operator() (const T& lhs, const T& rhs) const
+		{
+			return lhs < rhs;
+		}
+	};
+
+	template <typename T>
+	struct Greater
+	{
+		bool operator() (const T& lhs, const T& rhs) const
+		{
+			return lhs > rhs;
+		}
+	};
+
+	template <typename T, typename Compare = Less<T>, typename Allocator = CrtAllocator>
 	class Set : public detail::VectorImpl<T,Allocator>
 	{
 		typedef detail::VectorImpl<T,Allocator> baseClass;
 
 	public:
 		typedef T value_type;
+		typedef Compare key_compare;
 		typedef Allocator allocator_type;
 		typedef T& reference;
 		typedef typename add_const<reference>::type const_reference;
@@ -46,34 +65,31 @@ namespace OOBase
 
 		static const size_t npos = size_t(-1);
 
-		Set() : baseClass(), m_sorted(true)
+		explicit Set(const key_compare& comp = key_compare()) : baseClass(), m_compare(comp)
 		{}
 
-		Set(AllocatorInstance& allocator) : baseClass(allocator), m_sorted(true)
+		Set(AllocatorInstance& allocator) : baseClass(allocator), m_compare()
 		{}
 
-		template <typename T1>
-		int insert(T1 value)
+		Set(const key_compare& comp, AllocatorInstance& allocator) : baseClass(allocator), m_compare(comp)
+		{}
+
+		int insert(const T& value)
 		{
-			int err = baseClass::push_back(value);
-			if (!err)
-			{
-				// Only clear sorted flag if we are sorted, and have inserted an
-				// item that does not change the sort order
-				if (m_sorted && this->m_size > 1 && !default_sort(*baseClass::at(this->m_size-2),value))
-					m_sorted = false;
-			}
-			return err;
+			const T* p = bsearch(value);
+			if (!p)
+				return baseClass::push_back(value);
+			else
+				return baseClass::insert_at(p - this->m_data,value);
 		}
 
 		iterator erase(iterator iter)
 		{
 			assert(iter.check(this));
-			return iterator(this,erase(iter.deref()));
+			return iterator(this,baseClass::erase(iter.deref()));
 		}
 
-		template <typename T1>
-		bool remove(T1 value)
+		bool remove(const T& value)
 		{
 			iterator i = find(value);
 			if (i == end())
@@ -88,72 +104,36 @@ namespace OOBase
 			return baseClass::pop_back();
 		}
 
-		template <typename T1>
-		bool exists(T1 value) const
-		{
-			return (find(value) != end());
-		}
-
-		template <typename T1>
-		iterator find(T1 value, bool first = false)
+		bool exists(const T& value) const
 		{
 			const T* p = bsearch(value);
+			return (p && *p == value);
+		}
+
+		iterator find(const T& value)
+		{
+			const T* p = bsearch(value);
+			if (!p || *p != value)
+				return end();
 
 			// Scan for the first
-			while (p && first && p > this->m_data && *(p-1) == *p)
+			while (p && p > this->m_data && *(p-1) == value)
 				--p;
 
 			return (p ? iterator(this,static_cast<size_t>(p - this->m_data)) : end());
 		}
 
-		template <typename T1>
-		const_iterator find(T1 value, bool first = false) const
+		const_iterator find(const T& value) const
 		{
 			const T* p = bsearch(value);
+			if (!p || *p != value)
+				return end();
 
 			// Scan for the first
-			while (p && first && p > this->m_data && *(p-1) == *p)
+			while (p && p > this->m_data && *(p-1) == value)
 				--p;
 
 			return (p ? const_iterator(this,static_cast<size_t>(p - this->m_data)) : end());
-		}
-
-		void sort()
-		{
-			if (!m_sorted)
-				sort(&default_sort);
-		}
-
-		void sort(bool (*less_than)(const T& v1, const T& v2))
-		{
-			// This is a Shell-sort because we mostly use sort() in cases where qsort() behaves badly
-			// i.e. insertion at the end and then sort
-			// see http://warp.povusers.org/SortComparison
-
-			// Generate the split intervals
-			// Knuth is my homeboy :)
-			size_t h = 1;
-			while (h <= this->m_size / 9)
-				h = 3*h + 1;
-
-			for (;h > 0; h /= 3)
-			{
-				for (size_t i = h; i < this->m_size; ++i)
-				{
-					T v = this->m_data[i];
-					size_t j = i;
-
-					while (j >= h && (*less_than)(v,this->m_data[j-h]))
-					{
-						this->m_data[j] = this->m_data[j-h];
-						j -= h;
-					}
-
-					this->m_data[j] = v;
-				}
-			}
-
-			m_sorted = (less_than == &default_sort);
 		}
 
 		iterator begin()
@@ -197,46 +177,25 @@ namespace OOBase
 		}
 
 	private:
-		bool m_sorted;
+		key_compare m_compare;
 
-		size_t erase(size_t pos)
+		const T* bsearch(const T& key) const
 		{
-			if (m_sorted)
-				return baseClass::erase(pos);
-
-			if (this->m_data && pos < this->m_size)
-			{
-				this->m_data[pos] = this->m_data[--this->m_size];
-				this->m_data[this->m_size].~T();
-			}
-			return pos < this->m_size ? pos : this->m_size;
-		}
-
-		template <typename T1>
-		const T* bsearch(T1 key) const
-		{
-			// Always sort first
-			const_cast<Set*>(this)->sort();
-
 			const T* base = this->m_data;
+			const T* mid_point = NULL;
 			for (size_t span = this->m_size; span > 0; span /= 2)
 			{
-				const T* mid_point = base + (span / 2);
-				if (*mid_point == key)
-					return mid_point;
-
-				if (*mid_point < key)
+				mid_point = base + (span / 2);
+				if (m_compare(*mid_point,key))
 				{
 					base = mid_point + 1;
-					--span;
+					if (--span == 0)
+						mid_point = NULL; // The end...
 				}
+				else if (*mid_point == key)
+					break;
 			}
-			return NULL;
-		}
-
-		static bool default_sort(const T& v1, const T& v2)
-		{
-			return (v1 < v2);
+			return mid_point;
 		}
 	};
 }
