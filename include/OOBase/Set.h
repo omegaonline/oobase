@@ -47,13 +47,13 @@ namespace OOBase
 
 		static const size_t npos = size_t(-1);
 
-		explicit Set(const key_compare& comp = key_compare()) : baseClass(), m_compare(comp)
+		explicit Set(const Compare& comp) : baseClass(), m_compare(comp)
 		{}
 
 		explicit Set(AllocatorInstance& allocator) : baseClass(allocator), m_compare()
 		{}
 
-		Set(const key_compare& comp, AllocatorInstance& allocator) : baseClass(allocator), m_compare(comp)
+		Set(const Compare& comp, AllocatorInstance& allocator) : baseClass(allocator), m_compare(comp)
 		{}
 
 		Set(const Set& rhs) : baseClass(rhs), m_compare(rhs.m_compare)
@@ -71,7 +71,20 @@ namespace OOBase
 			OOBase::swap(rhs.m_compare);
 		}
 
-		int insert(const T& value)
+		template <typename It>
+		int insert(It first, It last)
+		{
+			int err = 0;
+			for (It i = first; i != last; ++i)
+			{
+				if ((err = insert(*i)) != 0)
+					break;
+			}
+			return err;
+		}
+
+		template <typename T1>
+		int insert(const T1& value)
 		{
 			const T* p = bsearch(value);
 			if (!p)
@@ -86,7 +99,8 @@ namespace OOBase
 			return iterator(this,baseClass::remove_at(iter.deref()));
 		}
 
-		bool remove(const T& value)
+		template <typename T1>
+		bool remove(const T1& value)
 		{
 			iterator i = find(value);
 			if (i == end())
@@ -101,13 +115,15 @@ namespace OOBase
 			return baseClass::pop_back();
 		}
 
-		bool exists(const T& value) const
+		template <typename T1>
+		bool exists(const T1& value) const
 		{
 			const T* p = bsearch(value);
 			return (p && *p == value);
 		}
 
-		iterator find(const T& value)
+		template <typename T1>
+		iterator find(const T1& value)
 		{
 			const T* p = bsearch(value);
 			if (!p || *p != value)
@@ -120,7 +136,8 @@ namespace OOBase
 			return (p ? iterator(this,static_cast<size_t>(p - this->m_data)) : end());
 		}
 
-		const_iterator find(const T& value) const
+		template <typename T1>
+		const_iterator find(const T1& value) const
 		{
 			const T* p = bsearch(value);
 			if (!p || *p != value)
@@ -135,12 +152,12 @@ namespace OOBase
 
 		iterator begin()
 		{
-			return iterator(this,0);
+			return baseClass::empty() ? end() : iterator(this,0);
 		}
 
 		const_iterator cbegin() const
 		{
-			return const_iterator(this,0);
+			return baseClass::empty() ? end() : const_iterator(this,0);
 		}
 
 		const_iterator begin() const
@@ -174,9 +191,8 @@ namespace OOBase
 		}
 
 	private:
-		key_compare m_compare;
-
-		const T* bsearch(const T& key) const
+		template <typename K1>
+		const T* bsearch(const K1& key) const
 		{
 			const T* base = this->m_data;
 			const T* mid_point = NULL;
@@ -194,6 +210,7 @@ namespace OOBase
 			}
 			return mid_point;
 		}
+		Compare m_compare;
 	};
 }
 

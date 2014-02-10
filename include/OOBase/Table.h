@@ -26,221 +26,215 @@
 
 namespace OOBase
 {
-	template <typename K, typename V, typename Allocator = CrtAllocator>
+	template <typename K, typename V, typename Compare = Less<K>, typename Allocator = CrtAllocator>
 	class Table : public detail::VectorImpl<Pair<K,V>,Allocator>
 	{
-		typedef Pair<K,V> Node;
 		typedef detail::VectorImpl<Pair<K,V>,Allocator> baseClass;
 
 	public:
+		typedef K key_type;
+		typedef Pair<K,V> value_type;
+		typedef V mapped_type;
+		typedef Compare key_compare;
+		typedef Allocator allocator_type;
+		typedef value_type& reference;
+		typedef typename add_const<reference>::type const_reference;
+		typedef value_type* pointer;
+		typedef typename add_const<pointer>::type const_pointer;
+
+		typedef detail::IteratorImpl<Table,value_type,size_t> iterator;
+		friend class detail::IteratorImpl<Table,value_type,size_t>;
+		typedef detail::IteratorImpl<const Table,const value_type,size_t> const_iterator;
+		friend class detail::IteratorImpl<const Table,const value_type,size_t>;
+
 		static const size_t npos = size_t(-1);
 
-		Table() : baseClass(), m_sorted(true)
+		explicit Table(const Compare& comp = Compare()) : baseClass(), m_compare(comp)
 		{}
 
-		explicit Table(AllocatorInstance& allocator) : baseClass(allocator), m_sorted(true)
+		explicit Table(AllocatorInstance& allocator) : baseClass(allocator), m_compare()
 		{}
 
-		int insert(const K& key, const V& value)
+		Table(const Compare& comp, AllocatorInstance& allocator) : baseClass(allocator), m_compare(comp)
+		{}
+
+		Table(const Table& rhs) : baseClass(rhs), m_compare(rhs.m_compare)
+		{}
+
+		Table& operator = (const Table& rhs)
 		{
-			int err = baseClass::push_back(make_pair(key,value));
-			if (!err)
-			{
-				// Only clear sorted flag if we are sorted, and have inserted an
-				// item that does not change the sort order
-				if (m_sorted && this->m_size > 1 && !default_sort(*key_at(this->m_size-2),key))
-					m_sorted = false;
-			}
+			Table(rhs).swap(*this);
+			return *this;
+		}
 
+		void swap(Table& rhs)
+		{
+			baseClass::swap(rhs);
+			OOBase::swap(rhs.m_compare);
+		}
+
+		template <typename It>
+		int insert(It first, It last)
+		{
+			int err = 0;
+			for (It i = first; i != last; ++i)
+			{
+				if ((err = insert(*i)) != 0)
+					break;
+			}
 			return err;
 		}
 
-		bool erase(size_t pos, K* key = NULL, V* value = NULL)
+		int insert(const Pair<K,V>& value)
 		{
-			Node node;
-			if (!baseClass::erase(pos,&node))
-				return false;
+			const Pair<K,V>* p = bsearch(value.first);
+			if (!p)
+				return baseClass::push_back(value);
+			else
+				return baseClass::insert_at(p - this->m_data,value);
+		}
 
-			if (key)
-				*key = node.first;
+		int insert(const K& key, const V& value)
+		{
+			return insert(OOBase::make_pair(key,value));
+		}
 
-			if (value)
-				*value = node.second;
-
-			return true;
+		iterator erase(iterator iter)
+		{
+			assert(iter.check(this));
+			return iterator(this,baseClass::remove_at(iter.deref()));
 		}
 
 		template <typename K1>
-		bool remove(const K1& key, V* value = NULL)
+		bool remove(const K1& key)
 		{
-			size_t pos = find_i(key,false);
-			if (pos == npos)
+			iterator i = find(key);
+			if (i == end())
 				return false;
 
-			return erase(pos,NULL,value);
+			erase(i);
+			return true;
 		}
 
-		bool pop_back(K* key = NULL, V* value = NULL)
+		bool pop_back()
 		{
-			Node node;
-			if (!baseClass::pop_back(&node))
-				return false;
-
-			if (key)
-				*key = node.first;
-
-			if (value)
-				*value = node.second;
-
-			return true;
+			return baseClass::pop_back();
 		}
 
 		template <typename K1>
 		bool exists(const K1& key) const
 		{
-			return (find_i(key,false) != npos);
+			const Pair<K,V>* p = bsearch(key);
+			return (p && p->first == key);
 		}
 
 		template <typename K1>
-		V* find(const K1& key)
+		iterator find(const K1& key)
 		{
-			size_t pos = find_i(key,false);
-			if (pos == npos)
-				return NULL;
+			const Pair<K,V>* p = bsearch(key);
+			if (!p || p->first != key)
+				return end();
 
-			return at(pos);
+			// Scan for the first
+			while (p && p > this->m_data && (p-1)->first == key)
+				--p;
+
+			return (p ? iterator(this,static_cast<size_t>(p - this->m_data)) : end());
 		}
 
 		template <typename K1>
-		const V* find(const K1& key) const
+		const_iterator find(const K1& key) const
 		{
-			size_t pos = find_i(key,false);
-			if (pos == npos)
-				return NULL;
+			const Pair<K,V>* p = bsearch(key);
+			if (!p || p->first != key)
+				return end();
 
-			return at(pos);
+			// Scan for the first
+			while (p && p > this->m_data && (p-1)->first == key)
+				--p;
+
+			return (p ? const_iterator(this,static_cast<size_t>(p - this->m_data)) : end());
 		}
 
 		template <typename K1>
-		bool find(const K1& key, V& value, bool first = false) const
+		bool find(const K1& key, V& value) const
 		{
-			size_t pos = find_i(key,first);
-			if (pos == npos)
+			const Pair<K,V>* p = bsearch(key);
+			if (!p || p->first != key)
 				return false;
 
-			value = *at(pos);
+			// Scan for the first
+			while (p && p > this->m_data && (p-1)->first == key)
+				--p;
+
+			if (!p)
+				return false;
+
+			value = p->second;
 			return true;
 		}
 
-		template <typename K1>
-		size_t find_first(const K1& key) const
+		iterator begin()
 		{
-			return find_i(key,true);
+			return baseClass::empty() ? end() : iterator(this,0);
 		}
 
-		template <typename K1>
-		size_t find_at(const K1& key) const
+		const_iterator cbegin() const
 		{
-			return find_i(key,false);
+			return baseClass::empty() ? end() : const_iterator(this,0);
 		}
 
-		V* at(size_t pos)
+		const_iterator begin() const
 		{
-			Node* n = baseClass::at(pos);
-			return (n ? &n->second : NULL);
+			return cbegin();
 		}
 
-		const V* at(size_t pos) const
+		iterator back()
 		{
-			const Node* n = baseClass::at(pos);
-			return (n ? &n->second : NULL);
+			return (this->m_size ? iterator(this,this->m_size-1) : end());
 		}
 
-		const K* key_at(size_t pos) const
+		const_iterator back() const
 		{
-			const Node* n = baseClass::at(pos);
-			return (n ? &n->first : NULL);
+			return (this->m_size ? const_iterator(this,this->m_size-1) : end());
 		}
 
-		void sort()
+		iterator end()
 		{
-			if (!m_sorted)
-				sort(&default_sort);
+			return iterator(this,size_t(-1));
 		}
 
-		void sort(bool (*less_than)(const K& k1, const K& k2))
+		const_iterator cend() const
 		{
-			// This is a Shell-sort because we mostly use sort() in cases where qsort() behaves badly
-			// i.e. insertion at the end and then sort
-			// see http://warp.povusers.org/SortComparison
+			return const_iterator(this,size_t(-1));
+		}
 
-			// Generate the split intervals
-			// Knuth is my homeboy :)
-			size_t h = 1;
-			while (h <= this->m_size / 9)
-				h = 3*h + 1;
-			
-			for (;h > 0; h /= 3)
-			{
-				for (size_t i = h; i < this->m_size; ++i)
-				{
-					Node v = this->m_data[i];
-					size_t j = i;
-
-					while (j >= h && (*less_than)(v.first,this->m_data[j-h].first))
-					{
-						this->m_data[j] = this->m_data[j-h];
-						j -= h;
-					}
-
-					this->m_data[j] = v;
-				}
-			}
-
-			m_sorted = (less_than == &default_sort);
+		const_iterator end() const
+		{
+			return cend();
 		}
 
 	private:
-		bool m_sorted;
-
 		template <typename K1>
-		size_t find_i(const K1& key, bool first) const
+		const Pair<K,V>* bsearch(const K1& key) const
 		{
-			const Node* p = bsearch(key);
-
-			// Scan for the first
-			while (p && first && p > this->m_data && (p-1)->first == p->first)
-				--p;
-
-			return (p ? static_cast<size_t>(p - this->m_data) : npos);
-		}
-
-		template <typename K1>
-		const Node* bsearch(const K1& key) const
-		{
-			// Always sort first
-			const_cast<Table*>(this)->sort();
-
-			const Node* base = this->m_data;
+			const Pair<K,V>* base = this->m_data;
+			const Pair<K,V>* mid_point = NULL;
 			for (size_t span = this->m_size; span > 0; span /= 2)
 			{
-				const Node* mid_point = base + (span / 2);
-				if (mid_point->first == key)
-					return mid_point;
-
-				if (mid_point->first < key)
+				mid_point = base + (span / 2);
+				if (m_compare(mid_point->first,key))
 				{
 					base = mid_point + 1;
-					--span;
+					if (--span == 0)
+						mid_point = NULL; // The end...
 				}
+				else if (mid_point->first == key)
+					break;
 			}
-			return NULL;
+			return mid_point;
 		}
-
-		static bool default_sort(const K& k1, const K& k2)
-		{
-			return (k1 < k2);
-		}
+		Compare m_compare;
 	};
 }
 

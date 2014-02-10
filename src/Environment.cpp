@@ -270,55 +270,52 @@ int OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tabS
 	// This might be full of bugs!!
 
 	// Substitute any ${VAR} in tabEnv with values from tabSrc
-	for (size_t idx = 0; idx < tabEnv.size(); ++idx)
+	for (env_table_t::iterator i = tabEnv.begin(); i != tabEnv.end(); ++i)
 	{
-		String* pVal = tabEnv.at(idx);
-
 		// Loop finding ${VAR}
 		for (size_t offset = 0;;)
 		{
-			size_t start = pVal->find("${",offset);
+			size_t start = i->second.find("${",offset);
 			if (start == String::npos)
 				break;
 
-			size_t end = pVal->find('}',start+2);
+			size_t end = i->second.find('}',start+2);
 			if (end == String::npos)
 				break;
 
 			String strPrefix,strSuffix,strParam;
-			int err = strPrefix.assign(pVal->c_str(),start);
+			int err = strPrefix.assign(i->second.c_str(),start);
 			if (!err)
-				err = strSuffix.assign(pVal->c_str()+end+1);
+				err = strSuffix.assign(i->second.c_str()+end+1);
 			if (!err)
-				err = strParam.assign(pVal->c_str()+start+2,end-start-2);
+				err = strParam.assign(i->second.c_str()+start+2,end-start-2);
 			if (err)
 				return err;
 
-			*pVal = strPrefix;
+			i->second = strPrefix;
 
-			const String* pRepl = tabSrc.find(strParam);
-			if (pRepl)
+			env_table_t::const_iterator j = tabSrc.find(strParam);
+			if (j != tabSrc.end())
 			{
-				err = pVal->append(*pRepl);
+				err = i->second.append(j->second);
 				if (err)
 					return err;
 			}
 
-			offset = pVal->length();
+			offset = i->second.length();
 
-			err = pVal->append(strSuffix);
+			err = i->second.append(strSuffix);
 			if (err)
 				return err;
 		}
 	}
 
 	// Now add any values in tabSrc not in tabEnv
-	for (size_t idx = 0; idx < tabSrc.size(); ++idx)
+	for (env_table_t::const_iterator i = tabSrc.begin(); i != tabSrc.end(); ++i)
 	{
-		const String* key = tabSrc.key_at(idx);
-		if (!tabEnv.exists(*key))
+		if (!tabEnv.exists(i->first))
 		{
-			int err = tabEnv.insert(*key,*tabSrc.at(idx));
+			int err = tabEnv.insert(*i);
 			if (err)
 				return err;
 		}
@@ -336,8 +333,8 @@ int OOBase::Environment::get_envp(const env_table_t& tabEnv, SharedPtr<char*>& p
 
 	// Count the size needed
 	size_t len = (tabEnv.size()+1) * sizeof(char*);
-	for (size_t idx = 0; idx < tabEnv.size(); ++idx)
-		len += tabEnv.key_at(idx)->length() + tabEnv.at(idx)->length() + 2; // = and NUL
+	for (env_table_t::const_iterator i = tabEnv.cbegin(); i != tabEnv.cend(); ++i)
+		len += i->first.length() + i->second.length() + 2; // = and NUL
 
 	ptr = make_shared<char*,CrtAllocator>(static_cast<char**>(CrtAllocator::allocate(len,16)));
 	if (!ptr)
@@ -346,17 +343,15 @@ int OOBase::Environment::get_envp(const env_table_t& tabEnv, SharedPtr<char*>& p
 	char** envp = ptr.get();
 	char* char_data = reinterpret_cast<char*>(envp) + ((tabEnv.size()+1) * sizeof(char*));
 
-	for (size_t idx = 0; idx < tabEnv.size(); ++idx)
+	for (env_table_t::const_iterator i = tabEnv.cbegin(); i != tabEnv.cend(); ++i)
 	{
 		*envp++ = char_data;
 
-		const String* key = tabEnv.key_at(idx);
-		const String* val = tabEnv.at(idx);
-		memcpy(char_data,key->c_str(),key->length());
-		char_data += key->length();
+		memcpy(char_data,i->first.c_str(),i->first.length());
+		char_data += i->first.length();
 		*char_data++ = '=';
-		memcpy(char_data,val->c_str(),val->length());
-		char_data += val->length();
+		memcpy(char_data,i->second.c_str(),i->second.length());
+		char_data += i->second.length();
 		*char_data++ = '\0';
 	}
 

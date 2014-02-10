@@ -148,11 +148,11 @@ namespace
 			}
 		}
 
-		OOBase::String* pv = results.find(strKey);
-		if (!pv)
+		OOBase::ConfigFile::results_t::iterator i = results.find(strKey);
+		if (i == results.end())
 			return results.insert(strKey,strValue);
 
-		*pv = strValue;
+		i->second = strValue;
 		return 0;
 	}
 

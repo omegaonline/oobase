@@ -704,12 +704,12 @@ namespace OOBase
 
 		iterator begin()
 		{
-			return iterator(this,baseClass::empty() ? size_t(-1) : 0);
+			return baseClass::empty() ? end() : iterator(this,0);
 		}
 
 		const_iterator cbegin() const
 		{
-			return const_iterator(this,baseClass::empty() ? size_t(-1) : 0);
+			return baseClass::empty() ? end() : const_iterator(this,0);
 		}
 
 		const_iterator begin() const

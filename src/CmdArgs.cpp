@@ -140,14 +140,12 @@ int OOBase::CmdArgs::parse(int argc, const char* argv[], results_t& results, int
 int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, int& arg, int argc) const
 {
 	String strKey,strVal;
-	for (size_t i=0; i < m_map_opts.size(); ++i)
+	for (Table<String,Option>::const_iterator i = m_map_opts.begin();i != m_map_opts.end(); ++i)
 	{
-		const Option& opt = *m_map_opts.at(i);
-
 		const char* value = "true";
-		if (opt.m_long_opt == argv[arg]+2)
+		if (i->second.m_long_opt == argv[arg]+2)
 		{
-			if (opt.m_has_value)
+			if (i->second.m_has_value)
 			{
 				if (arg >= argc-1)
 					return error(results,EINVAL,"missing",argv[arg]);
@@ -159,19 +157,19 @@ int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, in
 			if (err != 0)
 				return err;
 
-			return results.insert(*m_map_opts.key_at(i),strVal);
+			return results.insert(i->first,strVal);
 		}
 
-		if (strncmp(opt.m_long_opt.c_str(),argv[arg]+2,opt.m_long_opt.length())==0 && argv[arg][opt.m_long_opt.length()+2]=='=')
+		if (strncmp(i->second.m_long_opt.c_str(),argv[arg]+2,i->second.m_long_opt.length())==0 && argv[arg][i->second.m_long_opt.length()+2]=='=')
 		{
-			if (opt.m_has_value)
-				value = &argv[arg][opt.m_long_opt.length()+3];
+			if (i->second.m_has_value)
+				value = &argv[arg][i->second.m_long_opt.length()+3];
 
 			int err = strVal.assign(value);
 			if (err != 0)
 				return err;
 
-			return results.insert(*m_map_opts.key_at(i),strVal);
+			return results.insert(i->first,strVal);
 		}
 	}
 
@@ -183,13 +181,12 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 	String strKey,strVal;
 	for (const char* c = argv[arg]+1; *c!='\0'; ++c)
 	{
-		size_t i;
-		for (i = 0; i < m_map_opts.size(); ++i)
+		Table<String,Option>::const_iterator i = m_map_opts.begin();
+		for (;i != m_map_opts.end(); ++i)
 		{
-			const Option& opt = *m_map_opts.at(i);
-			if (opt.m_short_opt == *c)
+			if (i->second.m_short_opt == *c)
 			{
-				if (opt.m_has_value)
+				if (i->second.m_has_value)
 				{
 					const char* value;
 					if (c[1] == '\0')
@@ -214,7 +211,7 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 						return err;
 
 					// No more for this arg...
-					return results.insert(*m_map_opts.key_at(i),strVal);
+					return results.insert(i->first,strVal);
 				}
 				else
 				{
@@ -222,7 +219,7 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 					if (err != 0)
 						return err;
 
-					err = results.insert(*m_map_opts.key_at(i),strVal);
+					err = results.insert(i->first,strVal);
 					if (err != 0)
 						return err;
 
@@ -231,7 +228,7 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 			}
 		}
 
-		if (i == m_map_opts.size())
+		if (i == m_map_opts.end())
 		{
 			int err = strVal.printf("-%c",*c);
 			if (err)

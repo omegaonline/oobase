@@ -450,7 +450,8 @@ namespace OOBase
 	template <typename T>
 	struct Less
 	{
-		bool operator() (const T& lhs, const T& rhs) const
+		template <typename T1>
+		bool operator() (const T& lhs, const T1& rhs) const
 		{
 			return lhs < rhs;
 		}
@@ -459,7 +460,8 @@ namespace OOBase
 	template <typename T>
 	struct Greater
 	{
-		bool operator() (const T& lhs, const T& rhs) const
+		template <typename T1>
+		bool operator() (const T& lhs, const T1& rhs) const
 		{
 			return lhs > rhs;
 		}
