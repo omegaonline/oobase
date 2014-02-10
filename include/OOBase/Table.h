@@ -26,45 +26,6 @@
 
 namespace OOBase
 {
-	template <typename T1, typename T2>
-	class Pair
-	{
-	public:
-		typedef T1 first_type;
-		typedef T2 second_type;
-
-		Pair() : first(), second()
-		{}
-
-		template <typename U1, typename U2>
-		Pair(const Pair<U1,U2>& n) : first(n.first), second(n.second)
-		{}
-
-		Pair(const first_type& f, const second_type& s) : first(f), second(s)
-		{}
-
-		Pair& operator = (const Pair& rhs)
-		{
-			Pair(rhs).swap(*this);
-			return *this;
-		}
-
-		void swap(Pair& rhs)
-		{
-			OOBase::swap(first,rhs.first);
-			OOBase::swap(second,rhs.second);
-		}
-
-		T1 first;
-		T2 second;
-	};
-
-	template <class T1,class T2>
-	Pair<T1,T2> make_pair(T1 x, T2 y)
-	{
-		return Pair<T1,T2>(x,y);
-	}
-
 	template <typename K, typename V, typename Allocator = CrtAllocator>
 	class Table : public detail::VectorImpl<Pair<K,V>,Allocator>
 	{
@@ -77,7 +38,7 @@ namespace OOBase
 		Table() : baseClass(), m_sorted(true)
 		{}
 
-		Table(AllocatorInstance& allocator) : baseClass(allocator), m_sorted(true)
+		explicit Table(AllocatorInstance& allocator) : baseClass(allocator), m_sorted(true)
 		{}
 
 		int insert(const K& key, const V& value)
@@ -281,42 +242,6 @@ namespace OOBase
 			return (k1 < k2);
 		}
 	};
-}
-
-template <class T1, class T2>
-inline bool operator == (const OOBase::Pair<T1,T2>& lhs, const OOBase::Pair<T1,T2>& rhs)
-{
-	return lhs.first==rhs.first && lhs.second==rhs.second;
-}
-
-template <class T1, class T2>
-inline bool operator != (const OOBase::Pair<T1,T2>& lhs, const OOBase::Pair<T1,T2>& rhs)
-{
-	return !(lhs == rhs);
-}
-
-template <class T1, class T2>
-inline bool operator < (const OOBase::Pair<T1,T2>& lhs, const OOBase::Pair<T1,T2>& rhs)
-{
-	return lhs.first<rhs.first || (!(rhs.first<lhs.first) && lhs.second<rhs.second);
-}
-
-template <class T1, class T2>
-inline bool operator <= (const OOBase::Pair<T1,T2>& lhs, const OOBase::Pair<T1,T2>& rhs)
-{
-	return !(rhs < lhs);
-}
-
-template <class T1, class T2>
-inline bool operator > (const OOBase::Pair<T1,T2>& lhs, const OOBase::Pair<T1,T2>& rhs)
-{
-	return rhs < lhs;
-}
-
-template <class T1, class T2>
-inline bool operator >= (const OOBase::Pair<T1,T2>& lhs, const OOBase::Pair<T1,T2>& rhs)
-{
-	return !(lhs < rhs);
 }
 
 #endif // OOBASE_TABLE_H_INCLUDED_

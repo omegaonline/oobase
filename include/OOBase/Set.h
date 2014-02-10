@@ -26,24 +26,6 @@
 
 namespace OOBase
 {
-	template <typename T>
-	struct Less
-	{
-		bool operator() (const T& lhs, const T& rhs) const
-		{
-			return lhs < rhs;
-		}
-	};
-
-	template <typename T>
-	struct Greater
-	{
-		bool operator() (const T& lhs, const T& rhs) const
-		{
-			return lhs > rhs;
-		}
-	};
-
 	template <typename T, typename Compare = Less<T>, typename Allocator = CrtAllocator>
 	class Set : public detail::VectorImpl<T,Allocator>
 	{
@@ -68,11 +50,26 @@ namespace OOBase
 		explicit Set(const key_compare& comp = key_compare()) : baseClass(), m_compare(comp)
 		{}
 
-		Set(AllocatorInstance& allocator) : baseClass(allocator), m_compare()
+		explicit Set(AllocatorInstance& allocator) : baseClass(allocator), m_compare()
 		{}
 
 		Set(const key_compare& comp, AllocatorInstance& allocator) : baseClass(allocator), m_compare(comp)
 		{}
+
+		Set(const Set& rhs) : baseClass(rhs), m_compare(rhs.m_compare)
+		{}
+
+		Set& operator = (const Set& rhs)
+		{
+			Set(rhs).swap(*this);
+			return *this;
+		}
+
+		void swap(Set& rhs)
+		{
+			baseClass::swap(rhs);
+			OOBase::swap(rhs.m_compare);
+		}
 
 		int insert(const T& value)
 		{
@@ -86,7 +83,7 @@ namespace OOBase
 		iterator erase(iterator iter)
 		{
 			assert(iter.check(this));
-			return iterator(this,baseClass::erase(iter.deref()));
+			return iterator(this,baseClass::remove_at(iter.deref()));
 		}
 
 		bool remove(const T& value)

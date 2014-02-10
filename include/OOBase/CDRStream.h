@@ -34,7 +34,7 @@ namespace OOBase
 	public:
 		static const int MaxAlignment = 16;
 
-		CDRStream(size_t len = 256) :
+		explicit CDRStream(size_t len = 256) :
 				m_endianess(OOBASE_BYTE_ORDER),
 				m_last_error(0)
 		{
@@ -46,7 +46,7 @@ namespace OOBase
 			}
 		}
 
-		CDRStream(AllocatorInstance& allocator, size_t len = 256) :
+		explicit CDRStream(AllocatorInstance& allocator, size_t len = 256) :
 				m_endianess(OOBASE_BYTE_ORDER),
 				m_last_error(0)
 		{

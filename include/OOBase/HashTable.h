@@ -202,10 +202,10 @@ namespace OOBase
 		friend class detail::IteratorImpl<HashTable,typename Node::pair,size_t>;
 		friend class detail::IteratorImpl<const HashTable,const typename Node::pair,size_t>;
 
-		HashTable(const H& h = H()) : baseClass(), m_data(NULL), m_size(0), m_count(0), m_hash(h)
+		explicit HashTable(const H& h = H()) : baseClass(), m_data(NULL), m_size(0), m_count(0), m_hash(h)
 		{}
 
-		HashTable(AllocatorInstance& allocator, const H& h = H()) : baseClass(allocator), m_data(NULL), m_size(0), m_count(0), m_hash(h)
+		explicit HashTable(AllocatorInstance& allocator, const H& h = H()) : baseClass(allocator), m_data(NULL), m_size(0), m_count(0), m_hash(h)
 		{}
 
 		~HashTable()

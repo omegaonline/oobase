@@ -40,7 +40,7 @@ namespace OOBase
 			VectorBase() : baseClass(), m_data(NULL), m_size(0), m_capacity(0)
 			{}
 
-			VectorBase(AllocatorInstance& allocator) : baseClass(allocator), m_data(NULL), m_size(0), m_capacity(0)
+			explicit VectorBase(AllocatorInstance& allocator) : baseClass(allocator), m_data(NULL), m_size(0), m_capacity(0)
 			{}
 
 			VectorBase(const VectorBase& rhs) : baseClass(rhs), m_data(NULL), m_size(0), m_capacity(0)
@@ -51,8 +51,16 @@ namespace OOBase
 				baseClass::free(m_data);
 			}
 
+			VectorBase& operator = (const VectorBase& rhs)
+			{
+				VectorBase(rhs).swap(*this);
+				return *this;
+			}
+
 			void swap(VectorBase& rhs)
 			{
+				Allocating<Allocator>::swap(rhs);
+
 				OOBase::swap(m_data,rhs.m_data);
 				OOBase::swap(m_size,rhs.m_size);
 				OOBase::swap(m_capacity,rhs.m_size);
@@ -109,7 +117,7 @@ namespace OOBase
 			VectorPODBase() : baseClass()
 			{}
 
-			VectorPODBase(AllocatorInstance& allocator) : baseClass(allocator)
+			explicit VectorPODBase(AllocatorInstance& allocator) : baseClass(allocator)
 			{}
 
 			~VectorPODBase()
@@ -333,7 +341,7 @@ namespace OOBase
 				return 0;
 			}
 #endif
-			size_t erase(size_t pos)
+			size_t remove_at(size_t pos)
 			{
 				if (this->m_data && pos < this->m_size)
 				{
@@ -355,7 +363,7 @@ namespace OOBase
 			VectorPODBase() : baseClass()
 			{}
 
-			VectorPODBase(AllocatorInstance& allocator) : baseClass(allocator)
+			explicit VectorPODBase(AllocatorInstance& allocator) : baseClass(allocator)
 			{}
 
 		protected:
@@ -434,7 +442,7 @@ namespace OOBase
 				return 0;
 			}
 
-			size_t erase(size_t pos)
+			size_t remove_at(size_t pos)
 			{
 				if (this->m_data && pos < this->m_size)
 				{
@@ -455,7 +463,7 @@ namespace OOBase
 			VectorImpl() : baseClass()
 			{}
 
-			VectorImpl(AllocatorInstance& allocator) : baseClass(allocator)
+			explicit VectorImpl(AllocatorInstance& allocator) : baseClass(allocator)
 			{}
 
 			VectorImpl(const VectorImpl& rhs) : baseClass(rhs)
@@ -533,7 +541,7 @@ namespace OOBase
 
 			bool pop_back()
 			{
-				baseClass::erase(this->m_size - 1);
+				baseClass::remove_at(this->m_size - 1);
 				return !baseClass::empty();
 			}
 		};
@@ -561,7 +569,7 @@ namespace OOBase
 		Vector() : baseClass()
 		{}
 
-		Vector(AllocatorInstance& allocator) : baseClass(allocator)
+		explicit Vector(AllocatorInstance& allocator) : baseClass(allocator)
 		{}
 
 		template <typename It>
@@ -653,7 +661,7 @@ namespace OOBase
 		iterator erase(iterator iter)
 		{
 			assert(iter.check(this));
-			return iterator(this,baseClass::erase(iter.deref()));
+			return iterator(this,baseClass::remove_at(iter.deref()));
 		}
 
 		size_t erase(const T& value)
@@ -663,7 +671,7 @@ namespace OOBase
 			{
 				if (this->m_data[pos] == value)
 				{
-					baseClass::erase(pos);
+					baseClass::remove_at(pos);
 					++ret;
 				}
 				else

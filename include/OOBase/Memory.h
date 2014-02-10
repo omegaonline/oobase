@@ -395,7 +395,7 @@ namespace OOBase
 		}
 
 	protected:
-		Allocating(AllocatorInstance& allocator) : m_allocator(allocator)
+		explicit Allocating(AllocatorInstance& allocator) : m_allocator(allocator)
 		{}
 
 		Allocating(const Allocating& rhs) : m_allocator(rhs.m_allocator)

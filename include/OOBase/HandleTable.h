@@ -49,7 +49,7 @@ namespace OOBase
 				m_next(0)
 		{}
 
-		HandleTable(AllocatorInstance& allocator) : baseClass(allocator),
+		explicit HandleTable(AllocatorInstance& allocator) : baseClass(allocator),
 				m_next(0)
 		{}
 			

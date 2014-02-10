@@ -54,7 +54,7 @@ namespace OOBase
 		List() : baseClass(), m_head(NULL), m_tail(m_head), m_size(0)
 		{}
 
-		List(AllocatorInstance& allocator) : baseClass(allocator), m_head(NULL), m_tail(m_head), m_size(0)
+		explicit List(AllocatorInstance& allocator) : baseClass(allocator), m_head(NULL), m_tail(m_head), m_size(0)
 		{}
 
 		~List()
