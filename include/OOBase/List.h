@@ -294,8 +294,6 @@ namespace OOBase
 			if (pval)
 				*pval = curr->m_data;
 
-
-
 			if (curr->m_prev)
 				curr->m_prev->m_next = curr->m_next;
 			else

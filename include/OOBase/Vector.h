@@ -340,16 +340,21 @@ namespace OOBase
 #endif
 			size_t remove_at(size_t pos, size_t len)
 			{
-				if (this->m_data && pos < this->m_size && len)
+				if (this->m_data && pos < this->m_size)
 				{
-					size_t orig_len = this->m_size;
-					this->m_size -= len;
+					if (len > this->m_size - pos)
+						len = this->m_size - pos;
+					if (len)
+					{
+						size_t orig_len = this->m_size;
+						this->m_size -= len;
 
-					for(;pos < this->m_size;++pos)
-						OOBase::swap(this->m_data[pos],this->m_data[pos+len]);
+						for(;pos < this->m_size;++pos)
+							OOBase::swap(this->m_data[pos],this->m_data[pos+len]);
 
-					for(;pos < orig_len;++pos)
-						this->m_data[pos].~T();
+						for(;pos < orig_len;++pos)
+							this->m_data[pos].~T();
+					}
 				}
 				return pos < this->m_size ? pos : size_t(-1);
 			}
@@ -445,11 +450,16 @@ namespace OOBase
 
 			size_t remove_at(size_t pos, size_t len)
 			{
-				if (this->m_data && pos < this->m_size && len)
+				if (this->m_data && pos < this->m_size)
 				{
-					this->m_size -= len;
-					if (pos < this->m_size)
-						memmove(&this->m_data[pos],&this->m_data[pos+len],(this->m_size - (pos + len)) * sizeof(T));
+					if (len > this->m_size - pos)
+						len = this->m_size - pos;
+					if (len)
+					{
+						this->m_size -= len;
+						if (pos < this->m_size)
+							memmove(&this->m_data[pos],&this->m_data[pos+len],(this->m_size - (pos + len)) * sizeof(T));
+					}
 				}
 				return pos < this->m_size ? pos : size_t(-1);
 			}
