@@ -47,8 +47,6 @@ namespace OOBase
 		typedef detail::IteratorImpl<const Table,const value_type,size_t> const_iterator;
 		friend class detail::IteratorImpl<const Table,const value_type,size_t>;
 
-		static const size_t npos = size_t(-1);
-
 		explicit Table(const Compare& comp = Compare()) : baseClass(), m_compare(comp)
 		{}
 
@@ -70,7 +68,7 @@ namespace OOBase
 		void swap(Table& rhs)
 		{
 			baseClass::swap(rhs);
-			OOBase::swap(rhs.m_compare);
+			OOBase::swap(m_compare,rhs.m_compare);
 		}
 
 		template <typename It>
@@ -102,7 +100,13 @@ namespace OOBase
 		iterator erase(iterator iter)
 		{
 			assert(iter.check(this));
-			return iterator(this,baseClass::remove_at(iter.deref()));
+			return iterator(this,baseClass::remove_at(iter.deref(),1));
+		}
+
+		iterator erase(iterator first, iterator last)
+		{
+			assert(first.check(this) && last.check(this));
+			return iterator(this,baseClass::remove_at(first.deref(),last.deref() - first.deref()));
 		}
 
 		template <typename K1>

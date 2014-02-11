@@ -195,32 +195,32 @@ namespace OOBase
 			return (node ? &node->m_data : NULL);
 		}
 
-		void next(ListNode*& node) const
+		template <typename N>
+		void iterator_move(N*& node, ptrdiff_t n) const
 		{
-			if (node)
+			for (ptrdiff_t i = 0;i < n && node;++i)
 				node = node->m_next;
-		}
-
-		void next(const ListNode*& node) const
-		{
-			if (node)
-				node = node->m_next;
-		}
-
-		void prev(ListNode*& node) const
-		{
-			if (node)
+			for (ptrdiff_t i = n;i < 0 && node;++i)
 				node = node->m_prev;
-			else
-				node = m_tail;
 		}
 
-		void prev(const ListNode*& node) const
+		template <typename N>
+		ptrdiff_t iterator_diff(N pos1, N pos2) const
 		{
-			if (node)
-				node = node->m_prev;
-			else
-				node = m_tail;
+			ptrdiff_t r = -1;
+			N pos = pos2;
+			for (;pos != pos1 && pos;pos = pos->m_next)
+				++r;
+
+			if (!pos)
+			{
+				r = 0;
+				for (pos = pos2;pos != pos1 && pos;pos = pos->m_prev)
+					--r;
+
+				assert(pos);
+			}
+			return r;
 		}
 
 		template <typename T1>

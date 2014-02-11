@@ -69,6 +69,26 @@ namespace OOBase
 				return !(*this == rhs);
 			}
 
+			bool operator < (const IteratorImpl& rhs) const
+			{
+				return *this - rhs < 0;
+			}
+
+			bool operator <= (const IteratorImpl& rhs) const
+			{
+				return *this - rhs <= 0;
+			}
+
+			bool operator > (const IteratorImpl& rhs) const
+			{
+				return *this - rhs > 0;
+			}
+
+			bool operator >= (const IteratorImpl& rhs) const
+			{
+				return *this - rhs >= 0;
+			}
+
 			T* operator -> () const
 			{
 				assert(m_cont->at(deref()) != NULL);
@@ -83,7 +103,7 @@ namespace OOBase
 
 			IteratorImpl& operator ++ ()
 			{
-				m_cont->next(m_pos);
+				m_cont->iterator_move(m_pos,1);
 				return *this;
 			}
 
@@ -94,9 +114,20 @@ namespace OOBase
 				return r;
 			}
 
+			IteratorImpl& operator += (ptrdiff_t n)
+			{
+				m_cont->iterator_move(m_pos,n);
+				return *this;
+			}
+
+			IteratorImpl operator + (ptrdiff_t n) const
+			{
+				return IteratorImpl(*this) += n;
+			}
+
 			IteratorImpl& operator -- ()
 			{
-				m_cont->prev(m_pos);
+				m_cont->iterator_move(m_pos,-1);
 				return *this;
 			}
 
@@ -105,6 +136,23 @@ namespace OOBase
 				IteratorImpl r(*this);
 				--(*this);
 				return r;
+			}
+
+			IteratorImpl& operator -= (ptrdiff_t n)
+			{
+				m_cont->iterator_move(m_pos,-n);
+				return *this;
+			}
+
+			IteratorImpl operator - (ptrdiff_t n) const
+			{
+				return IteratorImpl(*this) -= n;
+			}
+
+			ptrdiff_t operator - (const IteratorImpl& rhs) const
+			{
+				assert(rhs.m_cont == m_cont);
+				return m_cont->iterator_diff(m_pos,rhs.m_pos);
 			}
 
 		protected:
@@ -133,6 +181,12 @@ namespace OOBase
 			Container* m_cont;
 			Iter       m_pos;
 		};
+	}
+
+	template <typename Container, typename T, typename Iter>
+	detail::IteratorImpl<Container,T,Iter> operator + (ptrdiff_t n, const detail::IteratorImpl<Container,T,Iter>& i)
+	{
+		return detail::IteratorImpl<Container,T,Iter>(i) += n;
 	}
 }
 

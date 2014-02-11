@@ -91,20 +91,17 @@ namespace OOBase
 				return (pos >= m_size ? NULL : &m_data[pos]);
 			}
 
-			void next(size_t& pos) const
+			void iterator_move(size_t& pos, ptrdiff_t n) const
 			{
-				if (pos < m_size - 1)
-					++pos;
-				else
+				assert(pos + n >= 0);
+				pos += n;
+				if (pos >= m_size)
 					pos = size_t(-1);
 			}
 
-			void prev(size_t& pos) const
+			ptrdiff_t iterator_diff(const size_t& pos1, const size_t& pos2) const
 			{
-				if (pos >= m_size || pos == 0)
-					pos = m_size-1;
-				else
-					--pos;
+				return (pos1 - pos2);
 			}
 		};
 
@@ -341,16 +338,20 @@ namespace OOBase
 				return 0;
 			}
 #endif
-			size_t remove_at(size_t pos)
+			size_t remove_at(size_t pos, size_t len)
 			{
-				if (this->m_data && pos < this->m_size)
+				if (this->m_data && pos < this->m_size && len)
 				{
-					for(--this->m_size;pos < this->m_size;++pos)
-						OOBase::swap(this->m_data[pos],this->m_data[pos+1]);
+					size_t orig_len = this->m_size;
+					this->m_size -= len;
 
-					this->m_data[this->m_size].~T();
+					for(;pos < this->m_size;++pos)
+						OOBase::swap(this->m_data[pos],this->m_data[pos+len]);
+
+					for(;pos < orig_len;++pos)
+						this->m_data[pos].~T();
 				}
-				return pos < this->m_size ? pos : this->m_size;
+				return pos < this->m_size ? pos : size_t(-1);
 			}
 		};
 
@@ -442,15 +443,15 @@ namespace OOBase
 				return 0;
 			}
 
-			size_t remove_at(size_t pos)
+			size_t remove_at(size_t pos, size_t len)
 			{
-				if (this->m_data && pos < this->m_size)
+				if (this->m_data && pos < this->m_size && len)
 				{
-					--this->m_size;
+					this->m_size -= len;
 					if (pos < this->m_size)
-						memmove(&this->m_data[pos],&this->m_data[pos+1],(this->m_size - pos) * sizeof(T));
+						memmove(&this->m_data[pos],&this->m_data[pos+len],(this->m_size - (pos + len)) * sizeof(T));
 				}
-				return pos < this->m_size ? pos : this->m_size;
+				return pos < this->m_size ? pos : size_t(-1);
 			}
 		};
 
@@ -490,7 +491,9 @@ namespace OOBase
 			template <typename It>
 			int assign(It first, It last)
 			{
+				assert(last >= first);
 				baseClass::clear();
+				baseClass::reserve(last - first);
 				for (It i = first; i != last; ++i)
 				{
 					int err = push_back(*i);
@@ -541,7 +544,7 @@ namespace OOBase
 
 			bool pop_back()
 			{
-				baseClass::remove_at(this->m_size - 1);
+				baseClass::remove_at(this->m_size - 1,1);
 				return !baseClass::empty();
 			}
 		};
@@ -661,7 +664,13 @@ namespace OOBase
 		iterator erase(iterator iter)
 		{
 			assert(iter.check(this));
-			return iterator(this,baseClass::remove_at(iter.deref()));
+			return iterator(this,baseClass::remove_at(iter.deref(),1));
+		}
+
+		iterator erase(iterator first, iterator last)
+		{
+			assert(first.check(this) && last.check(this) && last >= first);
+			return iterator(this,baseClass::remove_at(first.deref(),last.deref() - first.deref()));
 		}
 
 		size_t erase(const T& value)
@@ -671,7 +680,7 @@ namespace OOBase
 			{
 				if (this->m_data[pos] == value)
 				{
-					baseClass::remove_at(pos);
+					baseClass::remove_at(pos,1);
 					++ret;
 				}
 				else
