@@ -84,11 +84,16 @@ namespace OOBase
 		template <typename T1>
 		int insert(const T1& value)
 		{
-			const T* p = bsearch(value);
-			if (!p)
-				return baseClass::push_back(value);
-			else
-				return baseClass::insert_at(p - this->m_data,value);
+			size_t start = 0;
+			for (size_t end = this->m_size;start < end;)
+			{
+				size_t mid = start + (end - start) / 2;
+				if (m_compare(this->m_data[mid],value))
+					end = mid;
+				else
+					start = mid + 1;
+			}
+			return baseClass::insert_at(start,value);
 		}
 
 		iterator erase(iterator iter)
@@ -206,13 +211,12 @@ namespace OOBase
 				if (m_compare(*mid_point,key))
 				{
 					base = mid_point + 1;
-					if (--span == 0)
-						mid_point = NULL; // The end...
+					--span;
 				}
 				else if (*mid_point == key)
-					break;
+					return mid_point;
 			}
-			return mid_point;
+			return NULL;
 		}
 		Compare m_compare;
 	};

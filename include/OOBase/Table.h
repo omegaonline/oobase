@@ -85,11 +85,16 @@ namespace OOBase
 
 		int insert(const Pair<K,V>& value)
 		{
-			const Pair<K,V>* p = bsearch(value.first);
-			if (!p)
-				return baseClass::push_back(value);
-			else
-				return baseClass::insert_at(p - this->m_data,value);
+			size_t start = 0;
+			for (size_t end = this->m_size;start < end;)
+			{
+				size_t mid = start + (end - start) / 2;
+				if (m_compare(this->m_data[mid].first,value.first))
+					end = mid;
+				else
+					start = mid + 1;
+			}
+			return baseClass::insert_at(start,value);
 		}
 
 		int insert(const K& key, const V& value)
@@ -230,13 +235,12 @@ namespace OOBase
 				if (m_compare(mid_point->first,key))
 				{
 					base = mid_point + 1;
-					if (--span == 0)
-						mid_point = NULL; // The end...
+					--span;
 				}
 				else if (mid_point->first == key)
-					break;
+					return mid_point;
 			}
-			return mid_point;
+			return NULL;
 		}
 		Compare m_compare;
 	};
