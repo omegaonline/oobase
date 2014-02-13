@@ -41,9 +41,15 @@ namespace OOBase
 		{
 		public:
 			BTreeInternalPage(BTreeInternalPage* parent, BTreeLeafPage<K,V,Compare,B,Allocator>* leaf) :
-					m_parent(parent), m_leafs(leaf != NULL), m_key_count(0)
+					m_parent(parent), m_leafs(true), m_key_count(0)
 			{
 				m_pages[0] = leaf;
+			}
+
+			BTreeInternalPage(BTreeInternalPage* parent, BTreeInternalPage* internal) :
+					m_parent(parent), m_leafs(false), m_key_count(0)
+			{
+				m_pages[0] = internal;
 			}
 
 			void destroy(BTreeImpl<K,V,Compare,B,Allocator>* tree)
@@ -69,18 +75,16 @@ namespace OOBase
 
 			bool insert_page(BTreeImpl<K,V,Compare,B,Allocator>* tree, void* page, const K& key)
 			{
-				assert(m_leafs);
 				if (m_key_count == B - 1)
 					return split(tree) && m_parent->insert_page(tree,page,key);
 
 				size_t pos = find_page(key,tree->m_compare);
-				OOBase::swap(m_pages[m_key_count+1],m_pages[m_key_count]);
 				for (size_t i = m_key_count;i > pos;--i)
 				{
-					OOBase::swap(m_pages[i],m_pages[i-1]);
+					OOBase::swap(m_pages[i+1],m_pages[i]);
 					OOBase::swap(m_keys[i],m_keys[i-1]);
 				}
-				m_pages[pos] = page;
+				m_pages[pos+1] = page;
 				m_keys[pos] = key;
 				++m_key_count;
 				return true;
@@ -117,22 +121,22 @@ namespace OOBase
 				{
 					size_t mid = start + (end - start) / 2;
 					if (compare(m_keys[mid],key))
-						end = mid;
-					else
 						start = mid + 1;
+					else
+						end = mid;
 				}
 				return start;
 			}
 
 			bool split(BTreeImpl<K,V,Compare,B,Allocator>* tree)
 			{
-				BTreeInternalPage* page = tree->new_internal(m_parent,NULL);
+				BTreeInternalPage* page = tree->new_internal(m_parent,static_cast<BTreeInternalPage*>(NULL));
 				if (!page)
 					return false;
 
 				if (!m_parent)
 				{
-					if (!(m_parent = tree->new_internal(NULL,NULL)))
+					if (!(m_parent = tree->new_internal(NULL,this)))
 					{
 						page->destroy(tree);
 						return false;
@@ -148,7 +152,7 @@ namespace OOBase
 					OOBase::swap(page->m_pages[page->m_key_count],m_pages[pos]);
 					++page->m_key_count;
 				}
-				OOBase::swap(page->m_pages[m_key_count],m_pages[m_key_count]);
+				OOBase::swap(page->m_pages[page->m_key_count],m_pages[m_key_count]);
 				m_key_count = half;
 
 				return m_parent->insert_page(tree,page,page->m_keys[0]);
@@ -190,9 +194,9 @@ namespace OOBase
 				{
 					size_t mid = pos + (end - pos) / 2;
 					if (tree->m_compare(m_data[mid].first,value.first))
-						end = mid;
-					else
 						pos = mid + 1;
+					else
+						end = mid;
 				}
 
 				for (size_t i = m_size;i > pos;--i)
@@ -265,7 +269,7 @@ namespace OOBase
 					tree->m_root_page = m_parent;
 				}
 
-				size_t half = m_size/2;
+				size_t half = m_size/2 + m_size%2;
 				for (size_t pos = half; pos < m_size; ++pos)
 					OOBase::swap(leaf->m_data[leaf->m_size++],m_data[pos]);
 				m_size = half;
@@ -291,6 +295,12 @@ namespace OOBase
 			{
 				internal_page_t* page = NULL;
 				return Allocator::allocate_new(page,parent,leaf) ? page : NULL;
+			}
+
+			internal_page_t* new_internal(internal_page_t* parent, internal_page_t* internal)
+			{
+				internal_page_t* page = NULL;
+				return Allocator::allocate_new(page,parent,internal) ? page : NULL;
 			}
 
 			void destroy_leaf(leaf_page_t* page)
@@ -321,6 +331,12 @@ namespace OOBase
 			{
 				internal_page_t* page = NULL;
 				return m_allocator.allocate_new(page,m_allocator,parent,leaf) ? page : NULL;
+			}
+
+			internal_page_t* new_internal(internal_page_t* parent, internal_page_t* internal)
+			{
+				internal_page_t* page = NULL;
+				return m_allocator.allocate_new(page,m_allocator,parent,internal) ? page : NULL;
 			}
 
 			void destroy_leaf(leaf_page_t* page)
