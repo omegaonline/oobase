@@ -89,9 +89,9 @@ namespace OOBase
 			{
 				size_t mid = start + (end - start) / 2;
 				if (m_compare(this->m_data[mid],value))
-					end = mid;
-				else
 					start = mid + 1;
+				else
+					end = mid;
 			}
 			return baseClass::insert_at(start,value);
 		}
