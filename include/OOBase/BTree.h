@@ -26,6 +26,8 @@
 #include "List.h"
 #include "SharedPtr.h"
 
+#include <stdlib.h>
+
 namespace OOBase
 {
 	namespace detail
@@ -50,6 +52,29 @@ namespace OOBase
 					m_parent(parent), m_leafs(false), m_key_count(0)
 			{
 				m_pages[0] = internal;
+			}
+
+			void dump()
+			{
+				::printf("Internal:%p\n",this);
+
+				for (size_t i=0;i<m_key_count;++i)
+					::printf("        %c",m_keys[i]);
+				::printf("\n ");
+				for (size_t i=0;i<m_key_count;++i)
+					::printf("      / \\");
+				::printf("\n");
+				for (size_t i=0;i<m_key_count+1;++i)
+					::printf("%p ",m_pages[i]);
+				::printf("\n\n");
+
+				for (size_t i=0;i<m_key_count+1;++i)
+				{
+					if (m_leafs)
+						static_cast<BTreeLeafPage<K,V,Compare,B,Allocator>*>(m_pages[i])->dump();
+					else
+						static_cast<BTreeInternalPage*>(m_pages[i])->dump();
+				}
 			}
 
 			void destroy(BTreeImpl<K,V,Compare,B,Allocator>* tree)
@@ -146,16 +171,20 @@ namespace OOBase
 				}
 
 				size_t half = m_key_count/2;
-				for (size_t pos = half; pos < m_key_count; ++pos)
+				K page_key;
+				OOBase::swap(page_key,m_keys[half]);
+
+				for (size_t pos = half+1; pos < m_key_count; ++pos)
 				{
 					OOBase::swap(page->m_keys[page->m_key_count],m_keys[pos]);
 					OOBase::swap(page->m_pages[page->m_key_count],m_pages[pos]);
 					++page->m_key_count;
 				}
 				OOBase::swap(page->m_pages[page->m_key_count],m_pages[m_key_count]);
+
 				m_key_count = half;
 
-				return m_parent->insert_page(tree,page,page->m_keys[0]);
+				return m_parent->insert_page(tree,page,page_key);
 			}
 		};
 
@@ -168,6 +197,16 @@ namespace OOBase
 			BTreeLeafPage(BTreeInternalPage<K,V,Compare,B,Allocator>* parent, BTreeLeafPage* prev, BTreeLeafPage* next) :
 					m_parent(parent), m_prev(prev), m_next(next), m_size(0)
 			{}
+
+			void dump()
+			{
+				::printf("Leaf:%p [ ",this);
+
+				for (size_t i=0;i<m_size;++i)
+					::printf("%c ",m_data[i].first);
+
+				::printf("]\n");
+			}
 
 			void destroy(BTreeImpl<K,V,Compare,B,Allocator>* tree)
 			{
@@ -269,7 +308,7 @@ namespace OOBase
 					tree->m_root_page = m_parent;
 				}
 
-				size_t half = m_size/2 + m_size%2;
+				size_t half = m_size/2;
 				for (size_t pos = half; pos < m_size; ++pos)
 					OOBase::swap(leaf->m_data[leaf->m_size++],m_data[pos]);
 				m_size = half;
@@ -374,6 +413,16 @@ namespace OOBase
 			bool empty() const
 			{
 				return size() != 0;
+			}
+
+			void dump()
+			{
+				if (m_root_page)
+					m_root_page->dump();
+				else if (m_head)
+					m_head->dump();
+
+				::printf("\n");
 			}
 
 		protected:
