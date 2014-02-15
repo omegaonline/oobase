@@ -65,6 +65,11 @@ namespace OOBase
 				close();
 			}
 
+			void swap(SmartHandle& rhs)
+			{
+				OOBase::swap(m_handle,rhs.m_handle);
+			}
+
 			HANDLE detach()
 			{
 				HANDLE h = m_handle;

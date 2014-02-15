@@ -83,7 +83,7 @@ int OOBase::CmdArgs::parse(results_t& results, int skip) const
 	for (int i=0;i<argc;++i)
 	{
 		String s;
-		int err = Win32::wchar_t_to_utf8(argvw.get()[i],s);
+		int err = s.wchar_t_to_utf8(argvw.get()[i]);
 		if (err)
 			return err;
 

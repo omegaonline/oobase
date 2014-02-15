@@ -173,7 +173,7 @@ namespace OOBase
 				void (*m_static)(P1 p1);
 			} d;
 
-			template<typename T, void (T::*fn)(P1 p1)>
+			template<typename T, typename P1, void (T::*fn)(P1 p1)>
 			static bool adaptor(const Slot* pThis, P1 p1)
 			{
 				SharedPtr<T> ptr(pThis->m_ptr);

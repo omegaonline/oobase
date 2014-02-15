@@ -27,6 +27,7 @@
 #include "ScopedArrayPtr.h"
 #include "SharedPtr.h"
 #include "tr24731.h"
+#include "Win32.h"
 
 #include <string.h>
 
@@ -211,7 +212,7 @@ namespace OOBase
 #if defined(_WIN32)
 		int wchar_t_to_utf8(const wchar_t* wsz)
 		{
-			return wchar_t_to_utf8(wsz,m_data);
+			return Win32::wchar_t_to_utf8(wsz,m_data);
 		}
 #endif
 
@@ -321,7 +322,7 @@ namespace OOBase
 				if (err)
 					return err;
 
-				if ((err = ptr->append(sz,len)))
+				if ((err = ptr->append(sz,len)) != 0)
 					return err;
 
 				m_ptr.swap(ptr);
@@ -397,7 +398,7 @@ namespace OOBase
 			if (err)
 				return err;
 
-			if ((err = ptr->vprintf(format,args)))
+			if ((err = ptr->vprintf(format,args)) != 0)
 				return err;
 
 			m_ptr.swap(ptr);
@@ -412,7 +413,7 @@ namespace OOBase
 			if (err)
 				return err;
 
-			if ((err = ptr->wchar_t_to_utf8(wsz)))
+			if ((err = ptr->wchar_t_to_utf8(wsz)) != 0)
 				return err;
 
 			m_ptr.swap(ptr);

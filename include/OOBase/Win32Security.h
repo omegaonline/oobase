@@ -110,8 +110,8 @@ namespace OOBase
 
 			void swap(sec_descript_t& rhs)
 			{
-				swap(m_pACL,rhs.m_pACL);
-				swap(m_psd,rhs.m_psd);
+				OOBase::swap(m_pACL,rhs.m_pACL);
+				OOBase::swap(m_psd,rhs.m_psd);
 			}
 
 			DWORD SetEntriesInAcl(ULONG cCountOfExplicitEntries, PEXPLICIT_ACCESSW pListOfExplicitEntries);

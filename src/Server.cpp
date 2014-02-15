@@ -189,17 +189,17 @@ int OOBase::Server::create_pid_file(const char* szPidFile, bool& already)
 	// If it exists, then we are already running
 
 	ScopedString strFullPidFile;
-	int err = printf(strFullPidFile,"Global\\%s",szPidFile);
+	int err = strFullPidFile.printf("Global\\%s",szPidFile);
 	if (err)
 		return err;
 
-	for (size_t i=0;i<strFullPidFile.count();++i)
+	for (size_t i=0;i<strFullPidFile.length();++i)
 	{
 		if (strFullPidFile[i] == '/')
 			strFullPidFile[i] = '_';
 	}
 
-	OOBase::Win32::SmartHandle e(CreateEvent(NULL,TRUE,FALSE,strFullPidFile.get()));
+	OOBase::Win32::SmartHandle e(CreateEvent(NULL,TRUE,FALSE,strFullPidFile.c_str()));
 	if (!e.is_valid())
 	{
 		err = GetLastError();

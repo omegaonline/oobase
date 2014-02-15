@@ -317,7 +317,7 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 		String value,key;
 
 		szName[dwNameLen-1] = L'\0';
-		lRes = Win32::wchar_t_to_utf8(szName,key);
+		lRes = key.wchar_t_to_utf8(szName);
 		if (lRes)
 			break;
 
@@ -367,10 +367,10 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 				}
 
 				if (lRes == ERROR_SUCCESS)
-					lRes = Win32::wchar_t_to_utf8(ptrEnv.get(),value);
+					lRes = value.wchar_t_to_utf8(ptrEnv.get());
 			}
 			else
-				lRes = Win32::wchar_t_to_utf8(wszKey.get(),value);
+				lRes = value.wchar_t_to_utf8(wszKey.get());
 
 			if (lRes)
 				break;
@@ -382,15 +382,15 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 
 		if (!key.empty())
 		{
-			String* v = results.find(key);
-			if (!v)
+			results_t::iterator i = results.find(key);
+			if (i == results.end())
 			{
 				lRes = results.insert(key,value);
 				if (lRes)
 					break;
 			}
 			else
-				*v = value;
+				i->second = value;
 		}
 	}
 

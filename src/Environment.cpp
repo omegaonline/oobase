@@ -43,7 +43,7 @@ namespace
 		for (const wchar_t* e=env;!err && e != NULL && *e != L'\0';e += wcslen(e)+1)
 		{
 			OOBase::String str;
-			err = OOBase::Win32::wchar_t_to_utf8(e,str);
+			err = str.wchar_t_to_utf8(e);
 			if (!err)
 			{
 				size_t eq = str.find('=');
@@ -61,11 +61,6 @@ namespace
 			}
 		}
 		return err;
-	}
-
-	bool env_sort(const OOBase::SharedPtr<wchar_t>& s1, const OOBase::SharedPtr<wchar_t>& s2)
-	{
-		return (_wcsicmp(s1.get(),s2.get()) < 0);
 	}
 }
 
@@ -104,13 +99,22 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 	// Copy and widen to UNICODE
 	typedef SharedPtr<wchar_t> temp_wchar_t;
 
+	// Sort environment block - UNICODE, no-locale, case-insensitive (from MSDN)
+	struct env_sort
+	{
+		bool operator ()(const OOBase::SharedPtr<wchar_t>& s1, const OOBase::SharedPtr<wchar_t>& s2) const
+		{
+			return (_wcsicmp(s1.get(),s2.get()) < 0);
+		}
+	};
+
 	StackAllocator<1024> allocator;
-	Table<temp_wchar_t,temp_wchar_t,AllocatorInstance> wenv(allocator);
+	Table<temp_wchar_t,temp_wchar_t,env_sort,AllocatorInstance> wenv(env_sort(),allocator);
 
 	size_t total_size = 0;
-	for (size_t i=0;i<tabEnv.size();++i)
+	for (env_table_t::const_iterator i=tabEnv.begin();i!=tabEnv.end();++i)
 	{
-		int err = Win32::utf8_to_wchar_t(tabEnv.key_at(i)->c_str(),ptr);
+		int err = Win32::utf8_to_wchar_t(i->first.c_str(),ptr);
 		if (!err)
 		{
 			// Include \0 and optionally '=' length
@@ -124,7 +128,7 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 			{
 				wcscpy(key.get(),ptr.get());
 
-				err = Win32::utf8_to_wchar_t(tabEnv.at(i)->c_str(),ptr);
+				err = Win32::utf8_to_wchar_t(i->second.c_str(),ptr);
 				if (!err)
 				{
 					temp_wchar_t value;
@@ -151,22 +155,19 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 			return err;
 	}
 
-	// Sort environment block - UNICODE, no-locale, case-insensitive (from MSDN)
-	wenv.sort(&env_sort);
-
 	// And now copy into one giant block
 	if (!ptr.reallocate(total_size + 2))
 		return ERROR_OUTOFMEMORY;
 
 	wchar_t* pout = ptr.get();
-	for (size_t i=0;i<wenv.size();++i)
+	for (Table<temp_wchar_t,temp_wchar_t,env_sort,AllocatorInstance>::iterator i=wenv.begin();i!=wenv.end();++i)
 	{
-		const wchar_t* p = wenv.key_at(i)->get();
+		const wchar_t* p = i->first.get();
 
 		while (*p != L'\0')
 			*pout++ = *p++;
 
-		p = wenv.at(i)->get();
+		p = i->second.get();
 		if (p && *p != L'\0')
 		{
 			*pout++ = L'=';
@@ -206,7 +207,7 @@ int OOBase::Environment::getenv(const char* envvar, String& strValue)
 					err = 0;
 			}
 			else if (dwActualLen > 1)
-				err = Win32::wchar_t_to_utf8(wenv.get(),strValue);
+				err = strValue.wchar_t_to_utf8(wenv.get());
 			
 			break;
 		}

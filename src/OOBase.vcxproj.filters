@@ -19,9 +19,6 @@
     <ClCompile Include="Once.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="String.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Thread.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -91,6 +88,24 @@
     <ClCompile Include="File.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="BSDSocket.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Memory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Posix.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ProactorPoll.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ProactorPosix.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ProactorPosixSocket.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\OOBase\Atomic.h">
@@ -114,9 +129,6 @@
     <ClInclude Include="..\include\OOBase\Condition.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\config-base.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\OOBase\Destructor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -138,9 +150,6 @@
     <ClInclude Include="..\include\OOBase\Once.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\oobase-msvc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\OOBase\Posix.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -148,9 +157,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\OOBase\Singleton.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\OOBase\SmartPtr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\OOBase\Socket.h">
@@ -177,9 +183,6 @@
     <ClInclude Include="..\include\OOBase\CmdArgs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\GlobalNew.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\OOBase\Logger.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -199,9 +202,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\OOBase\ConfigFile.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\OOBase\Bag.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\OOBase\StackAllocator.h">
@@ -259,6 +259,21 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\OOBase\UniquePtr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\OOBase\BTree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\OOBase\Iterator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\OOBase\ScopedArrayPtr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\OOBase\SharedPtr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\OOBase\SignalSlot.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
