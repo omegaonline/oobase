@@ -43,11 +43,6 @@ namespace OOBase
 		{
 		public:
 			BTreeInternalPage* m_parent;
-			bool m_leafs;
-			size_t m_key_count;
-
-			K m_keys[B-1];
-			void* m_pages[B];
 
 			BTreeInternalPage(BTreeInternalPage* parent, BTreeLeafPage<K,V,Compare,B,Allocator>* leaf) :
 					m_parent(parent), m_leafs(true), m_key_count(0)
@@ -141,6 +136,13 @@ namespace OOBase
 					return static_cast<BTreeInternalPage*>(m_pages[page])->find(key,compare);
 			}
 
+		private:
+			bool m_leafs;
+			size_t m_key_count;
+
+			K m_keys[B-1];
+			void* m_pages[B];
+
 			bool need_merge() const
 			{
 				return m_key_count == (m_parent ? (B/2 + B%2) : 2);
@@ -181,7 +183,7 @@ namespace OOBase
 					tree->m_root_page = m_parent;
 				}
 
-				size_t half = m_key_count/2;
+				size_t half = (m_key_count+1)/2;
 				K page_key;
 				OOBase::swap(page_key,m_keys[half]);
 
@@ -206,26 +208,22 @@ namespace OOBase
 
 				m_key_count = half;
 
-				bool ok = false;
 				if (tree->m_compare(child_key,page_key))
-					ok = insert_page(tree,child_page,child_key);
+					insert_page(tree,child_page,child_key);
 				else
 				{
 					if (page->m_leafs)
 						static_cast<BTreeLeafPage<K,V,Compare,B,Allocator>*>(child_page)->m_parent = page;
 					else
 						static_cast<BTreeInternalPage*>(child_page)->m_parent = page;
-					ok = page->insert_page(tree,child_page,child_key);
+					page->insert_page(tree,child_page,child_key);
 				}
 
-				if (ok)
-					ok = !m_parent->insert_page(tree,page,page_key);
-
-				if (!ok)
+				if (!m_parent->insert_page(tree,page,page_key))
 				{
 					void* TODO;  // Undo changes
 				}
-				return ok;
+				return true;
 			}
 		};
 
@@ -234,11 +232,6 @@ namespace OOBase
 		{
 		public:
 			BTreeInternalPage<K,V,Compare,B,Allocator>* m_parent;
-			BTreeLeafPage* m_prev;
-			BTreeLeafPage* m_next;
-
-			size_t m_size;
-			Pair<K,V> m_data[B-1];
 
 			BTreeLeafPage(BTreeInternalPage<K,V,Compare,B,Allocator>* parent, BTreeLeafPage* prev, BTreeLeafPage* next) :
 					m_parent(parent), m_prev(prev), m_next(next), m_size(0)
@@ -315,6 +308,13 @@ namespace OOBase
 				return NULL;
 			}
 
+		private:
+			BTreeLeafPage* m_prev;
+			BTreeLeafPage* m_next;
+
+			size_t m_size;
+			Pair<K,V> m_data[B-1];
+
 			bool need_merge() const
 			{
 				return m_size == (m_parent ? B/2 : 0);
@@ -352,25 +352,24 @@ namespace OOBase
 				}
 
 				size_t half = m_size/2;
+				bool insert_into_us = tree->m_compare(value.first,m_data[half].first);
+				if (!insert_into_us)
+					++half;
+
 				for (size_t pos = half; pos < m_size; ++pos)
 					OOBase::swap(leaf->m_data[leaf->m_size++],m_data[pos]);
 				m_size = half;
 
-				bool ok = false;
-				if (tree->m_compare(value.first,leaf->m_data[0].first))
-					ok = insert(tree,value);
+				if (insert_into_us)
+					insert(tree,value);
 				else
-					ok = leaf->insert(tree,value);
+					leaf->insert(tree,value);
 
-				if (ok)
-					ok = m_parent->insert_page(tree,leaf,leaf->m_data[0].first);
-
-				if (!ok)
+				if (!m_parent->insert_page(tree,leaf,leaf->m_data[0].first))
 				{
 					void* TODO; // Put it all back!
 				}
-
-				return ok;
+				return true;
 			}
 		};
 
