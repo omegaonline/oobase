@@ -221,8 +221,61 @@ namespace OOBase
 
 				if (!m_parent->insert_page(tree,page,page_key))
 				{
-					void* TODO;  // Undo changes
+					remove_page(tree,child_key);
+					page->remove_page(tree,child_key);
+
+					OOBase::swap(m_keys[m_key_count++],page_key);
+					for (size_t i=0;i<page->m_key_count;++i)
+					{
+						OOBase::swap(m_keys[m_key_count],page->m_keys[i]);
+						OOBase::swap(m_pages[m_key_count],page->m_pages[i]);
+						if (m_leafs)
+							static_cast<BTreeLeafPage<K,V,Compare,B,Allocator>*>(m_pages[m_key_count])->m_parent = this;
+						else
+							static_cast<BTreeInternalPage*>(m_pages[m_key_count])->m_parent = this;
+
+						m_key_count++;
+					}
+					OOBase::swap(m_pages[m_key_count],page->m_pages[page->m_key_count]);
+					if (m_leafs)
+						static_cast<BTreeLeafPage<K,V,Compare,B,Allocator>*>(m_pages[m_key_count])->m_parent = this;
+					else
+						static_cast<BTreeInternalPage*>(m_pages[m_key_count])->m_parent = this;
+					page->destroy(tree);
+					return false;
 				}
+				return true;
+			}
+
+			void* const* find_exact(const K& key, const Compare& compare) const
+			{
+				size_t start = 0;
+				for (size_t end = m_key_count;start < end;)
+				{
+					size_t mid = start + (end - start) / 2;
+					if (compare(m_keys[mid],key))
+						start = mid + 1;
+					else if (m_keys[mid] == key)
+						return &m_pages[mid];
+					else
+						end = mid;
+				}
+				return NULL;
+			}
+
+			bool remove_page(BTreeImpl<K,V,Compare,B,Allocator>* tree, const K& child_key)
+			{
+				void* const* p = find_exact(child_key,tree->m_compare);
+				if (!p)
+					return false;
+
+				--m_key_count;
+				for (size_t i = p - m_pages;i < m_key_count;++i)
+				{
+					OOBase::swap(m_keys[i],m_keys[i+1]);
+					OOBase::swap(m_pages[i],m_pages[i+1]);
+				}
+				OOBase::swap(m_pages[m_key_count],m_pages[m_key_count+1]);
 				return true;
 			}
 		};
@@ -367,8 +420,26 @@ namespace OOBase
 
 				if (!m_parent->insert_page(tree,leaf,leaf->m_data[0].first))
 				{
-					void* TODO; // Put it all back!
+					remove_value(tree,value);
+					leaf->remove_value(tree,value);
+
+					for (size_t i=0;i<leaf->m_size;++i)
+						OOBase::swap(m_data[m_size++],leaf->m_data[i]);
+					leaf->destroy(tree);
+					return false;
 				}
+				return true;
+			}
+
+			bool remove_value(BTreeImpl<K,V,Compare,B,Allocator>* tree, const Pair<K,V>& value)
+			{
+				const Pair<K,V>* p = find(value.first,tree->m_compare);
+				if (!p)
+					return false;
+
+				--m_size;
+				for (size_t i = p - m_data;i < m_size;++i)
+					OOBase::swap(m_data[i],m_data[i+1]);
 				return true;
 			}
 		};
