@@ -42,6 +42,13 @@ namespace OOBase
 		class BTreeInternalPage
 		{
 		public:
+			BTreeInternalPage* m_parent;
+			bool m_leafs;
+			size_t m_key_count;
+
+			K m_keys[B-1];
+			void* m_pages[B];
+
 			BTreeInternalPage(BTreeInternalPage* parent, BTreeLeafPage<K,V,Compare,B,Allocator>* leaf) :
 					m_parent(parent), m_leafs(true), m_key_count(0)
 			{
@@ -54,27 +61,36 @@ namespace OOBase
 				m_pages[0] = internal;
 			}
 
-			void dump()
+			void dump(BTreeInternalPage* parent)
 			{
+				assert(m_parent == parent);
+
 				::printf("Internal:%p\n",this);
 
 				for (size_t i=0;i<m_key_count;++i)
-					::printf("        %c",m_keys[i]);
+					::printf("        %c ",m_keys[i]);
 				::printf("\n ");
 				for (size_t i=0;i<m_key_count;++i)
-					::printf("      / \\");
+					::printf("      / \\ ");
 				::printf("\n");
-				for (size_t i=0;i<m_key_count+1;++i)
-					::printf("%p ",m_pages[i]);
-				::printf("\n\n");
 
-				for (size_t i=0;i<m_key_count+1;++i)
+				if (!m_leafs)
 				{
-					if (m_leafs)
-						static_cast<BTreeLeafPage<K,V,Compare,B,Allocator>*>(m_pages[i])->dump();
-					else
-						static_cast<BTreeInternalPage*>(m_pages[i])->dump();
+					for (size_t i=0;i<m_key_count+1;++i)
+						::printf("%p ",m_pages[i]);
+					::printf("\n\n");
+
+					for (size_t i=0;i<m_key_count+1;++i)
+						static_cast<BTreeInternalPage*>(m_pages[i])->dump(this);
 				}
+				else
+				{
+					for (size_t i=0;i<m_key_count+1;++i)
+						static_cast<BTreeLeafPage<K,V,Compare,B,Allocator>*>(m_pages[i])->dump(this);
+					::printf("\n");
+				}
+
+				::printf("\n");
 			}
 
 			void destroy(BTreeImpl<K,V,Compare,B,Allocator>* tree)
@@ -101,7 +117,7 @@ namespace OOBase
 			bool insert_page(BTreeImpl<K,V,Compare,B,Allocator>* tree, void* page, const K& key)
 			{
 				if (m_key_count == B - 1)
-					return split(tree) && m_parent->insert_page(tree,page,key);
+					return split(tree,page,key);
 
 				size_t pos = find_page(key,tree->m_compare);
 				for (size_t i = m_key_count;i > pos;--i)
@@ -125,14 +141,6 @@ namespace OOBase
 					return static_cast<BTreeInternalPage*>(m_pages[page])->find(key,compare);
 			}
 
-		private:
-			BTreeInternalPage* m_parent;
-			bool m_leafs;
-			size_t m_key_count;
-
-			K m_keys[B-1];
-			void* m_pages[B];
-
 			bool need_merge() const
 			{
 				return m_key_count == (m_parent ? (B/2 + B%2) : 2);
@@ -153,9 +161,12 @@ namespace OOBase
 				return start;
 			}
 
-			bool split(BTreeImpl<K,V,Compare,B,Allocator>* tree)
+			bool split(BTreeImpl<K,V,Compare,B,Allocator>* tree, void* child_page, const K& child_key)
 			{
-				BTreeInternalPage* page = tree->new_internal(m_parent,static_cast<BTreeInternalPage*>(NULL));
+				BTreeInternalPage* page = m_leafs ?
+						tree->new_internal(m_parent,static_cast<BTreeLeafPage<K,V,Compare,B,Allocator>*>(NULL))
+						: tree->new_internal(m_parent,static_cast<BTreeInternalPage*>(NULL));
+
 				if (!page)
 					return false;
 
@@ -178,34 +189,74 @@ namespace OOBase
 				{
 					OOBase::swap(page->m_keys[page->m_key_count],m_keys[pos]);
 					OOBase::swap(page->m_pages[page->m_key_count],m_pages[pos]);
+
+					// Update parent pointer of children
+					if (page->m_leafs)
+						static_cast<BTreeLeafPage<K,V,Compare,B,Allocator>*>(page->m_pages[page->m_key_count])->m_parent = page;
+					else
+						static_cast<BTreeInternalPage*>(page->m_pages[page->m_key_count])->m_parent = page;
+
 					++page->m_key_count;
 				}
 				OOBase::swap(page->m_pages[page->m_key_count],m_pages[m_key_count]);
+				if (page->m_leafs)
+					static_cast<BTreeLeafPage<K,V,Compare,B,Allocator>*>(page->m_pages[page->m_key_count])->m_parent = page;
+				else
+					static_cast<BTreeInternalPage*>(page->m_pages[page->m_key_count])->m_parent = page;
 
 				m_key_count = half;
 
-				return m_parent->insert_page(tree,page,page_key);
+				bool ok = false;
+				if (tree->m_compare(child_key,page_key))
+					ok = insert_page(tree,child_page,child_key);
+				else
+				{
+					if (page->m_leafs)
+						static_cast<BTreeLeafPage<K,V,Compare,B,Allocator>*>(child_page)->m_parent = page;
+					else
+						static_cast<BTreeInternalPage*>(child_page)->m_parent = page;
+					ok = page->insert_page(tree,child_page,child_key);
+				}
+
+				if (ok)
+					ok = !m_parent->insert_page(tree,page,page_key);
+
+				if (!ok)
+				{
+					void* TODO;  // Undo changes
+				}
+				return ok;
 			}
 		};
 
 		template <typename K, typename V, typename Compare, size_t B, typename Allocator>
 		class BTreeLeafPage
 		{
-			friend class BTreeImpl<K,V,Compare,B,Allocator>;
-
 		public:
+			BTreeInternalPage<K,V,Compare,B,Allocator>* m_parent;
+			BTreeLeafPage* m_prev;
+			BTreeLeafPage* m_next;
+
+			size_t m_size;
+			Pair<K,V> m_data[B-1];
+
 			BTreeLeafPage(BTreeInternalPage<K,V,Compare,B,Allocator>* parent, BTreeLeafPage* prev, BTreeLeafPage* next) :
 					m_parent(parent), m_prev(prev), m_next(next), m_size(0)
 			{}
 
-			void dump()
+			void dump(BTreeInternalPage<K,V,Compare,B,Allocator>* parent)
 			{
-				::printf("Leaf:%p [ ",this);
+				assert(m_parent == parent);
 
-				for (size_t i=0;i<m_size;++i)
+				::printf("[ ");
+
+				size_t i=0;
+				for (;i<m_size;++i)
 					::printf("%c ",m_data[i].first);
+				for (;i < B-1;++i)
+					::printf("  ");
 
-				::printf("]\n");
+				::printf("]   ");
 			}
 
 			void destroy(BTreeImpl<K,V,Compare,B,Allocator>* tree)
@@ -226,7 +277,7 @@ namespace OOBase
 			bool insert(BTreeImpl<K,V,Compare,B,Allocator>* tree, const Pair<K,V>& value)
 			{
 				if (m_size == B - 1)
-					return split(tree) && tree->insert(value);
+					return split(tree,value);
 
 				size_t pos = 0;
 				for (size_t end = m_size;pos < end;)
@@ -269,14 +320,6 @@ namespace OOBase
 				return m_size == (m_parent ? B/2 : 0);
 			}
 
-		private:
-			BTreeInternalPage<K,V,Compare,B,Allocator>* m_parent;
-			BTreeLeafPage* m_prev;
-			BTreeLeafPage* m_next;
-
-			size_t m_size;
-			Pair<K,V> m_data[B-1];
-
 			BTreeLeafPage* insert_leaf(BTreeImpl<K,V,Compare,B,Allocator>* tree)
 			{
 				BTreeLeafPage* leaf = tree->new_leaf(m_parent,m_prev,this);
@@ -291,7 +334,7 @@ namespace OOBase
 				return leaf;
 			}
 
-			bool split(BTreeImpl<K,V,Compare,B,Allocator>* tree)
+			bool split(BTreeImpl<K,V,Compare,B,Allocator>* tree, const Pair<K,V>& value)
 			{
 				BTreeLeafPage* leaf = insert_leaf(tree);
 				if (!leaf)
@@ -313,7 +356,21 @@ namespace OOBase
 					OOBase::swap(leaf->m_data[leaf->m_size++],m_data[pos]);
 				m_size = half;
 
-				return m_parent->insert_page(tree,leaf,leaf->m_data[0].first);
+				bool ok = false;
+				if (tree->m_compare(value.first,leaf->m_data[0].first))
+					ok = insert(tree,value);
+				else
+					ok = leaf->insert(tree,value);
+
+				if (ok)
+					ok = m_parent->insert_page(tree,leaf,leaf->m_data[0].first);
+
+				if (!ok)
+				{
+					void* TODO; // Put it all back!
+				}
+
+				return ok;
 			}
 		};
 
@@ -418,11 +475,11 @@ namespace OOBase
 			void dump()
 			{
 				if (m_root_page)
-					m_root_page->dump();
+					m_root_page->dump(NULL);
 				else if (m_head)
-					m_head->dump();
+					m_head->dump(NULL);
 
-				::printf("\n");
+				::printf("\n******\n");
 			}
 
 		protected:
