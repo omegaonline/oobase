@@ -250,6 +250,23 @@ namespace OOBase
 			return (t != NULL);
 		}
 
+		template <typename T, typename P1, typename P2>
+		bool allocate_new(T*& t, P1& p1, const P2& p2)
+		{
+			t = NULL;
+			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);
+			if (p)
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				try
+				{
+#endif
+					t = ::new (p) T(p1,p2);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				} catch (...) { static_cast<Derived*>(this)->free(p); throw; }
+#endif
+			return (t != NULL);
+		}
+
 		template <typename T, typename P1, typename P2, typename P3>
 		bool allocate_new(T*& t, const P1& p1, const P2& p2, const P3& p3)
 		{
