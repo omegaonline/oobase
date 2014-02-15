@@ -216,17 +216,7 @@ namespace OOBase
 #define HAVE__IS_POD 1
 #define HAVE__ALIGNOF 1
 #define ALIGNOF(X) __alignof(X)
-#if (_MSC_VER == 1400)
-#include <type_traits>
-#define IS_POD(X) (std::tr1::is_pod<X>::value)
-#elif (_MSC_VER > 1400)
-#include <type_traits>
-#define IS_POD(X) (std::is_pod<X>::value)
-#else
-#include <limits>
-#define HAVE__IS_POD 1
-#define IS_POD(X) (std::numeric_limits<X>::is_specialized || __is_enum(X) || (__has_trivial_constructor(X) && __is_pod(X)))
-#endif
+#define IS_POD(X) (!__is_class(X) || __is_pod(X))
 #elif defined(__GNUC__) && (__GNUC__ >= 3)
 #define HAVE__ALIGNOF 1
 #define ALIGNOF(X) __alignof__(X)
