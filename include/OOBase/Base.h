@@ -377,13 +377,15 @@ namespace OOBase
 				// SFINAE
 				typedef char (&yes)[2];
 
-				template <size_t> struct exists;
+				// GCC way
+				//template <size_t> struct exists;
+				//template <typename T> static yes test(exists<sizeof(static_cast<void (T::*)(T&)>(&T::swap))>*);
 
-				template <typename T>
-				static yes test(exists<sizeof(static_cast<void (T::*)(T&)>(&T::swap))>*);
+				// MSVC way
+				template <typename T,void (T::*)(T&)> struct ptmf_helper {};
+				template <typename T> static yes test(ptmf_helper<T,&T::swap>* p);
 
-				template <typename T>
-				static char test(...);
+				template <typename T> static char test(...);
 
 			public:
 				static const bool value = (sizeof(test<Type>(NULL)) == sizeof(yes));
