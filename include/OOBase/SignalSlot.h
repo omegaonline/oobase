@@ -273,50 +273,50 @@ namespace OOBase
 			template<typename T, void (T::*fn)(const P1& p1, const P2& p2)>
 			static bool adaptor(const Slot* pThis, const P1& p1, const P2& p2)
 			{
-					SharedPtr<T> ptr(pThis->m_ptr);
-					if (!ptr)
-						return false;
+				SharedPtr<T> ptr(pThis->m_ptr);
+				if (!ptr)
+					return false;
 
-					ptr->*(pThis->*fn)(p1,p2);
-					return true;
-				}
-			};
-			mutable Vector<Slot,Allocator> m_slots;
-
-		public:
-			Signal2()
-			{}
-
-			Signal2(AllocatorInstance& a) : m_slots(a)
-			{}
-
-			template <typename T>
-			int connect(const WeakPtr<T>& ptr, void (T::*slot)(const P1& p1,const P2& p2))
-			{
-				return m_slots.push_back(Slot(ptr,slot));
-			}
-
-			int connect(void (*slot)(const P1& p1, const P2& p2))
-			{
-				return m_slots.push_back(Slot(slot));
-			}
-
-			template <typename T>
-			bool disconnect(WeakPtr<T>& ptr, void (T::*slot)(const P1& p1,const P2& p2))
-			{
-				return m_slots.remove(Slot(ptr,slot));
-			}
-
-			void fire(const P1& p1, const P2& p2) const
-			{
-				Vector<Slot,Allocator> slots(m_slots);
-				for (typename Vector<Slot,Allocator>::iterator i=slots.begin();i!=slots.end();++i)
-				{
-					if (!i->invoke(p1,p2))
-						m_slots.erase(*i);
-				}
+				ptr->*(pThis->*fn)(p1,p2);
+				return true;
 			}
 		};
+		mutable Vector<Slot,Allocator> m_slots;
+
+	public:
+		Signal2()
+		{}
+
+		Signal2(AllocatorInstance& a) : m_slots(a)
+		{}
+
+		template <typename T>
+		int connect(const WeakPtr<T>& ptr, void (T::*slot)(const P1& p1,const P2& p2))
+		{
+			return m_slots.push_back(Slot(ptr,slot));
+		}
+
+		int connect(void (*slot)(const P1& p1, const P2& p2))
+		{
+			return m_slots.push_back(Slot(slot));
+		}
+
+		template <typename T>
+		bool disconnect(WeakPtr<T>& ptr, void (T::*slot)(const P1& p1,const P2& p2))
+		{
+			return m_slots.remove(Slot(ptr,slot));
+		}
+
+		void fire(const P1& p1, const P2& p2) const
+		{
+			Vector<Slot,Allocator> slots(m_slots);
+			for (typename Vector<Slot,Allocator>::iterator i=slots.begin();i!=slots.end();++i)
+			{
+				if (!i->invoke(p1,p2))
+					m_slots.erase(*i);
+			}
+		}
+	};
 }
 
 #endif // OOBASE_SIGNALSLOT_H_INCLUDED_
