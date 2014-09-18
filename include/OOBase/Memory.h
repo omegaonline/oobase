@@ -85,6 +85,22 @@ namespace OOBase
 			return (t != NULL);
 		}
 
+		template <typename T, typename P1>
+		static bool allocate_new(T*& t, P1& p1)
+		{
+			t = NULL;
+			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
+			if (p)
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				try {
+#endif
+					t = ::new (p) T(p1);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				} catch (...) { Derived::free(p); throw; }
+#endif
+			return (t != NULL);
+		}
+
 		template <typename T, typename P1, typename P2>
 		static bool allocate_new(T*& t, const P1& p1, const P2& p2)
 		{
