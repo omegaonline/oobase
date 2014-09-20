@@ -29,7 +29,7 @@ OOBase::RefPtr<OOBase::Buffer> OOBase::Buffer::create(AllocatorInstance& allocat
 	if (buf)
 	{
 		detail::BufferImpl<AllocatorInstance>* buffer = NULL;
-		if (!allocator.allocate_new(buffer,allocator,buf,cbSize,align))
+		if (!allocator.allocate_new(buffer,OOBase::Ref<AllocatorInstance>(allocator),buf,cbSize,align))
 			allocator.free(buf);
 
 		ptr = buffer;

@@ -611,14 +611,6 @@ namespace OOBase
 		return make_shared<T,Allocator>(p);
 	}
 
-	template <typename T, typename Allocator, typename P1>
-	inline SharedPtr<T> allocate_shared(P1& p1)
-	{
-		T* p = NULL;
-		Allocator::allocate_new(p,p1);
-		return make_shared<T,Allocator>(p);
-	}
-
 	template <typename T, typename Allocator, typename P1, typename P2>
 	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2)
 	{
