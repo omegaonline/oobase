@@ -37,6 +37,16 @@ namespace OOBase
 		Ref(T& r) : m_r(r)
 		{}
 
+		Ref(const Ref& rhs) : m_r(rhs.m_r) 
+		{}
+		
+		Ref& operator = (const Ref& rhs)
+		{
+			if (this != &rhs)
+				m_r = rhs.m_r;
+			return *this;
+		}
+
 		operator T&() const
 		{
 			return m_r;

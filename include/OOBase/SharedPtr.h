@@ -166,7 +166,7 @@ namespace OOBase
 			SharedCount(AllocatorInstance& alloc, T* p) : m_impl(NULL)
 			{
 				SharedCountAllocInstance<T>* i = NULL;
-				if (!alloc.allocate_new(i,alloc,p))
+				if (!alloc.allocate_new(i,Ref<AllocatorInstance>(alloc),p))
 					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 				m_impl = i;
 			}
