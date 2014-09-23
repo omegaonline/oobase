@@ -25,31 +25,63 @@
 #include "Mutex.h"
 #include "List.h"
 #include "SharedPtr.h"
+#include "Condition.h"
 
 namespace OOBase
 {
-	class Thread : public NonCopyable
+	class Thread : public NonCopyable, public EnableSharedFromThis<Thread>
 	{
+		friend class AllocateNewStatic<CrtAllocator>;
+
 	public:
-		Thread(bool bAutodelete);
-		virtual ~Thread();
+		~Thread();
 
-		virtual int run(int (*thread_fn)(void*), void* param);
+		static SharedPtr<Thread> run(int (*thread_fn)(void*), void* param, int& err);
 
-		virtual bool join(const Timeout& timeout = Timeout());
-		virtual void abort();
-		virtual bool is_running() const;
+		bool join(const Timeout& timeout = Timeout());
+		void abort();
+		bool is_running() const;
 
 		static void sleep(unsigned int millisecs);
 		static void yield();
 
-	protected:
-		Thread(bool bAutodelete,bool);
-
-		const bool m_bAutodelete;
-
 	private:
-		Thread*    m_impl;
+		Thread();
+
+		int run(int (*thread_fn)(void*), void* param);
+
+#if defined(_WIN32)
+		struct wrapper
+		{
+			Win32::SmartHandle m_hEvent;
+			int (*m_thread_fn)(void*);
+			void*              m_param;
+			Thread*            m_pThis;
+		};
+
+		Win32::SmartHandle m_hThread;
+
+		static unsigned int __stdcall oobase_thread_fn(void* param);
+#elif defined(HAVE_PTHREAD)
+		struct wrapper
+		{
+			Thread*       m_pThis;
+			int (*m_thread_fn)(void*);
+			void*         m_param;
+			Event*        m_started;
+		};
+
+		pthread_t m_thread;
+		Event     m_finished;
+
+		static const pthread_t pthread_t_def()
+		{
+			static const pthread_t t = {0};
+			return t;
+		}
+
+		static void* oobase_thread_fn(void* param);
+#endif
 	};
 
 	class ThreadPool
@@ -65,7 +97,7 @@ namespace OOBase
 
 	private:
 		mutable Mutex m_lock;
-		List<SharedPtr<Thread>,CrtAllocator> m_threads;
+		List<SharedPtr<Thread> > m_threads;
 	};
 }
 
