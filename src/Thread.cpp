@@ -113,9 +113,12 @@ unsigned int OOBase::Thread::oobase_thread_fn(void* param)
 	wrapper* wrap = static_cast<wrapper*>(param);
 
 	// Copy the values out before we signal
-	Win32Thread* pThis = wrap->m_pThis;
+	Thread* pThis = wrap->m_pThis;
 	int (*thread_fn)(void*) = wrap->m_thread_fn;
 	void* p = wrap->m_param;
+
+	// Hold a reference to ourselves for the lifetime of the thread function
+	SharedPtr<Thread> ptrThis = pThis->shared_from_this();
 
 	// Set the event, meaning we have started
 	if (!SetEvent(wrap->m_hEvent))
@@ -235,6 +238,9 @@ void* OOBase::Thread::oobase_thread_fn(void* param)
 	Thread* pThis = wrap->m_pThis;
 	int (*thread_fn)(void*) = wrap->m_thread_fn;
 	void* p = wrap->m_param;
+
+	// Hold a reference to ourselves for the lifetime of the thread function
+	SharedPtr<Thread> ptrThis = pThis->shared_from_this();
 
 	// Set the event, meaning we have started
 	wrap->m_started->set();
