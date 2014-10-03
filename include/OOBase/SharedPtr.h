@@ -150,7 +150,7 @@ namespace OOBase
 			friend class WeakCount;
 
 		public:
-			SharedCount() : m_impl(NULL)
+			SharedCount(SharedCountBase* impl = NULL) : m_impl(impl)
 			{}
 
 			template <typename T, typename Allocator>
@@ -306,16 +306,6 @@ namespace OOBase
 		SharedPtr() : m_ptr(NULL), m_sc()
 		{}
 
-		template <typename T1>
-		SharedPtr(T1* p, AllocatorInstance& alloc) : m_ptr(p), m_sc()
-		{
-			if (p)
-			{
-				detail::SharedCount(alloc,p).swap(m_sc);
-				detail::shared::enable_shared_from_this(this,p,p);
-			}
-		}
-
 		SharedPtr(const SharedPtr& rhs) : m_ptr(rhs.m_ptr), m_sc(rhs.m_sc)
 		{}
 
@@ -406,7 +396,7 @@ namespace OOBase
 		detail::SharedCount m_sc;
 
 		template <typename T1, typename Allocator>
-		SharedPtr(T1* p, const Allocator* a) : m_ptr(p)
+		SharedPtr(T1* p, const Allocator* a) : m_ptr(p), m_sc()
 		{
 			detail::shared::assert_convertible<T,T1>();
 			if (p)
@@ -414,6 +404,23 @@ namespace OOBase
 				detail::SharedCount(a,p).swap(m_sc);
 				detail::shared::enable_shared_from_this(this,p,p);
 			}
+		}
+
+		template <typename T1>
+		SharedPtr(T1* p, AllocatorInstance& alloc) : m_ptr(p), m_sc()
+		{
+			if (p)
+			{
+				detail::SharedCount(alloc,p).swap(m_sc);
+				detail::shared::enable_shared_from_this(this,p,p);
+			}
+		}
+
+		template <typename T1>
+		SharedPtr(T1* p, detail::SharedCountBase* b) : m_ptr(p), m_sc(b)
+		{
+			if (p)
+				detail::shared::enable_shared_from_this(this,p,p);
 		}
 	};
 
@@ -510,6 +517,18 @@ namespace OOBase
 					return SharedPtr<T>(p,a);
 				}
 
+				template <typename T>
+				static SharedPtr<T> make_shared(T* p, AllocatorInstance& a)
+				{
+					return SharedPtr<T>(p,a);
+				}
+
+				template <typename T>
+				static SharedPtr<T> make_shared(T* p, detail::SharedCountBase* b)
+				{
+					return SharedPtr<T>(p,b);
+				}
+
 				template <typename X, typename Y, typename T>
 				static void enable_shared_from_this(const SharedPtr<X>& px, const Y* y, const EnableSharedFromThis<T>* pe)
 				{
@@ -593,6 +612,18 @@ namespace OOBase
 	inline SharedPtr<T> make_shared(T* p)
 	{
 		return detail::shared::template_friend::make_shared(p,static_cast<const Allocator*>(NULL));
+	}
+
+	template <typename T>
+	inline SharedPtr<T> make_shared(T* p, AllocatorInstance& a)
+	{
+		return detail::shared::template_friend::make_shared(p,a);
+	}
+
+	template <typename T>
+	inline SharedPtr<T> make_shared(T* p, detail::SharedCountBase* b)
+	{
+		return detail::shared::template_friend::make_shared(p,b);
 	}
 
 	template <typename T, typename Allocator>
