@@ -35,7 +35,7 @@ OOBase::Thread::~Thread()
 	abort();
 }
 
-OOBase::SharedPtr<OOBase::Thread> OOBase::Thread::run(int (*thread_fn)(void*), void* param, int& err)
+int OOBase::Thread::run(int (*thread_fn)(void*), void* param)
 {
 	if (is_running())
 		return ERROR_INVALID_PARAMETER;
@@ -308,7 +308,6 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 		}
 		if (bAdd)
 		{
-			int err = 0;
 			m_threads.push_back(ptrThread,err);
 			if (err != 0)
 				return err;
