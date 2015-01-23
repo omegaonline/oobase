@@ -60,10 +60,8 @@ namespace OOBase
 		}
 	}
 
-#if defined(__GNUC__)
 	template <typename A, size_t S>
-	int printf(ScopedArrayPtr<char,A,S>& ptr, const char* format, ...) __attribute__((format(printf,2,3)));
-#endif
+	inline int printf(ScopedArrayPtr<char,A,S>& ptr, const char* format, ...) OOBASE_FORMAT(printf,2,3);
 
 	template <typename A, size_t S>
 	inline int printf(ScopedArrayPtr<char,A,S>& ptr, const char* format, ...)
@@ -183,11 +181,7 @@ namespace OOBase
 			return f ? size_t(f - m_data.get()) : npos;
 		}
 
-#if defined(__GNUC__)
-		int printf(const char* format, ...) __attribute__((format(printf,2,3)))
-#else
-		int printf(const char* format, ...)
-#endif
+		int printf(const char* format, ...) OOBASE_FORMAT(printf,2,3)
 		{
 			va_list args;
 			va_start(args,format);
@@ -375,11 +369,7 @@ namespace OOBase
 			return !m_ptr ? npos : m_ptr->find(sz,start);
 		}
 
-#if defined(__GNUC__)
-		int printf(const char* format, ...) __attribute__((format(printf,2,3)))
-#else
-		int printf(const char* format, ...)
-#endif
+		int printf(const char* format, ...) OOBASE_FORMAT(printf,2,3)
 		{
 			va_list args;
 			va_start(args,format);

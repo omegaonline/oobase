@@ -212,6 +212,12 @@ namespace OOBase
 	{ struct oobase_static_assert { char static_check[expr ? 1 : -1]; }; }
 #endif
 
+#if defined(__GNUC__)
+#define OOBASE_FORMAT(f,a,b) __attribute__((format(f,a,b)))
+#else
+#define OOBASE_FORMAT(f,a,b)
+#endif
+
 #if defined(_MSC_VER)
 #define HAVE__IS_POD 1
 #define HAVE__ALIGNOF 1
