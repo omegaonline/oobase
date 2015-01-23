@@ -38,7 +38,7 @@ namespace OOBase
 		{
 			DLLDestructor& inst = instance();
 			Guard<SpinLock> guard(inst.m_lock);
-			
+
 			int err = 0;
 			inst.m_stack.push_back(Node(pfn,p),err);
 			return err;
@@ -54,7 +54,7 @@ namespace OOBase
 
 	private:
 		DLLDestructor() {}
-		
+
 		struct Node
 		{
 			Node(pfn_destructor pfn, void* p) : m_pfn(pfn), m_param(p)
@@ -98,7 +98,7 @@ namespace OOBase
 		{
 			static Once::once_t key = ONCE_T_INIT;
 			Once::Run(&key,&init);
-			
+
 			return *s_instance;
 		}
 
@@ -112,7 +112,7 @@ namespace OOBase
 	};
 
 	template <typename DLL>
-	DLLDestructor<DLL>* DLLDestructor<DLL>::s_instance;
+	DLLDestructor<DLL>* DLLDestructor<DLL>::s_instance = NULL;
 }
 
 #endif // OOBASE_DESTRUCTOR_H_INCLUDED_
