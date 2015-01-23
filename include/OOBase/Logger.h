@@ -30,32 +30,31 @@ namespace OOBase
 	{
 		enum Priority
 		{
-			Error,
-			Warning,
-			Information,
-			Debug
+			Error = 3,
+			Warning = 2,
+			Information = 1,
+			Debug = 0
 		};
 
-		void open_console_log(const char* pszSrcFile = NULL);
-		void open_system_log(const char* name, const char* pszSrcFile = NULL);
+		int connect_stdout_log(Priority min = Debug, Priority max = Information);
+		int connect_stderr_log(Priority min = Warning, Priority max = Error);
+		int connect_debug_log();
+		int connect_system_log(const char* name, const char* category);
 
-#if defined(__GNUC__)
-		void log(Priority priority, const char* fmt, ...) __attribute__((format(printf,2,3)));
-#else
-		void log(Priority priority, const char* fmt, ...);
-#endif
+		void set_source_file(const char* pszSrcFile);
+
+		int connect(void (*callback)(void* param, const ::timeval& t, Priority priority, const char* msg), void* param);
+		bool disconnect(void (*callback)(void* param, const ::timeval& t, Priority priority, const char* msg), void* param);
+
+		void log(Priority priority, const char* fmt, ...) OOBASE_FORMAT(printf,2,3);
 		void log(Priority priority, const char* fmt, va_list args);
-		
+
 #if !defined(DOXYGEN)
 		struct filenum_t
 		{
 			filenum_t(Priority priority, const char* pszFilename, unsigned int nLine);
 
-#if defined(__GNUC__)
-			void log(const char* fmt, ...) __attribute__((format(printf,2,3)));
-#else
-			void log(const char* fmt, ...);
-#endif
+			void log(const char* fmt, ...) OOBASE_FORMAT(printf,2,3);
 
 			Priority     m_priority;
 			const char*  m_pszFilename;
