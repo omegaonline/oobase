@@ -128,7 +128,7 @@ namespace OOBase
 
 			operator bool_type() const
 			{
-				return m_pwd != NULL ? &SafeBoolean::this_type_does_not_support_comparisons : NULL;
+				return SafeBoolean::safe_bool(m_pwd != NULL);
 			}
 
 		private:

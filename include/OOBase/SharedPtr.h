@@ -362,7 +362,7 @@ namespace OOBase
 
 		operator bool_type() const
 		{
-			return m_ptr != NULL ? &SafeBoolean::this_type_does_not_support_comparisons : NULL;
+			return SafeBoolean::safe_bool(m_ptr != NULL);
 		}
 
 		T* operator ->() const
@@ -496,7 +496,7 @@ namespace OOBase
 
 		operator bool_type() const
 		{
-			return m_ptr != NULL ? &SafeBoolean::this_type_does_not_support_comparisons : NULL;
+			return SafeBoolean::safe_bool(m_ptr != NULL);
 		}
 
 	private:

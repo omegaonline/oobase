@@ -435,8 +435,12 @@ namespace OOBase
 	{
 	public:
 		typedef void (SafeBoolean::*bool_type)() const;
-		void this_type_does_not_support_comparisons() const
-		{}
+		void this_type_does_not_support_comparisons() const {}
+
+		bool_type safe_bool(bool v) const
+		{
+			return (v ? &SafeBoolean::this_type_does_not_support_comparisons : NULL);
+		}
 	};
 
 	template <typename T>
