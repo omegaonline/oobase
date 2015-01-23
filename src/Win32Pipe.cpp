@@ -42,13 +42,13 @@ namespace
 	class Pipe : public OOBase::Socket
 	{
 	public:
-		explicit Pipe(HANDLE handle);
+		Pipe(HANDLE handle);
 		virtual ~Pipe();
 
 		size_t recv(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout);
 		int recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
 		size_t recv_msg(void* data_buf, size_t data_len, const OOBase::RefPtr<OOBase::Buffer>& ctl_buffer, int& err, const OOBase::Timeout& timeout);
-		
+
 		size_t send(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout);
 		int send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout& timeout);
 		size_t send_msg(const void* data_buf, size_t data_len, const void* ctl_buf, size_t ctl_len, int& err, const OOBase::Timeout& timeout);
@@ -56,7 +56,7 @@ namespace
 		int shutdown(bool bSend, bool bRecv);
 		int close();
 		OOBase::socket_t get_handle() const;
-					
+
 	private:
 		OOBase::Win32::SmartHandle m_handle;
 		OOBase::Mutex              m_recv_lock;  // These are mutexes to enforce ordering
@@ -65,7 +65,7 @@ namespace
 		OOBase::Win32::SmartHandle m_send_event;
 		bool                       m_send_allowed;
 		bool                       m_recv_allowed;
-		
+
 		size_t recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::Timeout& timeout);
 		size_t send_i(const void* buf, size_t len, int& err, const OOBase::Timeout& timeout);
 
@@ -126,7 +126,7 @@ int Pipe::send_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout&
 	OOBase::Guard<OOBase::Mutex> guard(m_send_lock,false);
 	if (!guard.acquire(timeout))
 		return WSAETIMEDOUT;
-	
+
 	int err = 0;
 	for (size_t i=0;i<count && err == 0 ;++i)
 	{
@@ -192,7 +192,7 @@ size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::Timeout
 			if (err)
 				break;
 		}
-		
+
 		DWORD dwWritten = 0;
 		if (!GetOverlappedResult(m_handle,&ov,&dwWritten,TRUE))
 		{
@@ -269,7 +269,7 @@ int Pipe::recv_v(OOBase::Buffer* buffers[], size_t count, const OOBase::Timeout&
 			buffers[i]->wr_ptr(len);
 		}
 	}
-	
+
 	return err;
 }
 
@@ -299,7 +299,7 @@ size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::Ti
 
 	OVERLAPPED ov = {0};
 	ov.hEvent = m_recv_event;
-		
+
 	char* cbuf = static_cast<char*>(buf);
 	size_t to_read = len;
 	while (to_read > 0)
@@ -413,7 +413,7 @@ int Pipe::close()
 	// This will halt all send's
 	if (m_send_event.is_valid())
 		SetEvent(m_send_event);
-	
+
 	// This will halt all recv's
 	if (m_recv_event.is_valid())
 		SetEvent(m_recv_event);
@@ -532,7 +532,7 @@ OOBase::Socket* OOBase::Socket::connect(const char* path, int& err, const Timeou
 			return 0;
 		}
 	}
-	
+
 	Pipe* pPipe = NULL;
 	if (!CrtAllocator::allocate_new(pPipe,hPipe))
 		err = ERROR_OUTOFMEMORY;

@@ -43,16 +43,16 @@ namespace OOBase
 	class HandleTable : public HashTable<ID,V,Allocator,detail::HandleHash<ID> >
 	{
 		typedef HashTable<ID,V,Allocator,detail::HandleHash<ID> > baseClass;
-		
+
 	public:
 		HandleTable() : baseClass(),
 				m_next(0)
 		{}
 
-		explicit HandleTable(AllocatorInstance& allocator) : baseClass(allocator),
+		HandleTable(AllocatorInstance& allocator) : baseClass(allocator),
 				m_next(0)
 		{}
-			
+
 		~HandleTable()
 		{}
 
@@ -75,7 +75,7 @@ namespace OOBase
 			err = insert_i(value,handle,min,max,false);
 			if (err)
 				return baseClass::end();
-			
+
 			return baseClass::iterator(this,handle);
 		}
 
@@ -94,7 +94,7 @@ namespace OOBase
 			ID next = m_next;
 			if (next < min)
 				next = min;
-			
+
 			for (int twice = 0; twice < 2; ++twice)
 			{
 				for (handle = next+1; handle != next;)
@@ -121,7 +121,7 @@ namespace OOBase
 						return 0;
 					}
 				}
-				
+
 				int err = baseClass::clone();
 				if (err)
 					return err;

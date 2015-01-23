@@ -47,10 +47,10 @@ namespace OOBase
 		typedef detail::IteratorImpl<const Table,const value_type,size_t> const_iterator;
 		friend class detail::IteratorImpl<const Table,const value_type,size_t>;
 
-		explicit Table(const Compare& comp = Compare()) : baseClass(), m_compare(comp)
+		Table(const Compare& comp = Compare()) : baseClass(), m_compare(comp)
 		{}
 
-		explicit Table(AllocatorInstance& allocator) : baseClass(allocator), m_compare()
+		Table(AllocatorInstance& allocator) : baseClass(allocator), m_compare()
 		{}
 
 		Table(const Compare& comp, AllocatorInstance& allocator) : baseClass(allocator), m_compare(comp)

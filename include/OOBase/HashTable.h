@@ -41,12 +41,12 @@ namespace OOBase
 		static size_t hash(T* v)
 		{
 			size_t r = reinterpret_cast<size_t>(v);
-			
+
 			// Because pointers are commonly aligned
-			return (r >> 4) | (r << (sizeof(size_t)*8 -4)); 
+			return (r >> 4) | (r << (sizeof(size_t)*8 -4));
 		}
 	};
-	
+
 	namespace detail
 	{
 		// See http://isthe.com/chongo/tech/comp/fnv/ for details
@@ -202,10 +202,10 @@ namespace OOBase
 		friend class detail::IteratorImpl<HashTable,typename Node::pair,size_t>;
 		friend class detail::IteratorImpl<const HashTable,const typename Node::pair,size_t>;
 
-		explicit HashTable(const H& h = H()) : baseClass(), m_data(NULL), m_size(0), m_count(0), m_hash(h)
+		HashTable(const H& h = H()) : baseClass(), m_data(NULL), m_size(0), m_count(0), m_hash(h)
 		{}
 
-		explicit HashTable(AllocatorInstance& allocator, const H& h = H()) : baseClass(allocator), m_data(NULL), m_size(0), m_count(0), m_hash(h)
+		HashTable(AllocatorInstance& allocator, const H& h = H()) : baseClass(allocator), m_data(NULL), m_size(0), m_count(0), m_hash(h)
 		{}
 
 		~HashTable()
@@ -306,10 +306,10 @@ namespace OOBase
 			iterator i = find(key);
 			if (i == end())
 				return false;
-			
+
 			if (value)
 				*value = i->value;
-			
+
 			remove_at(i);
 			return true;
 		}
@@ -439,7 +439,7 @@ namespace OOBase
 					}
 				}
 			}
-			
+
 			destroy(m_data,m_size);
 			m_data = new_data;
 			m_size = new_size;
@@ -473,7 +473,7 @@ namespace OOBase
 
 				if (m_data[h1].m_in_use == 0)
 					return size_t(-1);
-				
+
 				if (m_data[h1].m_in_use == 2 && m_data[h1].m_data.key == key)
 					return h1;
 			}

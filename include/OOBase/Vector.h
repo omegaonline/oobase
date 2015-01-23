@@ -40,7 +40,7 @@ namespace OOBase
 			VectorBase() : baseClass(), m_data(NULL), m_size(0), m_capacity(0)
 			{}
 
-			explicit VectorBase(AllocatorInstance& allocator) : baseClass(allocator), m_data(NULL), m_size(0), m_capacity(0)
+			VectorBase(AllocatorInstance& allocator) : baseClass(allocator), m_data(NULL), m_size(0), m_capacity(0)
 			{}
 
 			VectorBase(const VectorBase& rhs) : baseClass(rhs), m_data(NULL), m_size(0), m_capacity(0)
@@ -114,7 +114,7 @@ namespace OOBase
 			VectorPODBase() : baseClass()
 			{}
 
-			explicit VectorPODBase(AllocatorInstance& allocator) : baseClass(allocator)
+			VectorPODBase(AllocatorInstance& allocator) : baseClass(allocator)
 			{}
 
 			~VectorPODBase()
@@ -369,7 +369,7 @@ namespace OOBase
 			VectorPODBase() : baseClass()
 			{}
 
-			explicit VectorPODBase(AllocatorInstance& allocator) : baseClass(allocator)
+			VectorPODBase(AllocatorInstance& allocator) : baseClass(allocator)
 			{}
 
 		protected:
@@ -474,7 +474,7 @@ namespace OOBase
 			VectorImpl() : baseClass()
 			{}
 
-			explicit VectorImpl(AllocatorInstance& allocator) : baseClass(allocator)
+			VectorImpl(AllocatorInstance& allocator) : baseClass(allocator)
 			{}
 
 			VectorImpl(const VectorImpl& rhs) : baseClass(rhs)
@@ -582,7 +582,7 @@ namespace OOBase
 		Vector() : baseClass()
 		{}
 
-		explicit Vector(AllocatorInstance& allocator) : baseClass(allocator)
+		Vector(AllocatorInstance& allocator) : baseClass(allocator)
 		{}
 
 		template <typename It>

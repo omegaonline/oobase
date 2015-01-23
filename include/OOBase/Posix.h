@@ -51,7 +51,7 @@ namespace OOBase
 		class SmartFD : public NonCopyable
 		{
 		public:
-			explicit SmartFD(int fd = -1) :
+			SmartFD(int fd = -1) :
 					m_fd(fd)
 			{}
 
@@ -113,8 +113,8 @@ namespace OOBase
 		class pw_info : public NonCopyable, public SafeBoolean
 		{
 		public:
-			explicit pw_info(uid_t uid);
-			explicit pw_info(const char* uname);
+			pw_info(uid_t uid);
+			pw_info(const char* uname);
 
 			const struct passwd* operator ->() const
 			{

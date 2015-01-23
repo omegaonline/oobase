@@ -45,10 +45,10 @@ namespace OOBase
 		typedef detail::IteratorImpl<const Set,const value_type,size_t> const_iterator;
 		friend class detail::IteratorImpl<const Set,const value_type,size_t>;
 
-		explicit Set(const Compare& comp) : baseClass(), m_compare(comp)
+		Set(const Compare& comp) : baseClass(), m_compare(comp)
 		{}
 
-		explicit Set(AllocatorInstance& allocator) : baseClass(allocator), m_compare()
+		Set(AllocatorInstance& allocator) : baseClass(allocator), m_compare()
 		{}
 
 		Set(const Compare& comp, AllocatorInstance& allocator) : baseClass(allocator), m_compare(comp)

@@ -37,9 +37,9 @@ namespace OOBase
 		Ref(T& r) : m_r(r)
 		{}
 
-		Ref(const Ref& rhs) : m_r(rhs.m_r) 
+		Ref(const Ref& rhs) : m_r(rhs.m_r)
 		{}
-		
+
 		Ref& operator = (const Ref& rhs)
 		{
 			if (this != &rhs)
@@ -406,7 +406,7 @@ namespace OOBase
 		}
 
 	protected:
-		explicit Allocating(AllocatorInstance& allocator) : m_allocator(allocator)
+		Allocating(AllocatorInstance& allocator) : m_allocator(allocator)
 		{}
 
 		Allocating(const Allocating& rhs) : m_allocator(rhs.m_allocator)

@@ -33,10 +33,10 @@ namespace OOBase
 		ScopedArrayPtr() : m_data(m_static)
 		{}
 
-		explicit ScopedArrayPtr(AllocatorInstance& alloc) : m_data(m_static), m_dynamic(alloc)
+		ScopedArrayPtr(AllocatorInstance& alloc) : m_data(m_static), m_dynamic(alloc)
 		{}
 
-		explicit ScopedArrayPtr(size_t count) : m_data(m_static)
+		ScopedArrayPtr(size_t count) : m_data(m_static)
 		{
 			reallocate(count);
 		}

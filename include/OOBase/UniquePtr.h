@@ -129,10 +129,10 @@ namespace OOBase
 		typedef detail::UniquePtrImpl<T,Allocator,detail::is_pod<T>::value> baseClass;
 
 	public:
-		explicit UniquePtr(T* ptr = NULL) : baseClass(ptr)
+		UniquePtr(T* ptr = NULL) : baseClass(ptr)
 		{}
 
-		explicit UniquePtr(AllocatorInstance& alloc) : baseClass(NULL,alloc)
+		UniquePtr(AllocatorInstance& alloc) : baseClass(NULL,alloc)
 		{}
 
 		UniquePtr(T* ptr, AllocatorInstance& alloc) : baseClass(ptr,alloc)
@@ -155,10 +155,10 @@ namespace OOBase
 		typedef detail::UniquePtrImpl<void,Allocator,true> baseClass;
 
 	public:
-		explicit UniquePtr(void* ptr = NULL) : baseClass(ptr)
+		UniquePtr(void* ptr = NULL) : baseClass(ptr)
 		{}
 
-		explicit UniquePtr(AllocatorInstance& alloc) : baseClass(NULL,alloc)
+		UniquePtr(AllocatorInstance& alloc) : baseClass(NULL,alloc)
 		{}
 
 		UniquePtr(void* ptr, AllocatorInstance& alloc) : baseClass(ptr,alloc)

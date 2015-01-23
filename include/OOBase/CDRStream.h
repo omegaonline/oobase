@@ -34,7 +34,7 @@ namespace OOBase
 	public:
 		static const int MaxAlignment = 16;
 
-		explicit CDRStream(size_t len = 256) :
+		CDRStream(size_t len = 256) :
 				m_endianess(OOBASE_BYTE_ORDER),
 				m_last_error(0)
 		{
@@ -46,7 +46,7 @@ namespace OOBase
 			}
 		}
 
-		explicit CDRStream(AllocatorInstance& allocator, size_t len = 256) :
+		CDRStream(AllocatorInstance& allocator, size_t len = 256) :
 				m_endianess(OOBASE_BYTE_ORDER),
 				m_last_error(0)
 		{
@@ -74,7 +74,7 @@ namespace OOBase
 		}
 
 		~CDRStream()
-		{ 
+		{
 		}
 
 		const RefPtr<Buffer>& buffer() const
@@ -132,7 +132,7 @@ namespace OOBase
 
 			if (!m_buffer)
 				return error_too_big();
-				
+
 			m_last_error = m_buffer->align_wr_ptr(2);
 			if (m_last_error != 0)
 				return false;
@@ -180,7 +180,7 @@ namespace OOBase
 
 			if (!m_buffer)
 				return error_eof();
-				
+
 			m_buffer->align_rd_ptr(alignment_of<T>::value);
 			if (m_buffer->length() < sizeof(T))
 				return error_eof();
@@ -278,7 +278,7 @@ namespace OOBase
 
 			if (!m_buffer)
 				return error_too_big();
-				
+
 			m_last_error = m_buffer->align_wr_ptr(alignment_of<T>::value);
 			if (m_last_error != 0)
 				return false;

@@ -87,7 +87,7 @@ namespace OOBase
 		ScopedStringImpl() : m_data()
 		{}
 
-		explicit ScopedStringImpl(AllocatorInstance& allocator) : m_data(allocator)
+		ScopedStringImpl(AllocatorInstance& allocator) : m_data(allocator)
 		{}
 
 		int compare(const char* rhs) const

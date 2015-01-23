@@ -101,7 +101,7 @@ namespace OOBase
 		class SharedCountAlloc : public SharedCountBase
 		{
 		public:
-			explicit SharedCountAlloc(T* p) : m_ptr(p)
+			SharedCountAlloc(T* p) : m_ptr(p)
 			{}
 
 			virtual void dispose()
