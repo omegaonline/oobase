@@ -126,7 +126,7 @@ namespace
 		ULARGE_INTEGER uli;
 		uli.LowPart = file_time.dwLowDateTime;
 		uli.HighPart = file_time.dwHighDateTime;
-		t.tv_sec = ((uli.QuadPart - epoch) / 10000000L);
+		t.tv_sec = static_cast<long>((uli.QuadPart - epoch) / 10000000L);
 		t.tv_usec = (system_time.wMilliseconds * 1000);
 	}
 	#elif defined(HAVE_UNISTD_H)
@@ -291,7 +291,11 @@ namespace
 		OOBase::ScopedArrayPtr<char,OOBase::ThreadLocalAllocator,64> timestamp;
 		time_t nowtime = t.tv_sec;
 		struct tm nowtm = {0};
+#if defined(_MSC_VER)
+		localtime_s(&nowtm,&nowtime);
+#else
 		localtime_r(&nowtime,&nowtm);
+#endif
 		strftime(timestamp.get(),timestamp.count(),"%c",&nowtm);
 
 		const char* tag = "Error: ";
@@ -335,8 +339,9 @@ namespace
 		return info.wAttributes;
 	}
 
-	void onConsole(HANDLE h, uintptr_t param, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg)
+	void onConsole(DWORD nStdHandle, uintptr_t param, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg)
 	{
+		HANDLE h = GetStdHandle(nStdHandle);
 		OOBase::Logger::Priority min = static_cast<OOBase::Logger::Priority>((param & 0xFF00) >> 8);
 		OOBase::Logger::Priority max = static_cast<OOBase::Logger::Priority>(param & 0xFF);
 
@@ -388,7 +393,7 @@ namespace
 	}
 }
 
-int OOBase::Logger::connect_system_log(const char* name, const char* category)
+int OOBase::Logger::connect_system_log(const char* name, const char*)
 {
 	wchar_t szPath[MAX_PATH];
 	if (!GetModuleFileNameW(NULL,szPath,MAX_PATH))

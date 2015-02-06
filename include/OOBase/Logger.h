@@ -24,6 +24,13 @@
 
 #include "Base.h"
 
+#if defined(_WIN32)
+#if defined(__MINGW32__) && defined(_WINSOCKAPI_)
+#undef _WINSOCKAPI_
+#endif
+#include <winsock2.h>
+#endif
+
 namespace OOBase
 {
 	namespace Logger
