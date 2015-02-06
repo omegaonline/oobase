@@ -121,7 +121,7 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 			size_t len = wcslen(ptr.get());
 			total_size += len + 1;
 
-			temp_wchar_t key(static_cast<wchar_t*>(allocator.allocate(len+1,alignment_of<wchar_t>::value)),allocator);
+			temp_wchar_t key = make_shared(static_cast<wchar_t*>(allocator.allocate(len+1,alignment_of<wchar_t>::value)),allocator);
 			if (!key)
 				err = ERROR_OUTOFMEMORY;
 			else
@@ -138,7 +138,7 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 					{
 						total_size += len + 1;
 
-						value = temp_wchar_t(static_cast<wchar_t*>(allocator.allocate(len+1,alignment_of<wchar_t>::value)),allocator);
+						value = make_shared(static_cast<wchar_t*>(allocator.allocate(len+1,alignment_of<wchar_t>::value)),allocator);
 						if (!value)
 							err = ERROR_OUTOFMEMORY;
 						else
