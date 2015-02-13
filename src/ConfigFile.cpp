@@ -352,7 +352,7 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 				ScopedArrayPtr<wchar_t> ptrEnv;
 				for (;;)
 				{
-					DWORD dwNewLen = ExpandEnvironmentStringsW(wszKey.get(),ptrEnv.get(),ptrEnv.count());
+					DWORD dwNewLen = ExpandEnvironmentStringsW(wszKey.get(),ptrEnv.get(),static_cast<DWORD>(ptrEnv.count()));
 					if (!dwNewLen)
 						lRes = ::GetLastError();
 

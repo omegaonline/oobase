@@ -92,7 +92,7 @@ size_t OOBase::File::read(const RefPtr<Buffer>& buffer, int& err, size_t len)
 	size_t tot = 0;
 	while (len)
 	{
-		long r = read(buffer->wr_ptr(),len);
+		long r = read(buffer->wr_ptr(),static_cast<unsigned long>(len));
 		if (r <= 0)
 		{
 			if (r != 0)
@@ -136,7 +136,7 @@ int OOBase::File::write(const RefPtr<Buffer>& buffer, size_t len)
 
 	while (len)
 	{
-		long w = write(buffer->rd_ptr(),len);
+		long w = write(buffer->rd_ptr(),static_cast<unsigned long>(len));
 		if (w < 0)
 		{
 #if defined(_WIN32)

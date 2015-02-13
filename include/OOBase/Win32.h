@@ -189,7 +189,7 @@ namespace OOBase
 		template <typename A, size_t S>
 		int utf8_to_wchar_t(const char* sz, ScopedArrayPtr<wchar_t,A,S>& ptrBuf)
 		{
-			int len = ptrBuf.count();
+			int len = static_cast<int>(ptrBuf.count());
 			int err = detail::utf8_to_wchar_t(sz,ptrBuf.get(),len);
 			if (!err)
 				return 0;
@@ -203,7 +203,7 @@ namespace OOBase
 		template <typename A, size_t S>
 		int wchar_t_to_utf8(const wchar_t* wsz, ScopedArrayPtr<char,A,S>& ptrBuf)
 		{
-			int len = ptrBuf.count();
+			int len = static_cast<int>(ptrBuf.count());
 			int err = detail::wchar_t_to_utf8(wsz,ptrBuf.get(),len);
 			if (!err)
 				return 0;

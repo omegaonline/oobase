@@ -131,8 +131,8 @@ DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, ScopedArrayPtr<wchar_t>& st
 		return dwErr;
 
 	SID_NAME_USE name_use;
-	DWORD dwUNameSize = strUserName.count();
-	DWORD dwDNameSize = strDomainName.count();
+	DWORD dwUNameSize = static_cast<DWORD>(strUserName.count());
+	DWORD dwDNameSize = static_cast<DWORD>(strDomainName.count());
 	LookupAccountSidW(NULL,ptrUserInfo->User.Sid,strUserName.get(),&dwUNameSize,strDomainName.get(),&dwDNameSize,&name_use);
 	if (dwUNameSize == 0)
 		return GetLastError();
