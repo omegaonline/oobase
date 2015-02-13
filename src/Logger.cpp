@@ -296,7 +296,7 @@ namespace
 #else
 		localtime_r(&nowtime,&nowtm);
 #endif
-		strftime(timestamp.get(),timestamp.count(),"%c",&nowtm);
+		strftime(timestamp.get(),timestamp.count(),"%H:%M:%S",&nowtm);
 
 		const char* tag = "Error: ";
 
@@ -526,7 +526,7 @@ namespace
 		time_t nowtime = t.tv_sec;
 		struct tm nowtm = {0};
 		localtime_r(&nowtime,&nowtm);
-		strftime(timestamp.get(),timestamp.count(),"%c",&nowtm);
+		strftime(timestamp.get(),timestamp.count(),"%H:%M:%S",&nowtm);
 
 		const char* on_col = "\x1b[31m";
 		const char* off_col = "\x1b[0m";
