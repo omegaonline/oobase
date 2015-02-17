@@ -69,9 +69,8 @@ namespace
 		// Update the section name, [] clears it...
 		if (key_end != key_start + 1)
 		{
-			int err = strSection.assign((const char*)(key_start+1),key_end - key_start - 1);
-			if (err)
-				return err;
+			if (!strSection.assign((const char*)(key_start+1),key_end - key_start - 1))
+				return ERROR_OUTOFMEMORY;
 		}
 		else
 			strSection.clear();
@@ -119,14 +118,12 @@ namespace
 			return 0;
 		}
 
-		int err = 0;
 		OOBase::String strKey = strSection;
-		if (!strKey.empty())
-			err = strKey.append("/",1);
-		if (!err)
-			err = strKey.append((const char*)key_start,key_end - key_start);
-		if (err)
-			return err;
+		if (!strKey.empty() && !strKey.append("/",1))
+			return ERROR_OUTOFMEMORY;
+
+		if (!strKey.append((const char*)key_start,key_end - key_start))
+			return ERROR_OUTOFMEMORY;
 
 		OOBase::String strValue;
 		if (value_start)
@@ -142,15 +139,14 @@ namespace
 
 			if (value_end > value_start)
 			{
-				err = strValue.assign((const char*)value_start,value_end - value_start);
-				if (err)
-					return err;
+				if (!strValue.assign((const char*)value_start,value_end - value_start))
+					return ERROR_OUTOFMEMORY;
 			}
 		}
 
 		OOBase::ConfigFile::results_t::iterator i = results.find(strKey);
 		if (i == results.end())
-			return results.insert(strKey,strValue);
+			return results.insert(strKey,strValue) ? 0 : ERROR_OUTOFMEMORY;
 
 		i->second = strValue;
 		return 0;

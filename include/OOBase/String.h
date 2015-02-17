@@ -102,25 +102,25 @@ namespace OOBase
 		int compare(const ScopedStringImpl<A1>& rhs) const
 		{
 			if (this == &rhs)
-				return true;
+				return 0;
 			return this->compare(rhs.c_str());
 		}
 
-		int assign(const char* sz, size_t len = npos)
+		bool assign(const char* sz, size_t len = npos)
 		{
 			if (len == npos)
 				len = strlen(sz);
 
 			if (!m_data.reallocate(len + 1))
-				return ERROR_OUTOFMEMORY;
+				return false;
 
 			if (len)
 				memcpy(m_data.get(),sz,len);
 			m_data[len] = '\0';
-			return 0;
+			return true;
 		}
 
-		int append(const char* sz, size_t len = npos)
+		bool append(const char* sz, size_t len = npos)
 		{
 			if (len == npos)
 				len = strlen(sz);
@@ -129,12 +129,12 @@ namespace OOBase
 			{
 				size_t orig_len = length();
 				if (!m_data.reallocate(orig_len + len + 1))
-					return ERROR_OUTOFMEMORY;
+					return false;
 
 				memcpy(m_data.get() + orig_len,sz,len);
 				m_data[orig_len + len] = '\0';
 			}
-			return 0;
+			return true;
 		}
 
 		const char* c_str() const
@@ -290,46 +290,41 @@ namespace OOBase
 			return compare(rhs.c_str());
 		}
 
-		int assign(const char* sz, size_t len = npos)
+		bool assign(const char* sz, size_t len = npos)
 		{
 			if (sz && len)
 			{
 				node_t ptr = new_node();
 				if (!ptr)
-					return ERROR_OUTOFMEMORY;
+					return false;
 
-				int err = ptr->assign(sz,len);
-				if (err)
-					return err;
+				if (!ptr->assign(sz,len))
+					return false;
 
 				m_ptr.swap(ptr);
 			}
-			return 0;
+			return true;
 		}
 
-		int append(const char* sz, size_t len = npos)
+		bool append(const char* sz, size_t len = npos)
 		{
 			if (sz && len)
 			{
 				node_t ptr;
-				int err = new_node(ptr,m_ptr);
-				if (err)
-					return err;
-
-				if ((err = ptr->append(sz,len)) != 0)
-					return err;
+				if (!new_node(ptr,m_ptr) || !ptr->append(sz,len))
+					return false;
 
 				m_ptr.swap(ptr);
 			}
-			return 0;
+			return true;
 		}
 
-		int append(const String& rhs)
+		bool append(const String& rhs)
 		{
 			if (!m_ptr)
 			{
 				m_ptr = rhs.m_ptr;
-				return 0;
+				return true;
 			}
 			return append(rhs.c_str(),rhs.length());
 		}
@@ -384,11 +379,11 @@ namespace OOBase
 		int vprintf(const char* format, va_list args)
 		{
 			node_t ptr;
-			int err = new_node(ptr,m_ptr);
-			if (err)
-				return err;
+			if (!new_node(ptr,m_ptr))
+				return ERROR_OUTOFMEMORY;
 
-			if ((err = ptr->vprintf(format,args)) != 0)
+			int err = ptr->vprintf(format,args);
+			if (err != 0)
 				return err;
 
 			m_ptr.swap(ptr);
@@ -399,11 +394,11 @@ namespace OOBase
 		int wchar_t_to_utf8(const wchar_t* wsz)
 		{
 			node_t ptr;
-			int err = new_node(ptr,m_ptr);
-			if (err)
-				return err;
+			if (!new_node(ptr,m_ptr))
+				return ERROR_OUTOFMEMORY;
 
-			if ((err = ptr->wchar_t_to_utf8(wsz)) != 0)
+			int err = ptr->wchar_t_to_utf8(wsz);
+			if (err != 0)
 				return err;
 
 			m_ptr.swap(ptr);
@@ -417,14 +412,14 @@ namespace OOBase
 			return allocate_shared<ScopedStringImpl<CrtAllocator>,CrtAllocator>();
 		}
 
-		int new_node(node_t& n, const node_t& rhs)
+		bool new_node(node_t& n, const node_t& rhs)
 		{
 			n = new_node();
 			if (!n)
-				return ERROR_OUTOFMEMORY;
+				return false;
 
 			if (!rhs)
-				return 0;
+				return true;
 
 			return n->assign(rhs->c_str(),rhs->length());
 		}

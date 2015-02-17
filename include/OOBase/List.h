@@ -78,25 +78,20 @@ namespace OOBase
 			return m_size;
 		}
 
-		template <typename T1>
-		iterator insert(const T1& value, const iterator& before, int& err)
+		iterator insert(const T& value, const iterator& before)
 		{
 			assert(before.check(this));
-			return iterator(this,insert_before(value,before.deref(),err));
+			return iterator(this,insert_before(value,before.deref()));
 		}
 
-		template <typename T1>
-		iterator push_back(const T1& value, int& err)
+		iterator push_back(const T& value)
 		{
-			return iterator(this,insert_tail(value,err));
+			return iterator(this,insert_tail(value));
 		}
 
-		template <typename T1>
-		int push_front(const T1& value)
+		bool push_front(const T& value)
 		{
-			int err = 0;
-			insert_head(value,err);
-			return err;
+			return insert_head(value) != NULL;
 		}
 
 		void remove_at(iterator& iter)
@@ -223,15 +218,11 @@ namespace OOBase
 			return r;
 		}
 
-		template <typename T1>
-		ListNode* insert_before(const T1& value, ListNode* before, int& err)
+		ListNode* insert_before(const T& value, ListNode* before)
 		{
 			ListNode* new_node = NULL;
 			if (!baseClass::allocate_new(new_node,before->m_prev,before,value))
-			{
-				err = ERROR_OUTOFMEMORY;
 				return NULL;
-			}
 
 			if (!before->m_prev)
 				m_head = new_node;
@@ -244,19 +235,15 @@ namespace OOBase
 			return new_node;
 		}
 
-		template <typename T1>
-		ListNode* insert_head(const T1& value, int& err)
+		ListNode* insert_head(const T& value)
 		{
 			if (m_head)
-				return insert_before(value,m_head,err);
+				return insert_before(value,m_head);
 
 			ListNode* null = NULL;
 			ListNode* new_node = NULL;
 			if (!baseClass::allocate_new(new_node,null,null,value))
-			{
-				err = ERROR_OUTOFMEMORY;
 				return NULL;
-			}
 
 			m_head = new_node;
 			m_tail = new_node;
@@ -265,19 +252,15 @@ namespace OOBase
 			return new_node;
 		}
 
-		template <typename T1>
-		ListNode* insert_tail(const T1& value, int& err)
+		ListNode* insert_tail(const T& value)
 		{
 			if (!m_tail)
-				return insert_head(value,err);
+				return insert_head(value);
 
 			ListNode* null = NULL;
 			ListNode* new_node = NULL;
 			if (!baseClass::allocate_new(new_node,m_tail,null,value))
-			{
-				err = ERROR_OUTOFMEMORY;
 				return NULL;
-			}
 
 			m_tail->m_next = new_node;
 			m_tail = new_node;

@@ -100,9 +100,9 @@ namespace OOBase
 			bool check_timers(TimerItem& active_timer, Timeout& timeout);
 			int process_timer(const TimerItem& active_timer);
 
-			virtual int do_bind_fd(int fd, void* param, fd_callback_t callback) = 0;
-			virtual int do_watch_fd(int fd, unsigned int events) = 0;
-			virtual int do_unbind_fd(int fd) = 0;
+			virtual bool do_bind_fd(int fd, void* param, fd_callback_t callback) = 0;
+			virtual bool do_watch_fd(int fd, unsigned int events) = 0;
+			virtual bool do_unbind_fd(int fd) = 0;
 
 			Mutex                 m_lock;
 			LockedAllocator<4096> m_allocator;
@@ -113,8 +113,8 @@ namespace OOBase
 			Set<TimerItem,Greater<TimerItem>,AllocatorInstance> m_timers;
 			int                                                 m_write_fd;
 
-			int add_timer(void* param, timer_callback_t callback, const Timeout& timeout);
-			int remove_timer(void* param);
+			bool add_timer(void* param, timer_callback_t callback, const Timeout& timeout);
+			bool remove_timer(void* param);
 			int watch_fd_i(int fd, unsigned int events, Future<int>* future);
 		};
 	}

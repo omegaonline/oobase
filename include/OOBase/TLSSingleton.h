@@ -29,7 +29,7 @@ namespace OOBase
 	namespace TLS
 	{
 		bool Get(const void* key, void** val);
-		int Set(const void* key, void* val, void (*destructor)(void*) = NULL);
+		bool Set(const void* key, void* val, void (*destructor)(void*) = NULL);
 		
 		void ThreadExit();
 

@@ -64,17 +64,17 @@ namespace
 	}
 }
 
-int OOBase::Environment::get_current(env_table_t& tabEnv)
+bool OOBase::Environment::get_current(env_table_t& tabEnv)
 {
 	wchar_t* env = GetEnvironmentStringsW();
 	if (!env)
-		return GetLastError();
+		return GetLastError() == ERROR_SUCCESS;
 
 	int err = process_block(env,tabEnv);
 
 	FreeEnvironmentStringsW(env);
 
-	return err;
+	return (err == ERROR_SUCCESS);
 }
 
 int OOBase::Environment::get_user(HANDLE hToken, env_table_t& tabEnv)
@@ -123,31 +123,29 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 
 			temp_wchar_t key = make_shared(static_cast<wchar_t*>(allocator.allocate(len+1,alignment_of<wchar_t>::value)),allocator);
 			if (!key)
-				err = ERROR_OUTOFMEMORY;
-			else
+				return ERROR_OUTOFMEMORY;
+
+			wcscpy(key.get(),ptr.get());
+
+			err = Win32::utf8_to_wchar_t(i->second.c_str(),ptr);
+			if (!err)
 			{
-				wcscpy(key.get(),ptr.get());
+				temp_wchar_t value;
 
-				err = Win32::utf8_to_wchar_t(i->second.c_str(),ptr);
-				if (!err)
+				len = wcslen(ptr.get());
+				if (len)
 				{
-					temp_wchar_t value;
+					total_size += len + 1;
 
-					len = wcslen(ptr.get());
-					if (len)
-					{
-						total_size += len + 1;
+					value = make_shared(static_cast<wchar_t*>(allocator.allocate(len+1,alignment_of<wchar_t>::value)),allocator);
+					if (!value)
+						return ERROR_OUTOFMEMORY;
 
-						value = make_shared(static_cast<wchar_t*>(allocator.allocate(len+1,alignment_of<wchar_t>::value)),allocator);
-						if (!value)
-							err = ERROR_OUTOFMEMORY;
-						else
-							wcscpy(value.get(),ptr.get());
-					}
-
-					if (!err)
-						err = wenv.insert(key,value);
+					wcscpy(value.get(),ptr.get());
 				}
+
+				if (!wenv.insert(key,value))
+					return ERROR_OUTOFMEMORY;
 			}
 		}
 		
@@ -186,7 +184,7 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 	return 0;
 }
 
-int OOBase::Environment::getenv(const char* envvar, String& strValue)
+bool OOBase::Environment::getenv(const char* envvar, String& strValue)
 {
 	ScopedArrayPtr<wchar_t> wenvvar;
 	ScopedArrayPtr<wchar_t> wenv;
@@ -195,7 +193,7 @@ int OOBase::Environment::getenv(const char* envvar, String& strValue)
 	for (DWORD dwLen = 128;!err;)
 	{
 		if (!wenv.reallocate(dwLen))
-			return ERROR_OUTOFMEMORY;
+			return false;
 
 		DWORD dwActualLen = GetEnvironmentVariableW(wenvvar.get(),wenv.get(),dwLen);
 		if (dwActualLen < dwLen)
@@ -215,19 +213,18 @@ int OOBase::Environment::getenv(const char* envvar, String& strValue)
 		dwLen = dwActualLen;
 	}
 	
-	return err;
+	return err == 0;
 }
 		
 #elif defined(HAVE_UNISTD_H)
 
-int OOBase::Environment::get_current(env_table_t& tabEnv)
+bool OOBase::Environment::get_current(env_table_t& tabEnv)
 {
 	for (const char** env = (const char**)environ;*env != NULL;++env)
 	{
 		String str;
-		int err = str.assign(*env);
-		if (err)
-			return err;
+		if (!str.assign(*env))
+			return false;
 
 		size_t eq = str.find('=');
 		if (eq == String::npos)
@@ -235,38 +232,34 @@ int OOBase::Environment::get_current(env_table_t& tabEnv)
 			if (tabEnv.exists(str))
 				continue;
 
-			err = tabEnv.insert(String(),str);
+			if (!tabEnv.insert(String(),str))
+				return false;
 		}
 		else
 		{
 			String strK,strV;
-			err = strK.assign(str.c_str(),eq);
-			if (err)
-				return err;
+			if (!strK.assign(str.c_str(),eq))
+				return false;
 
 			if (tabEnv.exists(strK))
 				continue;
 
-			err = strV.assign(str.c_str()+eq+1);
-			if (!err)
-				err = tabEnv.insert(strK,strV);
+			if (!strV.assign(str.c_str()+eq+1) || !tabEnv.insert(strK,strV))
+				return false;
 		}
-
-		if (err)
-			return err;
 	}
 
-	return 0;
+	return true;
 }
 
-int OOBase::Environment::getenv(const char* envvar, String& strValue)
+bool OOBase::Environment::getenv(const char* envvar, String& strValue)
 {
 	return strValue.assign(::getenv(envvar));
 }
 
 #endif
 
-int OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tabSrc)
+bool OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tabSrc)
 {
 	// This might be full of bugs!!
 
@@ -285,29 +278,26 @@ int OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tabS
 				break;
 
 			String strPrefix,strSuffix,strParam;
-			int err = strPrefix.assign(i->second.c_str(),start);
-			if (!err)
-				err = strSuffix.assign(i->second.c_str()+end+1);
-			if (!err)
-				err = strParam.assign(i->second.c_str()+start+2,end-start-2);
-			if (err)
-				return err;
+			if (!strPrefix.assign(i->second.c_str(),start) ||
+					!strSuffix.assign(i->second.c_str()+end+1) ||
+					!strParam.assign(i->second.c_str()+start+2,end-start-2))
+			{
+				return false;
+			}
 
 			i->second = strPrefix;
 
 			env_table_t::const_iterator j = tabSrc.find(strParam);
 			if (j != tabSrc.end())
 			{
-				err = i->second.append(j->second);
-				if (err)
-					return err;
+				if (!i->second.append(j->second))
+					return false;
 			}
 
 			offset = i->second.length();
 
-			err = i->second.append(strSuffix);
-			if (err)
-				return err;
+			if (!i->second.append(strSuffix))
+				return false;
 		}
 	}
 
@@ -316,19 +306,18 @@ int OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tabS
 	{
 		if (!tabEnv.exists(i->first))
 		{
-			int err = tabEnv.insert(*i);
-			if (err)
-				return err;
+			if (!tabEnv.insert(*i))
+				return false;
 		}
 	}
 
-	return 0;
+	return true;
 }
 
-int OOBase::Environment::get_envp(const env_table_t& tabEnv, SharedPtr<char*>& ptr)
+bool OOBase::Environment::get_envp(const env_table_t& tabEnv, SharedPtr<char*>& ptr)
 {
 	if (tabEnv.empty())
-		return 0;
+		return true;
 
 	// We cheat here and allocate the strings and the array in one block.
 
@@ -339,7 +328,7 @@ int OOBase::Environment::get_envp(const env_table_t& tabEnv, SharedPtr<char*>& p
 
 	ptr = make_shared<char*,CrtAllocator>(static_cast<char**>(CrtAllocator::allocate(len,16)));
 	if (!ptr)
-		return ERROR_OUTOFMEMORY;
+		return false;
 
 	char** envp = ptr.get();
 	char* char_data = reinterpret_cast<char*>(envp) + ((tabEnv.size()+1) * sizeof(char*));
@@ -359,5 +348,5 @@ int OOBase::Environment::get_envp(const env_table_t& tabEnv, SharedPtr<char*>& p
 	// Add terminating NULL
 	*envp = NULL;
 
-	return 0;
+	return true;
 }

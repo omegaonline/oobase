@@ -238,7 +238,7 @@ int OOBase::detail::ProactorPosix::bind_fd(int fd, void* param, fd_callback_t ca
 {
 	Guard<Mutex> guard(m_lock,false);
 	if (guard.try_acquire())
-		return do_bind_fd(fd,param,callback);
+		return do_bind_fd(fd,param,callback) ? 0 : ERROR_OUTOFMEMORY;
 
 	Future<int> future;
 
@@ -263,7 +263,7 @@ int OOBase::detail::ProactorPosix::watch_fd(int fd, unsigned int events)
 {
 	Guard<Mutex> guard(m_lock,false);
 	if (guard.try_acquire())
-		return do_watch_fd(fd,events);
+		return do_watch_fd(fd,events) ? 0 : ERROR_OUTOFMEMORY;
 
 	ControlMessage msg;
 	memset(&msg,0,sizeof(msg));
@@ -285,7 +285,7 @@ int OOBase::detail::ProactorPosix::unbind_fd(int fd)
 {
 	Guard<Mutex> guard(m_lock,false);
 	if (guard.try_acquire())
-		return do_unbind_fd(fd);
+		return do_unbind_fd(fd) ? 0 : ERROR_OUTOFMEMORY;
 
 	Future<int> future;
 
@@ -304,7 +304,7 @@ int OOBase::detail::ProactorPosix::unbind_fd(int fd)
 	return future.wait(false);
 }
 
-int OOBase::detail::ProactorPosix::add_timer(void* param, timer_callback_t callback, const Timeout& timeout)
+bool OOBase::detail::ProactorPosix::add_timer(void* param, timer_callback_t callback, const Timeout& timeout)
 {
 	TimerItem ti;
 	ti.m_param = param;
@@ -313,17 +313,17 @@ int OOBase::detail::ProactorPosix::add_timer(void* param, timer_callback_t callb
 	return m_timers.insert(ti);
 }
 
-int OOBase::detail::ProactorPosix::remove_timer(void* param)
+bool OOBase::detail::ProactorPosix::remove_timer(void* param)
 {
 	for (Set<TimerItem,Greater<TimerItem>,AllocatorInstance>::iterator i = m_timers.begin(); i != m_timers.end(); ++i)
 	{
 		if (i->m_param == param)
 		{
 			m_timers.erase(i);
-			return 0;
+			return true;
 		}
 	}
-	return ENOENT;
+	return false;
 }
 
 int OOBase::detail::ProactorPosix::read_control()

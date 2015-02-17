@@ -58,7 +58,7 @@ namespace
 		const char* src() const { return m_pszSrcFile; }
 		void set_src(const char* pszSrcFile) { m_pszSrcFile = pszSrcFile; }
 
-		int connect(void (*callback)(void* param, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg), void* param);
+		bool connect(void (*callback)(void* param, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg), void* param);
 		bool disconnect(void (*callback)(void* param, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg), void* param);
 
 		void swap(Logger& rhs)
@@ -142,7 +142,7 @@ void Logger::init()
 	Logger().swap(s_instance);
 }
 
-int Logger::connect(void (*callback)(void* param, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg), void* param)
+bool Logger::connect(void (*callback)(void* param, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg), void* param)
 {
 	OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
@@ -172,7 +172,7 @@ void OOBase::Logger::set_source_file(const char* pszSrcFile)
 	LoggerInstance().set_src(pszSrcFile);
 }
 
-int OOBase::Logger::connect(void (*callback)(void* param, const ::timeval& t, Priority priority, const char* msg), void* param)
+bool OOBase::Logger::connect(void (*callback)(void* param, const ::timeval& t, Priority priority, const char* msg), void* param)
 {
 	return LoggerInstance().connect(callback,param);
 }
@@ -422,22 +422,22 @@ int OOBase::Logger::connect_system_log(const char* name, const char*)
 	if (!hLog)
 		return GetLastError();
 
-	return Logger::connect(&onSysLog,hLog);
+	return Logger::connect(&onSysLog,hLog) ? 0 : ERROR_OUTOFMEMORY;
 }
 
-int OOBase::Logger::connect_debug_log()
+bool OOBase::Logger::connect_debug_log()
 {
 	return Logger::connect(&onDebug,NULL);
 }
 
-int OOBase::Logger::connect_stdout_log(Priority min, Priority max)
+bool OOBase::Logger::connect_stdout_log(Priority min, Priority max)
 {
 	uintptr_t mask = (uintptr_t(min) << 8) | max;
 
 	return Logger::connect(&onStdout,reinterpret_cast<void*>(mask));
 }
 
-int OOBase::Logger::connect_stderr_log(Priority min, Priority max)
+bool OOBase::Logger::connect_stderr_log(Priority min, Priority max)
 {
 	uintptr_t mask = (uintptr_t(min) << 8) | max;
 
@@ -513,7 +513,7 @@ int OOBase::Logger::connect_system_log(const char* name, const char* category)
 	}
 	openlog(name,LOG_NDELAY,id | LOG_CONS | LOG_PID);
 
-	return Logger::connect(&onSysLog,NULL);
+	return Logger::connect(&onSysLog,NULL) ? 0 : ERROR_OUTOFMEMORY;
 }
 
 #endif // defined(HAVE_SYSLOG_H)
@@ -594,7 +594,7 @@ namespace
 	}
 }
 
-int OOBase::Logger::connect_stdout_log(Priority min, Priority max)
+bool OOBase::Logger::connect_stdout_log(Priority min, Priority max)
 {
 	uintptr_t use_colour = (((::getenv("TERM") != NULL) && (isatty(STDERR_FILENO) == 1)) ? 0x10000 : 0);
 	uintptr_t mask = use_colour | (uintptr_t(min) << 8) | max;
@@ -602,7 +602,7 @@ int OOBase::Logger::connect_stdout_log(Priority min, Priority max)
 	return Logger::connect(&onStdout,reinterpret_cast<void*>(mask));
 }
 
-int OOBase::Logger::connect_stderr_log(Priority min, Priority max)
+bool OOBase::Logger::connect_stderr_log(Priority min, Priority max)
 {
 	uintptr_t use_colour = (((::getenv("TERM") != NULL) && (isatty(STDERR_FILENO) == 1)) ? 0x10000 : 0);
 	uintptr_t mask = use_colour | (uintptr_t(min) << 8) | max;
@@ -610,9 +610,9 @@ int OOBase::Logger::connect_stderr_log(Priority min, Priority max)
 	return Logger::connect(&onStderr,reinterpret_cast<void*>(mask));
 }
 
-int OOBase::Logger::connect_debug_log()
+bool OOBase::Logger::connect_debug_log()
 {
-	return 0;
+	return true;
 }
 
 #endif

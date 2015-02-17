@@ -32,11 +32,11 @@ namespace OOBase
 	{
 		typedef Table<String,String> env_table_t;
 
-		int get_current(env_table_t& tabEnv);
-		int substitute(env_table_t& tabEnv, const env_table_t& tabSrc);
+		bool get_current(env_table_t& tabEnv);
+		bool substitute(env_table_t& tabEnv, const env_table_t& tabSrc);
 
-		int get_envp(const env_table_t& tabEnv, SharedPtr<char*>& envp);
-		int getenv(const char* envvar, String& strVal);
+		bool get_envp(const env_table_t& tabEnv, SharedPtr<char*>& envp);
+		bool getenv(const char* envvar, String& strVal);
 
 #if defined(_WIN32)
 		int get_user(HANDLE hToken, env_table_t& tabEnv);

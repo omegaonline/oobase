@@ -130,7 +130,7 @@ namespace OOBase
 
 		protected:
 #if defined(OOBASE_HAVE_EXCEPTIONS)
-			int assign(size_t n, const T& value = T())
+			bool assign(size_t n, const T& value = T())
 			{
 				T* new_data = NULL;
 				size_t capacity = 0;
@@ -139,7 +139,7 @@ namespace OOBase
 					capacity = (n/2 + 1) * 2;
 					new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
-						return ERROR_OUTOFMEMORY;
+						return false;
 
 					size_t i = 0;
 					try
@@ -164,17 +164,17 @@ namespace OOBase
 				this->m_data = new_data;
 				this->m_size = n;
 				this->m_capacity = capacity;
-				return 0;
+				return true;
 			}
 
-			int reserve(size_t n)
+			bool reserve(size_t n)
 			{
 				if (n > this->m_capacity)
 				{
 					size_t capacity = (n/2 + 1) * 2;
 					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
-						return ERROR_OUTOFMEMORY;
+						return false;
 
 					size_t i = 0;
 					try
@@ -198,10 +198,10 @@ namespace OOBase
 					this->m_data = new_data;
 					this->m_capacity = capacity;
 				}
-				return 0;
+				return true;
 			}
 
-			int insert_at(size_t pos, const T& value)
+			bool insert_at(size_t pos, const T& value)
 			{
 				if (pos > this->m_size)
 					pos = this->m_size;
@@ -215,7 +215,7 @@ namespace OOBase
 
 					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
-						return ERROR_OUTOFMEMORY;
+						return false;
 
 					size_t i = 0;
 					try
@@ -252,10 +252,10 @@ namespace OOBase
 				}
 
 				++this->m_size;
-				return 0;
+				return true;
 			}
 #else
-			int assign(size_t n, const T& value = T())
+			bool assign(size_t n, const T& value = T())
 			{
 				T* new_data = NULL;
 				size_t capacity = 0;
@@ -264,7 +264,7 @@ namespace OOBase
 					capacity = (n/2 + 1) * 2;
 					new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
-						return ERROR_OUTOFMEMORY;
+						return false;
 
 					for (size_t i=0;i<this->m_size;++i)
 						::new (&new_data[i]) T(value);
@@ -277,17 +277,17 @@ namespace OOBase
 				this->m_data = new_data;
 				this->m_size = n;
 				this->m_capacity = capacity;
-				return 0;
+				return true;
 			}
 
-			int reserve(size_t n)
+			bool reserve(size_t n)
 			{
 				if (n > this->m_capacity)
 				{
 					size_t capacity = (n/2 + 1) * 2;
 					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
-						return ERROR_OUTOFMEMORY;
+						return false;
 
 					for (size_t i = 0;i<this->m_size;++i)
 					{
@@ -299,10 +299,10 @@ namespace OOBase
 					this->m_data = new_data;
 					this->m_capacity = capacity;
 				}
-				return 0;
+				return true;
 			}
 
-			int insert_at(size_t pos, const T& value)
+			bool insert_at(size_t pos, const T& value)
 			{
 				if (pos > this->m_size)
 					pos = this->m_size;
@@ -312,7 +312,7 @@ namespace OOBase
 					size_t capacity = (this->m_capacity == 0 ? 2 : this->m_capacity*2);
 					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
-						return ERROR_OUTOFMEMORY;
+						return false;
 
 					for (size_t i = 0;i<this->m_size;++i)
 					{
@@ -335,7 +335,7 @@ namespace OOBase
 				}
 
 				++this->m_size;
-				return 0;
+				return true;
 			}
 #endif
 			size_t remove_at(size_t pos, size_t len)
@@ -373,7 +373,7 @@ namespace OOBase
 			{}
 
 		protected:
-			int assign(size_t n, const T& value = T())
+			bool assign(size_t n, const T& value = T())
 			{
 				T* new_data = NULL;
 				size_t capacity = 0;
@@ -382,7 +382,7 @@ namespace OOBase
 					capacity = (n/2 + 1) * 2;
 					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
-						return ERROR_OUTOFMEMORY;
+						return false;
 
 					for (size_t i=0; i<this->m_size; ++i)
 						new_data[i] = value;
@@ -391,17 +391,17 @@ namespace OOBase
 				this->m_data = new_data;
 				this->m_size = n;
 				this->m_capacity = capacity;
-				return 0;
+				return true;
 			}
 
-			int reserve(size_t n)
+			bool reserve(size_t n)
 			{
 				if (n > this->m_capacity)
 				{
 					size_t capacity = (n/2 + 1) * 2;
 					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
-						return ERROR_OUTOFMEMORY;
+						return false;
 
 					memcpy(new_data,this->m_data,this->m_size * sizeof(T));
 
@@ -409,10 +409,10 @@ namespace OOBase
 					this->m_data = new_data;
 					this->m_capacity = capacity;
 				}
-				return 0;
+				return true;
 			}
 
-			int insert_at(size_t pos, const T& value)
+			bool insert_at(size_t pos, const T& value)
 			{
 				if (pos > this->m_size)
 					pos = this->m_size;
@@ -423,7 +423,7 @@ namespace OOBase
 
 					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
-						return ERROR_OUTOFMEMORY;
+						return false;
 
 					if (pos > 0)
 						memcpy(new_data,this->m_data,pos * sizeof(T));
@@ -445,7 +445,7 @@ namespace OOBase
 					this->m_data[pos] = value;
 				}
 				++this->m_size;
-				return 0;
+				return true;
 			}
 
 			size_t remove_at(size_t pos, size_t len)
@@ -482,9 +482,8 @@ namespace OOBase
 				baseClass::clear();
 				for (size_t i=0;i<rhs.m_size;++i)
 				{
-					int err = push_back(rhs.m_data[i]);
-					if (err)
-						OOBase_CallCriticalFailure(err);
+					if (!push_back(rhs.m_data[i]))
+						OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 				}
 			}
 
@@ -499,18 +498,17 @@ namespace OOBase
 			typedef typename add_const<T*>::type const_pointer;
 
 			template <typename It>
-			int assign(It first, It last)
+			bool assign(It first, It last)
 			{
 				assert(last >= first);
 				baseClass::clear();
 				baseClass::reserve(last - first);
 				for (It i = first; i != last; ++i)
 				{
-					int err = push_back(*i);
-					if (err)
-						return err;
+					if (!push_back(*i))
+						return false;
 				}
-				return 0;
+				return true;
 			}
 
 			T* data()
@@ -547,7 +545,7 @@ namespace OOBase
 				return *baseClass::at(this->m_size-1);
 			}
 
-			int push_back(const T& value)
+			bool push_back(const T& value)
 			{
 				return baseClass::insert_at(this->m_size,value);
 			}
@@ -586,17 +584,17 @@ namespace OOBase
 		{}
 
 		template <typename It>
-		int assign(It first, It last)
+		bool assign(It first, It last)
 		{
 			return baseClass::assign(first,last);
 		}
 
-		int assign(size_t n, const T& value = T())
+		bool assign(size_t n, const T& value = T())
 		{
 			return baseClass::assign(n,value);
 		}
 
-		int reserve(size_t n)
+		bool reserve(size_t n)
 		{
 			return baseClass::reserve(n);
 		}
@@ -631,25 +629,22 @@ namespace OOBase
 			return baseClass::back();
 		}
 
-		int resize(size_t new_size, const T& value)
+		bool resize(size_t new_size, const T& value)
 		{
-			int err = reserve(new_size);
-			if (err)
-				return err;
-
-			while (this->m_size < new_size && !err)
-				err = baseClass::push_back(value);
-			while (this->m_size > new_size && !err)
-				err = baseClass::pop_back();
-			return err;
+			bool ret = reserve(new_size);
+			while (this->m_size < new_size && ret)
+				ret = baseClass::push_back(value);
+			while (this->m_size > new_size && ret)
+				ret = baseClass::pop_back();
+			return ret;
 		}
 
-		int resize(size_t new_size)
+		bool resize(size_t new_size)
 		{
 			return resize(new_size,T());
 		}
 
-		int push_back(const T& value)
+		bool push_back(const T& value)
 		{
 			return baseClass::push_back(value);
 		}
@@ -659,13 +654,13 @@ namespace OOBase
 			return baseClass::pop_back();
 		}
 
-		int insert(const T& value, const iterator& before)
+		bool insert(const T& value, const iterator& before)
 		{
 			assert(before.check(this));
 			return baseClass::insert_at(before.deref(),value);
 		}
 
-		iterator insert(const T& value, const iterator& before, int& err)
+		iterator insert(const T& value, const iterator& before, bool& err)
 		{
 			err = baseClass::insert_at(before.deref(),value);
 			return (!err ? before : end());

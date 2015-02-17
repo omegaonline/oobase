@@ -132,7 +132,7 @@ namespace OOBase
 			}
 
 		private:
-			static const size_t get_size();
+			static size_t get_size();
 
 			struct passwd*    m_pwd;
 			struct passwd     m_pwd2;

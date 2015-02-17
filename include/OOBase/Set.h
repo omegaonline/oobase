@@ -70,19 +70,17 @@ namespace OOBase
 		}
 
 		template <typename It>
-		int insert(It first, It last)
+		bool insert(It first, It last)
 		{
-			int err = 0;
 			for (It i = first; i != last; ++i)
 			{
-				if ((err = insert(*i)) != 0)
-					break;
+				if (!insert(*i))
+					return false;
 			}
-			return err;
+			return true;
 		}
 
-		template <typename T1>
-		int insert(const T1& value)
+		bool insert(const T& value)
 		{
 			size_t start = 0;
 			for (size_t end = this->m_size;start < end;)

@@ -43,14 +43,14 @@ namespace OOBase
 			Debug = 0
 		};
 
-		int connect_stdout_log(Priority min = Debug, Priority max = Information);
-		int connect_stderr_log(Priority min = Warning, Priority max = Error);
-		int connect_debug_log();
+		bool connect_stdout_log(Priority min = Debug, Priority max = Information);
+		bool connect_stderr_log(Priority min = Warning, Priority max = Error);
+		bool connect_debug_log();
 		int connect_system_log(const char* name, const char* category);
 
 		void set_source_file(const char* pszSrcFile);
 
-		int connect(void (*callback)(void* param, const ::timeval& t, Priority priority, const char* msg), void* param);
+		bool connect(void (*callback)(void* param, const ::timeval& t, Priority priority, const char* msg), void* param);
 		bool disconnect(void (*callback)(void* param, const ::timeval& t, Priority priority, const char* msg), void* param);
 
 		void log(Priority priority, const char* fmt, ...) OOBASE_FORMAT(printf,2,3);

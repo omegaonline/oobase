@@ -52,7 +52,7 @@ namespace OOBase
 		int parse_long_option(results_t& results, const char** argv, int& arg, int argc) const;
 		int parse_short_options(results_t& results, const char** argv, int& arg, int argc) const;
 		int parse_arg(results_t& results, const char* opt, unsigned int position) const;
-		int error(results_t& results, int err, const char* key, const char* value) const;
+		bool error(results_t& results, int err, const char* key, const char* value) const;
 	};
 }
 

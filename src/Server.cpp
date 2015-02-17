@@ -267,21 +267,19 @@ namespace
 			if (!cwd)
 				return errno;
 
-			err = strPidFile.assign(cwd);
+			if (!strPidFile.assign(cwd))
+				err = ERROR_OUTOFMEMORY;
 
 			::free(cwd);
 
-			if (!err)
-			{
-				if (strPidFile[strPidFile.length()-1] != '/')
-					err = strPidFile.append("/",1);
-			}
+			if (!err && strPidFile[strPidFile.length()-1] != '/' && !strPidFile.append("/",1))
+				err = ERROR_OUTOFMEMORY;
 
-			if (!err)
-				err = strPidFile.append(pszPidFile);
+			if (!err && !strPidFile.append(pszPidFile))
+				err = ERROR_OUTOFMEMORY;
 		}
-		else
-			err = strPidFile.assign(pszPidFile);
+		else if (!strPidFile.assign(pszPidFile))
+			err = ERROR_OUTOFMEMORY;
 
 		return err;
 	}

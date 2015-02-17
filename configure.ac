@@ -43,7 +43,7 @@ AS_CASE([$host_os],
 AS_IF([test "x$oo_test_CFLAGS" != "xset"],
 [
   AS_IF([test "x$debug" = "xtrue"],[
-    AX_APPEND_COMPILE_FLAGS([-ggdb -O0],[CFLAGS])
+    AX_APPEND_COMPILE_FLAGS([-ggdb -O0 -Wall],[CFLAGS])
   ],[
     AX_APPEND_COMPILE_FLAGS([-O2],[CFLAGS])
   ])
@@ -57,7 +57,7 @@ AS_IF([test "x$oo_test_CFLAGS" != "xset"],
 AS_IF([test "x$oo_test_CXXFLAGS" != "xset"],
 [
   AS_IF([test "x$debug" = "xtrue"],[
-  	AX_APPEND_COMPILE_FLAGS([-ggdb -O0],[CXXFLAGS])
+  	AX_APPEND_COMPILE_FLAGS([-ggdb -O0 -Wall],[CXXFLAGS])
   ],[
     AX_APPEND_COMPILE_FLAGS([-O2],[CXXFLAGS])
   ])

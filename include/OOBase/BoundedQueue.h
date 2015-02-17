@@ -46,7 +46,7 @@ namespace OOBase
 				m_waiters(0),
 				m_closed(false),
 				m_pulsed(false),
-				m_last_error(0)
+				m_errored(false)
 		{}
 
 		~BoundedQueue()
@@ -54,16 +54,16 @@ namespace OOBase
 			close();
 		}
 
-		int last_error() const
+		bool errored() const
 		{
-			return m_last_error;
+			return m_errored;
 		}
 
 		Result push(const T& val, const Timeout& timeout = Timeout())
 		{
 			Guard<Condition::Mutex> guard(m_lock);
 
-			if (m_last_error != 0)
+			if (m_errored)
 				return error;
 
 			if (m_closed)
@@ -78,9 +78,11 @@ namespace OOBase
 					return closed;
 			}
 
-			m_last_error = m_queue.push(val);
-			if (m_last_error != 0)
+			if (!m_queue.push(val))
+			{
+				m_errored = true;
 				return error;
+			}
 			
 			m_available.signal();
 
@@ -91,7 +93,7 @@ namespace OOBase
 		{
 			Guard<Condition::Mutex> guard(m_lock);
 
-			if (m_last_error != 0)
+			if (m_errored)
 				return error;
 
 			for (;;)
@@ -106,7 +108,7 @@ namespace OOBase
 					return pulsed;
 
 				if (m_closed)
-					return closed;
+					break;
 
 				++m_waiters;
 
@@ -118,6 +120,8 @@ namespace OOBase
 
 				--m_waiters;
 			}
+
+			return closed;
 		}
 
 		void close()
@@ -161,7 +165,7 @@ namespace OOBase
 		size_t           m_waiters;
 		bool             m_closed;
 		bool             m_pulsed;
-		int              m_last_error;
+		bool             m_errored;
 		Condition::Mutex m_lock;
 		Condition        m_available;
 		Condition        m_space;

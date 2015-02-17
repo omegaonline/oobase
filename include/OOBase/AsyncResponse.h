@@ -60,55 +60,55 @@ namespace OOBase
 		}
 
 		template <typename T>
-		int add_response(T* pThis, bool (T::*callback)(OOBase::CDRStream&), H& handle)
+		bool add_response(T* pThis, bool (T::*callback)(OOBase::CDRStream&), H& handle)
 		{
 			Delegate0<T>* d = NULL;
 			if (!baseClass::allocate_new(d,pThis,callback))
-				return ERROR_OUTOFMEMORY;
+				return false;
 
-			int err = add_response(d,handle);
-			if (err)
+			bool ret = add_response(d,handle);
+			if (!ret)
 				baseClass::delete_free(d);
-			return err;
+			return ret;
 		}
 
 		template <typename T, typename P1, typename PP1>
-		int add_response(T* pThis, bool (T::*callback)(OOBase::CDRStream&, P1 p1), PP1 p1, H& handle)
+		bool add_response(T* pThis, bool (T::*callback)(OOBase::CDRStream&, P1 p1), PP1 p1, H& handle)
 		{
 			Delegate1<T,P1,PP1>* d = NULL;
 			if (!baseClass::allocate_new(d,pThis,callback,p1))
-				return ERROR_OUTOFMEMORY;
+				return false;
 
-			int err = add_response(d,handle);
-			if (err)
+			bool ret = add_response(d,handle);
+			if (!ret)
 				baseClass::delete_free(d);
-			return err;
+			return ret;
 		}
 
 		template <typename T, typename P1, typename P2, typename PP1, typename PP2>
-		int add_response(T* pThis, bool (T::*callback)(OOBase::CDRStream&, P1 p1, P2 p2), PP1 p1, PP2 p2, H& handle)
+		bool add_response(T* pThis, bool (T::*callback)(OOBase::CDRStream&, P1 p1, P2 p2), PP1 p1, PP2 p2, H& handle)
 		{
 			Delegate2<T,P1,P2,PP1,PP2>* d = NULL;
 			if (!baseClass::allocate_new(d,pThis,callback,p1,p2))
-				return ERROR_OUTOFMEMORY;
+				return false;
 
-			int err = add_response(d,handle);
-			if (err)
+			bool ret = add_response(d,handle);
+			if (!ret)
 				baseClass::delete_free(d);
-			return err;
+			return ret;
 		}
 
 		template <typename T, typename P1, typename P2, typename P3, typename PP1, typename PP2, typename PP3>
-		int add_response(T* pThis, bool (T::*callback)(OOBase::CDRStream&, P1 p1, P2 p2, P3 p3), PP1 p1, PP2 p2, PP3 p3, H& handle)
+		bool add_response(T* pThis, bool (T::*callback)(OOBase::CDRStream&, P1 p1, P2 p2, P3 p3), PP1 p1, PP2 p2, PP3 p3, H& handle)
 		{
 			Delegate3<T,P1,P2,P3,PP1,PP2,PP3>* d = NULL;
 			if (!baseClass::allocate_new(d,pThis,callback,p1,p2,p3))
-				return ERROR_OUTOFMEMORY;
+				return false;
 
-			int err = add_response(d,handle);
-			if (err)
+			bool ret = add_response(d,handle);
+			if (!ret)
 				baseClass::delete_free(d);
-			return err;
+			return ret;
 		}
 
 		void drop_response(H handle)
@@ -293,7 +293,7 @@ namespace OOBase
 		OOBase::SpinLock                    m_lock;
 		HandleTable<H,DelegateV*,Allocator> m_response_table;
 
-		int add_response(DelegateV* delegate, H& handle)
+		bool add_response(DelegateV* delegate, H& handle)
 		{
 			OOBase::Guard<OOBase::SpinLock> guard(m_lock);
 

@@ -34,14 +34,12 @@ namespace OOBase
 	public:
 		typedef void (*pfn_destructor)(void*);
 
-		static int add_destructor(pfn_destructor pfn, void* p)
+		static bool add_destructor(pfn_destructor pfn, void* p)
 		{
 			DLLDestructor& inst = instance();
 			Guard<SpinLock> guard(inst.m_lock);
 
-			int err = 0;
-			inst.m_stack.push_back(Node(pfn,p),err);
-			return err;
+			return inst.m_stack.push_back(Node(pfn,p)) != inst.m_stack.end();
 		}
 
 		static void remove_destructor(pfn_destructor pfn, void* p)

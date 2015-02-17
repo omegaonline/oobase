@@ -74,7 +74,7 @@ namespace OOBase
 		pthread_t m_thread;
 		Event     m_finished;
 
-		static const pthread_t pthread_t_def()
+		static pthread_t pthread_t_def()
 		{
 			static const pthread_t t = {0};
 			return t;

@@ -321,7 +321,7 @@ OOBase::POSIX::pw_info::pw_info(const char* uname) : m_pwd(NULL)
 		errno = err;
 }
 
-const size_t OOBase::POSIX::pw_info::get_size()
+size_t OOBase::POSIX::pw_info::get_size()
 {
 	// _SC_GETPW_R_SIZE_MAX is defined on Mac OS X. However,
 	// sysconf(_SC_GETPW_R_SIZE_MAX) returns an error. Therefore, the

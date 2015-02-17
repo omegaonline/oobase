@@ -74,12 +74,12 @@ namespace OOBase
 				::new (p) T(v);
 			}
 
-			int grow()
+			bool grow()
 			{
 				size_t new_size = (m_capacity == 0 ? 8 : m_capacity * 2);
 				T* new_data = static_cast<T*>(baseClass::allocate(new_size*sizeof(T),alignment_of<T>::value));
 				if (!new_data)
-					return ERROR_OUTOFMEMORY;
+					return false;
 
 				// Now copy the contents of m_data into new_data
 				size_t new_back = 0;
@@ -116,7 +116,7 @@ namespace OOBase
 				m_front = 0;
 				m_back = new_back;
 
-				return 0;
+				return true;
 			}
 		};
 
@@ -163,16 +163,16 @@ namespace OOBase
 				*p = v;
 			}
 
-			int grow()
+			bool grow()
 			{
 				size_t new_size = (m_capacity == 0 ? 8 : m_capacity * 2);
 				T* new_data = static_cast<T*>(baseClass::reallocate(m_data,new_size*sizeof(T),alignment_of<T>::value));
 				if (!new_data)
-					return ERROR_OUTOFMEMORY;
+					return false;
 				
 				m_capacity = new_size;
 				m_data = new_data;
-				return 0;
+				return true;
 			}
 		};
 	}
@@ -189,19 +189,18 @@ namespace OOBase
 		Queue(AllocatorInstance& allocator) : baseClass(allocator)
 		{}
 		
-		int push(const T& val)
+		bool push(const T& val)
 		{
 			if (this->m_capacity == 0 || size() == (this->m_capacity - 1))
 			{
-				int err = baseClass::grow();
-				if (err != 0)
-					return err;
+				if (!baseClass::grow())
+					return false;
 			}
 
 			baseClass::copy_to(&this->m_data[this->m_back],val);
 
 			this->m_back = (this->m_back + 1) % this->m_capacity;
-			return 0;
+			return true;
 		}
 
 		T* front()

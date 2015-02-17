@@ -371,6 +371,18 @@ namespace OOBase
 		Allocating()
 		{}
 
+		Allocating(const Allocating& rhs)
+		{}
+
+		Allocating& operator = (const Allocating& rhs)
+		{
+			Allocating(rhs).swap(*this);
+			return *this;
+		}
+
+		void swap(Allocating& rhs)
+		{}
+
 		static void* allocate(size_t bytes, size_t align)
 		{
 			return Allocator::allocate(bytes,align);
@@ -414,9 +426,15 @@ namespace OOBase
 
 		Allocating& operator = (const Allocating& rhs)
 		{
-			if (&rhs != this)
-				 m_allocator = rhs.m_allocator;
+			Allocating(rhs).swap(*this);
 			return *this;
+		}
+
+		void swap(Allocating& rhs)
+		{
+			AllocatorInstance& t = m_allocator;
+			m_allocator = rhs.m_allocator;
+			rhs.m_allocator = t;
 		}
 
 		void* allocate(size_t bytes, size_t align)

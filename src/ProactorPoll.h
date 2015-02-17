@@ -64,9 +64,9 @@ namespace OOBase
 			OOBase::Vector<pollfd,AllocatorInstance>        m_poll_fds;
 			OOBase::HashTable<int,FdItem,AllocatorInstance> m_items;
 
-			int do_bind_fd(int fd, void* param, fd_callback_t callback);
-			int do_unbind_fd(int fd);
-			int do_watch_fd(int fd, unsigned int events);
+			bool do_bind_fd(int fd, void* param, fd_callback_t callback);
+			bool do_unbind_fd(int fd);
+			bool do_watch_fd(int fd, unsigned int events);
 
 			bool update_fds(FdEvent& active_fd, int poll_count, int& err);
 		};

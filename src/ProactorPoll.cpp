@@ -77,20 +77,20 @@ int OOBase::detail::ProactorPoll::init()
 
 	// Add the control pipe to m_poll_fds
 	pollfd pfd = { m_read_fd, POLLIN | POLLRDHUP, 0 };
-	return m_poll_fds.push_back(pfd);
+	return m_poll_fds.push_back(pfd) ? 0 : ERROR_OUTOFMEMORY;
 }
 
-int OOBase::detail::ProactorPoll::do_bind_fd(int fd, void* param, fd_callback_t callback)
+bool OOBase::detail::ProactorPoll::do_bind_fd(int fd, void* param, fd_callback_t callback)
 {
 	FdItem item = { param, callback, size_t(-1) };
-	return m_items.insert(fd,item);
+	return m_items.insert(fd,item) != m_items.end();
 }
 
-int OOBase::detail::ProactorPoll::do_unbind_fd(int fd)
+bool OOBase::detail::ProactorPoll::do_unbind_fd(int fd)
 {
 	OOBase::HashTable<int,FdItem,AllocatorInstance>::iterator i = m_items.find(fd);
 	if (i == m_items.end())
-		return ENOENT;
+		return false;
 
 	FdItem item = i->value;
 	m_items.remove_at(i);
@@ -109,10 +109,10 @@ int OOBase::detail::ProactorPoll::do_unbind_fd(int fd)
 			i->value.m_poll_pos = item.m_poll_pos;
 	}
 
-	return 0;
+	return true;
 }
 
-int OOBase::detail::ProactorPoll::do_watch_fd(int fd, unsigned int events)
+bool OOBase::detail::ProactorPoll::do_watch_fd(int fd, unsigned int events)
 {
 	OOBase::HashTable<int,FdItem,AllocatorInstance>::iterator i = m_items.find(fd);
 	if (i != m_items.end())
@@ -133,15 +133,14 @@ int OOBase::detail::ProactorPoll::do_watch_fd(int fd, unsigned int events)
 			{
 				// A new entry
 				pollfd pfd = { fd, p_events, 0 };
-				int err = m_poll_fds.push_back(pfd);
-				if (err)
-					return err;
+				if (!m_poll_fds.push_back(pfd))
+					return false;
 
 				i->value.m_poll_pos = m_poll_fds.size()-1;
 			}
 		}
 	}
-	return 0;
+	return true;
 }
 
 bool OOBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count, int& err)

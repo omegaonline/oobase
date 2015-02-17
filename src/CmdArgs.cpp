@@ -30,12 +30,8 @@
 int OOBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, const char* long_opt)
 {
 	String strId,strLongOpt;
-	int err = strId.assign(id);
-	if (err == 0)
-		err = strLongOpt.assign(long_opt);
-
-	if (err != 0)
-		return err;
+	if (!strId.assign(id) || !strLongOpt.assign(long_opt))
+		return ERROR_OUTOFMEMORY;
 
 	if (strId.empty())
 		return EINVAL;
@@ -49,23 +45,15 @@ int OOBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, 
 
 	opt.m_has_value = has_value;
 
-	return m_map_opts.insert(strId,opt);
+	return m_map_opts.insert(strId,opt) ? 0 : ERROR_OUTOFMEMORY;
 }
 
-int OOBase::CmdArgs::error(results_t& results, int retval, const char* key, const char* value) const
+bool OOBase::CmdArgs::error(results_t& results, int retval, const char* key, const char* value) const
 {
 	results.clear();
 
 	String strErr,strVal;
-	int err = strErr.assign(key);
-	if (err == 0)
-		err = strVal.assign(value);
-	if (err == 0)
-		err = results.insert(strErr,strVal);
-	if (err == 0)
-		err = retval;
-					
-	return err;
+	return strErr.assign(key) && strVal.assign(value) && results.insert(strErr,strVal);
 }
 
 #if defined(_WIN32)
@@ -153,11 +141,10 @@ int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, in
 				value = argv[++arg];
 			}
 
-			int err = strVal.assign(value);
-			if (err != 0)
-				return err;
+			if (!strVal.assign(value) || !results.insert(i->first,strVal))
+				return ERROR_OUTOFMEMORY;
 
-			return results.insert(i->first,strVal);
+			return 0;
 		}
 
 		if (strncmp(i->second.m_long_opt.c_str(),argv[arg]+2,i->second.m_long_opt.length())==0 && argv[arg][i->second.m_long_opt.length()+2]=='=')
@@ -165,11 +152,10 @@ int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, in
 			if (i->second.m_has_value)
 				value = &argv[arg][i->second.m_long_opt.length()+3];
 
-			int err = strVal.assign(value);
-			if (err != 0)
-				return err;
+			if (!strVal.assign(value) || !results.insert(i->first,strVal))
+				return ERROR_OUTOFMEMORY;
 
-			return results.insert(i->first,strVal);
+			return 0;
 		}
 	}
 
@@ -206,22 +192,16 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 					else
 						value = &c[1];
 
-					int err = strVal.assign(value);
-					if (err != 0)
-						return err;
+					if (!strVal.assign(value) || !results.insert(i->first,strVal))
+						return ERROR_OUTOFMEMORY;
 
 					// No more for this arg...
-					return results.insert(i->first,strVal);
+					return 0;
 				}
 				else
 				{
-					int err = strVal.assign("true");
-					if (err != 0)
-						return err;
-
-					err = results.insert(i->first,strVal);
-					if (err != 0)
-						return err;
+					if (!strVal.assign("true") || !results.insert(i->first,strVal))
+						return ERROR_OUTOFMEMORY;
 
 					break;
 				}
@@ -244,13 +224,14 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 int OOBase::CmdArgs::parse_arg(results_t& results, const char* arg, unsigned int position) const
 {
 	String strArg;
-	int err = strArg.assign(arg);
+	if (!strArg.assign(arg))
+		return ERROR_OUTOFMEMORY;
+
+
+	String strResult;
+	int err = strResult.printf("@%u",position);
 	if (err != 0)
 		return err;
 
-	String strResult;
-	if ((err = strResult.printf("@%u",position)) != 0)
-		return err;
-
-	return results.insert(strResult,strArg);
+	return results.insert(strResult,strArg) ? 0 : ERROR_OUTOFMEMORY;
 }

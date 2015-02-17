@@ -206,7 +206,7 @@ int PosixAsyncSocket::recv(void* param, recv_callback_t callback, const OOBase::
 	OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
 	bool watch = m_recv_queue.empty();
-	err = m_recv_queue.push(item);
+	err = m_recv_queue.push(item) ? 0 : ERROR_OUTOFMEMORY;
 
 	guard.release();
 
@@ -243,7 +243,7 @@ int PosixAsyncSocket::recv_msg(void* param, recv_msg_callback_t callback, const 
 	OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
 	bool watch = m_recv_queue.empty();
-	err = m_recv_queue.push(item);
+	err = m_recv_queue.push(item) ? 0 : ERROR_OUTOFMEMORY;
 
 	guard.release();
 
@@ -273,7 +273,7 @@ int PosixAsyncSocket::send(void* param, send_callback_t callback, const OOBase::
 	OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
 	bool watch = m_send_queue.empty();
-	int err = m_send_queue.push(item);
+	int err = m_send_queue.push(item) ? 0 : ERROR_OUTOFMEMORY;
 
 	guard.release();
 
@@ -325,7 +325,7 @@ int PosixAsyncSocket::send_v(void* param, send_v_callback_t callback, OOBase::Bu
 	OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
 	bool watch = m_send_queue.empty();
-	int err = m_send_queue.push(item);
+	int err = m_send_queue.push(item) ? 0 : ERROR_OUTOFMEMORY;
 
 	guard.release();
 
@@ -360,7 +360,7 @@ int PosixAsyncSocket::send_msg(void* param, send_msg_callback_t callback, const 
 	OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
 	bool watch = m_send_queue.empty();
-	int err = m_send_queue.push(item);
+	int err = m_send_queue.push(item) ? 0 : ERROR_OUTOFMEMORY;
 
 	guard.release();
 
@@ -624,7 +624,7 @@ void PosixAsyncSocket::process_recv(OOBase::Queue<RecvNotify,OOBase::AllocatorIn
 		notify.m_err = err;
 		notify.m_item = item;
 
-		err = notify_queue.push(notify);
+		err = notify_queue.push(notify) ? 0 : ERROR_OUTOFMEMORY;
 		if (err)
 		{
 			item.m_buffer->release();
@@ -831,7 +831,7 @@ void PosixAsyncSocket::process_send(OOBase::Queue<SendNotify,OOBase::AllocatorIn
 		SendNotify notify;
 		notify.m_err = err;
 		notify.m_item = item;
-		err = notify_queue.push(notify);
+		err = notify_queue.push(notify) ? 0 : ERROR_OUTOFMEMORY;
 		if (err)
 		{
 			if (item.m_count == 1)

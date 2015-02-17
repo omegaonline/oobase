@@ -30,11 +30,11 @@
 
 namespace OOBase
 {
+	template <typename K, typename V, typename Compare, size_t B, typename Allocator>
+	class BTree;
+
 	namespace detail
 	{
-		template <typename K, typename V, typename Compare, size_t B, typename Allocator>
-		class BTreeImpl;
-
 		template <typename K, typename V, typename Compare, size_t B, typename Allocator>
 		class BTreeLeafPage;
 
@@ -88,7 +88,7 @@ namespace OOBase
 				::printf("\n");
 			}
 
-			void destroy(BTreeImpl<K,V,Compare,B,Allocator>* tree)
+			void destroy(BTree<K,V,Compare,B,Allocator>* tree)
 			{
 				for (size_t pos = 0; pos < m_key_count + 1; ++pos)
 				{
@@ -100,7 +100,7 @@ namespace OOBase
 				tree->destroy_internal(this);
 			}
 
-			bool insert(BTreeImpl<K,V,Compare,B,Allocator>* tree, const Pair<K,V>& value)
+			bool insert(BTree<K,V,Compare,B,Allocator>* tree, const Pair<K,V>& value)
 			{
 				size_t page = find_page(value.first,tree->m_compare);
 				if (m_leafs)
@@ -109,7 +109,7 @@ namespace OOBase
 					return static_cast<BTreeInternalPage*>(m_pages[page])->insert(tree,value);
 			}
 
-			bool insert_page(BTreeImpl<K,V,Compare,B,Allocator>* tree, void* page, const K& key)
+			bool insert_page(BTree<K,V,Compare,B,Allocator>* tree, void* page, const K& key)
 			{
 				if (m_key_count == B - 1)
 					return split(tree,page,key);
@@ -137,7 +137,7 @@ namespace OOBase
 			}
 
 		private:
-			bool m_leafs;
+			const bool m_leafs;
 			size_t m_key_count;
 
 			K m_keys[B-1];
@@ -163,18 +163,18 @@ namespace OOBase
 				return start;
 			}
 
-			bool split(BTreeImpl<K,V,Compare,B,Allocator>* tree, void* child_page, const K& child_key)
+			bool split(BTree<K,V,Compare,B,Allocator>* tree, void* child_page, const K& child_key)
 			{
 				BTreeInternalPage* page = m_leafs ?
-						tree->new_internal(m_parent,static_cast<BTreeLeafPage<K,V,Compare,B,Allocator>*>(NULL))
-						: tree->new_internal(m_parent,static_cast<BTreeInternalPage*>(NULL));
+						tree->new_internal_leaf(m_parent,NULL)
+						: tree->new_internal_page(m_parent,NULL);
 
 				if (!page)
 					return false;
 
 				if (!m_parent)
 				{
-					if (!(m_parent = tree->new_internal(NULL,this)))
+					if (!(m_parent = tree->new_internal_page(NULL,this)))
 					{
 						page->destroy(tree);
 						return false;
@@ -263,7 +263,7 @@ namespace OOBase
 				return NULL;
 			}
 
-			bool remove_page(BTreeImpl<K,V,Compare,B,Allocator>* tree, const K& child_key)
+			bool remove_page(BTree<K,V,Compare,B,Allocator>* tree, const K& child_key)
 			{
 				void* const* p = find_exact(child_key,tree->m_compare);
 				if (!p)
@@ -305,7 +305,7 @@ namespace OOBase
 				::printf("]   ");
 			}
 
-			void destroy(BTreeImpl<K,V,Compare,B,Allocator>* tree)
+			void destroy(BTree<K,V,Compare,B,Allocator>* tree)
 			{
 				if (m_prev)
 					m_prev->m_next = m_next;
@@ -320,7 +320,7 @@ namespace OOBase
 				tree->destroy_leaf(this);
 			}
 
-			bool insert(BTreeImpl<K,V,Compare,B,Allocator>* tree, const Pair<K,V>& value)
+			bool insert(BTree<K,V,Compare,B,Allocator>* tree, const Pair<K,V>& value)
 			{
 				if (m_size == B - 1)
 					return split(tree,value);
@@ -373,7 +373,7 @@ namespace OOBase
 				return m_size == (m_parent ? B/2 : 0);
 			}
 
-			BTreeLeafPage* insert_leaf(BTreeImpl<K,V,Compare,B,Allocator>* tree)
+			BTreeLeafPage* insert_leaf(BTree<K,V,Compare,B,Allocator>* tree)
 			{
 				BTreeLeafPage* leaf = tree->new_leaf(m_parent,m_prev,this);
 				if (leaf)
@@ -387,7 +387,7 @@ namespace OOBase
 				return leaf;
 			}
 
-			bool split(BTreeImpl<K,V,Compare,B,Allocator>* tree, const Pair<K,V>& value)
+			bool split(BTree<K,V,Compare,B,Allocator>* tree, const Pair<K,V>& value)
 			{
 				BTreeLeafPage* leaf = insert_leaf(tree);
 				if (!leaf)
@@ -395,7 +395,7 @@ namespace OOBase
 
 				if (!m_parent)
 				{
-					if (!(m_parent = tree->new_internal(NULL,this)))
+					if (!(m_parent = tree->new_internal_leaf(NULL,this)))
 					{
 						leaf->destroy(tree);
 						return false;
@@ -431,7 +431,7 @@ namespace OOBase
 				return true;
 			}
 
-			bool remove_value(BTreeImpl<K,V,Compare,B,Allocator>* tree, const Pair<K,V>& value)
+			bool remove_value(BTree<K,V,Compare,B,Allocator>* tree, const Pair<K,V>& value)
 			{
 				const Pair<K,V>* p = find(value.first,tree->m_compare);
 				if (!p)
@@ -457,13 +457,13 @@ namespace OOBase
 				return Allocator::allocate_new(page,parent,prev,next) ? page : NULL;
 			}
 
-			internal_page_t* new_internal(internal_page_t* parent, leaf_page_t* leaf)
+			internal_page_t* new_internal_leaf(internal_page_t* parent, leaf_page_t* leaf)
 			{
 				internal_page_t* page = NULL;
 				return Allocator::allocate_new(page,parent,leaf) ? page : NULL;
 			}
 
-			internal_page_t* new_internal(internal_page_t* parent, internal_page_t* internal)
+			internal_page_t* new_internal_page(internal_page_t* parent, internal_page_t* internal)
 			{
 				internal_page_t* page = NULL;
 				return Allocator::allocate_new(page,parent,internal) ? page : NULL;
@@ -493,13 +493,13 @@ namespace OOBase
 				return m_allocator.allocate_new(page,m_allocator,parent,prev,next) ? page : NULL;
 			}
 
-			internal_page_t* new_internal(internal_page_t* parent, leaf_page_t* leaf)
+			internal_page_t* new_internal_leaf(internal_page_t* parent, leaf_page_t* leaf)
 			{
 				internal_page_t* page = NULL;
 				return m_allocator.allocate_new(page,m_allocator,parent,leaf) ? page : NULL;
 			}
 
-			internal_page_t* new_internal(internal_page_t* parent, internal_page_t* internal)
+			internal_page_t* new_internal_page(internal_page_t* parent, internal_page_t* internal)
 			{
 				internal_page_t* page = NULL;
 				return m_allocator.allocate_new(page,m_allocator,parent,internal) ? page : NULL;
@@ -516,104 +516,187 @@ namespace OOBase
 			}
 
 		protected:
-			explicit BTreeBase(AllocatorInstance& allocator) : m_allocator(allocator)
+			BTreeBase(AllocatorInstance& allocator) : m_allocator(allocator)
 			{}
 
 		private:
 			AllocatorInstance& m_allocator;
 		};
-
-		template <typename K, typename V, typename Compare, size_t B, typename Allocator>
-		class BTreeImpl : public BTreeBase<K,V,Compare,B,Allocator>
-		{
-			typedef BTreeBase<K,V,Compare,B,Allocator> baseClass;
-
-			friend class BTreeInternalPage<K,V,Compare,B,Allocator>;
-			friend class BTreeLeafPage<K,V,Compare,B,Allocator>;
-
-		public:
-			size_t size() const
-			{
-				return 0;
-			}
-
-			bool empty() const
-			{
-				return size() != 0;
-			}
-
-			void dump()
-			{
-				if (m_root_page)
-					m_root_page->dump(NULL);
-				else if (m_head)
-					m_head->dump(NULL);
-
-				::printf("\n******\n");
-			}
-
-		protected:
-			explicit BTreeImpl(const Compare& comp = Compare()) : baseClass(), m_compare(comp), m_root_page(NULL), m_head(NULL), m_tail(NULL)
-			{}
-
-			explicit BTreeImpl(AllocatorInstance& allocator) : baseClass(allocator), m_compare(), m_root_page(NULL), m_head(NULL), m_tail(NULL)
-			{}
-
-			BTreeImpl(const Compare& comp, AllocatorInstance& allocator) : baseClass(allocator), m_compare(comp), m_root_page(NULL), m_head(NULL), m_tail(NULL)
-			{}
-
-			~BTreeImpl()
-			{
-				if (m_root_page)
-					m_root_page->destroy(this);
-				else if (m_head)
-					m_head->destroy(this);
-			}
-
-			bool insert(const Pair<K,V>& value)
-			{
-				if (m_root_page)
-					return m_root_page->insert(this,value);
-
-				if (!m_head)
-				{
-					if (!(m_head = baseClass::new_leaf(NULL,NULL,NULL)))
-						return false;
-					m_tail = m_head;
-				}
-				return m_head->insert(this,value);
-			}
-
-			template <typename K1>
-			const Pair<K,V>* find(const K1& key) const
-			{
-				if (m_root_page)
-					return m_root_page->find(key,m_compare);
-				return m_head ? m_head->find(key,m_compare) : NULL;
-			}
-
-		private:
-			Compare m_compare;
-			BTreeInternalPage<K,V,Compare,B,Allocator>* m_root_page;
-			BTreeLeafPage<K,V,Compare,B,Allocator>* m_head;
-			BTreeLeafPage<K,V,Compare,B,Allocator>* m_tail;
-		};
 	}
 
 	template <typename K, typename V, typename Compare = Less<K>, size_t B = 8, typename Allocator = CrtAllocator>
-	class BTree : public detail::BTreeImpl<K,V,Compare,B,Allocator>
+	class BTree : public detail::BTreeBase<K,V,Compare,B,Allocator>
 	{
-		typedef detail::BTreeImpl<K,V,Compare,B,Allocator> baseClass;
+		typedef detail::BTreeBase<K,V,Compare,B,Allocator> baseClass;
+
+		friend class detail::BTreeInternalPage<K,V,Compare,B,Allocator>;
+		friend class detail::BTreeLeafPage<K,V,Compare,B,Allocator>;
+
 	public:
-		BTree() : baseClass()
+		typedef K key_type;
+		typedef Pair<K,V> value_type;
+		typedef V mapped_type;
+		typedef Compare key_compare;
+		typedef Allocator allocator_type;
+		typedef value_type& reference;
+		typedef typename add_const<reference>::type const_reference;
+		typedef value_type* pointer;
+		typedef typename add_const<pointer>::type const_pointer;
+
+		typedef detail::IteratorImpl<BTree,value_type,size_t> iterator;
+		friend class detail::IteratorImpl<BTree,value_type,size_t>;
+		typedef detail::IteratorImpl<const BTree,const value_type,size_t> const_iterator;
+		friend class detail::IteratorImpl<const BTree,const value_type,size_t>;
+
+		BTree(const Compare& comp = Compare()) : baseClass(), m_compare(comp), m_root_page(NULL), m_head(NULL), m_tail(NULL)
 		{}
 
-		explicit BTree(AllocatorInstance& allocator) : baseClass(allocator)
+		BTree(AllocatorInstance& allocator) : baseClass(allocator), m_compare(), m_root_page(NULL), m_head(NULL), m_tail(NULL)
 		{}
+
+		BTree(const Compare& comp, AllocatorInstance& allocator) : baseClass(allocator), m_compare(comp), m_root_page(NULL), m_head(NULL), m_tail(NULL)
+		{}
+
+		BTree(const BTree& rhs) : m_compare(rhs.m_compare), m_root_page(NULL), m_head(NULL), m_tail(NULL)
+		{
+			/*for (size_t i=0;i<rhs.m_size;++i)
+			{
+				int err = push_back(rhs.m_data[i]);
+				if (err)
+					OOBase_CallCriticalFailure(err);
+			}*/
+		}
+
+		~BTree()
+		{
+			if (m_root_page)
+				m_root_page->destroy(this);
+			else if (m_head)
+				m_head->destroy(this);
+		}
+
+		BTree& operator = (const BTree& rhs)
+		{
+			BTree(rhs).swap(*this);
+			return *this;
+		}
+
+		void swap(BTree& rhs)
+		{
+			OOBase::swap(m_compare,rhs.m_compare);
+			OOBase::swap(m_root_page,rhs.m_root_page);
+			OOBase::swap(m_head,rhs.m_head);
+			OOBase::swap(m_tail,rhs.m_tail);
+		}
+
+		template <typename It>
+		bool insert(It first, It last)
+		{
+			for (It i = first; i != last; ++i)
+			{
+				if (!insert(*i))
+					return false;
+			}
+			return true;
+		}
 
 		bool insert(const Pair<K,V>& value)
 		{
-			return baseClass::insert(value) == 0;
+			if (m_root_page)
+				return m_root_page->insert(this,value);
+
+			if (!m_head)
+			{
+				if (!(m_head = baseClass::new_leaf(NULL,NULL,NULL)))
+					return false;
+				m_tail = m_head;
+			}
+			return m_head->insert(this,value);
+		}
+
+		bool insert(const K& key, const V& value)
+		{
+			return insert(OOBase::make_pair(key,value));
+		}
+
+		template <typename K1>
+		bool exists(const K1& key) const
+		{
+			return (find_i(key) != NULL);
+		}
+
+		size_t size() const
+		{
+			return 0;
+		}
+
+		bool empty() const
+		{
+			return size() != 0;
+		}
+
+		iterator begin()
+		{
+			return baseClass::empty() ? end() : iterator(this,0);
+		}
+
+		const_iterator cbegin() const
+		{
+			return baseClass::empty() ? end() : const_iterator(this,0);
+		}
+
+		const_iterator begin() const
+		{
+			return cbegin();
+		}
+
+		iterator back()
+		{
+			return (this->m_size ? iterator(this,this->m_size-1) : end());
+		}
+
+		const_iterator back() const
+		{
+			return (this->m_size ? const_iterator(this,this->m_size-1) : end());
+		}
+
+		iterator end()
+		{
+			return iterator(this,size_t(-1));
+		}
+
+		const_iterator cend() const
+		{
+			return const_iterator(this,size_t(-1));
+		}
+
+		const_iterator end() const
+		{
+			return cend();
+		}
+
+		void dump()
+		{
+			if (m_root_page)
+				m_root_page->dump(NULL);
+			else if (m_head)
+				m_head->dump(NULL);
+
+			::printf("\n******\n");
+		}
+
+	private:
+		Compare m_compare;
+		detail::BTreeInternalPage<K,V,Compare,B,Allocator>* m_root_page;
+		detail::BTreeLeafPage<K,V,Compare,B,Allocator>* m_head;
+		detail::BTreeLeafPage<K,V,Compare,B,Allocator>* m_tail;
+
+		template <typename K1>
+		const Pair<K,V>* find_i(const K1& key) const
+		{
+			if (m_root_page)
+				return m_root_page->find(key,m_compare);
+			return m_head ? m_head->find(key,m_compare) : NULL;
 		}
 	};
 }

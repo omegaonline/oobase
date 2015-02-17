@@ -175,7 +175,7 @@ void OOBase::Thread::sleep(unsigned int millisecs)
 	}
 #endif
 
-	::timespec wt = {0};
+	::timespec wt = {0,0};
 	Timeout(millisecs / 1000,(millisecs % 1000) * 1000).get_timespec(wt);
 
 	int rc = -1;
@@ -308,14 +308,11 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 		}
 		if (bAdd)
 		{
-			m_threads.push_back(ptrThread,err);
-			if (err != 0)
-				return err;
+			if (m_threads.push_back(ptrThread) == m_threads.end())
+				return ERROR_OUTOFMEMORY;
 		}
 
 		guard.release();
-
-
 	}
 
 	return 0;
