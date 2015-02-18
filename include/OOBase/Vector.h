@@ -93,14 +93,23 @@ namespace OOBase
 
 			void iterator_move(size_t& pos, ptrdiff_t n) const
 			{
+				if (pos > m_size)
+					pos = m_size;
+
 				assert(pos + n >= 0);
 				pos += n;
 				if (pos >= m_size)
 					pos = size_t(-1);
 			}
 
-			ptrdiff_t iterator_diff(const size_t& pos1, const size_t& pos2) const
+			ptrdiff_t iterator_diff(size_t pos1, size_t pos2) const
 			{
+				if (pos1 > m_size)
+					pos1 = m_size;
+
+				if (pos2 > m_size)
+					pos2 = m_size;
+
 				return (pos1 - pos2);
 			}
 		};

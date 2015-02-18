@@ -191,8 +191,13 @@ namespace OOBase
 		}
 
 		template <typename N>
-		void iterator_move(N*& node, ptrdiff_t n) const
+		void iterator_move(N& node, ptrdiff_t n) const
 		{
+			if (!node && n < 0)
+			{
+				node = m_tail;
+				n++;
+			}
 			for (ptrdiff_t i = 0;i < n && node;++i)
 				node = node->m_next;
 			for (ptrdiff_t i = n;i < 0 && node;++i)
