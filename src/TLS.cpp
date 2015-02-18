@@ -194,11 +194,10 @@ namespace
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 			}
 
-			int err = OOBase::DLLDestructor<OOBase::Module>::add_destructor(destroy,inst);
-			if (err != 0)
+			if (!OOBase::DLLDestructor<OOBase::Module>::add_destructor(destroy,inst))
 			{
 				destroy(inst);
-				OOBase_CallCriticalFailure(err);
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 			}
 
 			TLS_GLOBAL::instance().Set(inst);

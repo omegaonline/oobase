@@ -82,11 +82,10 @@ namespace OOBase
 				throw;
 			}
 #endif
-			int err = DLLDestructor<DLL>::add_destructor(&destroy,t);
-			if (err)
+			if (!DLLDestructor<DLL>::add_destructor(&destroy,t))
 			{
 				destroy(t);
-				OOBase_CallCriticalFailure(err);
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 			}
 			
 			s_instance = static_cast<T*>(t);

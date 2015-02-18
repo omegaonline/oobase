@@ -57,8 +57,7 @@ namespace OOBase
 			{
 				if (count > COUNT)
 				{
-					int err = m_dynamic.resize(count);
-					if (err)
+					if (!m_dynamic.resize(count))
 						return false;
 
 					for (size_t i=0;i<COUNT;++i)
@@ -69,7 +68,7 @@ namespace OOBase
 			}
 			else
 			{
-				if (m_dynamic.resize(count) != 0)
+				if (!m_dynamic.resize(count))
 				{
 					m_data = NULL;
 					return false;
