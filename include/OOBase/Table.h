@@ -226,18 +226,16 @@ namespace OOBase
 		template <typename K1>
 		const Pair<K,V>* bsearch(const K1& key) const
 		{
-			const Pair<K,V>* base = this->m_data;
-			const Pair<K,V>* mid_point = NULL;
-			for (size_t span = this->m_size; span > 0; span /= 2)
+			size_t start = 0;
+			for (size_t end = this->m_size;start < end;)
 			{
-				mid_point = base + (span / 2);
-				if (m_compare(mid_point->first,key))
-				{
-					base = mid_point + 1;
-					--span;
-				}
-				else if (mid_point->first == key)
-					return mid_point;
+				size_t mid = start + (end - start) / 2;
+				if (m_compare(this->m_data[mid].first,key))
+					start = mid + 1;
+				else if (this->m_data[mid].first == key)
+					return &this->m_data[mid];
+				else
+					end = mid;
 			}
 			return NULL;
 		}
