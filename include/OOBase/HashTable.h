@@ -151,9 +151,14 @@ namespace OOBase
 			{}
 
 			template <typename V1>
-			static void inplace_copy(void* p, size_t h, const K& k, V1 v)
+			static void inplace_copy(HashTableNode* p, size_t h, const K& k, V1 v)
 			{
 				::new (p) HashTableNode(h,k,v);
+			}
+
+			static void inplace_destroy(HashTableNode& p)
+			{
+				p.m_data.~pair();
 			}
 
 			size_t m_hash;
@@ -177,6 +182,9 @@ namespace OOBase
 				static_cast<HashTableNode*>(p)->m_data.key = k;
 				static_cast<HashTableNode*>(p)->m_data.value = v;
 			}
+
+			static void inplace_destroy(HashTableNode&)
+			{}
 
 			size_t m_hash;
 			struct pair
@@ -213,7 +221,7 @@ namespace OOBase
 			for (size_t i=0;i<m_size;++i)
 			{
 				if (is_in_use(m_data[i].m_hash))
-					m_data[i].~Node();
+					Node::inplace_destroy(m_data[i]);
 			}
 			baseClass::free(m_data);
 		}
@@ -265,10 +273,10 @@ namespace OOBase
 
 			if (is_in_use(m_data[pos].m_hash))
 			{
-				m_data[pos].~Node();
+				Node::inplace_destroy(m_data[pos]);
 				--m_count;
 
-				shuffle(pos);
+				ripple(pos);
 			}
 
 			while (pos < m_size && !is_in_use(m_data[pos].m_hash))
@@ -313,11 +321,10 @@ namespace OOBase
 		{
 			for (size_t i=0;i<m_size && m_count>0;++i)
 			{
-				if (m_data[i].m_in_use == HashTable::used)
+				if (is_in_use(m_data[i].m_hash))
 				{
-					m_data[i].~Node();
-					m_data[i].m_in_use = HashTable::not_used;
-					--m_count;
+					Node::inplace_destroy(m_data[i]);
+					m_data[i].m_hash = 0;
 				}
 			}
 		}
@@ -516,7 +523,7 @@ namespace OOBase
 			return 0;
 		}
 
-		void shuffle(size_t start)
+		void ripple(size_t start)
 		{
 			size_t pos = start;
 			for (int i=0;i < 3;++i)
@@ -532,7 +539,7 @@ namespace OOBase
 				}
 
 				Node::inplace_copy(&m_data[pos],m_data[next].m_hash,m_data[next].m_data.key,m_data[next].m_data.value);
-				m_data[next].~Node();
+				Node::inplace_destroy(m_data[next]);
 
 				pos = next;
 			}

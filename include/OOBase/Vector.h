@@ -59,8 +59,7 @@ namespace OOBase
 
 			void swap(VectorBase& rhs)
 			{
-				Allocating<Allocator>::swap(rhs);
-
+				baseClass::swap(rhs);
 				OOBase::swap(m_data,rhs.m_data);
 				OOBase::swap(m_size,rhs.m_size);
 				OOBase::swap(m_capacity,rhs.m_size);
@@ -126,6 +125,20 @@ namespace OOBase
 			VectorPODBase(AllocatorInstance& allocator) : baseClass(allocator)
 			{}
 
+			VectorPODBase(const VectorPODBase& rhs) : baseClass(rhs)
+			{
+				if (rhs.m_size)
+				{
+					if (!reserve(rhs.m_size))
+						OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+					else
+					{
+						for (size_t i=0;i<rhs.m_size;++i)
+							insert_at(i,rhs.m_data[i]);
+					}
+				}
+			}
+
 			~VectorPODBase()
 			{
 				clear();
@@ -138,44 +151,6 @@ namespace OOBase
 			}
 
 		protected:
-#if defined(OOBASE_HAVE_EXCEPTIONS)
-			bool assign(size_t n, const T& value = T())
-			{
-				T* new_data = NULL;
-				size_t capacity = 0;
-				if (n)
-				{
-					capacity = (n/2 + 1) * 2;
-					new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
-					if (!new_data)
-						return false;
-
-					size_t i = 0;
-					try
-					{
-						for (;i<this->m_size;++i)
-							::new (&new_data[i]) T(value);
-					}
-					catch (...)
-					{
-						while (i-- > 0)
-							new_data[i].~T();
-
-						baseClass::free(new_data);
-						throw;
-					}
-				}
-
-				for (size_t i=0;i<this->m_size;++i)
-					this->m_data[i].~T();
-
-				baseClass::free(this->m_data);
-				this->m_data = new_data;
-				this->m_size = n;
-				this->m_capacity = capacity;
-				return true;
-			}
-
 			bool reserve(size_t n)
 			{
 				if (n > this->m_capacity)
@@ -186,6 +161,7 @@ namespace OOBase
 						return false;
 
 					size_t i = 0;
+#if defined(OOBASE_HAVE_EXCEPTIONS)
 					try
 					{
 						for (;i<this->m_size;++i)
@@ -200,12 +176,46 @@ namespace OOBase
 						throw;
 					}
 
-					for (i=0;i<this->m_size;++i)
+					for (;i<this->m_size;++i)
 						this->m_data[i].~T();
-
+#else
+					for (;i<this->m_size;++i)
+					{
+						::new (&new_data[i]) T(this->m_data[i]);
+						this->m_data[i].~T();
+					}
+#endif
 					baseClass::free(this->m_data);
 					this->m_data = new_data;
 					this->m_capacity = capacity;
+				}
+				return true;
+			}
+
+			bool assign(size_t n, const T& value = T())
+			{
+				if (n > this->m_capacity)
+				{
+					size_t capacity = (n/2 + 1) * 2;
+					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
+					if (!new_data)
+						return false;
+
+					clear();
+					baseClass::free(this->m_data);
+					this->m_data = new_data;
+					this->m_capacity = capacity;
+
+					for (size_t i=0; i<n; ++i)
+						::new (&this->m_data[this->m_size++]) T(value);
+				}
+				else
+				{
+					while (this->m_size > n)
+						this->m_data[this->m_size--].~T();
+
+					for (size_t i=0;i<this->m_size;++i)
+						this->m_data[i] = value;
 				}
 				return true;
 			}
@@ -217,20 +227,20 @@ namespace OOBase
 
 				if (this->m_size >= this->m_capacity)
 				{
-					// Copy buffer, inserting in the gap...
-					size_t capacity = this->m_capacity;
-					if (this->m_size+1 > this->m_capacity)
-						capacity = (this->m_capacity == 0 ? 2 : this->m_capacity*2);
-
+					size_t capacity = this->m_capacity ? this->m_capacity * 2 : 8;
 					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
 						return false;
 
 					size_t i = 0;
+#if defined(OOBASE_HAVE_EXCEPTIONS)
 					try
 					{
+						for (;i<pos;++i)
+							::new (&new_data[i]) T(this->m_data[i]);
+
 						for (;i<this->m_size;++i)
-							::new (&new_data[i + (i<pos ? 0 : 1)]) T(this->m_data[i]);
+							::new (&new_data[i+1]) T(this->m_data[i]);
 
 						::new (&new_data[pos]) T(value);
 					}
@@ -247,96 +257,26 @@ namespace OOBase
 
 					for (i=0;i<this->m_size;++i)
 						this->m_data[i].~T();
-
-					baseClass::free(this->m_data);
-					this->m_data = new_data;
-					this->m_capacity = capacity;
-				}
-				else
-				{
-					::new (&this->m_data[this->m_size]) T(value);
-
-					for (size_t i = this->m_size; i > pos; --i)
-						OOBase::swap(this->m_data[i],this->m_data[i-1]);
-				}
-
-				++this->m_size;
-				return true;
-			}
 #else
-			bool assign(size_t n, const T& value = T())
-			{
-				T* new_data = NULL;
-				size_t capacity = 0;
-				if (n)
-				{
-					capacity = (n/2 + 1) * 2;
-					new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
-					if (!new_data)
-						return false;
-
-					for (size_t i=0;i<this->m_size;++i)
-						::new (&new_data[i]) T(value);
-				}
-
-				for (size_t i=0;i<this->m_size;++i)
-					this->m_data[i].~T();
-
-				baseClass::free(this->m_data);
-				this->m_data = new_data;
-				this->m_size = n;
-				this->m_capacity = capacity;
-				return true;
-			}
-
-			bool reserve(size_t n)
-			{
-				if (n > this->m_capacity)
-				{
-					size_t capacity = (n/2 + 1) * 2;
-					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
-					if (!new_data)
-						return false;
-
-					for (size_t i = 0;i<this->m_size;++i)
+					for (;i<pos;++i)
 					{
 						::new (&new_data[i]) T(this->m_data[i]);
 						this->m_data[i].~T();
 					}
 
-					baseClass::free(this->m_data);
-					this->m_data = new_data;
-					this->m_capacity = capacity;
-				}
-				return true;
-			}
-
-			bool insert_at(size_t pos, const T& value)
-			{
-				if (pos > this->m_size)
-					pos = this->m_size;
-
-				if (this->m_size >= this->m_capacity)
-				{
-					size_t capacity = (this->m_capacity == 0 ? 2 : this->m_capacity*2);
-					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
-					if (!new_data)
-						return false;
-
-					for (size_t i = 0;i<this->m_size;++i)
+					for (;i<this->m_size;++i)
 					{
-						::new (&new_data[i + (i<pos ? 0 : 1)]) T(this->m_data[i]);
+						::new (&new_data[i+1]) T(this->m_data[i]);
 						this->m_data[i].~T();
 					}
-
-					::new (&new_data[pos]) T(value);
-
+#endif
 					baseClass::free(this->m_data);
 					this->m_data = new_data;
 					this->m_capacity = capacity;
 				}
 				else
 				{
+					// Insert at end and ripple down to pos
 					::new (&this->m_data[this->m_size]) T(value);
 
 					for (size_t i = this->m_size; i > pos; --i)
@@ -346,7 +286,7 @@ namespace OOBase
 				++this->m_size;
 				return true;
 			}
-#endif
+
 			size_t remove_at(size_t pos, size_t len)
 			{
 				if (this->m_data && pos < this->m_size)
@@ -381,25 +321,30 @@ namespace OOBase
 			VectorPODBase(AllocatorInstance& allocator) : baseClass(allocator)
 			{}
 
+			VectorPODBase(const VectorPODBase& rhs) : baseClass(rhs)
+			{
+				if (rhs.m_size)
+				{
+					if (!reserve(rhs.m_size))
+						OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+					else
+					{
+						memcpy(this->m_data,rhs.m_data,rhs.m_size*sizeof(T));
+						this->m_size = rhs.m_size;
+					}
+				}
+			}
+
 		protected:
 			bool assign(size_t n, const T& value = T())
 			{
-				T* new_data = NULL;
-				size_t capacity = 0;
-				if (n)
-				{
-					capacity = (n/2 + 1) * 2;
-					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
-					if (!new_data)
-						return false;
+				if (!reserve(n))
+					return false;
 
-					for (size_t i=0; i<this->m_size; ++i)
-						new_data[i] = value;
-				}
-				baseClass::free(this->m_data);
-				this->m_data = new_data;
+				for (size_t i=0; i<n; ++i)
+					this->m_data[i] = value;
+
 				this->m_size = n;
-				this->m_capacity = capacity;
 				return true;
 			}
 
@@ -408,13 +353,10 @@ namespace OOBase
 				if (n > this->m_capacity)
 				{
 					size_t capacity = (n/2 + 1) * 2;
-					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
+					T* new_data = static_cast<T*>(baseClass::reallocate(this->m_data,capacity*sizeof(T),alignment_of<T>::value));
 					if (!new_data)
 						return false;
 
-					memcpy(new_data,this->m_data,this->m_size * sizeof(T));
-
-					baseClass::free(this->m_data);
 					this->m_data = new_data;
 					this->m_capacity = capacity;
 				}
@@ -428,31 +370,15 @@ namespace OOBase
 
 				if (this->m_size >= this->m_capacity)
 				{
-					size_t capacity = (this->m_capacity == 0 ? 2 : this->m_capacity*2);
-
-					T* new_data = static_cast<T*>(baseClass::allocate(capacity*sizeof(T),alignment_of<T>::value));
-					if (!new_data)
+					if (!reserve(this->m_capacity ? this->m_capacity * 2 : 8))
 						return false;
-
-					if (pos > 0)
-						memcpy(new_data,this->m_data,pos * sizeof(T));
-
-					if (pos < this->m_size)
-						memcpy(&new_data[pos + 1],&this->m_data[pos],(this->m_size - pos) * sizeof(T));
-
-					new_data[pos] = value;
-
-					baseClass::free(this->m_data);
-					this->m_data = new_data;
-					this->m_capacity = capacity;
 				}
-				else
-				{
-					if (pos < this->m_size)
-						memmove(&this->m_data[pos + 1],&this->m_data[pos],(this->m_size - pos) * sizeof(T));
 
-					this->m_data[pos] = value;
-				}
+				if (pos < this->m_size)
+					memmove(&this->m_data[pos + 1],&this->m_data[pos],(this->m_size - pos) * sizeof(T));
+
+				this->m_data[pos] = value;
+
 				++this->m_size;
 				return true;
 			}
@@ -485,22 +411,6 @@ namespace OOBase
 
 			VectorImpl(AllocatorInstance& allocator) : baseClass(allocator)
 			{}
-
-			VectorImpl(const VectorImpl& rhs) : baseClass(rhs)
-			{
-				baseClass::clear();
-				for (size_t i=0;i<rhs.m_size;++i)
-				{
-					if (!push_back(rhs.m_data[i]))
-						OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-				}
-			}
-
-			VectorImpl& operator = (const VectorImpl& rhs)
-			{
-				VectorImpl(rhs).swap(*this);
-				return *this;
-			}
 
 		protected:
 			typedef typename add_const<T&>::type const_reference;
@@ -591,6 +501,15 @@ namespace OOBase
 
 		Vector(AllocatorInstance& allocator) : baseClass(allocator)
 		{}
+
+		Vector(const Vector& rhs) : baseClass(rhs)
+		{}
+
+		Vector& operator = (const Vector& rhs)
+		{
+			Vector(rhs).swap(*this);
+			return *this;
+		}
 
 		template <typename It>
 		bool assign(It first, It last)
