@@ -341,12 +341,12 @@ namespace
 
 	void onConsole(DWORD nStdHandle, uintptr_t param, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg)
 	{
-		HANDLE h = GetStdHandle(nStdHandle);
 		OOBase::Logger::Priority min = static_cast<OOBase::Logger::Priority>((param & 0xFF00) >> 8);
 		OOBase::Logger::Priority max = static_cast<OOBase::Logger::Priority>(param & 0xFF);
 
 		if (priority >= min && priority <= max)
 		{
+			HANDLE h = GetStdHandle(nStdHandle);
 			OOBase::ScopedArrayPtr<char> out;
 			formatMsg(out,t,priority,msg);
 
