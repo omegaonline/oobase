@@ -210,7 +210,11 @@ namespace OOBase
 					return false;
 
 				// Copy half our values
-				size_t half = (m_key_count+1)/2 ;
+				size_t half = s_min-1;
+				bool insert_into_us = tree->m_compare(child_key,this->m_keys[half]);
+				if (insert_into_us)
+					++half;
+
 				K sibling_key;
 				OOBase::swap(sibling_key,m_keys[half]);
 
@@ -249,7 +253,7 @@ namespace OOBase
 					return false;
 				}
 
-				if (tree->m_compare(child_key,sibling->m_keys[0]))
+				if (insert_into_us)
 					return insert_page(tree,child,child_key);
 				
 				child->m_parent = sibling;
@@ -464,7 +468,7 @@ namespace OOBase
 			BTreeLeafPage* m_next;
 
 			size_t m_size;
-			Pair<K,V> m_data[B-1];
+			Pair<K,V> m_data[B];
 
 			static const size_t s_min = (B+1)/2;
 
@@ -557,8 +561,8 @@ namespace OOBase
 				if (m_size >= B)
 					return split(tree,value);
 
-				for (size_t i = m_size;i > pos;--i)
-					OOBase::swap(m_data[i],m_data[i-1]);
+				for (size_t i = pos;i < m_size;--i)
+					OOBase::swap(m_data[i],m_data[i+1]);
 				m_data[pos] = value;
 				++m_size;
 
@@ -624,10 +628,14 @@ namespace OOBase
 					m_next->m_prev = sibling;
 				m_next = sibling;
 
+				size_t half = s_min;
+				if (tree->m_compare(value.first,this->m_data[half].first))
+					--half;
+				
 				// Copy half our values
-				for (size_t pos = s_min; pos < m_size; ++pos)
+				for (size_t pos = half; pos < m_size; ++pos)
 					OOBase::swap(sibling->m_data[sibling->m_size++],m_data[pos]);
-				m_size = s_min;
+				m_size = half;
 
 				if (!this->m_parent->insert_page(tree,sibling,sibling->m_data[0].first))
 				{
@@ -756,7 +764,7 @@ namespace OOBase
 
 		~BTree()
 		{
-			static_assert(B > 2,"BTree must be of order > 2");
+			static_assert(B > 1,"BTree must be of order > 1");
 
 			if (m_root_page)
 				m_root_page->destroy(this);
