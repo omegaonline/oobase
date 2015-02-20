@@ -269,6 +269,7 @@ namespace OOBase
 						::new (&new_data[i+1]) T(this->m_data[i]);
 						this->m_data[i].~T();
 					}
+					::new (&new_data[pos]) T(value);
 #endif
 					baseClass::free(this->m_data);
 					this->m_data = new_data;

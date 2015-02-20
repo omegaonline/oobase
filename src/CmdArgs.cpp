@@ -48,12 +48,17 @@ int OOBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, 
 	return m_map_opts.insert(strId,opt) ? 0 : ERROR_OUTOFMEMORY;
 }
 
-bool OOBase::CmdArgs::error(results_t& results, int retval, const char* key, const char* value) const
+int OOBase::CmdArgs::error(results_t& results, int err, const char* key, const char* value) const
 {
-	results.clear();
-
 	String strErr,strVal;
-	return strErr.assign(key) && strVal.assign(value) && results.insert(strErr,strVal);
+	if (!strErr.assign(key) || !strVal.assign(value))
+		return ERROR_OUTOFMEMORY;
+	
+	results.clear();
+	if (!results.insert(strErr,strVal))
+		return ERROR_OUTOFMEMORY;
+
+	return err;
 }
 
 #if defined(_WIN32)

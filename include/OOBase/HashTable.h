@@ -387,7 +387,7 @@ namespace OOBase
 		size_t   m_count;
 		H        m_hash;
 
-		static const size_t s_hi_bit = (1 << ((sizeof(size_t) * 8) - 1));
+		static const size_t s_hi_bit = (size_t(1) << ((sizeof(size_t) * 8) - 1));
 
 		HashTable(const HashTable& h, Node* data, size_t size) : baseClass(h), m_data(data), m_size(size), m_count(0), m_hash(h.m_hash)
 		{
