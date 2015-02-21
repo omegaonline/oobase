@@ -142,17 +142,18 @@ namespace OOBase
 					m_pages[i]->dump(str,indent + 2);
 			}
 
-			bool insert_page(BTree<K,V,Compare,B,Allocator>* tree, baseClass* page, const K& key)
+			bool insert_page(BTree<K,V,Compare,B,Allocator>* tree, baseClass* page, const K& key, size_t& parent_pos)
 			{
 				if (m_key_count >= B - 1)
-					return split(tree,page,key);
+					return split(tree,page,key,parent_pos);
 
 				size_t pos = find_page(BTreeCompare<K,K,Compare>(tree->m_compare,key));
-				for (size_t i = m_key_count;i > pos;--i)
+				for (size_t i = m_key_count;i-- > pos;)
 				{
-					OOBase::swap(m_pages[i+1],m_pages[i]);
-					OOBase::swap(m_keys[i],m_keys[i-1]);
+					OOBase::swap(m_pages[i+1],m_pages[i+2]);
+					OOBase::swap(m_keys[i],m_keys[i+1]);
 				}
+				parent_pos = pos;
 				m_pages[pos+1] = page;
 				m_keys[pos] = key;
 				++m_key_count;
@@ -195,7 +196,7 @@ namespace OOBase
 
 			virtual BTreeInternalPageBase* new_page(BTree<K,V,Compare,B,Allocator>* tree) = 0;
 
-			bool split(BTree<K,V,Compare,B,Allocator>* tree, baseClass* child, const K& child_key)
+			bool split(BTree<K,V,Compare,B,Allocator>* tree, baseClass* child, const K& child_key, size_t& parent_pos)
 			{
 				// Make sure we have a parent
 				if (!this->m_parent)
@@ -210,10 +211,10 @@ namespace OOBase
 					return false;
 
 				// Copy half our values
-				size_t half = s_min-1;
+				size_t half = B/2;
 				bool insert_into_us = tree->m_compare(child_key,this->m_keys[half]);
 				if (insert_into_us)
-					++half;
+					--half;
 
 				K sibling_key;
 				OOBase::swap(sibling_key,m_keys[half]);
@@ -234,7 +235,7 @@ namespace OOBase
 				m_key_count = half;
 
 				// Add the sibling
-				if (!this->m_parent->insert_page(tree,sibling,sibling_key))
+				if (!this->m_parent->insert_page(tree,sibling,sibling_key,parent_pos))
 				{
 					// Copy everything back
 					OOBase::swap(m_keys[m_key_count++],sibling_key);
@@ -254,10 +255,10 @@ namespace OOBase
 				}
 
 				if (insert_into_us)
-					return insert_page(tree,child,child_key);
+					return insert_page(tree,child,child_key,parent_pos);
 				
 				child->m_parent = sibling;
-				return sibling->insert_page(tree,child,child_key);
+				return sibling->insert_page(tree,child,child_key,parent_pos);
 			}
 
 			baseClass* const* find_exact(const K& key, const Compare& compare) const
@@ -559,10 +560,11 @@ namespace OOBase
 				}
 
 				if (m_size >= B)
-					return split(tree,value);
+					return split(tree,value,parent_pos);
 
-				for (size_t i = pos;i < m_size;--i)
+				for (size_t i = m_size; i-- > pos;)
 					OOBase::swap(m_data[i],m_data[i+1]);
+
 				m_data[pos] = value;
 				++m_size;
 
@@ -608,7 +610,7 @@ namespace OOBase
 				return true;
 			}
 			
-			bool split(BTree<K,V,Compare,B,Allocator>* tree, const Pair<K,V>& value)
+			bool split(BTree<K,V,Compare,B,Allocator>* tree, const Pair<K,V>& value, size_t parent_pos)
 			{
 				// Make sure we have a parent
 				if (!this->m_parent)
@@ -628,16 +630,17 @@ namespace OOBase
 					m_next->m_prev = sibling;
 				m_next = sibling;
 
-				size_t half = s_min;
-				if (tree->m_compare(value.first,this->m_data[half].first))
-					--half;
-				
 				// Copy half our values
+				size_t half = s_min;
+				bool insert_into_us = tree->m_compare(value.first,m_data[half].first);
+				if (insert_into_us)
+					--half;
+
 				for (size_t pos = half; pos < m_size; ++pos)
 					OOBase::swap(sibling->m_data[sibling->m_size++],m_data[pos]);
 				m_size = half;
 
-				if (!this->m_parent->insert_page(tree,sibling,sibling->m_data[0].first))
+				if (!this->m_parent->insert_page(tree,sibling,sibling->m_data[0].first,parent_pos))
 				{
 					// Copy back again
 					for (size_t i=0;i<sibling->m_size;++i)
@@ -647,7 +650,10 @@ namespace OOBase
 					return false;
 				}
 
-				return m_parent->insert(tree,value);
+				if (insert_into_us)
+					return insert_i(tree,value,parent_pos);
+				
+				return sibling->m_parent->insert(tree,value);
 			}
 		};
 
@@ -764,7 +770,7 @@ namespace OOBase
 
 		~BTree()
 		{
-			static_assert(B > 1,"BTree must be of order > 1");
+			static_assert(B > 2,"BTree must be of order > 2");
 
 			if (m_root_page)
 				m_root_page->destroy(this);
