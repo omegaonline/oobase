@@ -312,7 +312,7 @@ namespace OOBase
 			bool insert(BTree<K,V,Compare,B,Allocator>* tree, const Pair<K,V>& value)
 			{
 				size_t page = baseClass::find_page(tree,value);
-				return m_pages[page]->insert(tree,value);
+				return this->m_pages[page]->insert(tree,value);
 			}
 
 			bool remove(BTree<K,V,Compare,B,Allocator>* tree, const BTreeCompareBase<K,Compare>& compare)
