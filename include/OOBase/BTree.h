@@ -120,42 +120,68 @@ namespace OOBase
 			void dump(String& str, unsigned int indent)
 			{
 				String str2;
-				size_t i=0;
-				for (;i<m_key_count;++i)
+
+				if (m_key_count)
 				{
-					m_pages[i]->dump(str,indent + 2);
+					size_t i=0;
+					for (;i<m_key_count;++i)
+					{
+						if (!m_pages[i])
+						{
+							str2.printf("%*sNULL\n",indent + 2,"");
+							str.append(str2);
+						}
+						else
+							m_pages[i]->dump(str,indent + 2);
+
+
+						str2.printf("%*s%s\n",indent,""," /");
+						str.append(str2);
+						str2.printf("%*s%c\n",indent,"",m_keys[i]);
+						str.append(str2);
+						str2.printf("%*s%s\n",indent,""," \\");
+						str.append(str2);
+					}
+
+					if (!m_pages[i])
+					{
+						str2.printf("%*sNULL\n",indent + 2,"");
+						str.append(str2);
+					}
+					else
+						m_pages[i]->dump(str,indent + 2);
+				}
+				else
+				{
+					if (!m_pages[0])
+					{
+						str2.printf("%*sNULL\n",indent + 2,"");
+						str.append(str2);
+					}
+					else
+						m_pages[0]->dump(str,indent + 2);
 
 					str2.printf("%*s%s\n",indent,""," /");
 					str.append(str2);
-					str2.printf("%*s%c\n",indent,"",m_keys[i]);
-					str.append(str2);
-					str2.printf("%*s%s\n",indent,""," \\");
+					str2.printf("%*s?\n",indent,"");
 					str.append(str2);
 				}
-
-				if (!m_pages[i])
-				{
-					str2.printf("%*sNULL\n",indent + 2,"");
-					str.append(str2);
-				}
-				else
-					m_pages[i]->dump(str,indent + 2);
 			}
 
-			bool insert_page(BTree<K,V,Compare,B,Allocator>* tree, baseClass* page, const K& key)
+			bool insert_page(BTree<K,V,Compare,B,Allocator>* tree, baseClass* page, const K& key, size_t insert_pos)
 			{
 				if (m_key_count >= B - 1)
-					return split(tree,page,key);
+					return split(tree,insert_pos,page,key);
 
-				size_t pos = find_page(BTreeCompare<K,K,Compare>(tree->m_compare,key));
-				for (size_t i = m_key_count;i-- > pos;)
+				for (size_t i = m_key_count;i-- > insert_pos;)
 				{
 					OOBase::swap(m_pages[i+1],m_pages[i+2]);
 					OOBase::swap(m_keys[i],m_keys[i+1]);
 				}
-				m_pages[pos+1] = page;
-				m_keys[pos] = key;
+				m_pages[insert_pos+1] = page;
+				m_keys[insert_pos] = key;
 				++m_key_count;
+
 				return true;
 			}
 
@@ -195,7 +221,7 @@ namespace OOBase
 
 			virtual BTreeInternalPageBase* new_page(BTree<K,V,Compare,B,Allocator>* tree) = 0;
 
-			bool split(BTree<K,V,Compare,B,Allocator>* tree, baseClass* child, const K& child_key)
+			bool split(BTree<K,V,Compare,B,Allocator>* tree, size_t insert_pos, baseClass* child, const K& child_key)
 			{
 				// Make sure we have a parent
 				if (!this->m_parent)
@@ -209,55 +235,74 @@ namespace OOBase
 				if (!sibling)
 					return false;
 
-				// Copy half our values
-				size_t half = B/2 - 1;
-				bool insert_into_us = tree->m_compare(child_key,this->m_keys[half]);
-				if (!insert_into_us)
-					++half;
-
-				K sibling_key;
-				OOBase::swap(sibling_key,m_keys[half]);
-
-				for (size_t pos = half+1; pos < m_key_count; ++pos)
+				size_t half = B/2;
+				if (insert_pos > half)
 				{
-					OOBase::swap(sibling->m_keys[sibling->m_key_count],m_keys[pos]);
-					OOBase::swap(sibling->m_pages[sibling->m_key_count],m_pages[pos]);
+					// Promote half, insert into sibling
+					size_t parent_pos = this->m_parent->find_page(BTreeCompare<K,K,Compare>(tree->m_compare,m_keys[half]));
+					if (!this->m_parent->insert_page(tree,sibling,m_keys[half],parent_pos))
+						return false;
 
-					// Update parent pointer of children
+					size_t i = half+1;
+					for (; i < insert_pos; ++i)
+					{
+						OOBase::swap(sibling->m_keys[sibling->m_key_count],m_keys[i]);
+						OOBase::swap(sibling->m_pages[sibling->m_key_count],m_pages[i]);
+						sibling->m_pages[sibling->m_key_count++]->m_parent = sibling;
+					}
+					OOBase::swap(sibling->m_pages[sibling->m_key_count],m_pages[i]);
 					sibling->m_pages[sibling->m_key_count]->m_parent = sibling;
 
+					sibling->m_keys[sibling->m_key_count] = child_key;
+					sibling->m_pages[sibling->m_key_count+1] = child;
+					sibling->m_pages[sibling->m_key_count+1]->m_parent = sibling;
 					++sibling->m_key_count;
-				}
-				OOBase::swap(sibling->m_pages[sibling->m_key_count],m_pages[m_key_count]);
-				sibling->m_pages[sibling->m_key_count]->m_parent = sibling;
 
-				m_key_count = half;
-
-				// Add the sibling
-				if (!this->m_parent->insert_page(tree,sibling,sibling_key))
-				{
-					// Copy everything back
-					OOBase::swap(m_keys[m_key_count++],sibling_key);
-					for (size_t i=0;i<sibling->m_key_count;++i)
+					for (; i < m_key_count; ++i)
 					{
-						OOBase::swap(m_keys[m_key_count],sibling->m_keys[i]);
-						OOBase::swap(m_pages[m_key_count],sibling->m_pages[i]);
-
-						m_pages[m_key_count]->m_parent = this;
-
-						m_key_count++;
+						OOBase::swap(sibling->m_keys[sibling->m_key_count],m_keys[i]);
+						OOBase::swap(sibling->m_pages[sibling->m_key_count+1],m_pages[i]);
+						sibling->m_pages[sibling->m_key_count+1]->m_parent = sibling;
+						++sibling->m_key_count;
 					}
-					OOBase::swap(m_pages[m_key_count],sibling->m_pages[sibling->m_key_count]);
-					m_pages[m_key_count]->m_parent = this;
-					sibling->destroy(tree);
-					return false;
+					m_key_count = half;
+				}
+				else
+				{
+					if (insert_pos == half)
+					{
+						// Promote child_key
+						size_t parent_pos = this->m_parent->find_page(BTreeCompare<K,K,Compare>(tree->m_compare,child_key));
+						if (!this->m_parent->insert_page(tree,sibling,child_key,parent_pos))
+							return false;
+					}
+					else
+					{
+						// Promote half-1
+						size_t parent_pos = this->m_parent->find_page(BTreeCompare<K,K,Compare>(tree->m_compare,m_keys[half-1]));
+						if (!this->m_parent->insert_page(tree,sibling,m_keys[half-1],parent_pos))
+							return false;
+					}
+
+					// Insert into us
+					size_t i = half;
+					for (; i < m_key_count; ++i)
+					{
+						OOBase::swap(sibling->m_keys[sibling->m_key_count],m_keys[i]);
+						OOBase::swap(sibling->m_pages[sibling->m_key_count],m_pages[i]);
+						sibling->m_pages[sibling->m_key_count++]->m_parent = sibling;
+					}
+					OOBase::swap(sibling->m_pages[sibling->m_key_count],m_pages[i]);
+					sibling->m_pages[sibling->m_key_count]->m_parent = sibling;
+					m_key_count = half - 1;
+
+					insert_page(tree,child,child_key,insert_pos);
 				}
 
-				if (insert_into_us)
-					return insert_page(tree,child,child_key);
-				
-				child->m_parent = sibling;
-				return sibling->insert_page(tree,child,child_key);
+				LOG_DEBUG(("internal::split(%zu,%c)",insert_pos,child_key));
+				tree->dump();
+
+				return true;
 			}
 
 			baseClass* const* find_exact(const K& key, const Compare& compare) const
@@ -407,7 +452,10 @@ namespace OOBase
 				str.append(str2);
 				for (size_t i=0;i<m_size;++i)
 				{
-					str2.printf("%c ",m_data[i].first);
+					if (m_data[i].first == 0)
+						str2.printf("? ");
+					else
+						str2.printf("%c ",m_data[i].first);
 					str.append(str2);
 				}
 				str2.printf("\n");
@@ -514,16 +562,20 @@ namespace OOBase
 				if (m_size >= B)
 					return split(tree,value,pos,parent_pos);
 
-				for (size_t i = m_size; i-- > pos;)
+				insert_entry(pos,value,parent_pos);
+				return true;
+			}
+
+			void insert_entry(size_t insert_pos, const Pair<K,V>& value, size_t parent_pos)
+			{
+				for (size_t i = m_size; i-- > insert_pos;)
 					OOBase::swap(m_data[i],m_data[i+1]);
 
-				m_data[pos] = value;
+				m_data[insert_pos] = value;
 				++m_size;
 
-				if (pos == 0)
+				if (insert_pos == 0)
 					adjust_parent_key(parent_pos);
-
-				return true;
 			}
 
 			bool split(BTree<K,V,Compare,B,Allocator>* tree, const Pair<K,V>& value, size_t insert_pos, size_t parent_pos)
@@ -546,52 +598,42 @@ namespace OOBase
 					m_next->m_prev = sibling;
 				m_next = sibling;
 
-				// Copy half our values
-				size_t half = s_min - 1;
-				bool insert_into_us = (insert_pos <= half);
-				if (!insert_into_us)
-					++half;
-
-				for (size_t pos = half; pos < m_size; ++pos)
-					OOBase::swap(sibling->m_data[sibling->m_size++],m_data[pos]);
-				m_size = half;
+				// Find the half-way point
+				size_t half = s_min;
+				bool insert_into_us = (insert_pos < half);
+				if (insert_pos != half)
+				{
+					if (insert_into_us)
+						--half;
+					if (!this->m_parent->insert_page(tree,sibling,m_data[half].first,parent_pos))
+						return false;
+				}
+				else if (!this->m_parent->insert_page(tree,sibling,value.first,parent_pos))
+					return false;
 
 				if (insert_into_us)
 				{
-					for (size_t i = m_size; i-- > insert_pos;)
-						OOBase::swap(m_data[i],m_data[i+1]);
+					for (size_t i = half; i < m_size; ++i)
+						OOBase::swap(sibling->m_data[sibling->m_size++],m_data[i]);
+					m_size = half;
 
-					m_data[insert_pos] = value;
-					++m_size;
-
-					if (insert_pos == 0)
-						adjust_parent_key(parent_pos);
+					insert_entry(insert_pos,value,parent_pos);
 				}
 				else
 				{
-					insert_pos -= half;
-
-					for (size_t i = sibling->m_size; i-- > insert_pos;)
-						OOBase::swap(sibling->m_data[i],sibling->m_data[i+1]);
-
-					sibling->m_data[insert_pos] = value;
+					size_t i = half;
+					for (;i < insert_pos; ++i)
+						OOBase::swap(sibling->m_data[sibling->m_size++],m_data[i]);
 					++sibling->m_size;
-				}
-				
-				if (!this->m_parent->insert_page(tree,sibling,sibling->m_data[0].first))
-				{
-					if (insert_into_us)
-						remove_i(tree,BTreeCompare<K,K,Compare>(tree->m_compare,value.first),parent_pos);
-					else
-						sibling->remove_i(tree,BTreeCompare<K,K,Compare>(tree->m_compare,value.first),0);
+					for (; i < m_size; ++i)
+						OOBase::swap(sibling->m_data[sibling->m_size++],m_data[i]);
+					m_size = half;
 
-					// Copy back again
-					for (size_t i=0;i<sibling->m_size;++i)
-						OOBase::swap(m_data[m_size++],sibling->m_data[i]);
-
-					sibling->destroy(tree);
-					return false;
+					insert_pos -= half;
+					sibling->m_data[insert_pos] = value;
 				}
+
+
 				return true;
 			}
 
@@ -621,13 +663,14 @@ namespace OOBase
 			{
 				size_t steal = (m_prev->m_size - s_min) / 2 + 1;
 				
-				for (size_t i = pos+1; i < m_size; ++i)
+				size_t i = pos + 1;
+				for (; i < m_size; ++i)
 					OOBase::swap(m_data[i-1],m_data[i]);
 
-				for (size_t i = 0; i < steal; ++i)
+				for (i = 0; i < steal; ++i)
 					OOBase::swap(m_data[m_size++],m_next->m_data[i]);
 
-				for (size_t i = steal; i < m_next->m_size; ++i)
+				for (; i < m_next->m_size; ++i)
 					OOBase::swap(m_next->m_data[i - steal],m_next->m_data[i]);
 
 				m_next->m_size -= steal;
