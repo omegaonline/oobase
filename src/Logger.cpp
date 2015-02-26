@@ -195,7 +195,7 @@ void OOBase::Logger::log(Priority priority, const char* fmt, ...)
 void OOBase::Logger::log(Priority priority, const char* fmt, va_list args)
 {
 	ScopedArrayPtr<char> ptr;
-	if (vprintf(ptr,fmt,args) == 0)
+	if (OOBase::vprintf(ptr,fmt,args) == 0)
 		LoggerInstance().log(priority,ptr.get());
 	else
 		LoggerInstance().log(priority,fmt);
@@ -214,7 +214,7 @@ void OOBase::Logger::filenum_t::log(const char* fmt, ...)
 	va_start(args,fmt);
 
 	ScopedArrayPtr<char> msg;
-	int err = vprintf(msg,fmt,args);
+	int err = OOBase::vprintf(msg,fmt,args);
 
 	va_end(args);
 
@@ -239,7 +239,7 @@ void OOBase::Logger::filenum_t::log(const char* fmt, ...)
 		}
 
 		ScopedArrayPtr<char> header;
-		if (printf(header,"%s(%u): %s",m_pszFilename,m_nLine,msg.get()) == 0)
+		if (OOBase::printf(header,"%s(%u): %s",m_pszFilename,m_nLine,msg.get()) == 0)
 			LoggerInstance().log(m_priority,header.get());
 	}
 }
@@ -356,18 +356,18 @@ namespace
 			case OOBase::Logger::Warning:
 				attrs = get_console_attrs(h);
 				SetConsoleTextAttribute(h,FOREGROUND_RED | FOREGROUND_GREEN);
-				OOBase::stdout_write(out.get(),out.count());
+				OOBase::stdout_write(out.get(),-1);
 				SetConsoleTextAttribute(h,attrs);
 				break;
 
 			case OOBase::Logger::Information:
-				OOBase::stdout_write(out.get(),out.count());
+				OOBase::stdout_write(out.get(),-1);
 				break;
 
 			case OOBase::Logger::Debug:
 				attrs = get_console_attrs(h);
 				SetConsoleTextAttribute(h,FOREGROUND_GREEN);
-				OOBase::stdout_write(out.get(),out.count());
+				OOBase::stdout_write(out.get(),-1);
 				SetConsoleTextAttribute(h,attrs);
 				break;
 
@@ -375,7 +375,7 @@ namespace
 			default:
 				attrs = get_console_attrs(h);
 				SetConsoleTextAttribute(h,FOREGROUND_RED);
-				OOBase::stdout_write(out.get(),out.count());
+				OOBase::stdout_write(out.get(),-1);
 				SetConsoleTextAttribute(h,attrs);
 				break;
 			}
@@ -573,7 +573,7 @@ namespace
 			OOBase::ScopedArrayPtr<char> out;
 			formatMsg(out,t,priority,msg,use_colour);
 
-			OOBase::stdout_write(out.get(),out.count());
+			OOBase::stdout_write(out.get(),-1);
 		}
 	}
 
@@ -589,7 +589,7 @@ namespace
 			OOBase::ScopedArrayPtr<char> out;
 			formatMsg(out,t,priority,msg,use_colour);
 
-			OOBase::stdout_write(out.get(),out.count());
+			OOBase::stdout_write(out.get(),-1);
 		}
 	}
 }
