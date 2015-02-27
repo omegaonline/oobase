@@ -32,8 +32,8 @@ namespace OOBase
 			// Use a little trick to calculate next morton key
 			// Morton(x+1) = (Morton(x) - MAXMORTONKEY) & MAXMORTONKEY
 			static const T valueX = (MortonValue<T,I-1>::valueX - MortonMAX<T,sizeof(T)>::value) & MortonMAX<T,sizeof(T)>::value;
-			static const T valueY = T(valueX << 1);
-			static const T valueZ = T(valueX << 2);
+			static const T valueY = static_cast<T>(valueX << 1);
+			static const T valueZ = static_cast<T>(valueX << 2);
 		};
 
 		template <typename T>
