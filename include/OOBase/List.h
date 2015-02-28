@@ -113,12 +113,14 @@ namespace OOBase
 
 		bool pop_front(T* pval = NULL)
 		{
-			return remove(pval,m_head);
+			ListNode* p = m_head;
+			return remove(pval,p);
 		}
 
 		bool pop_back(T* pval = NULL)
 		{
-			return remove(pval,m_tail);
+			ListNode* p = m_tail;
+			return remove(pval,p);
 		}
 
 		template <typename T1>
