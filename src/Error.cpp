@@ -232,7 +232,7 @@ const char* OOBase::system_error_text(int err)
 #endif
 	}
 
-	static const char unknown_error[] = "Unknown error or error in processing";
+	static const char unknown_error[512] = "Unknown error or error in processing";
 	bool ok = false;
 
 	size_t err_len = 0;

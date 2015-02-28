@@ -358,8 +358,6 @@ namespace OOBase
 		static void* allocate(size_t bytes, size_t align = 16);
 		static void* reallocate(void* ptr, size_t bytes, size_t align = 16);
 		static void free(void* ptr);
-
-		static AllocatorInstance& instance();
 	};
 
 	template <typename Allocator = CrtAllocator>
@@ -371,7 +369,7 @@ namespace OOBase
 		Allocating()
 		{}
 
-		Allocating(const Allocating& rhs)
+		Allocating(const Allocating&)
 		{}
 
 		Allocating& operator = (const Allocating& rhs)
@@ -380,7 +378,7 @@ namespace OOBase
 			return *this;
 		}
 
-		void swap(Allocating& rhs)
+		void swap(Allocating&)
 		{}
 
 		static void* allocate(size_t bytes, size_t align)

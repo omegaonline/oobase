@@ -22,15 +22,6 @@
 #include "../include/OOBase/DLL.h"
 #include "../include/OOBase/Singleton.h"
 
-namespace OOBase
-{
-	// The discrimination type for singleton scoping for this module
-	struct Module
-	{
-		int unused;
-	};
-}
-
 template class OOBase::DLLDestructor<OOBase::Module>;
 
 #if defined(_WIN32)

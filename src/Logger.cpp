@@ -22,6 +22,7 @@
 #include "config-base.h"
 
 #include "../include/OOBase/Logger.h"
+#include "../include/OOBase/Singleton.h"
 #include "../include/OOBase/Once.h"
 #include "../include/OOBase/Mutex.h"
 
@@ -105,15 +106,8 @@ namespace
 		OOBase::Vector<OutputShim> m_vecOutputs;
 	};
 
-	static Logger s_instance;
-
-	Logger& LoggerInstance()
-	{
-		static OOBase::Once::once_t key = ONCE_T_INIT;
-		OOBase::Once::Run(&key,&Logger::init);
-		return s_instance;
-	}
-
+	typedef OOBase::Singleton<Logger,OOBase::Module> LOGGER;
+	
 	#if defined(_WIN32)
 	void get_now(timeval& t)
 	{
@@ -137,10 +131,7 @@ namespace
 	#endif
 }
 
-void Logger::init()
-{
-	Logger().swap(s_instance);
-}
+template class OOBase::Singleton<Logger,OOBase::Module>;
 
 bool Logger::connect(void (*callback)(void* param, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg), void* param)
 {
@@ -169,17 +160,27 @@ void Logger::log(OOBase::Logger::Priority priority, const char* msg)
 
 void OOBase::Logger::set_source_file(const char* pszSrcFile)
 {
-	LoggerInstance().set_src(pszSrcFile);
+	::Logger* logger = LOGGER::instance_ptr();
+	if (logger)
+		logger->set_src(pszSrcFile);
 }
 
 bool OOBase::Logger::connect(void (*callback)(void* param, const ::timeval& t, Priority priority, const char* msg), void* param)
 {
-	return LoggerInstance().connect(callback,param);
+	::Logger* logger = LOGGER::instance_ptr();
+	if (!logger)
+		return false;
+
+	return logger->connect(callback,param);
 }
 
 bool OOBase::Logger::disconnect(void (*callback)(void* param, const ::timeval& t, Priority priority, const char* msg), void* param)
 {
-	return LoggerInstance().disconnect(callback,param);
+	::Logger* logger = LOGGER::instance_ptr();
+	if (!logger)
+		return false;
+
+	return logger->disconnect(callback,param);
 }
 
 void OOBase::Logger::log(Priority priority, const char* fmt, ...)
@@ -194,11 +195,15 @@ void OOBase::Logger::log(Priority priority, const char* fmt, ...)
 
 void OOBase::Logger::log(Priority priority, const char* fmt, va_list args)
 {
-	ScopedArrayPtr<char> ptr;
-	if (OOBase::vprintf(ptr,fmt,args) == 0)
-		LoggerInstance().log(priority,ptr.get());
-	else
-		LoggerInstance().log(priority,fmt);
+	::Logger* logger = LOGGER::instance_ptr();
+	if (logger)
+	{
+		ScopedArrayPtr<char> ptr;
+		if (OOBase::vprintf(ptr,fmt,args) == 0)
+			logger->log(priority,ptr.get());
+		else
+			logger->log(priority,fmt);
+	}
 }
 
 OOBase::Logger::filenum_t::filenum_t(Priority priority, const char* pszFilename, unsigned int nLine) :
@@ -218,29 +223,41 @@ void OOBase::Logger::filenum_t::log(const char* fmt, ...)
 
 	va_end(args);
 
-	if (err == 0)
+	::Logger* logger = LOGGER::instance_ptr();
+	if (logger && err == 0)
 	{
 		if (m_pszFilename)
 		{
-			const char* pszSrcFile = LoggerInstance().src();
+			const char* pszSrcFile = logger->src();
 			size_t s=0;
 			for (;;)
 			{
+#if defined(_WIN32)
 				size_t s1 = s;
-				while (pszSrcFile[s1] == m_pszFilename[s1] && pszSrcFile[s1] != '\0' && pszSrcFile[s1] != '\\' && pszSrcFile[s1] != '/')
+				while (pszSrcFile[s1] == m_pszFilename[s1] && pszSrcFile[s1] != '\0' && pszSrcFile[s1] != '\\')
 					++s1;
 
-				if (pszSrcFile[s1] == '\\' || pszSrcFile[s1] == '/')
+				if (pszSrcFile[s1] == '\\')
 					s = s1+1;
 				else
 					break;
+#else
+				size_t s1 = s;
+				while (pszSrcFile[s1] == m_pszFilename[s1] && pszSrcFile[s1] != '\0' && pszSrcFile[s1] != '/')
+					++s1;
+
+				if (pszSrcFile[s1] == '/')
+					s = s1+1;
+				else
+					break;
+#endif				
 			}
 			m_pszFilename += s;
 		}
 
 		ScopedArrayPtr<char> header;
 		if (OOBase::printf(header,"%s(%u): %s",m_pszFilename,m_nLine,msg.get()) == 0)
-			LoggerInstance().log(m_priority,header.get());
+			logger->log(m_priority,header.get());
 	}
 }
 
@@ -356,18 +373,18 @@ namespace
 			case OOBase::Logger::Warning:
 				attrs = get_console_attrs(h);
 				SetConsoleTextAttribute(h,FOREGROUND_RED | FOREGROUND_GREEN);
-				OOBase::stdout_write(out.get(),-1);
+				OOBase::stdout_write(out.get());
 				SetConsoleTextAttribute(h,attrs);
 				break;
 
 			case OOBase::Logger::Information:
-				OOBase::stdout_write(out.get(),-1);
+				OOBase::stdout_write(out.get());
 				break;
 
 			case OOBase::Logger::Debug:
 				attrs = get_console_attrs(h);
 				SetConsoleTextAttribute(h,FOREGROUND_GREEN);
-				OOBase::stdout_write(out.get(),-1);
+				OOBase::stdout_write(out.get());
 				SetConsoleTextAttribute(h,attrs);
 				break;
 
@@ -375,7 +392,7 @@ namespace
 			default:
 				attrs = get_console_attrs(h);
 				SetConsoleTextAttribute(h,FOREGROUND_RED);
-				OOBase::stdout_write(out.get(),-1);
+				OOBase::stdout_write(out.get());
 				SetConsoleTextAttribute(h,attrs);
 				break;
 			}
@@ -573,7 +590,7 @@ namespace
 			OOBase::ScopedArrayPtr<char> out;
 			formatMsg(out,t,priority,msg,use_colour);
 
-			OOBase::stdout_write(out.get(),-1);
+			OOBase::stdout_write(out.get());
 		}
 	}
 
@@ -589,7 +606,7 @@ namespace
 			OOBase::ScopedArrayPtr<char> out;
 			formatMsg(out,t,priority,msg,use_colour);
 
-			OOBase::stdout_write(out.get(),-1);
+			OOBase::stdout_write(out.get());
 		}
 	}
 }

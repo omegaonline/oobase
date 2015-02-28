@@ -27,12 +27,11 @@
 
 namespace OOBase
 {
-	namespace detail
+	// The discrimination type for singleton scoping for this module
+	struct Module
 	{
-		struct default_module
-		{
-		};
-	}
+		int unused;
+	};
 
 	template <typename T, typename DLL = detail::default_module>
 	class Singleton : public NonCopyable

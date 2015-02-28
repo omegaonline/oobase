@@ -133,15 +133,6 @@ namespace
 	};
 }
 
-namespace OOBase
-{
-	// The discrimination type for singleton scoping for this module
-	struct Module
-	{
-		int unused;
-	};
-}
-
 void OOBase::Win32::WSAStartup()
 {
 	// Use a singleton to ensure WSAStartup() and WSACleanup() are called as a pair, once

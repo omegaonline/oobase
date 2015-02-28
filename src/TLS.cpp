@@ -26,12 +26,6 @@
 
 namespace OOBase
 {
-	// The discrimination type for singleton scoping for this module
-	struct Module
-	{
-		int unused;
-	};
-
 	namespace detail
 	{
 		char* get_error_buffer(size_t& len);
@@ -40,200 +34,155 @@ namespace OOBase
 
 namespace
 {
-	class TLSMap : public OOBase::NonCopyable
+	class TLSGlobal : public OOBase::NonCopyable
 	{
 	public:
-		TLSMap(OOBase::AllocatorInstance* allocator) : m_allocator(allocator), m_mapVals(*allocator)
+		TLSGlobal() : m_refcount(1)
 		{}
 
-		static TLSMap* instance(bool create = true);
+		void addref() 
+		{
+			++m_refcount; 
+		}
 
-		static void destroy(void* pThis);
+		void release();
+
+		static TLSGlobal* instance();
+		
+		OOBase::ArenaAllocator m_allocator;
 
 		struct tls_val
 		{
 			void* m_val;
 			void (*m_destructor)(void*);
 		};
-
-		OOBase::AllocatorInstance* m_allocator;
-		OOBase::HashTable<const void*,tls_val,OOBase::AllocatorInstance> m_mapVals;
-
+		OOBase::HashTable<const void*,tls_val,OOBase::ThreadLocalAllocator> m_mapVals;
+		
 		// Special internal thread-local variables
 		char m_error_buffer[512];
+
+	private:
+		size_t m_refcount;
 	};
+
+	static TLSGlobal* s_instance = NULL;
 }
 
 #if defined(_WIN32)
 
 namespace
 {
-	struct Win32TLSGlobal
+	static DWORD s_key = TLS_OUT_OF_INDEXES;
+
+	void init()
 	{
-		Win32TLSGlobal();
-		~Win32TLSGlobal();
-
-		TLSMap* Get();
-		void Set(TLSMap* inst);
-
-	private:
-		DWORD         m_key;
-	};
-
-	Win32TLSGlobal::Win32TLSGlobal() :
-			m_key(TLS_OUT_OF_INDEXES)
-	{
-		m_key = TlsAlloc();
-		if (m_key == TLS_OUT_OF_INDEXES)
-			OOBase_CallCriticalFailure(GetLastError());
-
-		if (!TlsSetValue(m_key,NULL))
+		s_key = TlsAlloc();
+		if (s_key == TLS_OUT_OF_INDEXES)
 			OOBase_CallCriticalFailure(GetLastError());
 	}
 
-	Win32TLSGlobal::~Win32TLSGlobal()
+	void term(void* inst)
 	{
-		if (m_key != TLS_OUT_OF_INDEXES)
-			TlsFree(m_key);
+		static_cast<TLSGlobal*>(inst)->release();
 	}
-
-	TLSMap* Win32TLSGlobal::Get()
-	{
-		return static_cast<TLSMap*>(TlsGetValue(m_key));
-	}
-
-	void Win32TLSGlobal::Set(TLSMap* inst)
-	{
-		if (!TlsSetValue(m_key,inst))
-			OOBase_CallCriticalFailure(GetLastError());
-	}
-
-	/** \typedef TLS_GLOBAL
-	 *  The TLS singleton.
-	 *  The singleton is specialised by the platform specific implementation
-	 *  e.g. \link Win32TLSGlobal \endlink or \link PthreadTLSGlobal \endlink
-	 */
-	typedef OOBase::Singleton<Win32TLSGlobal,OOBase::Module> TLS_GLOBAL;
 }
 
-template class OOBase::Singleton<Win32TLSGlobal,OOBase::Module>;
-
-#endif // _WIN32
-
-#if defined(HAVE_PTHREAD)
-
-namespace
+TLSGlobal* TLSGlobal::instance()
 {
-	struct PthreadTLSGlobal
+	static OOBase::Once::once_t key = ONCE_T_INIT;
+	OOBase::Once::Run(&key,init);
+		
+	TLSGlobal* inst = NULL;
+	if (s_key != TLS_OUT_OF_INDEXES)
 	{
-		PthreadTLSGlobal();
-		~PthreadTLSGlobal();
-
-		TLSMap* Get();
-		void Set(TLSMap* inst);
-
-	private:
-		pthread_key_t m_key;
-
-		static void thread_destruct(void*);
-	};
-
-	PthreadTLSGlobal::PthreadTLSGlobal()
-	{
-		int err = pthread_key_create(&m_key,&thread_destruct);
-		if (err != 0)
-			OOBase_CallCriticalFailure(err);
-	}
-
-	PthreadTLSGlobal::~PthreadTLSGlobal()
-	{
-		int err = pthread_key_delete(m_key);
-		if (err != 0)
-			OOBase_CallCriticalFailure(err);
-	}
-
-	TLSMap* PthreadTLSGlobal::Get()
-	{
-		return static_cast<TLSMap*>(pthread_getspecific(m_key));
-	}
-
-	void PthreadTLSGlobal::Set(TLSMap* inst)
-	{
-		int err = pthread_setspecific(m_key,inst);
-		if (err != 0)
-			OOBase_CallCriticalFailure(err);
-	}
-
-	void PthreadTLSGlobal::thread_destruct(void* inst)
-	{
-		OOBase::DLLDestructor<OOBase::Module>::remove_destructor(TLSMap::destroy,inst);
-		TLSMap::destroy(inst);
-	}
-
-	typedef OOBase::Singleton<PthreadTLSGlobal,OOBase::Module> TLS_GLOBAL;
-}
-
-template class OOBase::Singleton<PthreadTLSGlobal,OOBase::Module>;
-
-#endif // HAVE_PTHREAD
-
-namespace
-{
-	TLSMap* TLSMap::instance(bool create)
-	{
-		TLSMap* inst = TLS_GLOBAL::instance().Get();
-		if (!inst && create)
+		inst = static_cast<TLSGlobal*>(TlsGetValue(s_key));
+		if (!inst && OOBase::CrtAllocator::allocate_new(inst))
 		{
-			OOBase::ArenaAllocator* alloc = NULL;
-			if (!OOBase::CrtAllocator::allocate_new(alloc))
-				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-
-			if (!alloc->allocate_new(inst,alloc))
-			{
-				OOBase::CrtAllocator::delete_free(alloc);
-				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-			}
-
-			if (!OOBase::DLLDestructor<OOBase::Module>::add_destructor(destroy,inst))
-			{
-				destroy(inst);
-				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-			}
-
-			TLS_GLOBAL::instance().Set(inst);
+			OOBase::DLLDestructor<OOBase::Module>::add_destructor(&term,inst);
+			TlsSetValue(s_key,inst);
 		}
-		return inst;
+	}
+	return inst;
+}
+
+void TLSGlobal::release()
+{
+	if (--m_refcount == 0)
+	{
+		OOBase::CrtAllocator::delete_free(this);
+		TlsSetValue(s_key,NULL);
+	}
+}
+
+void OOBase::TLS::ThreadExit()
+{
+	TLSGlobal* inst = TLSGlobal::instance();
+	if (inst)
+	{
+		OOBase::DLLDestructor<OOBase::Module>::remove_destructor(&term,inst);
+		inst->release();
+	}
+}
+
+#elif defined(HAVE_PTHREAD)
+
+namespace
+{
+	static pthread_key_t s_key;
+
+	void init()
+	{
+		pthread_key_create(&s_key,&thread_destruct);
 	}
 
-	void TLSMap::destroy(void* pThis)
+	void term(void* inst)
 	{
-		TLSMap* inst = static_cast<TLSMap*>(pThis);
+		static_cast<TLSGlobal*>(inst)->release();
+		pthread_setspecific(s_key,NULL);
+	}
+
+	void thread_destruct(void* inst)
+	{
 		if (inst)
 		{
-			tls_val val = {0};
-			while (inst->m_mapVals.pop(NULL,&val))
-			{
-				if (val.m_destructor)
-					(*val.m_destructor)(val.m_val);
-			}
-
-			OOBase::AllocatorInstance* alloc = inst->m_allocator;
-
-			alloc->delete_free(inst);
-
-			OOBase::CrtAllocator::delete_free(alloc);
+			OOBase::DLLDestructor<OOBase::Module>::remove_destructor(&term,inst);
+			static_cast<TLSGlobal*>(inst)->release();
 		}
-
-		// Now set NULL back in place...
-		TLS_GLOBAL::instance().Set(NULL);
 	}
 }
+
+TLSGlobal* TLSGlobal::instance()
+{
+	static OOBase::Once::once_t key = ONCE_T_INIT;
+	OOBase::Once::Run(&key,init);
+		
+	TLSGlobal* inst = static_cast<TLSGlobal*>(pthread_getspecific(s_key));
+	if (!inst && OOBase::CrtAllocator::allocate_new(inst))
+	{
+		pthread_setspecific(s_key,inst);
+		OOBase::DLLDestructor<OOBase::Module>::add_destructor(&term,inst);
+	}
+		
+	return inst;
+}
+
+void TLSGlobal::release()
+{
+	if (--m_refcount == 0)
+		OOBase::CrtAllocator::delete_free(this);
+}
+
+void OOBase::TLS::ThreadExit()
+{
+}
+
+#endif
 
 bool OOBase::TLS::Get(const void* key, void** val)
 {
-	TLSMap* inst = TLSMap::instance();
+	TLSGlobal* inst = TLSGlobal::instance();
 
-	OOBase::HashTable<const void*,TLSMap::tls_val,OOBase::AllocatorInstance>::iterator i = inst->m_mapVals.find(key);
+	OOBase::HashTable<const void*,TLSGlobal::tls_val,OOBase::ThreadLocalAllocator>::iterator i = inst->m_mapVals.find(key);
 	if (i == inst->m_mapVals.end())
 		return false;
 
@@ -245,39 +194,18 @@ bool OOBase::TLS::Get(const void* key, void** val)
 
 bool OOBase::TLS::Set(const void* key, void* val, void (*destructor)(void*))
 {
-	TLSMap* inst = TLSMap::instance();
+	TLSGlobal* inst = TLSGlobal::instance();
 
-	TLSMap::tls_val v;
+	TLSGlobal::tls_val v;
 	v.m_val = val;
 	v.m_destructor = destructor;
 
 	return inst->m_mapVals.insert(key,v) != inst->m_mapVals.end();
 }
 
-void OOBase::TLS::ThreadExit()
-{
-	TLSMap* inst = TLSMap::instance(false);
-	if (inst)
-	{
-		OOBase::DLLDestructor<OOBase::Module>::remove_destructor(TLSMap::destroy,inst);
-		TLSMap::destroy(inst);
-	}
-}
-
-OOBase::AllocatorInstance* OOBase::TLS::detail::swap_allocator(AllocatorInstance* pNew)
-{
-	TLSMap* inst = TLSMap::instance();
-
-	AllocatorInstance* curr = inst->m_allocator;
-	if (pNew)
-		inst->m_allocator = pNew;
-
-	return curr;
-}
-
 char* OOBase::detail::get_error_buffer(size_t& len)
 {
-	TLSMap* inst = TLSMap::instance(false);
+	TLSGlobal* inst = TLSGlobal::instance();
 	if (!inst)
 		return NULL;
 
@@ -287,20 +215,37 @@ char* OOBase::detail::get_error_buffer(size_t& len)
 
 void* OOBase::ThreadLocalAllocator::allocate(size_t bytes, size_t align)
 {
-	return TLS::detail::swap_allocator()->allocate(bytes,align);
+	TLSGlobal* inst = TLSGlobal::instance();
+	if (!inst)
+		return NULL;
+
+	void* p = inst->m_allocator.allocate(bytes,align);
+	if (p)
+		inst->addref();
+	return p;
 }
 
 void* OOBase::ThreadLocalAllocator::reallocate(void* ptr, size_t bytes, size_t align)
 {
-	return TLS::detail::swap_allocator()->reallocate(ptr,bytes,align);
+	TLSGlobal* inst = TLSGlobal::instance();
+	if (!inst)
+		return NULL;
+
+	void* p = inst->m_allocator.reallocate(ptr,bytes,align);
+	if (ptr && !bytes)
+		inst->release();
+	else if (p && !ptr)
+		inst->addref();
+	return p;
 }
 
 void OOBase::ThreadLocalAllocator::free(void* ptr)
 {
-	TLS::detail::swap_allocator()->free(ptr);
-}
-
-OOBase::AllocatorInstance& OOBase::ThreadLocalAllocator::instance()
-{
-	return *TLS::detail::swap_allocator();
+	TLSGlobal* inst = TLSGlobal::instance();
+	if (inst)
+	{
+		inst->m_allocator.free(ptr);
+		if (ptr)
+			inst->release();
+	}
 }

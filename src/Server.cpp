@@ -33,15 +33,6 @@
 #include <limits.h>
 #endif
 
-namespace OOBase
-{
-	// The discrimination type for singleton scoping for this module
-	struct Module
-	{
-		int unused;
-	};
-}
-
 #if defined(_WIN32)
 
 namespace
