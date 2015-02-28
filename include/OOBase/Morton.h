@@ -32,8 +32,8 @@ namespace OOBase
 			// Use a little trick to calculate next morton key
 			// Morton(x+1) = (Morton(x) - MAXMORTONKEY) & MAXMORTONKEY
 			static const T valueX = (MortonValue<T,I-1>::valueX - MortonMAX<T,sizeof(T)>::value) & MortonMAX<T,sizeof(T)>::value;
-			static const T valueY = static_cast<T>(valueX << 1);
-			static const T valueZ = static_cast<T>(valueX << 2);
+			static const T valueY = T(valueX << 1);
+			static const T valueZ = T(valueX << 2);
 		};
 
 		template <typename T>
@@ -298,7 +298,7 @@ namespace OOBase
 
 	inline uint32_t MortonEncode32(uint16_t x, uint16_t y, uint16_t z)
 	{
-		uint64_t result = detail::MortonLUT<uint32_t>::x[(x >> 8) & 0x07] | detail::MortonLUT<uint32_t>::y[(y >> 8) & 0x07] | detail::MortonLUT<uint32_t>::z[(z >> 8) & 0x03];
+		uint32_t result = detail::MortonLUT<uint32_t>::x[(x >> 8) & 0x07] | detail::MortonLUT<uint32_t>::y[(y >> 8) & 0x07] | detail::MortonLUT<uint32_t>::z[(z >> 8) & 0x03];
 		result <<= 24;
 		result |= detail::MortonLUT<uint32_t>::x[x & 0xFF] | detail::MortonLUT<uint32_t>::y[y & 0xFF] | detail::MortonLUT<uint32_t>::z[z & 0xFF];
 		return result;
