@@ -397,10 +397,11 @@ namespace OOBase
 					{
 						size_t steal = (next->m_key_count - s_min + 1) / 2;
 						size_t i = steal;
-						for (; i-- > 0;)
+						while (i-- > 0)
 						{
 							OOBase::swap(page->m_keys[page->m_key_count++],this->m_keys[pos]);
 							OOBase::swap(page->m_pages[page->m_key_count],next->m_pages[0]);
+							page->m_pages[page->m_key_count]->m_parent = this;
 							OOBase::swap(this->m_keys[pos],next->m_keys[0]);
 						}
 						next->m_key_count -= steal;
@@ -432,13 +433,15 @@ namespace OOBase
 						{
 							OOBase::swap(next->m_keys[i],page->m_keys[i]);
 							OOBase::swap(next->m_pages[i],page->m_pages[i]);
+							next->m_pages[i]->m_parent = next;
 						}
 						OOBase::swap(next->m_keys[i],this->m_keys[pos]);
 						OOBase::swap(next->m_pages[i],page->m_pages[i]);
+						next->m_pages[i]->m_parent = next;
 						next->m_key_count += page->m_key_count+1;
 
 						--this->m_key_count;
-						for (i = 0;i < this->m_key_count;++i)
+						for (i = pos;i < this->m_key_count;++i)
 						{
 							OOBase::swap(this->m_keys[i],this->m_keys[i+1]);
 							OOBase::swap(this->m_pages[i],this->m_pages[i+1]);
@@ -495,8 +498,100 @@ namespace OOBase
 
 			bool remove(BTree<K,V,Compare,B,Allocator>* tree, const BTreeCompareBase<K,Compare>& compare)
 			{
-				size_t page = baseClass::find_page(compare);
-				return static_cast<BTreeLeafPage<K,V,Compare,B,Allocator>*>(this->m_pages[page])->remove_i(tree,compare,page);
+				size_t pos = baseClass::find_page(compare);
+				BTreeLeafPage<K,V,Compare,B,Allocator>* page = static_cast<BTreeLeafPage<K,V,Compare,B,Allocator>*>(this->m_pages[pos]);
+				if (!page->remove_i(tree,compare,pos))
+					return false;
+
+				if (page->m_size < page->s_min)
+				{
+					LOG_DEBUG(("Underflow!\n"));
+					tree->dump();
+
+					BTreeLeafPage<K,V,Compare,B,Allocator>* prev = pos > 0 ? static_cast<BTreeLeafPage<K,V,Compare,B,Allocator>*>(this->m_pages[pos-1]) : NULL;
+					BTreeLeafPage<K,V,Compare,B,Allocator>* next = pos < this->m_key_count ? static_cast<BTreeLeafPage<K,V,Compare,B,Allocator>*>(this->m_pages[pos+1]) : NULL;
+
+					if (next && next->m_size > next->s_min)
+					{
+						size_t steal = (next->m_size - next->s_min + 1) / 2;
+						size_t i = 0;
+						for (; i < steal; ++i)
+							OOBase::swap(page->m_data[page->m_size++],next->m_data[i]);
+						for (; i < next->m_size; ++i)
+							OOBase::swap(next->m_data[i - steal],next->m_data[i]);
+						next->m_size -= steal;
+						this->m_keys[pos] = next->m_data[0].first;
+
+						LOG_DEBUG(("Steal next!\n"));
+						tree->dump();
+					}
+					else if (prev && prev->m_size > prev->s_min)
+					{
+						size_t steal = (prev->m_size - prev->s_min + 1) / 2;
+						size_t i = next->m_size;
+						while (i-- > 0)
+							OOBase::swap(page->m_data[i],page->m_data[i+steal]);
+						page->m_size += steal;
+						prev->m_size -= steal;
+						for (i = 0; i < steal; ++i)
+							OOBase::swap(prev->m_data[prev->m_size + i],page->m_data[i]);
+						this->m_keys[pos-1] = page->m_data[0].first;
+						
+						LOG_DEBUG(("Steal prev!\n"));
+						tree->dump();
+					}
+					else if (next)
+					{
+						size_t i = next->m_size;
+						while (i-- > 0)
+							OOBase::swap(next->m_data[i],next->m_data[i+page->m_size]);
+						for (i = 0;i < page->m_size;++i)
+							OOBase::swap(next->m_data[i],page->m_data[i]);
+						next->m_size += page->m_size;
+
+						if (pos < this->m_key_count)
+						{
+							K key;
+							OOBase::swap(key,this->m_keys[pos]);
+						}
+						this->m_pages[pos] = NULL; // DEBUG
+						--this->m_key_count;
+						for (i = pos;i < this->m_key_count;++i)
+						{
+							OOBase::swap(this->m_keys[i],this->m_keys[i+1]);
+							OOBase::swap(this->m_pages[i],this->m_pages[i+1]);
+						}
+						OOBase::swap(this->m_pages[i],this->m_pages[i+1]);
+						tree->destroy_page(page);
+
+						LOG_DEBUG(("Merge next!\n"));
+						tree->dump();
+					}
+					else if (prev)
+					{
+						size_t i = 0;
+						for (; i < page->m_size; ++i)
+							OOBase::swap(page->m_data[i],prev->m_data[prev->m_size++]);
+
+						if (pos < this->m_key_count)
+						{
+							K key;
+							OOBase::swap(key,this->m_keys[pos]);
+						}
+						this->m_pages[pos] = NULL; // DEBUG
+						for (i = pos;i < this->m_key_count;++i)
+						{
+							OOBase::swap(this->m_keys[i],this->m_keys[i+1]);
+							OOBase::swap(this->m_pages[i+1],this->m_pages[i+2]);
+						}
+						--this->m_key_count;
+						tree->destroy_page(page);
+
+						LOG_DEBUG(("Merge prev!\n"));
+						tree->dump();
+					}
+				}
+				return true;
 			}
 		};
 
@@ -723,69 +818,6 @@ namespace OOBase
 				return true;
 			}
 
-			bool steal_prev(size_t pos, size_t parent_pos)
-			{
-				size_t steal = (m_prev->m_size - s_min + 1) / 2;
-				for (size_t i = m_size; steal > 1 && i-- > pos;)
-					OOBase::swap(m_data[i],m_data[i+steal-1]);
-				
-				for (size_t i = pos; i-- > 0;)
-					OOBase::swap(m_data[i],m_data[i+steal]);
-
-				for (size_t i = steal; i-- > 0;)
-					OOBase::swap(m_data[i],m_prev->m_data[--m_prev->m_size]);
-
-				adjust_parent_key(parent_pos);
-				return true;
-			}
-
-			bool merge_prev(BTree<K,V,Compare,B,Allocator>* tree, size_t pos, size_t parent_pos)
-			{
-				size_t i = 0;
-				for (;i < pos;++i)
-					OOBase::swap(m_data[i],m_prev->m_data[m_prev->m_size++]);
-				for (++i;i < m_size;++i)
-					OOBase::swap(m_data[i],m_prev->m_data[m_prev->m_size++]);
-				m_size = 0; // DEBUG
-				return this->m_parent->remove_page(tree,parent_pos);
-			}
-
-			bool steal_next(size_t pos, size_t parent_pos)
-			{
-				size_t i = pos + 1;
-				for (; i < m_size; ++i)
-					OOBase::swap(m_data[i-1],m_data[i]);
-				--m_size;
-
-				size_t steal = (m_prev->m_size - s_min + 1) / 2;
-				for (i = 0; i < steal; ++i)
-					OOBase::swap(m_data[m_size++],m_next->m_data[i]);
-
-				for (; i < m_next->m_size; ++i)
-					OOBase::swap(m_next->m_data[i - steal],m_next->m_data[i]);
-
-				m_next->m_size -= steal;
-				adjust_parent_key(parent_pos+1);
-				return true;
-			}
-
-			bool merge_next(BTree<K,V,Compare,B,Allocator>* tree, size_t pos, size_t parent_pos)
-			{
-				// Just ripple down
-				--m_size;
-				for (size_t i = pos; i < m_size; ++i)
-					OOBase::swap(m_data[i],m_data[i+1]);
-
-				for (size_t i = 0; i < m_next->m_size; ++i)
-					OOBase::swap(m_data[m_size++],m_next->m_data[i]);
-				m_next->m_size = 0; // DEBUG
-
-				if (pos == 0 && m_size)
-					adjust_parent_key(parent_pos);
-
-				return this->m_parent->remove_page(tree,parent_pos+1);
-			}
-
 			bool remove_i(BTree<K,V,Compare,B,Allocator>* tree, const BTreeCompareBase<K,Compare>& compare, size_t parent_pos)
 			{
 				size_t pos = find_i(compare);
@@ -794,22 +826,6 @@ namespace OOBase
 
 				// Swap out the value
 				Pair<K,V>().swap(m_data[pos]);
-
-				if (this->m_parent && m_size <= s_min)
-				{
-					// Underflow, steal from a direct neighbour
-					size_t prev = (m_prev && m_prev->m_parent == this->m_parent) ? m_prev->m_size : 0;
-					size_t next = (m_next && m_next->m_parent == this->m_parent) ? m_next->m_size : 0;
-
-					if (prev > s_min && prev > next)
-						return steal_prev(pos,parent_pos);
-					if (next > s_min)
-						return steal_next(pos,parent_pos);
-					if (prev)
-						return merge_prev(tree,pos,parent_pos);
-					if (next)
-						return merge_next(tree,pos,parent_pos);
-				}
 
 				// Just ripple down
 				--m_size;
