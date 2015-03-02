@@ -88,7 +88,7 @@ namespace OOBase
 			{}
 
 			virtual void destroy(BTree<K,V,Compare,B,Allocator>* tree) = 0;
-			virtual void dump(String& str, unsigned int indent) = 0;
+			virtual void dump(String& str, unsigned int indent, BTreePageBase* parent) = 0;
 			virtual bool insert(BTree<K,V,Compare,B,Allocator>* tree, const Pair<K,V>& value) = 0;
 			virtual const Pair<K,V>* find(const BTreeCompareBase<K,Compare>& compare) const = 0;
 			virtual bool remove(BTree<K,V,Compare,B,Allocator>* tree, const BTreeCompareBase<K,Compare>& compare) = 0;
@@ -123,8 +123,10 @@ namespace OOBase
 				tree->destroy_page(this);
 			}
 
-			void dump(String& str, unsigned int indent)
+			void dump(String& str, unsigned int indent, BTreePageBase<K,V,Compare,B,Allocator>* parent)
 			{
+				assert(this->m_parent == parent);
+
 				String str2;
 
 				if (m_key_count == size_t(-1))
@@ -141,7 +143,7 @@ namespace OOBase
 							str.append(str2);
 						}
 						else
-							m_pages[i]->dump(str,indent + 2);
+							m_pages[i]->dump(str,indent + 2,this);
 
 
 						str2.printf("%*s%s\n",indent,""," /");
@@ -158,7 +160,7 @@ namespace OOBase
 						str.append(str2);
 					}
 					else
-						m_pages[i]->dump(str,indent + 2);
+						m_pages[i]->dump(str,indent + 2,this);
 				}
 				else
 				{
@@ -168,7 +170,7 @@ namespace OOBase
 						str.append(str2);
 					}
 					else
-						m_pages[0]->dump(str,indent + 2);
+						m_pages[0]->dump(str,indent + 2,this);
 
 					str2.printf("%*s%s\n",indent,""," /");
 					str.append(str2);
@@ -197,23 +199,6 @@ namespace OOBase
 				m_keys[insert_pos] = key;
 				++m_key_count;
 
-				return true;
-			}
-
-			bool remove_page(BTree<K,V,Compare,B,Allocator>* tree, size_t pos)
-			{
-				K key;
-				OOBase::swap(key,m_keys[pos-1]);
-				tree->destroy_page(m_pages[pos]);
-				m_pages[pos] = NULL; // DEBUG
-
-				size_t i = pos;
-				for (;i < m_key_count;++i)
-				{
-					OOBase::swap(m_keys[i-1],m_keys[i]);
-					OOBase::swap(m_pages[i],m_pages[i+1]);
-				}
-				--m_key_count;
 				return true;
 			}
 
@@ -291,7 +276,6 @@ namespace OOBase
 
 					// Insert into us
 					size_t i = half;
-					sibling->m_pages[0] = child;
 					for (; i < m_key_count; ++i)
 					{
 						OOBase::swap(sibling->m_keys[sibling->m_key_count],m_keys[i]);
@@ -300,8 +284,8 @@ namespace OOBase
 						sibling->m_key_count++;
 					}
 					sibling->m_pages[0] = child;
+					sibling->m_pages[0]->m_parent = sibling;
 					m_key_count = half;
-
 					return true;
 				}
 
@@ -400,9 +384,9 @@ namespace OOBase
 						while (i-- > 0)
 						{
 							OOBase::swap(page->m_keys[page->m_key_count++],this->m_keys[pos]);
-							OOBase::swap(page->m_pages[page->m_key_count],next->m_pages[0]);
+							OOBase::swap(page->m_pages[page->m_key_count],next->m_pages[i]);
 							page->m_pages[page->m_key_count]->m_parent = this;
-							OOBase::swap(this->m_keys[pos],next->m_keys[0]);
+							OOBase::swap(this->m_keys[pos],next->m_keys[i]);
 						}
 						next->m_key_count -= steal;
 						for (i = 0; i < next->m_key_count; ++i)
@@ -440,6 +424,12 @@ namespace OOBase
 						next->m_pages[i]->m_parent = next;
 						next->m_key_count += page->m_key_count+1;
 
+						if (pos < this->m_key_count)
+						{
+							K key;
+							OOBase::swap(key,this->m_keys[pos]);
+						}
+						this->m_pages[pos] = NULL; // DEBUG
 						--this->m_key_count;
 						for (i = pos;i < this->m_key_count;++i)
 						{
@@ -505,7 +495,7 @@ namespace OOBase
 
 				if (page->m_size < page->s_min)
 				{
-					LOG_DEBUG(("Underflow!\n"));
+					LOG_DEBUG(("Leaf Underflow!\n"));
 					tree->dump();
 
 					BTreeLeafPage<K,V,Compare,B,Allocator>* prev = pos > 0 ? static_cast<BTreeLeafPage<K,V,Compare,B,Allocator>*>(this->m_pages[pos-1]) : NULL;
@@ -522,7 +512,7 @@ namespace OOBase
 						next->m_size -= steal;
 						this->m_keys[pos] = next->m_data[0].first;
 
-						LOG_DEBUG(("Steal next!\n"));
+						LOG_DEBUG(("Leaf Steal next!\n"));
 						tree->dump();
 					}
 					else if (prev && prev->m_size > prev->s_min)
@@ -537,7 +527,7 @@ namespace OOBase
 							OOBase::swap(prev->m_data[prev->m_size + i],page->m_data[i]);
 						this->m_keys[pos-1] = page->m_data[0].first;
 						
-						LOG_DEBUG(("Steal prev!\n"));
+						LOG_DEBUG(("Leaf Steal prev!\n"));
 						tree->dump();
 					}
 					else if (next)
@@ -562,9 +552,9 @@ namespace OOBase
 							OOBase::swap(this->m_pages[i],this->m_pages[i+1]);
 						}
 						OOBase::swap(this->m_pages[i],this->m_pages[i+1]);
-						tree->destroy_page(page);
+						page->destroy(tree);
 
-						LOG_DEBUG(("Merge next!\n"));
+						LOG_DEBUG(("Leaf Merge next!\n"));
 						tree->dump();
 					}
 					else if (prev)
@@ -585,11 +575,18 @@ namespace OOBase
 							OOBase::swap(this->m_pages[i+1],this->m_pages[i+2]);
 						}
 						--this->m_key_count;
-						tree->destroy_page(page);
+						page->destroy(tree);
 
-						LOG_DEBUG(("Merge prev!\n"));
+						LOG_DEBUG(("Leaf Merge prev!\n"));
 						tree->dump();
 					}
+				}
+
+				if (!this->m_parent && this->m_key_count == 0)
+				{
+					tree->m_root_page = this->m_pages[0];
+					this->m_pages[0]->m_parent = NULL;
+					tree->destroy_page(this);
 				}
 				return true;
 			}
@@ -628,8 +625,10 @@ namespace OOBase
 					baseClass(parent), m_prev(prev), m_next(next), m_size(0)
 			{}
 
-			void dump(String& str, unsigned int indent)
+			void dump(String& str, unsigned int indent, BTreePageBase<K,V,Compare,B,Allocator>* parent)
 			{
+				assert(this->m_parent == parent);
+
 				String str2;
 				str2.printf("%*s",indent,"");
 				str.append(str2);
@@ -719,12 +718,6 @@ namespace OOBase
 				return size_t(-1);
 			}
 
-			void adjust_parent_key(size_t parent_pos)
-			{
-				if (this->m_parent)
-					static_cast<BTreeInternalPageLeaf<K,V,Compare,B,Allocator>*>(this->m_parent)->adjust_key(parent_pos);
-			}
-
 			bool insert_i(BTree<K,V,Compare,B,Allocator>* tree, const Pair<K,V>& value, size_t parent_pos)
 			{
 				size_t pos = 0;
@@ -756,8 +749,8 @@ namespace OOBase
 				m_data[insert_pos] = value;
 				++m_size;
 
-				if (insert_pos == 0)
-					adjust_parent_key(parent_pos);
+				if (insert_pos == 0 && this->m_parent)
+					static_cast<BTreeInternalPageLeaf<K,V,Compare,B,Allocator>*>(this->m_parent)->adjust_key(parent_pos);
 
 				return true;
 			}
@@ -832,8 +825,13 @@ namespace OOBase
 				for (size_t i = pos; i < m_size; ++i)
 					OOBase::swap(m_data[i],m_data[i+1]);
 
-				if (pos == 0 && m_size)
-					adjust_parent_key(parent_pos);
+				if (!m_size && !this->m_parent)
+				{
+					tree->m_root_page = NULL;
+					this->destroy(tree);
+				}
+				else if (pos == 0)
+					static_cast<BTreeInternalPageLeaf<K,V,Compare,B,Allocator>*>(this->m_parent)->adjust_key(parent_pos);
 
 				return true;
 			}
@@ -918,6 +916,7 @@ namespace OOBase
 
 		friend class detail::BTreeInternalPageBase<K,V,Compare,B,Allocator>;
 		friend class detail::BTreeInternalPageInternal<K,V,Compare,B,Allocator>;
+		friend class detail::BTreeInternalPageLeaf<K,V,Compare,B,Allocator>;
 		friend class detail::BTreeLeafPage<K,V,Compare,B,Allocator>;
 
 	public:
@@ -1067,7 +1066,7 @@ namespace OOBase
 		{
 			OOBase::String str;
 			if (m_root_page)
-				m_root_page->dump(str,0);
+				m_root_page->dump(str,0,NULL);
 
 			LOG_DEBUG(("BTree:\n%s",str.c_str()));
 		}
