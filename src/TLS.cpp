@@ -37,7 +37,7 @@ namespace
 	class TLSGlobal : public OOBase::NonCopyable
 	{
 	public:
-		TLSGlobal() : m_refcount(1)
+		TLSGlobal() : m_mapVals(m_allocator), m_refcount(1)
 		{}
 
 		void addref() 
@@ -56,7 +56,7 @@ namespace
 			void* m_val;
 			void (*m_destructor)(void*);
 		};
-		OOBase::HashTable<const void*,tls_val,OOBase::ThreadLocalAllocator> m_mapVals;
+		OOBase::HashTable<const void*,tls_val,OOBase::AllocatorInstance> m_mapVals;
 		
 		// Special internal thread-local variables
 		char m_error_buffer[512];
@@ -180,7 +180,7 @@ bool OOBase::TLS::Get(const void* key, void** val)
 {
 	TLSGlobal* inst = TLSGlobal::instance();
 
-	OOBase::HashTable<const void*,TLSGlobal::tls_val,OOBase::ThreadLocalAllocator>::iterator i = inst->m_mapVals.find(key);
+	OOBase::HashTable<const void*,TLSGlobal::tls_val,OOBase::AllocatorInstance>::iterator i = inst->m_mapVals.find(key);
 	if (i == inst->m_mapVals.end())
 		return false;
 
