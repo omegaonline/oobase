@@ -33,7 +33,7 @@ namespace OOBase
 		int unused;
 	};
 
-	template <typename T, typename DLL = detail::default_module>
+	template <typename T, typename DLL = OOBase::Module>
 	class Singleton : public NonCopyable
 	{
 	public:

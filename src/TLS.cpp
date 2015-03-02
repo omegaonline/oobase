@@ -64,8 +64,6 @@ namespace
 	private:
 		size_t m_refcount;
 	};
-
-	static TLSGlobal* s_instance = NULL;
 }
 
 #if defined(_WIN32)
@@ -130,11 +128,6 @@ namespace
 {
 	static pthread_key_t s_key;
 
-	void init()
-	{
-		pthread_key_create(&s_key,&thread_destruct);
-	}
-
 	void term(void* inst)
 	{
 		static_cast<TLSGlobal*>(inst)->release();
@@ -148,6 +141,11 @@ namespace
 			OOBase::DLLDestructor<OOBase::Module>::remove_destructor(&term,inst);
 			static_cast<TLSGlobal*>(inst)->release();
 		}
+	}
+
+	void init()
+	{
+		pthread_key_create(&s_key,&thread_destruct);
 	}
 }
 
