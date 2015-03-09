@@ -301,6 +301,7 @@ namespace OOBase
 
 		template <typename T1> friend class SharedPtr;
 		template <typename T1> friend class WeakPtr;
+		friend class EnableSharedFromThis<T>;
 
 	public:
 		SharedPtr() : m_ptr(NULL), m_sc()
@@ -311,12 +312,6 @@ namespace OOBase
 
 		template <typename T1>
 		SharedPtr(const SharedPtr<T1>& rhs) : m_ptr(rhs.m_ptr), m_sc(rhs.m_sc)
-		{
-			detail::shared::assert_convertible<T,T1>();
-		}
-
-		template <typename T1>
-		SharedPtr(const SharedPtr<T1>& rhs, T* p) : m_ptr(p), m_sc(rhs.m_sc)
 		{
 			detail::shared::assert_convertible<T,T1>();
 		}
@@ -415,6 +410,10 @@ namespace OOBase
 				detail::shared::enable_shared_from_this(this,p,p);
 			}
 		}
+
+		template <typename T1>
+		SharedPtr(const SharedPtr<T1>& rhs, T* p) : m_ptr(p), m_sc(rhs.m_sc)
+		{}
 
 		template <typename T1>
 		SharedPtr(T1* p, detail::SharedCountBase* b) : m_ptr(p), m_sc(b)
@@ -534,6 +533,13 @@ namespace OOBase
 				{
 					pe->internal_accept_owner(px,const_cast<Y*>(y));
 				}
+
+				template <typename T, typename T1>
+				static SharedPtr<T> reinterpret(const SharedPtr<T1>& rhs)
+				{
+					(void)reinterpret_cast<T*>(static_cast<T1*>(NULL));
+					return SharedPtr<T>(rhs,reinterpret_cast<T*>(rhs.get()));
+				}
 			};
 
 			template <typename X, typename Y, typename T>
@@ -568,8 +574,7 @@ namespace OOBase
 	template <typename T, typename T1>
 	inline SharedPtr<T> reinterpret_pointer_cast(const SharedPtr<T1>& rhs)
 	{
-		(void)reinterpret_cast<T*>(static_cast<T1*>(NULL));
-		return SharedPtr<T>(rhs,reinterpret_cast<T*>(rhs.get()));
+		return detail::shared::template_friend::reinterpret<T>(rhs);
 	}
 
 	template<class T1, class T2>
@@ -714,6 +719,9 @@ namespace OOBase
 		template <typename X, typename Y>
 		void internal_accept_owner(const SharedPtr<X>& px, Y* y) const
 		{
+			detail::shared::assert_convertible<T,X>();
+			detail::shared::assert_convertible<X,Y>();
+
 			if (m_weak_this.expired())
 				m_weak_this = SharedPtr<T>(px,y);
 		}
