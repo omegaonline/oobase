@@ -32,11 +32,6 @@ namespace OOBase
 		bool Set(const void* key, void* val, void (*destructor)(void*) = NULL);
 		
 		void ThreadExit();
-
-		namespace detail
-		{
-			AllocatorInstance* swap_allocator(AllocatorInstance* pNew = NULL);
-		}
 	}
 
 	template <typename T, typename DLL>
@@ -49,7 +44,7 @@ namespace OOBase
 			if (!TLS::Get(&s_sentinal,&inst))
 				inst = init();
 
-			return static_cast<Instance*>(inst)->m_this;
+			return static_cast<T*>(inst);
 		}
 
 	private:
@@ -59,73 +54,22 @@ namespace OOBase
 
 		static size_t s_sentinal;
 
-		struct Instance
-		{
-			T*                 m_this;
-			AllocatorInstance* m_allocator;
-		};
-
 		static void* init()
 		{
-			AllocatorInstance* alloc = TLS::detail::swap_allocator();
-
-			Instance* i = NULL;
-			if (!alloc->allocate_new(i))
-				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-
-			// We do this long-hand so singleton class can friend us
-			void* t = alloc->allocate(sizeof(T),alignment_of<T>::value);
-			if (!t)
-				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-
-#if defined(OOBASE_HAVE_EXCEPTIONS)
-			try
+			T* t = NULL;
+			if (OOBase::ThreadLocalAllocator::allocate_new(t))
 			{
-#endif
-				i->m_this = ::new (t) T();
-#if defined(OOBASE_HAVE_EXCEPTIONS)
+				int err = TLS::Set(&s_sentinal,t,&destroy);
+				if (err != 0)
+					OOBase_CallCriticalFailure(err);
 			}
-			catch (...)
-			{
-				alloc->free(t);
-				throw;
-			}
-#endif
-			i->m_allocator = alloc;
-									
-			int err = TLS::Set(&s_sentinal,i,&destroy);
-			if (err != 0)
-				OOBase_CallCriticalFailure(err);
-
-			return i;
+			return t;
 		}
 
 		static void destroy(void* p)
 		{
-			Instance* i = static_cast<Instance*>(p);
-			if (i)
-			{
-				AllocatorInstance* curr = i->m_allocator;
-				AllocatorInstance* prev = TLS::detail::swap_allocator(curr);
-
-				// We do this long-hand so T can friend singleton
-#if defined(OOBASE_HAVE_EXCEPTIONS)
-				try
-				{
-#endif
-					i->m_this->~T();
-					curr->free(i->m_this);
-#if defined(OOBASE_HAVE_EXCEPTIONS)
-				}
-				catch (...)
-				{
-					OOBase_CallCriticalFailure("Exception in TLSSingleton destructor");
-				}
-#endif
-				curr->delete_free(i);
-
-				TLS::detail::swap_allocator(prev);
-			}
+			if (p)
+				OOBase::ThreadLocalAllocator::delete_free(static_cast<T*>(p));
 		}
 	};
 
