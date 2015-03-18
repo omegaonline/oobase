@@ -193,6 +193,38 @@ namespace OOBase
 			return (t != NULL);
 		}
 
+		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
+		static bool allocate_new(T*& t, const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7)
+		{
+			t = NULL;
+			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
+			if (p)
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				try	{
+#endif
+					t = ::new (p) T(p1,p2,p3,p4,p5,p6,p7);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				} catch (...) { Derived::free(p); throw; }
+#endif
+			return (t != NULL);
+		}
+
+		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
+		static bool allocate_new(T*& t, const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7, const P8& p8)
+		{
+			t = NULL;
+			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
+			if (p)
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				try	{
+#endif
+					t = ::new (p) T(p1,p2,p3,p4,p5,p6,p7,p8);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				} catch (...) { Derived::free(p); throw; }
+#endif
+			return (t != NULL);
+		}
+
 		static void swap(AllocateNewStatic&) {};
 	};
 
@@ -335,6 +367,38 @@ namespace OOBase
 				try	{
 #endif
 					t = ::new (p) T(p1,p2,p3,p4,p5,p6);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				} catch (...) { static_cast<Derived*>(this)->free(p); throw; }
+#endif
+			return (t != NULL);
+		}
+
+		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
+		bool allocate_new(T*& t, const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7)
+		{
+			t = NULL;
+			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);
+			if (p)
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				try	{
+#endif
+					t = ::new (p) T(p1,p2,p3,p4,p5,p6,p7);
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				} catch (...) { static_cast<Derived*>(this)->free(p); throw; }
+#endif
+			return (t != NULL);
+		}
+
+		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
+		bool allocate_new(T*& t, const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7, const P8& p8)
+		{
+			t = NULL;
+			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);
+			if (p)
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+				try	{
+#endif
+					t = ::new (p) T(p1,p2,p3,p4,p5,p6,p7,p8);
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				} catch (...) { static_cast<Derived*>(this)->free(p); throw; }
 #endif

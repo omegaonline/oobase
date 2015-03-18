@@ -687,6 +687,22 @@ namespace OOBase
 		return make_shared<T,Allocator>(p);
 	}
 
+	template <typename T, typename Allocator, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
+	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7)
+	{
+		T* p = NULL;
+		Allocator::allocate_new(p,p1,p2,p3,p4,p5,p6,p7);
+		return make_shared<T,Allocator>(p);
+	}
+
+	template <typename T, typename Allocator, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
+	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7, const P8& p8)
+	{
+		T* p = NULL;
+		Allocator::allocate_new(p,p1,p2,p3,p4,p5,p6,p7,p8);
+		return make_shared<T,Allocator>(p);
+	}
+
 	template <typename T>
 	class EnableSharedFromThis
 	{
