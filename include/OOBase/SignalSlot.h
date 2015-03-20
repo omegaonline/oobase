@@ -35,57 +35,64 @@ namespace OOBase
 		{
 		public:
 			template<typename T>
-			Slot(const WeakPtr<T>& ptr, void (T::*fn)()) :	m_ptr(ptr)
+			Slot(const WeakPtr<T>& ptr, void (T::*fn)()) : m_static(NULL)
 			{
-				assert(!!ptr);
-				d.m_adaptor = &Slot::adaptor<T,fn>;
+				m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(ptr,fn);
 			}
 
-			Slot(void (*fn)()) : m_ptr()
+			Slot(void (*fn)()) : m_static(fn)
 			{
-				d.m_static = fn;
 			}
 
 			bool operator == (const Slot& rhs) const
 			{
 				if (this == &rhs)
 					return true;
-				return m_ptr == rhs.m_ptr && d.m_adaptor == rhs.d.m_adaptor;
+				return m_ptr == rhs.m_ptr && m_static == rhs.m_static;
 			}
 
 			bool invoke() const
 			{
 				if (m_ptr)
-					return (*d.m_adaptor)(this);
+					return m_ptr->thunk();
 
-				(*d.m_static)();
+				(*m_static)();
 				return true;
 			}
 
 			void swap(Slot& rhs)
 			{
 				m_ptr.swap(rhs.m_ptr);
-				OOBase::swap(d,rhs.d);
+				OOBase::swap(m_static,rhs.m_static);
 			}
 
 		private:
-			WeakPtr<void> m_ptr;
-			union disc_t
+			struct ThunkBase
 			{
-				bool (*m_adaptor)(const Slot*);
-				void (*m_static)();
-			} d;
+				virtual bool thunk() = 0;
+			};
 
-			template<typename T, void (T::*fn)()>
-			static bool adaptor(const Slot* pThis)
+			SharedPtr<ThunkBase> m_ptr;
+			void (*m_static)();
+
+			template<typename T>
+			struct Thunk : public ThunkBase
 			{
-				SharedPtr<T> ptr(pThis->m_ptr);
-				if (!ptr)
-					return false;
+				Thunk(const WeakPtr<T>& ptr, void (T::*fn)()) : m_ptr(ptr), m_fn(fn)
+				{}
 
-				ptr->*(pThis->*fn)();
-				return true;
-			}
+				bool thunk()
+				{
+					if (!m_ptr)
+						return false;
+
+					(m_ptr.lock().get()->*m_fn)();
+					return true;
+				}
+
+				WeakPtr<T> m_ptr;
+				void (T::*m_fn)();
+			};
 		};
 		mutable Vector<Slot,Allocator> m_slots;
 
@@ -132,57 +139,64 @@ namespace OOBase
 		{
 		public:
 			template<typename T>
-			Slot(const WeakPtr<T>& ptr, void (T::*fn)(const P1& p1)) :	m_ptr(ptr)
+			Slot(const WeakPtr<T>& ptr, void (T::*fn)(const P1& p1)) : m_static(NULL)
 			{
-				assert(!!ptr);
-				d.m_adaptor = &Slot::adaptor<T,fn>;
+				m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(ptr,fn);
 			}
 
-			Slot(void (*fn)(const P1& p1)) : m_ptr()
+			Slot(void (*fn)(const P1& p1)) : m_static(fn)
 			{
-				d.m_static = fn;
 			}
 
 			bool operator == (const Slot& rhs) const
 			{
 				if (this == &rhs)
 					return true;
-				return m_ptr == rhs.m_ptr && d.m_adaptor == rhs.d.m_adaptor;
+				return m_ptr == rhs.m_ptr && m_static == rhs.m_static;
 			}
 
 			bool invoke(const P1& p1) const
 			{
 				if (m_ptr)
-					return (*d.m_adaptor)(this,p1);
+					return m_ptr->thunk(p1);
 
-				(*d.m_static)(p1);
+				(*m_static)(p1);
 				return true;
 			}
 
 			void swap(Slot& rhs)
 			{
 				m_ptr.swap(rhs.m_ptr);
-				OOBase::swap(d,rhs.d);
+				OOBase::swap(m_static,rhs.m_static);
 			}
 
 		private:
-			WeakPtr<void> m_ptr;
-			union disc_t
+			struct ThunkBase
 			{
-				bool (*m_adaptor)(const Slot*, const P1& p1);
-				void (*m_static)(const P1& p1);
-			} d;
+				virtual bool thunk(const P1& p1) = 0;
+			};
 
-			template<typename T, void (T::*fn)(const P1& p1)>
-			static bool adaptor(const Slot* pThis, const P1& p1)
+			SharedPtr<ThunkBase> m_ptr;
+			void (*m_static)(const P1& p1);
+
+			template<typename T>
+			struct Thunk : public ThunkBase
 			{
-				SharedPtr<T> ptr(pThis->m_ptr);
-				if (!ptr)
-					return false;
+				Thunk(const WeakPtr<T>& ptr, void (T::*fn)(const P1& p1)) : m_ptr(ptr), m_fn(fn)
+				{}
 
-				ptr->*(pThis->*fn)(p1);
-				return true;
-			}
+				bool thunk(const P1& p1)
+				{
+					if (!m_ptr)
+						return false;
+
+					(m_ptr.lock().get()->*m_fn)(p1);
+					return true;
+				}
+
+				WeakPtr<T> m_ptr;
+				void (T::*m_fn)(const P1& p1);
+			};
 		};
 		mutable Vector<Slot,Allocator> m_slots;
 
@@ -229,57 +243,64 @@ namespace OOBase
 		{
 		public:
 			template<typename T>
-			Slot(const WeakPtr<T>& ptr, void (T::*fn)(const P1& p1, const P2& p2)) :	m_ptr(ptr)
+			Slot(const WeakPtr<T>& ptr, void (T::*fn)(const P1& p1, const P2& p2)) : m_static(NULL)
 			{
-				assert(!!ptr);
-				d.m_adaptor = &Slot::adaptor<T,fn>;
+				m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(ptr,fn);
 			}
 
-			Slot(void (*fn)(const P1& p1, const P2& p2)) : m_ptr()
+			Slot(void (*fn)(const P1& p1, const P2& p2)) : m_static(fn)
 			{
-				d.m_static = fn;
 			}
 
 			bool operator == (const Slot& rhs) const
 			{
 				if (this == &rhs)
 					return true;
-				return m_ptr == rhs.m_ptr && d.m_adaptor == rhs.d.m_adaptor;
+				return m_ptr == rhs.m_ptr && m_static == rhs.m_static;
 			}
 
 			bool invoke(const P1& p1, const P2& p2) const
 			{
 				if (m_ptr)
-					return (*d.m_adaptor)(this,p1,p2);
+					return m_ptr->thunk(p1,p2);
 
-				(*d.m_static)(p1,p2);
+				(*m_static)(p1,p2);
 				return true;
 			}
 
 			void swap(Slot& rhs)
 			{
 				m_ptr.swap(rhs.m_ptr);
-				OOBase::swap(d,rhs.d);
+				OOBase::swap(m_static,rhs.m_static);
 			}
 
 		private:
-			WeakPtr<void> m_ptr;
-			union disc_t
+			struct ThunkBase
 			{
-				bool (*m_adaptor)(const Slot*, const P1& p1, const P2& p2);
-				void (*m_static)(const P1& p1, const P2& p2);
-			} d;
+				virtual bool thunk(const P1& p1, const P2& p2) = 0;
+			};
 
-			template<typename T, void (T::*fn)(const P1& p1, const P2& p2)>
-			static bool adaptor(const Slot* pThis, const P1& p1, const P2& p2)
+			SharedPtr<ThunkBase> m_ptr;
+			void (*m_static)(const P1& p1, const P2& p2);
+
+			template<typename T>
+			struct Thunk : public ThunkBase
 			{
-				SharedPtr<T> ptr(pThis->m_ptr);
-				if (!ptr)
-					return false;
+				Thunk(const WeakPtr<T>& ptr, void (T::*fn)(const P1& p1, const P2& p2)) : m_ptr(ptr), m_fn(fn)
+				{}
 
-				ptr->*(pThis->*fn)(p1,p2);
-				return true;
-			}
+				bool thunk(const P1& p1, const P2& p2)
+				{
+					if (!m_ptr)
+						return false;
+
+					(m_ptr.lock().get()->*m_fn)(p1,p2);
+					return true;
+				}
+
+				WeakPtr<T> m_ptr;
+				void (T::*m_fn)(const P1& p1, const P2& p2);
+			};
 		};
 		mutable Vector<Slot,Allocator> m_slots;
 
