@@ -47,6 +47,9 @@
 
 namespace
 {
+	// Force the clock to start at init
+	OOBase::Clock s_start_time;
+
 	class Logger
 	{
 	public:
@@ -107,28 +110,6 @@ namespace
 	};
 
 	typedef OOBase::Singleton<Logger,OOBase::Module> LOGGER;
-	
-	#if defined(_WIN32)
-	void get_now(timeval& t)
-	{
-		static const unsigned __int64 epoch = 116444736000000000ULL;
-
-		SYSTEMTIME system_time;
-		GetSystemTime(&system_time);
-		FILETIME file_time;
-		SystemTimeToFileTime(&system_time, &file_time);
-		ULARGE_INTEGER uli;
-		uli.LowPart = file_time.dwLowDateTime;
-		uli.HighPart = file_time.dwHighDateTime;
-		t.tv_sec = static_cast<long>((uli.QuadPart - epoch) / 10000000L);
-		t.tv_usec = (system_time.wMilliseconds * 1000);
-	}
-	#elif defined(HAVE_UNISTD_H)
-	void get_now(timeval& t)
-	{
-		gettimeofday(&t,NULL);
-	}
-	#endif
 }
 
 template class OOBase::Singleton<Logger,OOBase::Module>;
@@ -150,7 +131,7 @@ bool Logger::disconnect(void (*callback)(void* param, const ::timeval& t, OOBase
 void Logger::log(OOBase::Logger::Priority priority, const char* msg)
 {
 	timeval t = {0};
-	get_now(t);
+	s_start_time.get_timeval(t);
 
 	OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
@@ -305,16 +286,6 @@ namespace
 
 	void formatMsg(OOBase::ScopedArrayPtr<char>& out, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg)
 	{
-		OOBase::ScopedArrayPtr<char,OOBase::ThreadLocalAllocator,64> timestamp;
-		time_t nowtime = t.tv_sec;
-		struct tm nowtm = {0};
-#if defined(_MSC_VER)
-		localtime_s(&nowtm,&nowtime);
-#else
-		localtime_r(&nowtime,&nowtm);
-#endif
-		strftime(timestamp.get(),timestamp.count(),"%H:%M:%S",&nowtm);
-
 		const char* tag = "Error: ";
 
 		switch (priority)
@@ -337,7 +308,7 @@ namespace
 			break;
 		}
 
-		OOBase::printf(out,"[%s.%06lu] %s%s\n",timestamp.get(),t.tv_usec,tag,msg);
+		OOBase::printf(out,"[%.02lu:%.02lu:%.02lu.%06lu] %s%s\n",t.tv_sec / 3600,t.tv_sec / 60 % 60,t.tv_sec % 60,t.tv_usec,tag,msg);
 	}
 
 	void onDebug(void*, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg)
@@ -539,12 +510,6 @@ namespace
 {
 	void formatMsg(OOBase::ScopedArrayPtr<char>& out, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg, bool use_colour)
 	{
-		OOBase::ScopedArrayPtr<char,OOBase::ThreadLocalAllocator,64> timestamp;
-		time_t nowtime = t.tv_sec;
-		struct tm nowtm = {0};
-		localtime_r(&nowtime,&nowtm);
-		strftime(timestamp.get(),timestamp.count(),"%H:%M:%S",&nowtm);
-
 		const char* on_col = "\x1b[31m";
 		const char* off_col = "\x1b[0m";
 		const char* tag = "Error: ";
@@ -573,9 +538,9 @@ namespace
 		}
 
 		if (use_colour)
-			OOBase::printf(out,"%s[%s.%06lu] %s%s%s\n",on_col,timestamp.get(),t.tv_usec,tag,msg,off_col);
+			OOBase::printf(out,"%s[%.02lu:%.02lu:%.02lu.%06lu] %s%s%s\n",on_col,t.tv_sec / 3600,t.tv_sec / 60 % 60,t.tv_sec % 60,t.tv_usec,tag,msg,off_col);
 		else
-			OOBase::printf(out,"[%s.%06lu] %s%s\n",timestamp.get(),t.tv_usec,tag,msg);
+			OOBase::printf(out,"[%.02lu:%.02lu:%.02lu.%06lu] %s%s\n",t.tv_sec / 3600,t.tv_sec / 60 % 60,t.tv_sec % 60,t.tv_usec,tag,msg);
 	}
 
 	void onStdout(void* param, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg)
