@@ -22,7 +22,6 @@
 #include "config-base.h"
 
 #include "../include/OOBase/Timeout.h"
-#include "../include/OOBase/CDRStream.h"
 
 namespace
 {
@@ -382,6 +381,7 @@ bool OOBase::Timeout::operator < (const OOBase::Timeout& rhs) const
 #endif
 }
 
+#if defined(OOBASE_CDR_STREAM_H_INCLUDED_)
 bool OOBase::Timeout::read(CDRStream& stream)
 {
 	bool res = stream.read(m_null);
@@ -413,3 +413,4 @@ bool OOBase::Timeout::write(CDRStream& stream) const
 	}
 	return res;
 }
+#endif

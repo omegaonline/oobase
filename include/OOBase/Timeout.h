@@ -39,7 +39,9 @@
 
 namespace OOBase
 {
+#if defined(OOBASE_CDR_STREAM_H_INCLUDED_)
 	class CDRStream;
+#endif
 
 	class Clock : public NonCopyable
 	{
@@ -80,8 +82,10 @@ namespace OOBase
 		bool get_timeval(::timeval& timeout) const;
 		unsigned long millisecs() const;
 
+#if defined(OOBASE_CDR_STREAM_H_INCLUDED_)
 		bool read(CDRStream& stream);
 		bool write(CDRStream& stream) const;
+#endif
 
 #if defined(_POSIX_TIMERS) && (_POSIX_TIMERS > 0)
 		bool get_abs_timespec(::timespec& timeout) const;
