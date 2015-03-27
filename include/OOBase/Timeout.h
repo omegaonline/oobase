@@ -41,6 +41,24 @@ namespace OOBase
 {
 	class CDRStream;
 
+	class Clock : public NonCopyable
+	{
+	public:
+		Clock();
+
+		void get_timeval(::timeval& timeout) const;
+		unsigned long millisecs() const;
+
+	private:
+#if defined(_WIN32)
+		LONGLONG   m_start;
+#elif defined(_POSIX_TIMERS) && (_POSIX_TIMERS > 0)
+		::timespec m_start;
+#else
+#error Implement platform native time
+#endif
+	};
+
 	class Timeout
 	{
 	public:

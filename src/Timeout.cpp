@@ -87,6 +87,93 @@ namespace
 #endif
 }
 
+OOBase::Clock::Clock()
+{
+#if defined(_WIN32)
+
+	m_start = time_now();
+
+#elif defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
+
+	if (clock_gettime(CLOCK_MONOTONIC,&m_start) != 0)
+		OOBase_CallCriticalFailure(errno);
+
+#endif
+}
+
+void OOBase::Clock::get_timeval(::timeval& timeout) const
+{
+#if defined(_WIN32)
+
+	LONGLONG diff = time_now() - m_start;
+	if (diff < 0)
+	{
+		timeout.tv_sec = 0;
+		timeout.tv_usec = 0;
+	}
+	else
+	{
+		LONGLONG freq = qp_freq();
+		if (freq == 0)
+			freq = 1000;
+
+		timeout.tv_sec = static_cast<long>(diff / freq);
+		timeout.tv_usec = static_cast<long>(((diff % freq) * 1000000) / freq);
+	}
+
+#elif defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
+
+	::timespec now = {0};
+	if (clock_gettime(CLOCK_MONOTONIC,&now) != 0)
+		OOBase_CallCriticalFailure(errno);
+
+	::timespec diff = {0};
+	timespec_subtract(diff,now,m_start);
+
+	timeout.tv_sec = diff.tv_sec;
+	timeout.tv_usec = diff.tv_nsec / 1000;
+
+	if (timeout.tv_sec < 0)
+	{
+		timeout.tv_sec = 0;
+		timeout.tv_usec = 0;
+	}
+#endif
+}
+
+unsigned long OOBase::Clock::millisecs() const
+{
+#if defined(_WIN32)
+
+	LONGLONG diff = time_now() - m_start;
+	if (diff < 0)
+		return 0;
+
+	LONGLONG freq = qp_freq();
+	if (freq == 0)
+		freq = 1000;
+
+	LONGLONG r = (diff / freq) * 1000;
+	r += ((diff % freq) * 1000) / freq;
+	return static_cast<unsigned long>(r);
+
+#elif defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
+
+	::timespec now = {0};
+	if (clock_gettime(CLOCK_MONOTONIC,&now) != 0)
+		OOBase_CallCriticalFailure(errno);
+
+	::timespec diff = {0};
+	timespec_subtract(diff,now,m_start);
+
+	if (diff.tv_sec < 0)
+		return 0;
+
+	return (diff.tv_sec * 1000) + (diff.tv_nsec / 1000000);
+
+#endif
+}
+
 OOBase::Timeout::Timeout() :
 		m_null(true)
 {
