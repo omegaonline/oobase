@@ -43,18 +43,9 @@ namespace OOBase
 			VectorBase(AllocatorInstance& allocator) : baseClass(allocator), m_data(NULL), m_size(0), m_capacity(0)
 			{}
 
-			VectorBase(const VectorBase& rhs) : baseClass(rhs), m_data(NULL), m_size(0), m_capacity(0)
-			{}
-
 			~VectorBase()
 			{
 				baseClass::free(m_data);
-			}
-
-			VectorBase& operator = (const VectorBase& rhs)
-			{
-				VectorBase(rhs).swap(*this);
-				return *this;
 			}
 
 			void swap(VectorBase& rhs)
@@ -79,6 +70,9 @@ namespace OOBase
 			T*     m_data;
 			size_t m_size;
 			size_t m_capacity;
+
+			VectorBase(const VectorBase& rhs) : baseClass(rhs), m_data(NULL), m_size(0), m_capacity(0)
+			{}
 
 			T* at(size_t pos)
 			{
@@ -137,6 +131,22 @@ namespace OOBase
 							insert_at(i,rhs.m_data[i]);
 					}
 				}
+			}
+
+			VectorPODBase& operator = (const VectorPODBase& rhs)
+			{
+				this->clear();
+				if (rhs.m_size)
+				{
+					if (!reserve(rhs.m_size))
+						OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+					else
+					{
+						for (size_t i=0;i<rhs.m_size;++i)
+							insert_at(i,rhs.m_data[i]);
+					}
+				}
+				return *this;
 			}
 
 			~VectorPODBase()
@@ -336,6 +346,22 @@ namespace OOBase
 				}
 			}
 
+			VectorPODBase& operator = (const VectorPODBase& rhs)
+			{
+				this->clear();
+				if (rhs.m_size)
+				{
+					if (!reserve(rhs.m_size))
+						OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+					else
+					{
+						memcpy(this->m_data,rhs.m_data,rhs.m_size*sizeof(T));
+						this->m_size = rhs.m_size;
+					}
+				}
+				return *this;
+			}
+
 		protected:
 			bool assign(size_t n, const T& value = T())
 			{
@@ -411,6 +437,9 @@ namespace OOBase
 			{}
 
 			VectorImpl(AllocatorInstance& allocator) : baseClass(allocator)
+			{}
+
+			VectorImpl(const VectorImpl& rhs) : baseClass(rhs)
 			{}
 
 		protected:
