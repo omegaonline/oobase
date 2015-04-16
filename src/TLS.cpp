@@ -85,6 +85,46 @@ namespace
 	}
 }
 
+
+
+static BOOL WINAPI on_tls_callback(HANDLE h, DWORD dwReason, PVOID pv)
+{
+	if (reason == DLL_THREAD_DETACH || reason == DLL_PROCESS_DETACH)
+	{
+		TLSGlobal* inst = static_cast<TLSGlobal*>(TlsGetValue(s_key));
+		if (inst)
+		{
+			OOBase::DLLDestructor<OOBase::Module>::remove_destructor(&term,inst);
+			inst->release();
+		}
+	}
+	return TRUE;
+}
+
+#if (__MINGW32_MAJOR_VERSION >3) || ((__MINGW32_MAJOR_VERSION==3) && (__MINGW32_MINOR_VERSION>=18))
+extern "C"
+{
+	PIMAGE_TLS_CALLBACK _xl_b __attribute__ ((section(".CRT$XLB"))) = &on_tls_callback;
+}
+#elif defined(_MSC_VER)
+#ifdef _M_IX86
+#pragma comment (linker, “/INCLUDE:__tls_used”)
+#pragma comment (linker, “/INCLUDE:__xl_b”)
+#else
+#pragma comment (linker, “/INCLUDE:_tls_used”)
+#pragma comment (linker, “/INCLUDE:_xl_b”)
+#endif
+#ifdef _M_X64
+#pragma const_seg (“.CRT$XLB”)
+const
+#else
+#pragma data_seg (“.CRT$XLB”)
+#endif
+extern "C" PIMAGE_TLS_CALLBACK _xl_b = &on_tls_callback;
+#pragma data_seg ()
+#pragma const_seg ()
+#endif
+
 TLSGlobal* TLSGlobal::instance()
 {
 	static OOBase::Once::once_t key = ONCE_T_INIT;
@@ -109,16 +149,6 @@ void TLSGlobal::release()
 	{
 		OOBase::CrtAllocator::delete_free(this);
 		TlsSetValue(s_key,NULL);
-	}
-}
-
-void OOBase::TLS::ThreadExit()
-{
-	TLSGlobal* inst = TLSGlobal::instance();
-	if (inst)
-	{
-		OOBase::DLLDestructor<OOBase::Module>::remove_destructor(&term,inst);
-		inst->release();
 	}
 }
 
@@ -168,10 +198,6 @@ void TLSGlobal::release()
 {
 	if (--m_refcount == 0)
 		OOBase::CrtAllocator::delete_free(this);
-}
-
-void OOBase::TLS::ThreadExit()
-{
 }
 
 #endif

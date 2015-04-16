@@ -124,14 +124,8 @@ unsigned int OOBase::Thread::oobase_thread_fn(void* param)
 	if (!SetEvent(wrap->m_hEvent))
 		OOBase_CallCriticalFailure(GetLastError());
 
-	unsigned int ret = static_cast<unsigned int>((*thread_fn)(p));
-
-	// Make sure we clean up any thread-local storage
-	OOBase::TLS::ThreadExit();
-
-	return ret;
+	return static_cast<unsigned int>((*thread_fn)(p));
 }
-
 
 #elif defined(HAVE_PTHREAD)
 

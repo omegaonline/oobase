@@ -30,8 +30,6 @@ namespace OOBase
 	{
 		bool Get(const void* key, void** val);
 		bool Set(const void* key, void* val, void (*destructor)(void*) = NULL);
-		
-		void ThreadExit();
 	}
 
 	template <typename T, typename DLL>
