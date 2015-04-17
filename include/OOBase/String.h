@@ -250,26 +250,27 @@ namespace OOBase
 		return str1.compare(str2) >= 0;
 	}
 
-	class String
+	template <typename Allocator>
+	class SharedString
 	{
-		typedef SharedPtr<ScopedStringImpl<CrtAllocator> > node_t;
+		typedef SharedPtr<ScopedStringImpl<Allocator> > node_t;
 
 	public:
-		static const size_t npos = ScopedStringImpl<CrtAllocator>::npos;
+		static const size_t npos = ScopedStringImpl<Allocator>::npos;
 
-		String() : m_ptr()
+		SharedString() : m_ptr()
 		{}
 
-		String(const String& rhs) : m_ptr(rhs.m_ptr)
+		SharedString(const SharedString& rhs) : m_ptr(rhs.m_ptr)
 		{}
 
-		String& operator = (const String& rhs)
+		SharedString& operator = (const SharedString& rhs)
 		{
-			String(rhs).swap(*this);
+			SharedString(rhs).swap(*this);
 			return *this;
 		}
 
-		void swap(String& rhs)
+		void swap(SharedString& rhs)
 		{
 			m_ptr.swap(rhs.m_ptr);
 		}
@@ -282,7 +283,7 @@ namespace OOBase
 			return m_ptr->compare(rhs);
 		}
 
-		int compare(const String& rhs) const
+		int compare(const SharedString& rhs) const
 		{
 			if (this == &rhs)
 				return true;
@@ -319,7 +320,7 @@ namespace OOBase
 			return true;
 		}
 
-		bool append(const String& rhs)
+		bool append(const SharedString& rhs)
 		{
 			if (!m_ptr)
 			{
@@ -409,7 +410,7 @@ namespace OOBase
 	private:
 		node_t new_node()
 		{
-			return allocate_shared<ScopedStringImpl<CrtAllocator>,CrtAllocator>();
+			return allocate_shared<ScopedStringImpl<Allocator>,Allocator>();
 		}
 
 		bool new_node(node_t& n, const node_t& rhs)
@@ -427,41 +428,43 @@ namespace OOBase
 		node_t m_ptr;
 	};
 
-	template <typename T>
-	bool operator == (const String& str1, T str2)
+	template <typename Allocator, typename T>
+	bool operator == (const SharedString<Allocator>& str1, T str2)
 	{
 		return str1.compare(str2) == 0;
 	}
 
-	template <typename T>
-	bool operator != (const String& str1, T str2)
+	template <typename Allocator, typename T>
+	bool operator != (const SharedString<Allocator>& str1, T str2)
 	{
 		return str1.compare(str2) != 0;
 	}
 
-	template <typename T>
-	bool operator < (const String& str1, T str2)
+	template <typename Allocator, typename T>
+	bool operator < (const SharedString<Allocator>& str1, T str2)
 	{
 		return str1.compare(str2) < 0;
 	}
 
-	template <typename T>
-	bool operator <= (const String& str1, T str2)
+	template <typename Allocator, typename T>
+	bool operator <= (const SharedString<Allocator>& str1, T str2)
 	{
 		return str1.compare(str2) <= 0;
 	}
 
-	template <typename T>
-	bool operator > (const String& str1, T str2)
+	template <typename Allocator, typename T>
+	bool operator > (const SharedString<Allocator>& str1, T str2)
 	{
 		return str1.compare(str2) > 0;
 	}
 
-	template <typename T>
-	bool operator >= (const String& str1, T str2)
+	template <typename Allocator, typename T>
+	bool operator >= (const SharedString<Allocator>& str1, T str2)
 	{
 		return str1.compare(str2) >= 0;
 	}
+
+	typedef SharedString<CrtAllocator> String;
 
 	typedef ScopedStringImpl<ThreadLocalAllocator> ScopedString;
 }
