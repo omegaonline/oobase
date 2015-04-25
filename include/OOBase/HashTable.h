@@ -478,7 +478,7 @@ namespace OOBase
 
 		bool insert_i(size_t& pos, K key, V value)
 		{
-			if (m_count > (m_size / 10 * 9))
+			if (m_count >= (m_size / 10 * 9))
 			{
 				if (!clone())
 					return false;
@@ -491,6 +491,7 @@ namespace OOBase
 				if (!m_data[pos].m_hash)
 				{
 					Node::inplace_copy(&m_data[pos],h,key,value);
+					++m_count;
 					break;
 				}
 
@@ -507,6 +508,7 @@ namespace OOBase
 					if (is_deleted(m_data[pos].m_hash))
 					{
 						Node::inplace_copy(&m_data[pos],h,key,value);
+						++m_count;
 						break;
 					}
 
@@ -520,7 +522,7 @@ namespace OOBase
 				pos = (pos + 1) & (m_size-1);
 			}
 
-			return 0;
+			return true;
 		}
 
 		void ripple(size_t start)
