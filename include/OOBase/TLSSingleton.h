@@ -57,9 +57,8 @@ namespace OOBase
 			T* t = NULL;
 			if (OOBase::ThreadLocalAllocator::allocate_new(t))
 			{
-				int err = TLS::Set(&s_sentinal,t,&destroy);
-				if (err != 0)
-					OOBase_CallCriticalFailure(err);
+				if (!TLS::Set(&s_sentinal,t,&destroy))
+					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 			}
 			return t;
 		}
