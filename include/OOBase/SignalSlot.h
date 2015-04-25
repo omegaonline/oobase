@@ -84,23 +84,23 @@ namespace OOBase
 		{}
 
 		template <typename T>
-		int connect(const WeakPtr<T>& ptr, void (T::*slot)(const P1&))
+		int connect(const WeakPtr<T>& ptr, void (T::*slot)(P1))
 		{
 			return m_slots.push_back(delegate_t(ptr,slot));
 		}
 
-		int connect(void (*slot)(const P1&))
+		int connect(void (*slot)(P1))
 		{
 			return m_slots.push_back(delegate_t(slot));
 		}
 
 		template <typename T>
-		bool disconnect(WeakPtr<T>& ptr, void (T::*slot)(const P1&))
+		bool disconnect(WeakPtr<T>& ptr, void (T::*slot)(P1))
 		{
 			return m_slots.remove(delegate_t(ptr,slot));
 		}
 
-		void fire(const P1& p1) const
+		void fire(P1 p1) const
 		{
 			Vector<delegate_t,Allocator> slots(m_slots);
 			for (typename Vector<delegate_t,Allocator>::iterator i=slots.begin();i!=slots.end();++i)
@@ -126,28 +126,70 @@ namespace OOBase
 		{}
 
 		template <typename T>
-		int connect(const WeakPtr<T>& ptr, void (T::*slot)(const P1&,const P2&))
+		int connect(const WeakPtr<T>& ptr, void (T::*slot)(P1,P2))
 		{
 			return m_slots.push_back(delegate_t(ptr,slot));
 		}
 
-		int connect(void (*slot)(const P1&,const P2&))
+		int connect(void (*slot)(P1,P2))
 		{
 			return m_slots.push_back(delegate_t(slot));
 		}
 
 		template <typename T>
-		bool disconnect(WeakPtr<T>& ptr, void (T::*slot)(const P1&,const P2&))
+		bool disconnect(WeakPtr<T>& ptr, void (T::*slot)(P1,P2))
 		{
 			return m_slots.remove(delegate_t(ptr,slot));
 		}
 
-		void fire(const P1& p1, const P2& p2) const
+		void fire(P1 p1, P2 p2) const
 		{
 			Vector<delegate_t,Allocator> slots(m_slots);
 			for (typename Vector<delegate_t,Allocator>::iterator i=slots.begin();i!=slots.end();++i)
 			{
 				if (!i->invoke(p1,p2))
+					m_slots.erase(*i);
+			}
+		}
+	};
+
+	template <typename P1, typename P2, typename P3, typename Allocator = CrtAllocator>
+	class Signal3
+	{
+	private:
+		typedef Delegate3<P1,P2,P3,Allocator> delegate_t;
+		mutable Vector<delegate_t,Allocator> m_slots;
+
+	public:
+		Signal3()
+		{}
+
+		Signal3(AllocatorInstance& a) : m_slots(a)
+		{}
+
+		template <typename T>
+		int connect(const WeakPtr<T>& ptr, void (T::*slot)(P1,P2,P3))
+		{
+			return m_slots.push_back(delegate_t(ptr,slot));
+		}
+
+		int connect(void (*slot)(P1,P2,P3))
+		{
+			return m_slots.push_back(delegate_t(slot));
+		}
+
+		template <typename T>
+		bool disconnect(WeakPtr<T>& ptr, void (T::*slot)(P1,P2,P3))
+		{
+			return m_slots.remove(delegate_t(ptr,slot));
+		}
+
+		void fire(P1 p1, P2 p2, P3 p3) const
+		{
+			Vector<delegate_t,Allocator> slots(m_slots);
+			for (typename Vector<delegate_t,Allocator>::iterator i=slots.begin();i!=slots.end();++i)
+			{
+				if (!i->invoke(p1,p2,p3))
 					m_slots.erase(*i);
 			}
 		}

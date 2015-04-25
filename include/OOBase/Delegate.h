@@ -96,12 +96,12 @@ namespace OOBase
 	{
 	public:
 		template<typename T>
-		Delegate1(const WeakPtr<T>& ptr, void (T::*fn)(const P1&)) : m_static(NULL)
+		Delegate1(const WeakPtr<T>& ptr, void (T::*fn)(P1)) : m_static(NULL)
 		{
 			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(ptr,fn);
 		}
 
-		Delegate1(void (*fn)(const P1&)) : m_static(fn)
+		Delegate1(void (*fn)(P1)) : m_static(fn)
 		{
 		}
 
@@ -112,7 +112,7 @@ namespace OOBase
 			return m_ptr == rhs.m_ptr && m_static == rhs.m_static;
 		}
 
-		bool invoke(const P1& p1) const
+		bool invoke(P1 p1) const
 		{
 			if (m_ptr)
 				return m_ptr->thunk(p1);
@@ -130,16 +130,16 @@ namespace OOBase
 	private:
 		struct ThunkBase
 		{
-			virtual bool thunk(const P1&) = 0;
+			virtual bool thunk(P1) = 0;
 		};
 
 		template<typename T>
 		struct Thunk : public ThunkBase
 		{
-			Thunk(const WeakPtr<T>& ptr, void (T::*fn)(const P1&)) : m_ptr(ptr), m_fn(fn)
+			Thunk(const WeakPtr<T>& ptr, void (T::*fn)(P1)) : m_ptr(ptr), m_fn(fn)
 			{}
 
-			bool thunk(const P1& p1)
+			bool thunk(P1 p1)
 			{
 				if (!m_ptr)
 					return false;
@@ -149,11 +149,11 @@ namespace OOBase
 			}
 
 			WeakPtr<T> m_ptr;
-			void (T::*m_fn)(const P1&);
+			void (T::*m_fn)(P1);
 		};
 
 		SharedPtr<ThunkBase> m_ptr;
-		void (*m_static)(const P1&);
+		void (*m_static)(P1);
 	};
 
 	template <typename P1, typename P2, typename Allocator = CrtAllocator>
@@ -161,12 +161,12 @@ namespace OOBase
 	{
 	public:
 		template<typename T>
-		Delegate2(const WeakPtr<T>& ptr, void (T::*fn)(const P1&,const P2&)) : m_static(NULL)
+		Delegate2(const WeakPtr<T>& ptr, void (T::*fn)(P1,P2)) : m_static(NULL)
 		{
 			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(ptr,fn);
 		}
 
-		Delegate2(void (*fn)(const P1&,const P2&)) : m_static(fn)
+		Delegate2(void (*fn)(P1,P2)) : m_static(fn)
 		{
 		}
 
@@ -177,7 +177,7 @@ namespace OOBase
 			return m_ptr == rhs.m_ptr && m_static == rhs.m_static;
 		}
 
-		bool invoke(const P1& p1, const P2& p2) const
+		bool invoke(P1 p1, P2 p2) const
 		{
 			if (m_ptr)
 				return m_ptr->thunk(p1,p2);
@@ -195,16 +195,16 @@ namespace OOBase
 	private:
 		struct ThunkBase
 		{
-			virtual bool thunk(const P1&, const P2&) = 0;
+			virtual bool thunk(P1, P2) = 0;
 		};
 
 		template<typename T>
 		struct Thunk : public ThunkBase
 		{
-			Thunk(const WeakPtr<T>& ptr, void (T::*fn)(const P1&,const P2&)) : m_ptr(ptr), m_fn(fn)
+			Thunk(const WeakPtr<T>& ptr, void (T::*fn)(P1,P2)) : m_ptr(ptr), m_fn(fn)
 			{}
 
-			bool thunk(const P1& p1, const P2& p2)
+			bool thunk(P1 p1, P2 p2)
 			{
 				if (!m_ptr)
 					return false;
@@ -214,11 +214,76 @@ namespace OOBase
 			}
 
 			WeakPtr<T> m_ptr;
-			void (T::*m_fn)(const P1&,const P2&);
+			void (T::*m_fn)(P1,P2);
 		};
 
 		SharedPtr<ThunkBase> m_ptr;
-		void (*m_static)(const P1&,const P2&);
+		void (*m_static)(P1,P2);
+	};
+
+	template <typename P1, typename P2, typename P3, typename Allocator = CrtAllocator>
+	class Delegate3
+	{
+	public:
+		template<typename T>
+		Delegate3(const WeakPtr<T>& ptr, void (T::*fn)(P1,P2,P3)) : m_static(NULL)
+		{
+			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(ptr,fn);
+		}
+
+		Delegate3(void (*fn)(P1,P2,P3)) : m_static(fn)
+		{
+		}
+
+		bool operator == (const Delegate3& rhs) const
+		{
+			if (this == &rhs)
+				return true;
+			return m_ptr == rhs.m_ptr && m_static == rhs.m_static;
+		}
+
+		bool invoke(P1 p1, P2 p2, P3 p3) const
+		{
+			if (m_ptr)
+				return m_ptr->thunk(p1,p2,p3);
+
+			(*m_static)(p1,p2,p3);
+			return true;
+		}
+
+		void swap(Delegate3& rhs)
+		{
+			m_ptr.swap(rhs.m_ptr);
+			OOBase::swap(m_static,rhs.m_static);
+		}
+
+	private:
+		struct ThunkBase
+		{
+			virtual bool thunk(P1, P2, P3) = 0;
+		};
+
+		template<typename T>
+		struct Thunk : public ThunkBase
+		{
+			Thunk(const WeakPtr<T>& ptr, void (T::*fn)(P1,P2,P3)) : m_ptr(ptr), m_fn(fn)
+			{}
+
+			bool thunk(P1 p1, P2 p2, P3 p3)
+			{
+				if (!m_ptr)
+					return false;
+
+				(m_ptr.lock().get()->*m_fn)(p1,p2,p3);
+				return true;
+			}
+
+			WeakPtr<T> m_ptr;
+			void (T::*m_fn)(P1,P2,P3);
+		};
+
+		SharedPtr<ThunkBase> m_ptr;
+		void (*m_static)(P1,P2,P3);
 	};
 }
 
