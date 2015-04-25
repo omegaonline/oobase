@@ -38,12 +38,12 @@ namespace OOBase
 
 		ScopedArrayPtr(size_t count) : m_data(m_static)
 		{
-			reallocate(count);
+			resize(count);
 		}
 
 		ScopedArrayPtr(size_t count, AllocatorInstance& alloc) : m_data(m_static), m_dynamic(alloc)
 		{
-			reallocate(count);
+			resize(count);
 		}
 
 		~ScopedArrayPtr()
@@ -51,7 +51,7 @@ namespace OOBase
 			static_assert(detail::is_pod<T>::value,"ScopedArrayPtr must be of a POD type");
 		}
 
-		bool reallocate(size_t count)
+		bool resize(size_t count)
 		{
 			if (m_data == m_static)
 			{

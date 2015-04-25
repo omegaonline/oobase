@@ -194,7 +194,7 @@ namespace OOBase
 			if (!err)
 				return 0;
 
-			if (!ptrBuf.reallocate(len))
+			if (!ptrBuf.resize(len))
 				return ERROR_OUTOFMEMORY;
 
 			return detail::utf8_to_wchar_t(sz,ptrBuf.get(),len);
@@ -208,7 +208,7 @@ namespace OOBase
 			if (!err)
 				return 0;
 
-			if (!ptrBuf.reallocate(len))
+			if (!ptrBuf.resize(len))
 				return ERROR_OUTOFMEMORY;
 
 			return detail::wchar_t_to_utf8(wsz,ptrBuf.get(),len);

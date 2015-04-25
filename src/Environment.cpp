@@ -154,7 +154,7 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 	}
 
 	// And now copy into one giant block
-	if (!ptr.reallocate(total_size + 2))
+	if (!ptr.resize(total_size + 2))
 		return ERROR_OUTOFMEMORY;
 
 	wchar_t* pout = ptr.get();
@@ -192,7 +192,7 @@ bool OOBase::Environment::getenv(const char* envvar, String& strValue)
 	int err = Win32::utf8_to_wchar_t(envvar,wenvvar);
 	for (DWORD dwLen = 128;!err;)
 	{
-		if (!wenv.reallocate(dwLen))
+		if (!wenv.resize(dwLen))
 			return false;
 
 		DWORD dwActualLen = GetEnvironmentVariableW(wenvvar.get(),wenv.get(),dwLen);

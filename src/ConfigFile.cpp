@@ -332,7 +332,7 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 		}
 		else if (dwType == REG_SZ || dwType == REG_EXPAND_SZ)
 		{
-			if (!wszKey.reallocate(dwValLen/sizeof(wchar_t)))
+			if (!wszKey.resize(dwValLen/sizeof(wchar_t)))
 			{
 				lRes = ERROR_OUTOFMEMORY;
 				break;
@@ -355,7 +355,7 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 					if (dwNewLen < ptrEnv.count())
 						break;
 
-					if (!ptrEnv.reallocate(dwNewLen + 1))
+					if (!ptrEnv.resize(dwNewLen + 1))
 					{
 						lRes = ERROR_OUTOFMEMORY;
 						break;

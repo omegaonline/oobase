@@ -55,7 +55,7 @@ namespace OOBase
 			if (static_cast<size_t>(r) < ptr.count())
 				return 0;
 
-			if (!ptr.reallocate(static_cast<size_t>(r) + 1))
+			if (!ptr.resize(static_cast<size_t>(r) + 1))
 				return ERROR_OUTOFMEMORY;
 		}
 	}
@@ -111,7 +111,7 @@ namespace OOBase
 			if (len == npos)
 				len = strlen(sz);
 
-			if (!m_data.reallocate(len + 1))
+			if (!m_data.resize(len + 1))
 				return false;
 
 			if (len)
@@ -128,7 +128,7 @@ namespace OOBase
 			if (len)
 			{
 				size_t orig_len = length();
-				if (!m_data.reallocate(orig_len + len + 1))
+				if (!m_data.resize(orig_len + len + 1))
 					return false;
 
 				memcpy(m_data.get() + orig_len,sz,len);

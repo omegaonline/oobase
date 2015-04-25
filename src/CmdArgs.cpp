@@ -70,17 +70,17 @@ int OOBase::CmdArgs::parse(results_t& results, int skip) const
 		return GetLastError();
 
 	ScopedArrayPtr<const char*> argv;
-	if (!argv.reallocate(argc))
+	Vector<SharedString<ThreadLocalAllocator>,ThreadLocalAllocator> arg_strings;
+	if (!argv.resize(argc) || !arg_strings.resize(argc))
 		return ERROR_OUTOFMEMORY;
 
 	for (int i=0;i<argc;++i)
 	{
-		String s;
-		int err = s.wchar_t_to_utf8(argvw.get()[i]);
+		int err = arg_strings[i].wchar_t_to_utf8(argvw.get()[i]);
 		if (err)
 			return err;
 
-		argv.get()[i] = s.c_str();
+		argv[i] = arg_strings[i].c_str();
 	}
 
 	return parse(argc,argv.get(),results,skip);
@@ -231,8 +231,7 @@ int OOBase::CmdArgs::parse_arg(results_t& results, const char* arg, unsigned int
 	String strArg;
 	if (!strArg.assign(arg))
 		return ERROR_OUTOFMEMORY;
-
-
+	
 	String strResult;
 	int err = strResult.printf("@%u",position);
 	if (err != 0)

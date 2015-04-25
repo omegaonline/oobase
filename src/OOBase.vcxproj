@@ -228,6 +228,7 @@
     <ClInclude Include="..\include\OOBase\CDRIO.h" />
     <ClInclude Include="..\include\OOBase\CmdArgs.h" />
     <ClInclude Include="..\include\OOBase\ConfigFile.h" />
+    <ClInclude Include="..\include\OOBase\Delegate.h" />
     <ClInclude Include="..\include\OOBase\Environment.h" />
     <ClInclude Include="..\include\OOBase\File.h" />
     <ClInclude Include="..\include\OOBase\Iterator.h" />

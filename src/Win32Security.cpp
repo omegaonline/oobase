@@ -137,12 +137,12 @@ DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, ScopedArrayPtr<wchar_t>& st
 	if (dwUNameSize == 0)
 		return GetLastError();
 
-	if (!strUserName.reallocate(dwUNameSize))
+	if (!strUserName.resize(dwUNameSize))
 		return ERROR_OUTOFMEMORY;
 
 	if (dwDNameSize)
 	{
-		if (!strDomainName.reallocate(dwDNameSize))
+		if (!strDomainName.resize(dwDNameSize))
 			return ERROR_OUTOFMEMORY;
 	}
 
