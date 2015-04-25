@@ -543,6 +543,12 @@ namespace OOBase
 	{
 		return !(lhs < rhs);
 	}
+
+	// The discrimination type for singleton scoping for this module
+	struct Module
+	{
+		int unused;
+	};
 }
 
 #endif // __cplusplus

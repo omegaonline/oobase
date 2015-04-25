@@ -25,15 +25,6 @@
 
 #if defined(_WIN32)
 
-namespace OOBase
-{
-	// The discrimination type for singleton scoping for this module
-	struct Module
-	{
-		int unused;
-	};
-}
-
 namespace
 {
 	class Win32Thunk

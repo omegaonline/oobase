@@ -32,7 +32,7 @@ namespace OOBase
 		bool Set(const void* key, void* val, void (*destructor)(void*) = NULL);
 	}
 
-	template <typename T, typename DLL>
+	template <typename T, typename DLL = OOBase::Module>
 	class TLSSingleton : public NonCopyable
 	{
 	public:

@@ -27,12 +27,6 @@
 
 namespace OOBase
 {
-	// The discrimination type for singleton scoping for this module
-	struct Module
-	{
-		int unused;
-	};
-
 	template <typename T, typename DLL = OOBase::Module>
 	class Singleton : public NonCopyable
 	{
