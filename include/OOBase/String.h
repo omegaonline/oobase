@@ -82,19 +82,15 @@ namespace OOBase
 	public:
 		static const size_t npos = size_t(-1);
 
-		ScopedStringImpl() : m_data()
-		{
-			m_data[0] = '\0';
-		}
+		ScopedStringImpl() : m_data(), m_len(0)
+		{}
 
-		ScopedStringImpl(AllocatorInstance& allocator) : m_data(allocator)
-		{
-			m_data[0] = '\0';
-		}
+		ScopedStringImpl(AllocatorInstance& allocator) : m_data(allocator), m_len(0)
+		{}
 
 		int compare(const char* rhs) const
 		{
-			if (!m_data)
+			if (!m_len)
 				return (rhs == NULL ? 0 : -1);
 			else if (rhs == NULL)
 				return 1;
@@ -123,7 +119,9 @@ namespace OOBase
 
 			if (len)
 				memcpy(m_data.get(),sz,len);
+
 			m_data[len] = '\0';
+			m_len = len;
 			return true;
 		}
 
@@ -134,12 +132,13 @@ namespace OOBase
 
 			if (len)
 			{
-				size_t orig_len = length();
+				size_t orig_len = m_len;
 				if (!m_data.resize(orig_len + len + 1))
 					return false;
 
 				memcpy(m_data.get() + orig_len,sz,len);
 				m_data[orig_len + len] = '\0';
+				m_len += len;
 			}
 			return true;
 		}
@@ -151,33 +150,36 @@ namespace OOBase
 
 		const char* c_str() const
 		{
-			return m_data && m_data.count() ? m_data.get() : NULL;
+			return m_len ? m_data.get() : NULL;
 		}
 
 		char& operator [](ptrdiff_t i) const
 		{
+			assert(i >= 0 && size_t(i) < m_len);
 			return m_data[i];
 		}
 
 		bool empty() const
 		{
-			return !m_data || m_data.count() == 0 || m_data[0] == '\0';
+			return (m_len == 0);
 		}
 
 		void clear()
 		{
-			if (m_data)
-				m_data[0] = '\0';
+			m_len = 0;
 		}
 
 		size_t length() const
 		{
-			return empty() ? 0 : strlen(m_data.get());
+			return m_len;
 		}
 
 		size_t find(char c, size_t start = 0) const
 		{
-			if (empty())
+			if (!m_len)
+				return npos;
+
+			if (start > m_len)
 				return npos;
 
 			const char* f = strchr(m_data.get() + start,c);
@@ -186,9 +188,12 @@ namespace OOBase
 
 		size_t find(const char* sz, size_t start = 0) const
 		{
-			if (empty())
+			if (!m_len)
 				return npos;
 
+			if (start > m_len)
+				return npos;
+			
 			const char* f = strstr(m_data.get() + start,sz);
 			return f ? size_t(f - m_data.get()) : npos;
 		}
@@ -199,6 +204,8 @@ namespace OOBase
 			va_start(args,format);
 
 			int err = OOBase::vprintf(m_data,format,args);
+			if (!err)
+				m_len = m_data.count();
 
 			va_end(args);
 
@@ -218,12 +225,16 @@ namespace OOBase
 #if defined(_WIN32)
 		int wchar_t_to_utf8(const wchar_t* wsz)
 		{
-			return Win32::wchar_t_to_utf8(wsz,m_data);
+			int err = Win32::wchar_t_to_utf8(wsz,m_data);
+			if (!err)
+				m_len = m_data.count();
+			return err;
 		}
 #endif
 
 	private:
 		ScopedArrayPtr<char,Allocator,24> m_data;
+		size_t                            m_len;
 	};
 
 	template<typename A1, typename T>
