@@ -44,12 +44,12 @@ namespace OOBase
 		template <typename T>
 		int connect(const WeakPtr<T>& ptr, void (T::*slot)())
 		{
-			return m_slots.push_back(delegate_t(ptr,slot));
+			return m_slots.push_back(delegate_t(ptr,slot)) != m_slots.end();
 		}
 
 		int connect(void (*slot)())
 		{
-			return m_slots.push_back(delegate_t(slot));
+			return m_slots.push_back(delegate_t(slot)) != m_slots.end();
 		}
 
 		template <typename T>
@@ -86,12 +86,12 @@ namespace OOBase
 		template <typename T>
 		int connect(const WeakPtr<T>& ptr, void (T::*slot)(P1))
 		{
-			return m_slots.push_back(delegate_t(ptr,slot));
+			return m_slots.push_back(delegate_t(ptr,slot)) != m_slots.end();
 		}
 
 		int connect(void (*slot)(P1))
 		{
-			return m_slots.push_back(delegate_t(slot));
+			return m_slots.push_back(delegate_t(slot)) != m_slots.end();
 		}
 
 		template <typename T>
@@ -128,12 +128,12 @@ namespace OOBase
 		template <typename T>
 		int connect(const WeakPtr<T>& ptr, void (T::*slot)(P1,P2))
 		{
-			return m_slots.push_back(delegate_t(ptr,slot));
+			return m_slots.push_back(delegate_t(ptr,slot)) != m_slots.end();
 		}
 
 		int connect(void (*slot)(P1,P2))
 		{
-			return m_slots.push_back(delegate_t(slot));
+			return m_slots.push_back(delegate_t(slot)) != m_slots.end();
 		}
 
 		template <typename T>
@@ -170,12 +170,12 @@ namespace OOBase
 		template <typename T>
 		int connect(const WeakPtr<T>& ptr, void (T::*slot)(P1,P2,P3))
 		{
-			return m_slots.push_back(delegate_t(ptr,slot));
+			return m_slots.push_back(delegate_t(ptr,slot)) != m_slots.end();
 		}
 
 		int connect(void (*slot)(P1,P2,P3))
 		{
-			return m_slots.push_back(delegate_t(slot));
+			return m_slots.push_back(delegate_t(slot)) != m_slots.end();
 		}
 
 		template <typename T>

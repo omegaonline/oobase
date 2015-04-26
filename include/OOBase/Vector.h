@@ -128,7 +128,10 @@ namespace OOBase
 					else
 					{
 						for (size_t i=0;i<rhs.m_size;++i)
-							insert_at(i,rhs.m_data[i]);
+						{
+							if (!insert_at(i,rhs.m_data[i]))
+							break;
+						}
 					}
 				}
 			}
@@ -143,7 +146,10 @@ namespace OOBase
 					else
 					{
 						for (size_t i=0;i<rhs.m_size;++i)
-							insert_at(i,rhs.m_data[i]);
+						{
+							if (!insert_at(i,rhs.m_data[i]))
+								break;
+						}
 					}
 				}
 				return *this;
@@ -526,14 +532,23 @@ namespace OOBase
 		typedef detail::IteratorImpl<const Vector,const value_type,size_t> const_iterator;
 		friend class detail::IteratorImpl<const Vector,const value_type,size_t>;
 
-		Vector() : baseClass()
-		{}
+		Vector() : baseClass(), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		{
+			iterator(this,size_t(-1)).swap(m_end);
+			const_iterator(this,size_t(-1)).swap(m_cend);
+		}
 
-		Vector(AllocatorInstance& allocator) : baseClass(allocator)
-		{}
+		Vector(AllocatorInstance& allocator) : baseClass(allocator), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		{
+			iterator(this,size_t(-1)).swap(m_end);
+			const_iterator(this,size_t(-1)).swap(m_cend);
+		}
 
-		Vector(const Vector& rhs) : baseClass(rhs)
-		{}
+		Vector(const Vector& rhs) : baseClass(rhs), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		{
+			iterator(this,size_t(-1)).swap(m_end);
+			const_iterator(this,size_t(-1)).swap(m_cend);
+		}
 
 		Vector& operator = (const Vector& rhs)
 		{
@@ -602,9 +617,9 @@ namespace OOBase
 			return resize(new_size,T());
 		}
 
-		bool push_back(const T& value)
+		iterator push_back(const T& value)
 		{
-			return baseClass::push_back(value);
+			return baseClass::push_back(value) ? iterator(this,this->m_size-1) : m_end;
 		}
 
 		bool pop_back()
@@ -612,16 +627,10 @@ namespace OOBase
 			return baseClass::pop_back();
 		}
 
-		bool insert(const T& value, const iterator& before)
+		iterator insert(const T& value, const iterator& before)
 		{
-			assert(before.check(this));
-			return baseClass::insert_at(before.deref(),value);
-		}
-
-		iterator insert(const T& value, const iterator& before, bool& err)
-		{
-			err = baseClass::insert_at(before.deref(),value);
-			return (!err ? before : end());
+			size_t pos = before.deref();
+			return baseClass::insert_at(pos,value) ? iterator(this,pos) : m_end;
 		}
 
 		iterator erase(iterator iter)
@@ -676,12 +685,12 @@ namespace OOBase
 
 		iterator begin()
 		{
-			return baseClass::empty() ? end() : iterator(this,0);
+			return baseClass::empty() ? m_end : iterator(this,0);
 		}
 
 		const_iterator cbegin() const
 		{
-			return baseClass::empty() ? end() : const_iterator(this,0);
+			return baseClass::empty() ? m_cend : const_iterator(this,0);
 		}
 
 		const_iterator begin() const
@@ -689,20 +698,24 @@ namespace OOBase
 			return cbegin();
 		}
 
-		iterator end()
+		const iterator& end()
 		{
-			return iterator(this,size_t(-1));
+			return m_end;
 		}
 
-		const_iterator cend() const
+		const const_iterator& cend() const
 		{
-			return const_iterator(this,size_t(-1));
+			return m_cend;
 		}
 
-		const_iterator end() const
+		const const_iterator& end() const
 		{
-			return cend();
+			return m_cend;
 		}
+
+	private:
+		iterator m_end;
+		const_iterator m_cend;
 	};
 }
 

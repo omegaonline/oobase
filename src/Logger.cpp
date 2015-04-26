@@ -118,7 +118,7 @@ bool Logger::connect(void (*callback)(void* param, const ::timeval& t, OOBase::L
 {
 	OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
-	return m_vecOutputs.push_back(OutputShim(callback,param));
+	return m_vecOutputs.push_back(OutputShim(callback,param)) != m_vecOutputs.end();
 }
 
 bool Logger::disconnect(void (*callback)(void* param, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg), void* param)

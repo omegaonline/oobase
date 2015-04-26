@@ -45,17 +45,29 @@ namespace OOBase
 		typedef detail::IteratorImpl<const Set,const value_type,size_t> const_iterator;
 		friend class detail::IteratorImpl<const Set,const value_type,size_t>;
 
-		Set(const Compare& comp) : baseClass(), m_compare(comp)
-		{}
+		Set(const Compare& comp) : baseClass(), m_compare(comp), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		{
+			iterator(this,size_t(-1)).swap(m_end);
+			const_iterator(this,size_t(-1)).swap(m_cend);
+		}
+		
+		Set(AllocatorInstance& allocator) : baseClass(allocator), m_compare(), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		{
+			iterator(this,size_t(-1)).swap(m_end);
+			const_iterator(this,size_t(-1)).swap(m_cend);
+		}
 
-		Set(AllocatorInstance& allocator) : baseClass(allocator), m_compare()
-		{}
+		Set(const Compare& comp, AllocatorInstance& allocator) : baseClass(allocator), m_compare(comp), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		{
+			iterator(this,size_t(-1)).swap(m_end);
+			const_iterator(this,size_t(-1)).swap(m_cend);
+		}
 
-		Set(const Compare& comp, AllocatorInstance& allocator) : baseClass(allocator), m_compare(comp)
-		{}
-
-		Set(const Set& rhs) : baseClass(rhs), m_compare(rhs.m_compare)
-		{}
+		Set(const Set& rhs) : baseClass(rhs), m_compare(rhs.m_compare), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		{
+			iterator(this,size_t(-1)).swap(m_end);
+			const_iterator(this,size_t(-1)).swap(m_cend);
+		}
 
 		Set& operator = (const Set& rhs)
 		{
@@ -80,7 +92,7 @@ namespace OOBase
 			return true;
 		}
 
-		bool insert(const T& value)
+		iterator insert(const T& value)
 		{
 			size_t start = 0;
 			for (size_t end = this->m_size;start < end;)
@@ -91,7 +103,7 @@ namespace OOBase
 				else
 					end = mid;
 			}
-			return baseClass::insert_at(start,value);
+			return (baseClass::insert_at(start,value) ? iterator(this,start) : m_end;
 		}
 
 		iterator erase(iterator iter)
@@ -110,7 +122,7 @@ namespace OOBase
 		bool remove(const T1& value)
 		{
 			iterator i = find(value);
-			if (i == end())
+			if (i == m_end)
 				return false;
 
 			erase(i);
@@ -134,13 +146,13 @@ namespace OOBase
 		{
 			const T* p = bsearch(value);
 			if (!p || *p != value)
-				return end();
+				return m_end;
 
 			// Scan for the first
 			while (p && p > this->m_data && *(p-1) == value)
 				--p;
 
-			return (p ? iterator(this,static_cast<size_t>(p - this->m_data)) : end());
+			return (p ? iterator(this,static_cast<size_t>(p - this->m_data)) : m_end);
 		}
 
 		template <typename T1>
@@ -148,23 +160,23 @@ namespace OOBase
 		{
 			const T* p = bsearch(value);
 			if (!p || *p != value)
-				return end();
+				return m_cend;
 
 			// Scan for the first
 			while (p && p > this->m_data && *(p-1) == value)
 				--p;
 
-			return (p ? const_iterator(this,static_cast<size_t>(p - this->m_data)) : end());
+			return (p ? const_iterator(this,static_cast<size_t>(p - this->m_data)) : m_cend);
 		}
 
 		iterator begin()
 		{
-			return baseClass::empty() ? end() : iterator(this,0);
+			return baseClass::empty() ? m_end : iterator(this,0);
 		}
 
 		const_iterator cbegin() const
 		{
-			return baseClass::empty() ? end() : const_iterator(this,0);
+			return baseClass::empty() ? m_end : const_iterator(this,0);
 		}
 
 		const_iterator begin() const
@@ -174,27 +186,27 @@ namespace OOBase
 
 		iterator back()
 		{
-			return (this->m_size ? iterator(this,this->m_size-1) : end());
+			return (this->m_size ? iterator(this,this->m_size-1) : m_end);
 		}
 
 		const_iterator back() const
 		{
-			return (this->m_size ? const_iterator(this,this->m_size-1) : end());
+			return (this->m_size ? const_iterator(this,this->m_size-1) : m_cend);
 		}
 
-		iterator end()
+		const iterator& end()
 		{
-			return iterator(this,size_t(-1));
+			return m_end;
 		}
 
-		const_iterator cend() const
+		const const_iterator& cend() const
 		{
-			return const_iterator(this,size_t(-1));
+			return m_cend;
 		}
 
-		const_iterator end() const
+		const const_iterator& end() const
 		{
-			return cend();
+			return m_cend;
 		}
 
 	private:
@@ -215,6 +227,9 @@ namespace OOBase
 			return NULL;
 		}
 		Compare m_compare;
+
+		iterator m_end;
+		const_iterator m_cend;
 	};
 }
 

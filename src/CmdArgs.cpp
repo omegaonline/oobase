@@ -45,7 +45,7 @@ int OOBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, 
 
 	opt.m_has_value = has_value;
 
-	return m_map_opts.insert(strId,opt) ? 0 : ERROR_OUTOFMEMORY;
+	return (m_map_opts.insert(strId,opt) != m_map_opts.end()) ? 0 : ERROR_OUTOFMEMORY;
 }
 
 int OOBase::CmdArgs::error(results_t& results, int err, const char* key, const char* value) const
@@ -55,7 +55,7 @@ int OOBase::CmdArgs::error(results_t& results, int err, const char* key, const c
 		return ERROR_OUTOFMEMORY;
 	
 	results.clear();
-	if (!results.insert(strErr,strVal))
+	if (results.insert(strErr,strVal) == results.end())
 		return ERROR_OUTOFMEMORY;
 
 	return err;
@@ -146,7 +146,7 @@ int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, in
 				value = argv[++arg];
 			}
 
-			if (!strVal.assign(value) || !results.insert(i->first,strVal))
+			if (!strVal.assign(value) || results.insert(i->first,strVal) == results.end())
 				return ERROR_OUTOFMEMORY;
 
 			return 0;
@@ -157,7 +157,7 @@ int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, in
 			if (i->second.m_has_value)
 				value = &argv[arg][i->second.m_long_opt.length()+3];
 
-			if (!strVal.assign(value) || !results.insert(i->first,strVal))
+			if (!strVal.assign(value) || results.insert(i->first,strVal) == results.end())
 				return ERROR_OUTOFMEMORY;
 
 			return 0;
@@ -197,7 +197,7 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 					else
 						value = &c[1];
 
-					if (!strVal.assign(value) || !results.insert(i->first,strVal))
+					if (!strVal.assign(value) || results.insert(i->first,strVal) == results.end())
 						return ERROR_OUTOFMEMORY;
 
 					// No more for this arg...
@@ -205,7 +205,7 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 				}
 				else
 				{
-					if (!strVal.assign("true") || !results.insert(i->first,strVal))
+					if (!strVal.assign("true") || results.insert(i->first,strVal) == results.end())
 						return ERROR_OUTOFMEMORY;
 
 					break;
@@ -237,5 +237,5 @@ int OOBase::CmdArgs::parse_arg(results_t& results, const char* arg, unsigned int
 	if (err != 0)
 		return err;
 
-	return results.insert(strResult,strArg) ? 0 : ERROR_OUTOFMEMORY;
+	return (results.insert(strResult,strArg) != results.end()) ? 0 : ERROR_OUTOFMEMORY;
 }

@@ -48,7 +48,10 @@ namespace
 			{
 				size_t eq = str.find('=');
 				if (eq == OOBase::String::npos)
-					err = tabEnv.insert(str,OOBase::String());
+				{
+					if (tabEnv.insert(str,OOBase::String()) == tabEnv.end())
+						err = ERROR_OUTOFMEMORY;
+				}
 				else
 				{
 					OOBase::String strLeft,strRight;
@@ -56,7 +59,10 @@ namespace
 					if (!err)
 						err = strRight.assign(str.c_str()+eq+1);
 					if (!err)
-						err = tabEnv.insert(strLeft,strRight);
+					{
+						if (tabEnv.insert(strLeft,strRight) == tabEnv.end())
+							err = ERROR_OUTOFMEMORY;
+					}
 				}
 			}
 		}
@@ -144,7 +150,7 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 					wcscpy(value.get(),ptr.get());
 				}
 
-				if (!wenv.insert(key,value))
+				if (wenv.insert(key,value) == wenv.end())
 					return ERROR_OUTOFMEMORY;
 			}
 		}
@@ -306,7 +312,7 @@ bool OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tab
 	{
 		if (!tabEnv.exists(i->first))
 		{
-			if (!tabEnv.insert(*i))
+			if (tabEnv.insert(*i) == tabEnv.end())
 				return false;
 		}
 	}

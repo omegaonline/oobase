@@ -51,12 +51,18 @@ namespace OOBase
 		typedef detail::IteratorImpl<List,T,ListNode*> iterator;
 		typedef detail::IteratorImpl<const List,const T,const ListNode*> const_iterator;
 
-		List() : baseClass(), m_head(NULL), m_tail(m_head), m_size(0)
-		{}
-
-		List(AllocatorInstance& allocator) : baseClass(allocator), m_head(NULL), m_tail(m_head), m_size(0)
-		{}
-
+		List() : baseClass(), m_head(NULL), m_tail(m_head), m_size(0), m_end(NULL,NULL), m_cend(NULL,NULL)
+		{
+			iterator(this,NULL).swap(m_end);
+			const_iterator(this,NULL).swap(m_cend);
+		}
+		
+		List(AllocatorInstance& allocator) : baseClass(allocator), m_head(NULL), m_tail(m_head), m_size(0), m_end(NULL,NULL), m_cend(NULL,NULL)
+		{
+			iterator(this,NULL).swap(m_end);
+			const_iterator(this,NULL).swap(m_cend);
+		}
+		
 		~List()
 		{
 			clear();
@@ -89,9 +95,9 @@ namespace OOBase
 			return iterator(this,insert_tail(value));
 		}
 
-		bool push_front(const T& value)
+		iterator push_front(const T& value)
 		{
-			return insert_head(value) != NULL;
+			return iterator(this,insert_head(value));
 		}
 
 		void remove_at(iterator& iter)
@@ -104,7 +110,7 @@ namespace OOBase
 		bool remove(const T1& value)
 		{
 			iterator i = find(value);
-			if (i == end())
+			if (i == m_end)
 				return false;
 
 			remove_at(i);
@@ -127,7 +133,7 @@ namespace OOBase
 		iterator find(const T1& value)
 		{
 			iterator i = begin();
-			for (;i != end();++i)
+			for (;i != m_end;++i)
 			{
 				if (*i == value)
 					break;
@@ -139,7 +145,7 @@ namespace OOBase
 		const_iterator find(const T1& value) const
 		{
 			const_iterator i = cbegin();
-			for (;i != end();++i)
+			for (;i != m_end;++i)
 			{
 				if (*i == value)
 					break;
@@ -162,25 +168,28 @@ namespace OOBase
 			return cbegin();
 		}
 
-		iterator end()
+		const iterator& end()
 		{
-			return iterator(this,NULL);
+			return m_end;
 		}
 
-		const_iterator cend() const
+		const const_iterator& cend() const
 		{
-			return const_iterator(this,NULL);
+			return m_cend;
 		}
 
-		const_iterator end() const
+		const const_iterator& end() const
 		{
-			return cend();
+			return m_cend;
 		}
 
 	private:
 		ListNode* m_head;
 		ListNode* m_tail;
 		size_t    m_size;
+
+		iterator       m_end;
+		const_iterator m_cend;
 
 		T* at(ListNode* node)
 		{

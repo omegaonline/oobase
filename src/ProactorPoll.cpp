@@ -77,7 +77,7 @@ int OOBase::detail::ProactorPoll::init()
 
 	// Add the control pipe to m_poll_fds
 	pollfd pfd = { m_read_fd, POLLIN | POLLRDHUP, 0 };
-	return m_poll_fds.push_back(pfd) ? 0 : ERROR_OUTOFMEMORY;
+	return m_poll_fds.push_back(pfd) != m_poll_fds.end() ? 0 : ERROR_OUTOFMEMORY;
 }
 
 bool OOBase::detail::ProactorPoll::do_bind_fd(int fd, void* param, fd_callback_t callback)
@@ -133,7 +133,7 @@ bool OOBase::detail::ProactorPoll::do_watch_fd(int fd, unsigned int events)
 			{
 				// A new entry
 				pollfd pfd = { fd, p_events, 0 };
-				if (!m_poll_fds.push_back(pfd))
+				if (m_poll_fds.push_back(pfd) == m_poll_fds.end())
 					return false;
 
 				i->value.m_poll_pos = m_poll_fds.size()-1;
