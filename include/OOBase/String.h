@@ -83,10 +83,14 @@ namespace OOBase
 		static const size_t npos = size_t(-1);
 
 		ScopedStringImpl() : m_data()
-		{}
+		{
+			m_data[0] = '\0';
+		}
 
 		ScopedStringImpl(AllocatorInstance& allocator) : m_data(allocator)
-		{}
+		{
+			m_data[0] = '\0';
+		}
 
 		int compare(const char* rhs) const
 		{
@@ -108,6 +112,9 @@ namespace OOBase
 
 		bool assign(const char* sz, size_t len = npos)
 		{
+			if (!sz)
+				len = 0;
+
 			if (len == npos)
 				len = strlen(sz);
 
@@ -135,6 +142,11 @@ namespace OOBase
 				m_data[orig_len + len] = '\0';
 			}
 			return true;
+		}
+
+		bool append(char c)
+		{
+			return append(&c,1);
 		}
 
 		const char* c_str() const
@@ -312,12 +324,17 @@ namespace OOBase
 			if (sz && len)
 			{
 				node_t ptr;
-				if (!new_node(ptr,m_ptr) || !ptr->append(sz,len))
+				if (!clone_node(ptr,m_ptr) || !ptr->append(sz,len))
 					return false;
 
 				m_ptr.swap(ptr);
 			}
 			return true;
+		}
+
+		bool append(char c)
+		{
+			return append(&c,1);
 		}
 
 		bool append(const SharedString& rhs)
@@ -380,7 +397,7 @@ namespace OOBase
 		int vprintf(const char* format, va_list args)
 		{
 			node_t ptr;
-			if (!new_node(ptr,m_ptr))
+			if (!clone_node(ptr,m_ptr))
 				return ERROR_OUTOFMEMORY;
 
 			int err = ptr->vprintf(format,args);
@@ -395,7 +412,7 @@ namespace OOBase
 		int wchar_t_to_utf8(const wchar_t* wsz)
 		{
 			node_t ptr;
-			if (!new_node(ptr,m_ptr))
+			if (!clone_node(ptr,m_ptr))
 				return ERROR_OUTOFMEMORY;
 
 			int err = ptr->wchar_t_to_utf8(wsz);
@@ -413,7 +430,7 @@ namespace OOBase
 			return allocate_shared<ScopedStringImpl<Allocator>,Allocator>();
 		}
 
-		bool new_node(node_t& n, const node_t& rhs)
+		bool clone_node(node_t& n, const node_t& rhs)
 		{
 			n = new_node();
 			if (!n)
