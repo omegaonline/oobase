@@ -292,7 +292,7 @@ int OOBase::POSIX::random_chars(char* buffer, size_t len)
 OOBase::POSIX::pw_info::pw_info(uid_t uid) : m_pwd(NULL)
 {
 	size_t size = get_size();
-	if (!m_data.reallocate(size))
+	if (!m_data.resize(size))
 		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
 	int err = 0;
@@ -308,7 +308,7 @@ OOBase::POSIX::pw_info::pw_info(uid_t uid) : m_pwd(NULL)
 OOBase::POSIX::pw_info::pw_info(const char* uname) : m_pwd(NULL)
 {
 	size_t size = get_size();
-	if (!m_data.reallocate(size))
+	if (!m_data.resize(size))
 		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
 	int err = 0;

@@ -103,7 +103,7 @@ namespace OOBase
 				else
 					end = mid;
 			}
-			return (baseClass::insert_at(start,value) ? iterator(this,start) : m_end;
+			return (baseClass::insert_at(start,value) ? iterator(this,start) : m_end);
 		}
 
 		iterator erase(iterator iter)
