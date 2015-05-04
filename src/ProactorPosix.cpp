@@ -310,7 +310,7 @@ bool OOBase::detail::ProactorPosix::add_timer(void* param, timer_callback_t call
 	ti.m_param = param;
 	ti.m_callback = callback;
 	ti.m_timeout = timeout;
-	return m_timers.insert(ti);
+	return m_timers.insert(ti) != m_timers.end();
 }
 
 bool OOBase::detail::ProactorPosix::remove_timer(void* param)

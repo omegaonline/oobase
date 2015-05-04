@@ -238,7 +238,7 @@ bool OOBase::Environment::get_current(env_table_t& tabEnv)
 			if (tabEnv.exists(str))
 				continue;
 
-			if (!tabEnv.insert(String(),str))
+			if (tabEnv.insert(String(),str) == tabEnv.end())
 				return false;
 		}
 		else
@@ -250,7 +250,7 @@ bool OOBase::Environment::get_current(env_table_t& tabEnv)
 			if (tabEnv.exists(strK))
 				continue;
 
-			if (!strV.assign(str.c_str()+eq+1) || !tabEnv.insert(strK,strV))
+			if (!strV.assign(str.c_str()+eq+1) || tabEnv.insert(strK,strV) != tabEnv.end())
 				return false;
 		}
 	}
