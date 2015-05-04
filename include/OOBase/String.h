@@ -316,17 +316,14 @@ namespace OOBase
 
 		bool assign(const char* sz, size_t len = npos)
 		{
-			if (sz && len)
-			{
-				node_t ptr = new_node();
-				if (!ptr)
-					return false;
+			node_t ptr = new_node();
+			if (!ptr)
+				return false;
 
-				if (!ptr->assign(sz,len))
-					return false;
+			if (sz && len && !ptr->assign(sz,len))
+				return false;
 
-				m_ptr.swap(ptr);
-			}
+			m_ptr.swap(ptr);
 			return true;
 		}
 
