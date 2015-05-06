@@ -36,13 +36,22 @@ namespace OOBase
 	class TLSSingleton : public NonCopyable
 	{
 	public:
-		static T* instance()
+		static T* instance_ptr()
 		{
 			void* inst = NULL;
 			if (!TLS::Get(&s_sentinal,&inst))
 				inst = init();
 
 			return static_cast<T*>(inst);
+		}
+
+		static T& instance()
+		{
+			T* i = instance_ptr();
+			if (!i)
+				OOBase_CallCriticalFailure("Null instance pointer");
+
+			return *i;
 		}
 
 	private:
