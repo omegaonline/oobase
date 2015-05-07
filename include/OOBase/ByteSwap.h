@@ -97,6 +97,7 @@ namespace OOBase
 	template <typename T>
 	T byte_swap(const T& val)
 	{
+		static_assert(detail::is_pod<T>::value,"Attempting to byte swap non-POD");
 		return detail::byte_swapper<sizeof(T)>::byte_swap(val);
 	}
 
@@ -143,6 +144,17 @@ namespace OOBase
 			static T byte_swap(T val)
 			{
 				return (T)byte_swap_8((uint64_t)val);
+			}
+		};
+
+		// This is purely for pointers to member functions
+		template <>
+		struct byte_swapper<16>
+		{
+			template <typename T>
+			static T byte_swap(const T& val)
+			{
+				return val;
 			}
 		};
 	}

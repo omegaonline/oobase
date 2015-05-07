@@ -232,6 +232,18 @@ namespace OOBase
 		}
 #endif
 
+#if defined(OOBASE_CDR_STREAM_H_INCLUDED_)
+		bool read(CDRStream& stream)
+		{
+			return stream.read_string(*this);
+		}
+
+		bool write(CDRStream& stream) const
+		{
+			return stream.write(c_str(),m_len);
+		}
+#endif
+
 	private:
 		ScopedArrayPtr<char,Allocator,24> m_data;
 		size_t                            m_len;
@@ -429,6 +441,18 @@ namespace OOBase
 
 			m_ptr.swap(ptr);
 			return 0;
+		}
+#endif
+
+#if defined(OOBASE_CDR_STREAM_H_INCLUDED_)
+		bool read(CDRStream& stream)
+		{
+			return stream.read_string(*this);
+		}
+
+		bool write(CDRStream& stream) const
+		{
+			return stream.write(m_ptr->c_str(),m_ptr->length());
 		}
 #endif
 

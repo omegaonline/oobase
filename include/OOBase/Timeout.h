@@ -39,10 +39,6 @@
 
 namespace OOBase
 {
-#if defined(OOBASE_CDR_STREAM_H_INCLUDED_)
-	class CDRStream;
-#endif
-
 	class Clock : public NonCopyable
 	{
 	public:

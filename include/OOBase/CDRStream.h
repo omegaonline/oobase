@@ -24,11 +24,45 @@
 
 #include "Buffer.h"
 #include "ByteSwap.h"
-#include "String.h"
-#include "Timeout.h"
 
 namespace OOBase
 {
+	class CDRStream;
+
+	namespace detail
+	{
+		namespace stream
+		{
+			template <typename Type>
+			struct has_read_write
+			{
+			private:
+				// SFINAE
+				typedef char (&yes)[2];
+
+				// MSVC way
+				template <typename T,bool (T::*)(CDRStream&)> struct ptmf_helper_read {};
+				template <typename T> static yes test_read(ptmf_helper_read<T,&T::read>*);
+
+				template <typename T,bool (T::*)(CDRStream&) const> struct ptmf_helper_write {};
+				template <typename T> static yes test_write(ptmf_helper_write<T,&T::write>*);
+
+				template <typename T> static char test_read(...);
+				template <typename T> static char test_write(...);
+
+			public:
+				static const bool has_read = (sizeof(test_read<Type>(NULL)) == sizeof(yes));
+				static const bool has_write = (sizeof(test_write<Type>(NULL)) == sizeof(yes));
+			};
+
+			template <bool s>
+			struct read_impl;
+
+			template <bool s>
+			struct write_impl;
+		}
+	}
+
 	class CDRStream
 	{
 	public:
@@ -170,7 +204,7 @@ namespace OOBase
 
 		/** Templatized variable read function.
 		 *  This function reads a value of type \p T, and advances rd_ptr() by \p sizeof(T).
-		 *  \return \p true on sucess or \p false if length() < \p sizeof(T).
+		 *  \return \p true on success or \p false if length() < \p sizeof(T).
 		 */
 		template <typename T>
 		bool read(T& val)
@@ -181,38 +215,7 @@ namespace OOBase
 			if (!m_buffer)
 				return error_eof();
 
-			m_buffer->align_rd_ptr(alignment_of<T>::value);
-			if (m_buffer->length() < sizeof(T))
-				return error_eof();
-
-			val = byte_swap(*reinterpret_cast<const T*>(m_buffer->rd_ptr()));
-			m_buffer->rd_ptr(sizeof(T));
-			return true;
-		}
-
-		/** A specialization of read() for type \p Timeout.
-		 */
-		bool read(Timeout& val)
-		{
-			return val.read(*this);
-		}
-
-		/** A specialization of read() for type \p bool.
-		 */
-		bool read(bool& val)
-		{
-			if (m_last_error != 0)
-				return false;
-
-			if (!m_buffer)
-				return error_eof();
-
-			if (m_buffer->length() < 1)
-				return error_eof();
-
-			val = (*m_buffer->rd_ptr() != 0);
-			m_buffer->rd_ptr(1);
-			return true;
+			return detail::stream::read_impl<detail::stream::has_read_write<T>::has_read>::read(*this,val);
 		}
 
 		/** Read a string.
@@ -239,8 +242,9 @@ namespace OOBase
 			if (len > m_buffer->length())
 				return error_too_big();
 
-			m_last_error = val.assign((const char*)m_buffer->rd_ptr(),len);
-			if (m_last_error == 0)
+			if (!val.assign((const char*)m_buffer->rd_ptr(),len))
+				m_last_error = ERROR_OUTOFMEMORY;
+			else
 				m_buffer->rd_ptr(len);
 
 			return (m_last_error == 0);
@@ -265,6 +269,32 @@ namespace OOBase
 			return count;
 		}
 
+		template <typename T>
+		bool read_raw(T& val)
+		{
+			static_assert(detail::is_pod<T>::value,"Attempting to read_raw non-POD");
+
+			m_buffer->align_rd_ptr(alignment_of<T>::value);
+			if (m_buffer->length() < sizeof(T))
+				return error_eof();
+
+			val = byte_swap(*reinterpret_cast<const T*>(m_buffer->rd_ptr()));
+			m_buffer->rd_ptr(sizeof(T));
+			return true;
+		}
+
+		/** A specialization of read_raw() for type \p bool.
+		 */
+		bool read_raw(bool& val)
+		{
+			if (m_buffer->length() < 1)
+				return error_eof();
+
+			val = (*m_buffer->rd_ptr() != 0);
+			m_buffer->rd_ptr(1);
+			return true;
+		}
+
 		/** Templatized variable write function.
 		 *  This function writes a value of type \p T, and advances wr_ptr() by \p sizeof(T).
 		 *  This function will call space() to increase the internal buffer capacity.
@@ -279,18 +309,7 @@ namespace OOBase
 			if (!m_buffer)
 				return error_too_big();
 
-			m_last_error = m_buffer->align_wr_ptr(alignment_of<T>::value);
-			if (m_last_error != 0)
-				return false;
-
-			m_last_error = m_buffer->space(sizeof(T));
-			if (m_last_error != 0)
-				return false;
-
-			*reinterpret_cast<T*>(m_buffer->wr_ptr()) = byte_swap(val);
-			m_buffer->wr_ptr(sizeof(T));
-
-			return true;
+			return detail::stream::write_impl<detail::stream::has_read_write<T>::has_write>::write(*this,val);
 		}
 
 		/// A specialization of write() for type \p const char*.
@@ -319,36 +338,6 @@ namespace OOBase
 		bool write(const char (&arr)[S])
 		{
 			return write(arr,S);
-		}
-
-		/// A specialization of write() for type \p Timeout.
-		bool write(const Timeout& val)
-		{
-			return val.write(*this);
-		}
-
-		/// A specialization of write() for type \p bool.
-		bool write(bool val)
-		{
-			if (m_last_error != 0)
-				return false;
-
-			if (!m_buffer)
-				return error_too_big();
-
-			m_last_error = m_buffer->space(1);
-			if (m_last_error != 0)
-				return false;
-
-			*m_buffer->wr_ptr() = (val ? 1 : 0);
-			m_buffer->wr_ptr(1);
-			return true;
-		}
-
-		template <typename STR>
-		bool write_string(const STR& str)
-		{
-			return write(str.c_str(),str.length());
 		}
 
 		bool write_bytes(const uint8_t* buffer, size_t count)
@@ -392,6 +381,36 @@ namespace OOBase
 			m_buffer->wr_ptr(count);
 
 			return count;
+		}
+
+		template <typename T>
+		bool write_raw(const T& val)
+		{
+			static_assert(detail::is_pod<T>::value,"Attempting to write_raw non-POD");
+
+			m_last_error = m_buffer->align_wr_ptr(alignment_of<T>::value);
+			if (m_last_error != 0)
+				return false;
+
+			m_last_error = m_buffer->space(sizeof(T));
+			if (m_last_error != 0)
+				return false;
+
+			*reinterpret_cast<T*>(m_buffer->wr_ptr()) = byte_swap(val);
+			m_buffer->wr_ptr(sizeof(T));
+			return true;
+		}
+
+		/// A specialization of write() for type \p bool.
+		bool write_raw(bool val)
+		{
+			m_last_error = m_buffer->space(1);
+			if (m_last_error != 0)
+				return false;
+
+			*m_buffer->wr_ptr() = (val ? 1 : 0);
+			m_buffer->wr_ptr(1);
+			return true;
 		}
 
 		/** Templatized variable replace function.
@@ -481,6 +500,52 @@ namespace OOBase
 			return true;
 		}
 	};
+
+	namespace detail
+	{
+		namespace stream
+		{
+			template <bool s = true>
+			struct read_impl
+			{
+				template <typename T>
+				static bool read(CDRStream& stream, T& val)
+				{
+					return val.read(stream);
+				}
+			};
+
+			template <>
+			struct read_impl<false>
+			{
+				template <typename T>
+				static bool read(CDRStream& stream, T& val)
+				{
+					return stream.read_raw(val);
+				}
+			};
+
+			template <bool s = true>
+			struct write_impl
+			{
+				template <typename T>
+				static bool write(CDRStream& stream, const T& val)
+				{
+					return val.write(stream);
+				}
+			};
+
+			template <>
+			struct write_impl<false>
+			{
+				template <typename T>
+				static bool write(CDRStream& stream, const T& val)
+				{
+					return stream.write_raw(val);
+				}
+			};
+		}
+	}
 }
 
 #endif // OOBASE_CDR_STREAM_H_INCLUDED_
