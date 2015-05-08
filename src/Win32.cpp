@@ -817,7 +817,7 @@ namespace
 	}
 }
 
-void* OOBase::CrtAllocator::allocate(size_t len)
+void* OOBase::CrtAllocator::allocate(size_t len, size_t /*align*/)
 {
 	if (!len)
 		return NULL;
@@ -885,7 +885,7 @@ void* OOBase::CrtAllocator::allocate(size_t len)
 	return (m+1);
 }
 
-void* OOBase::CrtAllocator::reallocate(void* ptr, size_t len)
+void* OOBase::CrtAllocator::reallocate(void* ptr, size_t len, size_t /*align*/)
 {
 	if (!len)
 		return NULL;
