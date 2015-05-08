@@ -30,14 +30,14 @@ namespace OOBase
 	class Delegate0
 	{
 	public:
+		Delegate0(void (*fn)() = NULL) : m_static(fn)
+		{
+		}
+
 		template<typename T>
 		Delegate0(const WeakPtr<T>& ptr, void (T::*fn)()) : m_static(NULL)
 		{
 			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(ptr,fn);
-		}
-
-		Delegate0(void (*fn)()) : m_static(fn)
-		{
 		}
 
 		bool operator == (const Delegate0& rhs) const
@@ -52,6 +52,9 @@ namespace OOBase
 			if (m_ptr)
 				return m_ptr->thunk();
 
+			if (!m_static)
+				return false;
+
 			(*m_static)();
 			return true;
 		}
@@ -61,6 +64,18 @@ namespace OOBase
 			m_ptr.swap(rhs.m_ptr);
 			OOBase::swap(m_static,rhs.m_static);
 		}
+
+#if defined(OOBASE_CDR_STREAM_H_INCLUDED_)
+		bool read(CDRStream& stream)
+		{
+			return (m_ptr.read(stream) && stream.read(m_static));
+		}
+
+		bool write(CDRStream& stream) const
+		{
+			return (m_ptr.write(stream) && stream.write(m_static));
+		}
+#endif
 
 	private:
 		struct ThunkBase
@@ -95,14 +110,14 @@ namespace OOBase
 	class Delegate1
 	{
 	public:
+		Delegate1(void (*fn)(P1) = NULL) : m_static(fn)
+		{
+		}
+
 		template<typename T>
 		Delegate1(const WeakPtr<T>& ptr, void (T::*fn)(P1)) : m_static(NULL)
 		{
 			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(ptr,fn);
-		}
-
-		Delegate1(void (*fn)(P1)) : m_static(fn)
-		{
 		}
 
 		bool operator == (const Delegate1& rhs) const
@@ -116,6 +131,9 @@ namespace OOBase
 		{
 			if (m_ptr)
 				return m_ptr->thunk(p1);
+
+			if (!m_static)
+				return false;
 
 			(*m_static)(p1);
 			return true;
@@ -160,14 +178,14 @@ namespace OOBase
 	class Delegate2
 	{
 	public:
+		Delegate2(void (*fn)(P1,P2) = NULL) : m_static(fn)
+		{
+		}
+
 		template<typename T>
 		Delegate2(const WeakPtr<T>& ptr, void (T::*fn)(P1,P2)) : m_static(NULL)
 		{
 			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(ptr,fn);
-		}
-
-		Delegate2(void (*fn)(P1,P2)) : m_static(fn)
-		{
 		}
 
 		bool operator == (const Delegate2& rhs) const
@@ -181,6 +199,9 @@ namespace OOBase
 		{
 			if (m_ptr)
 				return m_ptr->thunk(p1,p2);
+
+			if (!m_static)
+				return false;
 
 			(*m_static)(p1,p2);
 			return true;
@@ -225,14 +246,14 @@ namespace OOBase
 	class Delegate3
 	{
 	public:
+		Delegate3(void (*fn)(P1,P2,P3) = NULL) : m_static(fn)
+		{
+		}
+
 		template<typename T>
 		Delegate3(const WeakPtr<T>& ptr, void (T::*fn)(P1,P2,P3)) : m_static(NULL)
 		{
 			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(ptr,fn);
-		}
-
-		Delegate3(void (*fn)(P1,P2,P3)) : m_static(fn)
-		{
 		}
 
 		bool operator == (const Delegate3& rhs) const
@@ -246,6 +267,9 @@ namespace OOBase
 		{
 			if (m_ptr)
 				return m_ptr->thunk(p1,p2,p3);
+
+			if (!m_static)
+				return false;
 
 			(*m_static)(p1,p2,p3);
 			return true;

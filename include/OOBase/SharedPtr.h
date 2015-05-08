@@ -206,6 +206,28 @@ namespace OOBase
 				return (m_impl ? m_impl->use_count() : 0);
 			}
 
+#if defined(OOBASE_CDR_STREAM_H_INCLUDED_)
+			bool read(CDRStream& stream)
+			{
+				SharedCountBase* impl = NULL;
+				if (!stream.read(impl))
+					return false;
+
+				SharedCount(impl).swap(*this);
+				return true;
+			}
+
+			bool write(CDRStream& stream) const
+			{
+				if (!stream.write(m_impl))
+					return false;
+
+				if (m_impl)
+					m_impl->addref();
+				return true;
+			}
+#endif
+
 		private:
 			SharedCountBase* m_impl;
 		};
@@ -385,6 +407,18 @@ namespace OOBase
 			OOBase::swap(m_ptr,other.m_ptr);
 			m_sc.swap(other.m_sc);
 		}
+
+#if defined(OOBASE_CDR_STREAM_H_INCLUDED_)
+		bool read(CDRStream& stream)
+		{
+			return stream.read(m_ptr) && m_sc.read(stream);
+		}
+
+		bool write(CDRStream& stream) const
+		{
+			return stream.write(m_ptr) && m_sc.write(stream);
+		}
+#endif
 
 	private:
 		T*                  m_ptr;
