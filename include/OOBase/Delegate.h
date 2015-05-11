@@ -35,9 +35,9 @@ namespace OOBase
 		}
 
 		template<typename T>
-		Delegate0(const WeakPtr<T>& ptr, void (T::*fn)()) : m_static(NULL)
+		Delegate0(T* p, void (T::*fn)()) : m_static(NULL)
 		{
-			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(ptr,fn);
+			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(p,fn);
 		}
 
 		bool operator == (const Delegate0& rhs) const
@@ -50,12 +50,11 @@ namespace OOBase
 		bool invoke() const
 		{
 			if (m_ptr)
-				return m_ptr->thunk();
-
-			if (!m_static)
+				m_ptr->thunk();
+			else if (!m_static)
 				return false;
-
-			(*m_static)();
+			else
+				(*m_static)();
 			return true;
 		}
 
@@ -80,25 +79,21 @@ namespace OOBase
 	private:
 		struct ThunkBase
 		{
-			virtual bool thunk() = 0;
+			virtual void thunk() = 0;
 		};
 
 		template<typename T>
 		struct Thunk : public ThunkBase
 		{
-			Thunk(const WeakPtr<T>& ptr, void (T::*fn)()) : m_ptr(ptr), m_fn(fn)
+			Thunk(T* p, void (T::*fn)()) : m_p(p), m_fn(fn)
 			{}
 
-			bool thunk()
+			void thunk()
 			{
-				if (!m_ptr)
-					return false;
-
-				(m_ptr.lock().get()->*m_fn)();
-				return true;
+				(m_p->*m_fn)();
 			}
 
-			WeakPtr<T> m_ptr;
+			T* m_p;
 			void (T::*m_fn)();
 		};
 
@@ -110,14 +105,17 @@ namespace OOBase
 	class Delegate1
 	{
 	public:
+		typedef Allocator allocator_type;
+		typedef P1 param1_type;
+
 		Delegate1(void (*fn)(P1) = NULL) : m_static(fn)
 		{
 		}
 
 		template<typename T>
-		Delegate1(const WeakPtr<T>& ptr, void (T::*fn)(P1)) : m_static(NULL)
+		Delegate1(T* p, void (T::*fn)(P1)) : m_static(NULL)
 		{
-			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(ptr,fn);
+			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(p,fn);
 		}
 
 		bool operator == (const Delegate1& rhs) const
@@ -130,12 +128,11 @@ namespace OOBase
 		bool invoke(P1 p1) const
 		{
 			if (m_ptr)
-				return m_ptr->thunk(p1);
-
-			if (!m_static)
+				m_ptr->thunk(p1);
+			else if (!m_static)
 				return false;
-
-			(*m_static)(p1);
+			else
+				(*m_static)(p1);
 			return true;
 		}
 
@@ -148,25 +145,21 @@ namespace OOBase
 	private:
 		struct ThunkBase
 		{
-			virtual bool thunk(P1) = 0;
+			virtual void thunk(P1) = 0;
 		};
 
 		template<typename T>
 		struct Thunk : public ThunkBase
 		{
-			Thunk(const WeakPtr<T>& ptr, void (T::*fn)(P1)) : m_ptr(ptr), m_fn(fn)
+			Thunk(T* p, void (T::*fn)(P1)) : m_p(p), m_fn(fn)
 			{}
 
-			bool thunk(P1 p1)
+			void thunk(P1 p1)
 			{
-				if (!m_ptr)
-					return false;
-
-				(m_ptr.lock().get()->*m_fn)(p1);
-				return true;
+				(m_p->*m_fn)(p1);
 			}
 
-			WeakPtr<T> m_ptr;
+			T* m_p;
 			void (T::*m_fn)(P1);
 		};
 
@@ -178,14 +171,18 @@ namespace OOBase
 	class Delegate2
 	{
 	public:
+		typedef Allocator allocator_type;
+		typedef P1 param1_type;
+		typedef P2 param2_type;
+
 		Delegate2(void (*fn)(P1,P2) = NULL) : m_static(fn)
 		{
 		}
 
 		template<typename T>
-		Delegate2(const WeakPtr<T>& ptr, void (T::*fn)(P1,P2)) : m_static(NULL)
+		Delegate2(T* p, void (T::*fn)(P1,P2)) : m_static(NULL)
 		{
-			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(ptr,fn);
+			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(p,fn);
 		}
 
 		bool operator == (const Delegate2& rhs) const
@@ -198,12 +195,11 @@ namespace OOBase
 		bool invoke(P1 p1, P2 p2) const
 		{
 			if (m_ptr)
-				return m_ptr->thunk(p1,p2);
-
-			if (!m_static)
+				m_ptr->thunk(p1,p2);
+			else if (!m_static)
 				return false;
-
-			(*m_static)(p1,p2);
+			else
+				(*m_static)(p1,p2);
 			return true;
 		}
 
@@ -216,25 +212,21 @@ namespace OOBase
 	private:
 		struct ThunkBase
 		{
-			virtual bool thunk(P1, P2) = 0;
+			virtual void thunk(P1, P2) = 0;
 		};
 
 		template<typename T>
 		struct Thunk : public ThunkBase
 		{
-			Thunk(const WeakPtr<T>& ptr, void (T::*fn)(P1,P2)) : m_ptr(ptr), m_fn(fn)
+			Thunk(T* p, void (T::*fn)(P1,P2)) : m_p(p), m_fn(fn)
 			{}
 
-			bool thunk(P1 p1, P2 p2)
+			void thunk(P1 p1, P2 p2)
 			{
-				if (!m_ptr)
-					return false;
-
-				(m_ptr.lock().get()->*m_fn)(p1,p2);
-				return true;
+				(m_p->*m_fn)(p1,p2);
 			}
 
-			WeakPtr<T> m_ptr;
+			T* m_p;
 			void (T::*m_fn)(P1,P2);
 		};
 
@@ -246,14 +238,19 @@ namespace OOBase
 	class Delegate3
 	{
 	public:
+		typedef Allocator allocator_type;
+		typedef P1 param1_type;
+		typedef P2 param2_type;
+		typedef P3 param3_type;
+
 		Delegate3(void (*fn)(P1,P2,P3) = NULL) : m_static(fn)
 		{
 		}
 
 		template<typename T>
-		Delegate3(const WeakPtr<T>& ptr, void (T::*fn)(P1,P2,P3)) : m_static(NULL)
+		Delegate3(T* p, void (T::*fn)(P1,P2,P3)) : m_static(NULL)
 		{
-			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(ptr,fn);
+			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(p,fn);
 		}
 
 		bool operator == (const Delegate3& rhs) const
@@ -266,12 +263,11 @@ namespace OOBase
 		bool invoke(P1 p1, P2 p2, P3 p3) const
 		{
 			if (m_ptr)
-				return m_ptr->thunk(p1,p2,p3);
-
-			if (!m_static)
+				m_ptr->thunk(p1,p2,p3);
+			else if (!m_static)
 				return false;
-
-			(*m_static)(p1,p2,p3);
+			else
+				(*m_static)(p1,p2,p3);
 			return true;
 		}
 
@@ -284,25 +280,21 @@ namespace OOBase
 	private:
 		struct ThunkBase
 		{
-			virtual bool thunk(P1, P2, P3) = 0;
+			virtual void thunk(P1, P2, P3) = 0;
 		};
 
 		template<typename T>
 		struct Thunk : public ThunkBase
 		{
-			Thunk(const WeakPtr<T>& ptr, void (T::*fn)(P1,P2,P3)) : m_ptr(ptr), m_fn(fn)
+			Thunk(T* p, void (T::*fn)(P1,P2,P3)) : m_p(p), m_fn(fn)
 			{}
 
-			bool thunk(P1 p1, P2 p2, P3 p3)
+			void thunk(P1 p1, P2 p2, P3 p3)
 			{
-				if (!m_ptr)
-					return false;
-
-				(m_ptr.lock().get()->*m_fn)(p1,p2,p3);
-				return true;
+				(m_p->*m_fn)(p1,p2,p3);
 			}
 
-			WeakPtr<T> m_ptr;
+			T* m_p;
 			void (T::*m_fn)(P1,P2,P3);
 		};
 
