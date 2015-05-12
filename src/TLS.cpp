@@ -47,7 +47,7 @@ namespace
 
 		void release();
 
-		static TLSGlobal* instance();
+		static TLSGlobal* instance(bool create);
 		
 		OOBase::ArenaAllocator m_allocator;
 
@@ -126,7 +126,7 @@ PIMAGE_TLS_CALLBACK _xl_b = &on_tls_callback;
 }
 #endif
 
-TLSGlobal* TLSGlobal::instance()
+TLSGlobal* TLSGlobal::instance(bool create)
 {
 	static OOBase::Once::once_t key = ONCE_T_INIT;
 	OOBase::Once::Run(&key,init);
@@ -135,7 +135,7 @@ TLSGlobal* TLSGlobal::instance()
 	if (s_key != TLS_OUT_OF_INDEXES)
 	{
 		inst = static_cast<TLSGlobal*>(TlsGetValue(s_key));
-		if (!inst && OOBase::CrtAllocator::allocate_new(inst))
+		if (!inst && create && OOBase::CrtAllocator::allocate_new(inst))
 		{
 			OOBase::DLLDestructor<OOBase::Module>::add_destructor(&term,inst);
 			TlsSetValue(s_key,inst);
@@ -180,7 +180,7 @@ namespace
 	}
 }
 
-TLSGlobal* TLSGlobal::instance()
+TLSGlobal* TLSGlobal::instance(bool create)
 {
 	static OOBase::Once::once_t key = ONCE_T_INIT;
 	OOBase::Once::Run(&key,init);
@@ -205,7 +205,9 @@ void TLSGlobal::release()
 
 bool OOBase::TLS::Get(const void* key, void** val)
 {
-	TLSGlobal* inst = TLSGlobal::instance();
+	TLSGlobal* inst = TLSGlobal::instance(false);
+	if (!inst)
+		return false;
 
 	OOBase::HashTable<const void*,TLSGlobal::tls_val,OOBase::AllocatorInstance>::iterator i = inst->m_mapVals.find(key);
 	if (i == inst->m_mapVals.end())
@@ -219,7 +221,9 @@ bool OOBase::TLS::Get(const void* key, void** val)
 
 bool OOBase::TLS::Set(const void* key, void* val, void (*destructor)(void*))
 {
-	TLSGlobal* inst = TLSGlobal::instance();
+	TLSGlobal* inst = TLSGlobal::instance(true);
+	if (!inst)
+		return false;
 
 	TLSGlobal::tls_val v;
 	v.m_val = val;
@@ -230,7 +234,7 @@ bool OOBase::TLS::Set(const void* key, void* val, void (*destructor)(void*))
 
 char* OOBase::detail::get_error_buffer(size_t& len)
 {
-	TLSGlobal* inst = TLSGlobal::instance();
+	TLSGlobal* inst = TLSGlobal::instance(false);
 	if (!inst)
 		return NULL;
 
@@ -240,7 +244,7 @@ char* OOBase::detail::get_error_buffer(size_t& len)
 
 void* OOBase::ThreadLocalAllocator::allocate(size_t bytes, size_t align)
 {
-	TLSGlobal* inst = TLSGlobal::instance();
+	TLSGlobal* inst = TLSGlobal::instance(true);
 	if (!inst)
 		return NULL;
 
@@ -252,7 +256,7 @@ void* OOBase::ThreadLocalAllocator::allocate(size_t bytes, size_t align)
 
 void* OOBase::ThreadLocalAllocator::reallocate(void* ptr, size_t bytes, size_t align)
 {
-	TLSGlobal* inst = TLSGlobal::instance();
+	TLSGlobal* inst = TLSGlobal::instance(true);
 	if (!inst)
 		return NULL;
 
@@ -266,7 +270,7 @@ void* OOBase::ThreadLocalAllocator::reallocate(void* ptr, size_t bytes, size_t a
 
 void OOBase::ThreadLocalAllocator::free(void* ptr)
 {
-	TLSGlobal* inst = TLSGlobal::instance();
+	TLSGlobal* inst = TLSGlobal::instance(false);
 	if (inst)
 	{
 		inst->m_allocator.free(ptr);
