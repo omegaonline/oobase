@@ -284,7 +284,7 @@ namespace
 		}
 	}
 
-	void formatMsg(OOBase::ScopedArrayPtr<char>& out, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg)
+	void formatMsg(OOBase::ScopedArrayPtr<char,OOBase::ThreadLocalAllocator,512>& out, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg)
 	{
 		const char* tag = "Error: ";
 
@@ -313,7 +313,7 @@ namespace
 
 	void onDebug(void*, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg)
 	{
-		OOBase::ScopedArrayPtr<char> out;
+		OOBase::ScopedArrayPtr<char,OOBase::ThreadLocalAllocator,512> out;
 		formatMsg(out,t,priority,msg);
 
 		OutputDebugStringA(out.get());
@@ -335,7 +335,7 @@ namespace
 		if (priority >= min && priority <= max)
 		{
 			HANDLE h = GetStdHandle(nStdHandle);
-			OOBase::ScopedArrayPtr<char> out;
+			OOBase::ScopedArrayPtr<char,OOBase::ThreadLocalAllocator,512> out;
 			formatMsg(out,t,priority,msg);
 
 			WORD attrs;
@@ -508,7 +508,7 @@ int OOBase::Logger::connect_system_log(const char* name, const char* category)
 
 namespace
 {
-	void formatMsg(OOBase::ScopedArrayPtr<char>& out, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg, bool use_colour)
+	void formatMsg(OOBase::ScopedArrayPtr<char,OOBase::ThreadLocalAllocator,512>& out, const ::timeval& t, OOBase::Logger::Priority priority, const char* msg, bool use_colour)
 	{
 		const char* on_col = "\x1b[31m";
 		const char* off_col = "\x1b[0m";
@@ -552,7 +552,7 @@ namespace
 		{
 			bool use_colour = (reinterpret_cast<uintptr_t>(param) & 0x10000) != 0;
 
-			OOBase::ScopedArrayPtr<char> out;
+			OOBase::ScopedArrayPtr<char,OOBase::ThreadLocalAllocator,512> out;
 			formatMsg(out,t,priority,msg,use_colour);
 
 			OOBase::stdout_write(out.get());
@@ -568,7 +568,7 @@ namespace
 		{
 			bool use_colour = (reinterpret_cast<uintptr_t>(param) & 0x10000) != 0;
 
-			OOBase::ScopedArrayPtr<char> out;
+			OOBase::ScopedArrayPtr<char,OOBase::ThreadLocalAllocator,512> out;
 			formatMsg(out,t,priority,msg,use_colour);
 
 			OOBase::stdout_write(out.get());
