@@ -36,11 +36,20 @@ namespace OOBase
 
 		int open(const char* filename, bool writeable = false);
 
-		long read(void* p, unsigned long size);
+		size_t read(void* p, size_t size);
 		size_t read(const RefPtr<Buffer>& buffer, int& err, size_t len = 0);
 
-		long write(const void* p, unsigned long size);
+		size_t write(const void* p, size_t size);
 		int write(const RefPtr<Buffer>& buffer, size_t len = 0);
+
+		enum seek_direction
+		{
+			seek_begin,
+			seek_current,
+			seek_end
+		};
+		uint64_t seek(int64_t offset, enum seek_direction dir);
+		uint64_t tell() const;
 
 	private:
 #if defined(_WIN32)

@@ -66,13 +66,22 @@ int OOBase::File::open(const char* filename, bool writeable)
 	return 0;
 }
 
-long OOBase::File::read(void* p, unsigned long size)
+size_t OOBase::File::read(void* p, size_t size)
 {
 #if defined(_WIN32)
-	DWORD r = 0;
-	if (!::ReadFile(m_fd,p,size,&r,NULL))
-		return -1;
-	return r;
+	size_t total = 0;
+	while (size)
+	{
+		DWORD r = 0;
+		if (!::ReadFile(m_fd,p,size,&r,NULL))
+			return size_t(-1);
+		total += r;
+		if (r <= size)
+			break;
+		p = static_cast<uint8_t*>(p) + r;
+		size -= r;
+	}
+	return total;
 #elif defined(HAVE_UNISTD_H)
 	return POSIX::read(m_fd,p,size);
 #endif
@@ -83,44 +92,42 @@ size_t OOBase::File::read(const RefPtr<Buffer>& buffer, int& err, size_t len)
 	if (!buffer)
 	{
 		err = EINVAL;
-		return 0;
+		return size_t(-1);
 	}
 
 	if (!len)
 		len = buffer->space();
 
-	size_t tot = 0;
-	while (len)
+	size_t r = read(buffer->wr_ptr(),len);
+	if (r == size_t(-1))
 	{
-		long r = read(buffer->wr_ptr(),static_cast<unsigned long>(len));
-		if (r <= 0)
-		{
-			if (r != 0)
-			{
 #if defined(_WIN32)
-				err = ::GetLastError();
+		err = ::GetLastError();
 #elif defined(HAVE_UNISTD_H)
-				err = errno;
+		err = errno;
 #endif
-			}
-			break;
-		}
-
-		tot += r;
-		buffer->wr_ptr(r);
-		len -= r;
 	}
+	else
+		buffer->wr_ptr(r);
 
-	return tot;
+	return r;
 }
 
-long OOBase::File::write(const void* p, unsigned long size)
+size_t OOBase::File::write(const void* p, size_t size)
 {
 #if defined(_WIN32)
-	DWORD w = 0;
-	if (!::WriteFile(m_fd,p,size,&w,NULL))
-		return -1;
-	return w;
+	size_t total = 0;
+	while (size)
+	{
+		DWORD w = 0;
+		if (!::WriteFile(m_fd,p,size,&w,NULL))
+			return size_t(-1);
+
+		total += w;
+		size -= w;
+		p = static_cast<uint8_t*>(p) + w;
+	}
+	return total;
 #elif defined(HAVE_UNISTD_H)
 	return POSIX::write(m_fd,p,size);
 #endif
@@ -134,21 +141,72 @@ int OOBase::File::write(const RefPtr<Buffer>& buffer, size_t len)
 	if (!len)
 		len = buffer->length();
 
-	while (len)
+	size_t w = write(buffer->rd_ptr(),len);
+	if (w == size_t(-1))
 	{
-		long w = write(buffer->rd_ptr(),static_cast<unsigned long>(len));
-		if (w < 0)
-		{
 #if defined(_WIN32)
-			return ::GetLastError();
+		return ::GetLastError();
 #elif defined(HAVE_UNISTD_H)
-			return errno;
+		return errno;
 #endif
-		}
-		
-		buffer->rd_ptr(w);
-		len -= w;
 	}
-
+		
+	buffer->rd_ptr(w);
 	return 0;
+}
+
+uint64_t OOBase::File::seek(int64_t offset, enum seek_direction dir)
+{
+#if defined(_WIN32)
+	DWORD d = FILE_CURRENT;
+	switch (dir)
+	{
+	case seek_begin:
+		d = FILE_BEGIN;
+		break;
+
+	case seek_current:
+		break;
+
+	case seek_end:
+		d = FILE_END;
+		break;
+	}
+	LARGE_INTEGER off,pos;
+	off.QuadPart = offset;
+	pos.QuadPart = 0;
+	if (!::SetFilePointerEx(m_fd,off,&pos,d))
+		return uint64_t(-1);
+	return pos.QuadPart;
+#else
+	int d = SEEK_CUR;
+	switch (dir)
+	{
+	case seek_begin:
+		d = SEEK_SET;
+		break;
+
+	case seek_current:
+		break;
+
+	case seek_end:
+		d = SEEK_END;
+		break;
+	}
+	return ::lseek(m_fd,offset,d);
+#endif
+}
+
+uint64_t OOBase::File::tell() const
+{
+#if defined(_WIN32)
+	LARGE_INTEGER off,pos;
+	off.QuadPart = 0;
+	pos.QuadPart = 0;
+	if (!::SetFilePointerEx(m_fd,off,&pos,FILE_CURRENT))
+		return uint64_t(-1);
+	return pos.QuadPart;
+#else
+	return ::lseek(m_fd,0,SEEK_CUR);
+#endif
 }
