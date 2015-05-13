@@ -802,16 +802,6 @@ namespace OOBase
 	{
 		friend class detail::shared::template_friend;
 
-	protected:
-		EnableSharedFromThis()
-		{}
-
-		EnableSharedFromThis(const EnableSharedFromThis&)
-		{}
-
-		~EnableSharedFromThis()
-		{}
-
 	public:
 		SharedPtr<T> shared_from_this()
 		{
