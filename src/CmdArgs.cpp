@@ -123,7 +123,7 @@ int OOBase::CmdArgs::parse(int argc, const char* argv[], results_t& results, int
 		else
 		{
 			// Arguments
-			err = parse_arg(results,argv[i],pos++);
+			err = parse_arg(results,argv[i],++pos);
 		}
 	}
 
@@ -233,7 +233,7 @@ int OOBase::CmdArgs::parse_arg(results_t& results, const char* arg, unsigned int
 		return ERROR_OUTOFMEMORY;
 	
 	String strResult;
-	int err = strResult.printf("@%u",position);
+	int err = strResult.printf("$%u",position);
 	if (err != 0)
 		return err;
 
