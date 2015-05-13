@@ -26,16 +26,18 @@
 
 namespace OOBase
 {
-	template <typename Allocator = CrtAllocator>
-	class Delegate0
+	template <typename R, typename Allocator = CrtAllocator>
+	class Delegate0 : public SafeBoolean
 	{
 	public:
-		Delegate0(void (*fn)() = NULL) : m_static(fn)
+		typedef R return_type;
+
+		Delegate0(R (*fn)() = NULL) : m_static(fn)
 		{
 		}
 
 		template<typename T>
-		Delegate0(T* p, void (T::*fn)()) : m_static(NULL)
+		Delegate0(T* p, R (T::*fn)()) : m_static(NULL)
 		{
 			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(p,fn);
 		}
@@ -47,15 +49,16 @@ namespace OOBase
 			return m_ptr == rhs.m_ptr && m_static == rhs.m_static;
 		}
 
-		bool invoke() const
+		operator bool_type() const
+		{
+			return SafeBoolean::safe_bool(m_ptr || m_static != NULL);
+		}
+
+		R invoke() const
 		{
 			if (m_ptr)
-				m_ptr->thunk();
-			else if (!m_static)
-				return false;
-			else
-				(*m_static)();
-			return true;
+				return m_ptr->thunk();
+			return (*m_static)();
 		}
 
 		void swap(Delegate0& rhs)
@@ -79,41 +82,66 @@ namespace OOBase
 	private:
 		struct ThunkBase
 		{
-			virtual void thunk() = 0;
+			virtual R thunk() = 0;
 		};
 
 		template<typename T>
 		struct Thunk : public ThunkBase
 		{
-			Thunk(T* p, void (T::*fn)()) : m_p(p), m_fn(fn)
+			Thunk(T* p, R (T::*fn)()) : m_p(p), m_fn(fn)
 			{}
 
-			void thunk()
+			R thunk()
 			{
-				(m_p->*m_fn)();
+				return (m_p->*m_fn)();
 			}
 
 			T* m_p;
-			void (T::*m_fn)();
+			R (T::*m_fn)();
 		};
 
 		SharedPtr<ThunkBase> m_ptr;
-		void (*m_static)();
+		R (*m_static)();
 	};
 
-	template <typename P1, typename Allocator = CrtAllocator>
-	class Delegate1
+	template <typename Allocator, typename R>
+	Delegate0<R,Allocator> make_delegate(R (*fn)())
+	{
+		return Delegate0<R,Allocator>(fn);
+	}
+
+	template <typename R>
+	Delegate0<R,CrtAllocator> make_delegate(R (*fn)())
+	{
+		return make_delegate<CrtAllocator,R>(fn);
+	}
+
+	template <typename Allocator, typename T, typename R>
+	Delegate0<R,Allocator> make_delegate(T* p, R (T::*fn)())
+	{
+		return Delegate0<R,Allocator>(p,fn);
+	}
+
+	template <typename T, typename R>
+	Delegate0<R,CrtAllocator> make_delegate(T* p, R (T::*fn)())
+	{
+		return make_delegate<CrtAllocator,T,R>(p,fn);
+	}
+
+	template <typename R, typename P1, typename Allocator = CrtAllocator>
+	class Delegate1 : public SafeBoolean
 	{
 	public:
 		typedef Allocator allocator_type;
+		typedef R return_type;
 		typedef P1 param1_type;
 
-		Delegate1(void (*fn)(P1) = NULL) : m_static(fn)
+		Delegate1(R (*fn)(P1) = NULL) : m_static(fn)
 		{
 		}
 
 		template<typename T>
-		Delegate1(T* p, void (T::*fn)(P1)) : m_static(NULL)
+		Delegate1(T* p, R (T::*fn)(P1)) : m_static(NULL)
 		{
 			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(p,fn);
 		}
@@ -125,15 +153,16 @@ namespace OOBase
 			return m_ptr == rhs.m_ptr && m_static == rhs.m_static;
 		}
 
-		bool invoke(P1 p1) const
+		operator bool_type() const
+		{
+			return SafeBoolean::safe_bool(m_ptr || m_static != NULL);
+		}
+
+		R invoke(P1 p1) const
 		{
 			if (m_ptr)
-				m_ptr->thunk(p1);
-			else if (!m_static)
-				return false;
-			else
-				(*m_static)(p1);
-			return true;
+				return m_ptr->thunk(p1);
+			return (*m_static)(p1);
 		}
 
 		void swap(Delegate1& rhs)
@@ -145,42 +174,67 @@ namespace OOBase
 	private:
 		struct ThunkBase
 		{
-			virtual void thunk(P1) = 0;
+			virtual R thunk(P1) = 0;
 		};
 
 		template<typename T>
 		struct Thunk : public ThunkBase
 		{
-			Thunk(T* p, void (T::*fn)(P1)) : m_p(p), m_fn(fn)
+			Thunk(T* p, R (T::*fn)(P1)) : m_p(p), m_fn(fn)
 			{}
 
-			void thunk(P1 p1)
+			R thunk(P1 p1)
 			{
-				(m_p->*m_fn)(p1);
+				return (m_p->*m_fn)(p1);
 			}
 
 			T* m_p;
-			void (T::*m_fn)(P1);
+			R (T::*m_fn)(P1);
 		};
 
 		SharedPtr<ThunkBase> m_ptr;
-		void (*m_static)(P1);
+		R (*m_static)(P1);
 	};
 
-	template <typename P1, typename P2, typename Allocator = CrtAllocator>
-	class Delegate2
+	template <typename Allocator, typename R, typename P1>
+	Delegate1<R,P1,Allocator> make_delegate(R (*fn)(P1))
+	{
+		return Delegate1<R,P1,Allocator>(fn);
+	}
+
+	template <typename R, typename P1>
+	Delegate1<R,P1,CrtAllocator> make_delegate(R (*fn)(P1))
+	{
+		return make_delegate<CrtAllocator,R,P1>(fn);
+	}
+
+	template <typename Allocator, typename T, typename R, typename P1>
+	Delegate1<R,P1,Allocator> make_delegate(T* p, R (T::*fn)(P1))
+	{
+		return Delegate1<R,P1,Allocator>(p,fn);
+	}
+
+	template <typename T, typename R, typename P1>
+	Delegate1<R,P1,CrtAllocator> make_delegate(T* p, R (T::*fn)(P1))
+	{
+		return make_delegate<CrtAllocator,T,R,P1>(p,fn);
+	}
+
+	template <typename R, typename P1, typename P2, typename Allocator = CrtAllocator>
+	class Delegate2 : public SafeBoolean
 	{
 	public:
 		typedef Allocator allocator_type;
+		typedef R return_type;
 		typedef P1 param1_type;
 		typedef P2 param2_type;
 
-		Delegate2(void (*fn)(P1,P2) = NULL) : m_static(fn)
+		Delegate2(R (*fn)(P1,P2) = NULL) : m_static(fn)
 		{
 		}
 
 		template<typename T>
-		Delegate2(T* p, void (T::*fn)(P1,P2)) : m_static(NULL)
+		Delegate2(T* p, R (T::*fn)(P1,P2)) : m_static(NULL)
 		{
 			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(p,fn);
 		}
@@ -192,15 +246,16 @@ namespace OOBase
 			return m_ptr == rhs.m_ptr && m_static == rhs.m_static;
 		}
 
-		bool invoke(P1 p1, P2 p2) const
+		operator bool_type() const
+		{
+			return SafeBoolean::safe_bool(m_ptr || m_static != NULL);
+		}
+
+		R invoke(P1 p1, P2 p2) const
 		{
 			if (m_ptr)
-				m_ptr->thunk(p1,p2);
-			else if (!m_static)
-				return false;
-			else
-				(*m_static)(p1,p2);
-			return true;
+				return m_ptr->thunk(p1,p2);
+			return (*m_static)(p1,p2);
 		}
 
 		void swap(Delegate2& rhs)
@@ -212,43 +267,68 @@ namespace OOBase
 	private:
 		struct ThunkBase
 		{
-			virtual void thunk(P1, P2) = 0;
+			virtual R thunk(P1, P2) = 0;
 		};
 
 		template<typename T>
 		struct Thunk : public ThunkBase
 		{
-			Thunk(T* p, void (T::*fn)(P1,P2)) : m_p(p), m_fn(fn)
+			Thunk(T* p, R (T::*fn)(P1,P2)) : m_p(p), m_fn(fn)
 			{}
 
-			void thunk(P1 p1, P2 p2)
+			R thunk(P1 p1, P2 p2)
 			{
-				(m_p->*m_fn)(p1,p2);
+				return (m_p->*m_fn)(p1,p2);
 			}
 
 			T* m_p;
-			void (T::*m_fn)(P1,P2);
+			R (T::*m_fn)(P1,P2);
 		};
 
 		SharedPtr<ThunkBase> m_ptr;
-		void (*m_static)(P1,P2);
+		R (*m_static)(P1,P2);
 	};
 
-	template <typename P1, typename P2, typename P3, typename Allocator = CrtAllocator>
-	class Delegate3
+	template <typename Allocator, typename R, typename P1, typename P2>
+	Delegate2<R,P1,P2,Allocator> make_delegate(R (*fn)(P1,P2))
+	{
+		return Delegate2<R,P1,P2,Allocator>(fn);
+	}
+
+	template <typename R, typename P1, typename P2>
+	Delegate2<R,P1,P2,CrtAllocator> make_delegate(R (*fn)(P1,P2))
+	{
+		return make_delegate<CrtAllocator,R,P1,P2>(fn);
+	}
+
+	template <typename Allocator, typename T, typename R, typename P1, typename P2>
+	Delegate2<R,P1,P2,Allocator> make_delegate(T* p, R (T::*fn)(P1,P2))
+	{
+		return Delegate2<R,P1,P2,Allocator>(p,fn);
+	}
+
+	template <typename T, typename R, typename P1, typename P2>
+	Delegate2<R,P1,P2,CrtAllocator> make_delegate(T* p, R (T::*fn)(P1,P2))
+	{
+		return make_delegate<CrtAllocator,T,R,P1,P2>(p,fn);
+	}
+
+	template <typename R, typename P1, typename P2, typename P3, typename Allocator = CrtAllocator>
+	class Delegate3 : public SafeBoolean
 	{
 	public:
 		typedef Allocator allocator_type;
+		typedef R return_type;
 		typedef P1 param1_type;
 		typedef P2 param2_type;
 		typedef P3 param3_type;
 
-		Delegate3(void (*fn)(P1,P2,P3) = NULL) : m_static(fn)
+		Delegate3(R (*fn)(P1,P2,P3) = NULL) : m_static(fn)
 		{
 		}
 
 		template<typename T>
-		Delegate3(T* p, void (T::*fn)(P1,P2,P3)) : m_static(NULL)
+		Delegate3(T* p, R (T::*fn)(P1,P2,P3)) : m_static(NULL)
 		{
 			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(p,fn);
 		}
@@ -260,15 +340,16 @@ namespace OOBase
 			return m_ptr == rhs.m_ptr && m_static == rhs.m_static;
 		}
 
-		bool invoke(P1 p1, P2 p2, P3 p3) const
+		operator bool_type() const
+		{
+			return SafeBoolean::safe_bool(m_ptr || m_static != NULL);
+		}
+
+		R invoke(P1 p1, P2 p2, P3 p3) const
 		{
 			if (m_ptr)
-				m_ptr->thunk(p1,p2,p3);
-			else if (!m_static)
-				return false;
-			else
-				(*m_static)(p1,p2,p3);
-			return true;
+				return m_ptr->thunk(p1,p2,p3);
+			return (*m_static)(p1,p2,p3);
 		}
 
 		void swap(Delegate3& rhs)
@@ -280,27 +361,51 @@ namespace OOBase
 	private:
 		struct ThunkBase
 		{
-			virtual void thunk(P1, P2, P3) = 0;
+			virtual R thunk(P1, P2, P3) = 0;
 		};
 
 		template<typename T>
 		struct Thunk : public ThunkBase
 		{
-			Thunk(T* p, void (T::*fn)(P1,P2,P3)) : m_p(p), m_fn(fn)
+			Thunk(T* p, R (T::*fn)(P1,P2,P3)) : m_p(p), m_fn(fn)
 			{}
 
-			void thunk(P1 p1, P2 p2, P3 p3)
+			R thunk(P1 p1, P2 p2, P3 p3)
 			{
-				(m_p->*m_fn)(p1,p2,p3);
+				return (m_p->*m_fn)(p1,p2,p3);
 			}
 
 			T* m_p;
-			void (T::*m_fn)(P1,P2,P3);
+			R (T::*m_fn)(P1,P2,P3);
 		};
 
 		SharedPtr<ThunkBase> m_ptr;
-		void (*m_static)(P1,P2,P3);
+		R (*m_static)(P1,P2,P3);
 	};
+
+	template <typename Allocator, typename R, typename P1, typename P2, typename P3>
+	Delegate3<R,P1,P2,P3,Allocator> make_delegate(R (*fn)(P1,P2,P3))
+	{
+		return Delegate3<R,P1,P2,P3,Allocator>(fn);
+	}
+
+	template <typename R, typename P1, typename P2, typename P3>
+	Delegate3<R,P1,P2,P3,CrtAllocator> make_delegate(R (*fn)(P1,P2,P3))
+	{
+		return make_delegate<CrtAllocator,R,P1,P2,P3>(fn);
+	}
+
+	template <typename Allocator, typename T, typename R, typename P1, typename P2, typename P3>
+	Delegate3<R,P1,P2,P3,Allocator> make_delegate(T* p, R (T::*fn)(P1,P2,P3))
+	{
+		return Delegate3<R,P1,P2,P3,Allocator>(p,fn);
+	}
+
+	template <typename T, typename R, typename P1, typename P2, typename P3>
+	Delegate3<R,P1,P2,P3,CrtAllocator> make_delegate(T* p, R (T::*fn)(P1,P2,P3))
+	{
+		return make_delegate<CrtAllocator,T,R,P1,P2,P3>(p,fn);
+	}
 }
 
 #endif // OOBASE_DELEGATE_H_INCLUDED_

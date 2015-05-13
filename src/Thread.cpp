@@ -252,7 +252,7 @@ void* OOBase::Thread::oobase_thread_fn(void* param)
 
 OOBase::SharedPtr<OOBase::Thread> OOBase::Thread::run(int (*thread_fn)(void*), void* param, int& err)
 {
-	SharedPtr<Thread> ptrThread = allocate_shared<Thread,CrtAllocator>();
+	SharedPtr<Thread> ptrThread = allocate_shared<Thread>();
 	if (!ptrThread)
 		err = ERROR_OUTOFMEMORY;
 	else

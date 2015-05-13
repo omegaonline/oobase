@@ -31,7 +31,7 @@ namespace OOBase
 	class Signal0
 	{
 	private:
-		typedef Delegate0<Allocator> delegate_t;
+		typedef Delegate0<void,Allocator> delegate_t;
 		mutable Vector<delegate_t,Allocator> m_slots;
 
 	public:
@@ -42,9 +42,9 @@ namespace OOBase
 		{}
 
 		template <typename T>
-		int connect(const WeakPtr<T>& ptr, void (T::*slot)())
+		int connect(T* p, void (T::*slot)())
 		{
-			return m_slots.push_back(delegate_t(ptr,slot)) != m_slots.end();
+			return m_slots.push_back(delegate_t(p,slot)) != m_slots.end();
 		}
 
 		int connect(void (*slot)())
@@ -53,9 +53,9 @@ namespace OOBase
 		}
 
 		template <typename T>
-		bool disconnect(WeakPtr<T>& ptr, void (T::*slot)())
+		bool disconnect(T* p, void (T::*slot)())
 		{
-			return m_slots.remove(delegate_t(ptr,slot));
+			return m_slots.remove(delegate_t(p,slot));
 		}
 
 		void fire() const
@@ -63,8 +63,10 @@ namespace OOBase
 			Vector<delegate_t,Allocator> slots(m_slots);
 			for (typename Vector<delegate_t,Allocator>::iterator i=slots.begin();i!=slots.end();++i)
 			{
-				if (!i->invoke())
+				if (!*i)
 					m_slots.erase(*i);
+				else
+					i->invoke();
 			}
 		}
 	};
@@ -73,7 +75,7 @@ namespace OOBase
 	class Signal1
 	{
 	private:
-		typedef Delegate1<P1,Allocator> delegate_t;
+		typedef Delegate1<void,P1,Allocator> delegate_t;
 		mutable Vector<delegate_t,Allocator> m_slots;
 
 	public:
@@ -84,9 +86,9 @@ namespace OOBase
 		{}
 
 		template <typename T>
-		int connect(const WeakPtr<T>& ptr, void (T::*slot)(P1))
+		int connect(T* p, void (T::*slot)(P1))
 		{
-			return m_slots.push_back(delegate_t(ptr,slot)) != m_slots.end();
+			return m_slots.push_back(delegate_t(p,slot)) != m_slots.end();
 		}
 
 		int connect(void (*slot)(P1))
@@ -95,9 +97,9 @@ namespace OOBase
 		}
 
 		template <typename T>
-		bool disconnect(WeakPtr<T>& ptr, void (T::*slot)(P1))
+		bool disconnect(T* p, void (T::*slot)(P1))
 		{
-			return m_slots.remove(delegate_t(ptr,slot));
+			return m_slots.remove(delegate_t(p,slot));
 		}
 
 		void fire(P1 p1) const
@@ -105,8 +107,10 @@ namespace OOBase
 			Vector<delegate_t,Allocator> slots(m_slots);
 			for (typename Vector<delegate_t,Allocator>::iterator i=slots.begin();i!=slots.end();++i)
 			{
-				if (!i->invoke(p1))
+				if (!*i)
 					m_slots.erase(*i);
+				else
+					i->invoke(p1);
 			}
 		}
 	};
@@ -115,7 +119,7 @@ namespace OOBase
 	class Signal2
 	{
 	private:
-		typedef Delegate2<P1,P2,Allocator> delegate_t;
+		typedef Delegate2<void,P1,P2,Allocator> delegate_t;
 		mutable Vector<delegate_t,Allocator> m_slots;
 
 	public:
@@ -126,9 +130,9 @@ namespace OOBase
 		{}
 
 		template <typename T>
-		int connect(const WeakPtr<T>& ptr, void (T::*slot)(P1,P2))
+		int connect(T* p, void (T::*slot)(P1,P2))
 		{
-			return m_slots.push_back(delegate_t(ptr,slot)) != m_slots.end();
+			return m_slots.push_back(delegate_t(p,slot)) != m_slots.end();
 		}
 
 		int connect(void (*slot)(P1,P2))
@@ -137,9 +141,9 @@ namespace OOBase
 		}
 
 		template <typename T>
-		bool disconnect(WeakPtr<T>& ptr, void (T::*slot)(P1,P2))
+		bool disconnect(T* p, void (T::*slot)(P1,P2))
 		{
-			return m_slots.remove(delegate_t(ptr,slot));
+			return m_slots.remove(delegate_t(p,slot));
 		}
 
 		void fire(P1 p1, P2 p2) const
@@ -147,8 +151,10 @@ namespace OOBase
 			Vector<delegate_t,Allocator> slots(m_slots);
 			for (typename Vector<delegate_t,Allocator>::iterator i=slots.begin();i!=slots.end();++i)
 			{
-				if (!i->invoke(p1,p2))
+				if (!*i)
 					m_slots.erase(*i);
+				else
+					i->invoke(p1,p2);
 			}
 		}
 	};
@@ -157,7 +163,7 @@ namespace OOBase
 	class Signal3
 	{
 	private:
-		typedef Delegate3<P1,P2,P3,Allocator> delegate_t;
+		typedef Delegate3<void,P1,P2,P3,Allocator> delegate_t;
 		mutable Vector<delegate_t,Allocator> m_slots;
 
 	public:
@@ -168,9 +174,9 @@ namespace OOBase
 		{}
 
 		template <typename T>
-		int connect(const WeakPtr<T>& ptr, void (T::*slot)(P1,P2,P3))
+		int connect(T* p, void (T::*slot)(P1,P2,P3))
 		{
-			return m_slots.push_back(delegate_t(ptr,slot)) != m_slots.end();
+			return m_slots.push_back(delegate_t(p,slot)) != m_slots.end();
 		}
 
 		int connect(void (*slot)(P1,P2,P3))
@@ -179,9 +185,9 @@ namespace OOBase
 		}
 
 		template <typename T>
-		bool disconnect(WeakPtr<T>& ptr, void (T::*slot)(P1,P2,P3))
+		bool disconnect(T* p, void (T::*slot)(P1,P2,P3))
 		{
-			return m_slots.remove(delegate_t(ptr,slot));
+			return m_slots.remove(delegate_t(p,slot));
 		}
 
 		void fire(P1 p1, P2 p2, P3 p3) const
@@ -189,8 +195,10 @@ namespace OOBase
 			Vector<delegate_t,Allocator> slots(m_slots);
 			for (typename Vector<delegate_t,Allocator>::iterator i=slots.begin();i!=slots.end();++i)
 			{
-				if (!i->invoke(p1,p2,p3))
+				if (!*i)
 					m_slots.erase(*i);
+				else
+					i->invoke(p1,p2,p3);
 			}
 		}
 	};
