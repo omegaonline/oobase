@@ -221,17 +221,17 @@ namespace
 	char s_err_buf[512];
 }
 
+int OOBase::system_error()
+{
+#if defined(_WIN32)
+	return GetLastError();
+#else
+	return errno;
+#endif
+}
+
 const char* OOBase::system_error_text(int err)
 {
-	if (err == -1)
-	{
-#if defined(_WIN32)
-		err = GetLastError();
-#else
-		err = errno;
-#endif
-	}
-
 	static const char unknown_error[512] = "Unknown error or error in processing";
 	bool ok = false;
 

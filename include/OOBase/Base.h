@@ -186,8 +186,11 @@ namespace OOBase
 	void OOBASE_NORETURN CallCriticalFailure(const char* pszFile, unsigned int nLine, const char*);
 	void OOBASE_NORETURN CallCriticalFailure(const char* pszFile, unsigned int nLine, int);
 
-	/// Return the system supplied error string from error code 'err' . If err == -1, use errno or GetLastError()
-	const char* system_error_text(int err = -1);
+	int system_error();
+
+	/// Return the system supplied error string from error code 'err'.
+	const char* system_error_text(int err = system_error());
+
 	int stderr_write(const char* sz, size_t len = size_t(-1));
 	int stdout_write(const char* sz, size_t len = size_t(-1));
 
