@@ -203,9 +203,7 @@ namespace OOBase
 			va_list args;
 			va_start(args,format);
 
-			int err = OOBase::vprintf(m_data,format,args);
-			if (!err)
-				m_len = m_data.count();
+			int err = vprintf(format,args);
 
 			va_end(args);
 
@@ -214,7 +212,10 @@ namespace OOBase
 
 		int vprintf(const char* format, va_list args)
 		{
-			return OOBase::vprintf(m_data,format,args);
+			int err = OOBase::vprintf(m_data,format,args);
+			if (!err)
+				m_len = m_data.count();
+			return err;
 		}
 
 		AllocatorInstance& get_allocator() const
