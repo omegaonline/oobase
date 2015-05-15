@@ -197,7 +197,10 @@ uint64_t OOBase::File::seek(int64_t offset, enum seek_direction dir)
 		d = SEEK_END;
 		break;
 	}
-	return ::lseek(m_fd,offset,d);
+	off_t s = ::lseek(m_fd,offset,d);
+	if (s == off_t(-1))
+		return uint64_t(-1);
+	return s;
 #endif
 }
 
@@ -211,7 +214,10 @@ uint64_t OOBase::File::tell() const
 		return uint64_t(-1);
 	return pos.QuadPart;
 #else
-	return ::lseek(m_fd,0,SEEK_CUR);
+	off_t s = ::lseek(m_fd,0,SEEK_CUR);
+	if (s == off_t(-1))
+		return uint64_t(-1);
+	return s;
 #endif
 }
 
