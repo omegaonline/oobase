@@ -22,6 +22,10 @@
 #include "../include/OOBase/File.h"
 #include "../include/OOBase/Win32.h"
 
+#if defined(HAVE_UNISTD_H)
+#include <sys/stat.h>
+#endif
+
 OOBase::File::File()
 {
 }
@@ -208,5 +212,24 @@ uint64_t OOBase::File::tell() const
 	return pos.QuadPart;
 #else
 	return ::lseek(m_fd,0,SEEK_CUR);
+#endif
+}
+
+uint64_t OOBase::File::length() const
+{
+#if defined(_WIN32)
+	LARGE_INTEGER li;
+	li.QuadPart = 0;
+	if (!GetFileSize(m_fd,&li))
+		return uint64_t(-1);
+
+	return li.QuadPart;
+#else
+	struct stat s = {0};
+	int err = ::fstat(m_fd,&s);
+	if (err)
+		return uint64_t(-1);
+
+	return s.st_size;
 #endif
 }

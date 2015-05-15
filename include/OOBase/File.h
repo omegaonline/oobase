@@ -51,6 +51,8 @@ namespace OOBase
 		uint64_t seek(int64_t offset, enum seek_direction dir);
 		uint64_t tell() const;
 
+		uint64_t length() const;
+
 	private:
 #if defined(_WIN32)
 		Win32::SmartHandle m_fd;
