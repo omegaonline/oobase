@@ -77,7 +77,7 @@ size_t OOBase::File::read(void* p, size_t size)
 	while (size)
 	{
 		DWORD r = 0;
-		if (!::ReadFile(m_fd,p,size,&r,NULL))
+		if (!::ReadFile(m_fd,p,static_cast<DWORD>(size),&r,NULL))
 			return size_t(-1);
 		total += r;
 		if (r <= size)
@@ -124,12 +124,12 @@ size_t OOBase::File::write(const void* p, size_t size)
 	while (size)
 	{
 		DWORD w = 0;
-		if (!::WriteFile(m_fd,p,size,&w,NULL))
+		if (!::WriteFile(m_fd,p,static_cast<DWORD>(size),&w,NULL))
 			return size_t(-1);
 
 		total += w;
 		size -= w;
-		p = static_cast<uint8_t*>(p) + w;
+		p = static_cast<const uint8_t*>(p) + w;
 	}
 	return total;
 #elif defined(HAVE_UNISTD_H)
@@ -159,7 +159,7 @@ int OOBase::File::write(const RefPtr<Buffer>& buffer, size_t len)
 	return 0;
 }
 
-uint64_t OOBase::File::seek(int64_t offset, enum seek_direction dir)
+OOBase::uint64_t OOBase::File::seek(int64_t offset, enum seek_direction dir)
 {
 #if defined(_WIN32)
 	DWORD d = FILE_CURRENT;
@@ -204,7 +204,7 @@ uint64_t OOBase::File::seek(int64_t offset, enum seek_direction dir)
 #endif
 }
 
-uint64_t OOBase::File::tell() const
+OOBase::uint64_t OOBase::File::tell() const
 {
 #if defined(_WIN32)
 	LARGE_INTEGER off,pos;
@@ -221,12 +221,12 @@ uint64_t OOBase::File::tell() const
 #endif
 }
 
-uint64_t OOBase::File::length() const
+OOBase::uint64_t OOBase::File::length() const
 {
 #if defined(_WIN32)
 	LARGE_INTEGER li;
 	li.QuadPart = 0;
-	if (!GetFileSize(m_fd,&li))
+	if (!GetFileSizeEx(m_fd,&li))
 		return uint64_t(-1);
 
 	return li.QuadPart;
