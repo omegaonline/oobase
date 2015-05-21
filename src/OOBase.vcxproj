@@ -253,7 +253,6 @@
     <ClInclude Include="..\include\OOBase\Condition.h" />
     <ClInclude Include="..\include\OOBase\Destructor.h" />
     <ClInclude Include="..\include\OOBase\DLL.h" />
-    <ClInclude Include="..\include\OOBase\HandleTable.h" />
     <ClInclude Include="..\include\OOBase\HashTable.h" />
     <ClInclude Include="..\include\OOBase\Memory.h" />
     <ClInclude Include="..\include\OOBase\Mutex.h" />

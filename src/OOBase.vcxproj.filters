@@ -135,9 +135,6 @@
     <ClInclude Include="..\include\OOBase\DLL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\HandleTable.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\OOBase\HashTable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
