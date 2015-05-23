@@ -569,7 +569,21 @@ namespace OOBase
 				}
 
 				template <typename T, typename T1>
-				static SharedPtr<T> reinterpret(const SharedPtr<T1>& rhs)
+				static SharedPtr<T> staticcast(const SharedPtr<T1>& rhs)
+				{
+					(void)static_cast<T*>(static_cast<T1*>(NULL));
+					return SharedPtr<T>(rhs,static_cast<T*>(rhs.get()));
+				}
+
+				template <typename T, typename T1>
+				static SharedPtr<T> constcast(const SharedPtr<T1>& rhs)
+				{
+					(void)const_cast<T*>(static_cast<T1*>(NULL));
+					return SharedPtr<T>(rhs,const_cast<T*>(rhs.get()));
+				}
+
+				template <typename T, typename T1>
+				static SharedPtr<T> reinterpretcast(const SharedPtr<T1>& rhs)
 				{
 					(void)reinterpret_cast<T*>(static_cast<T1*>(NULL));
 					return SharedPtr<T>(rhs,reinterpret_cast<T*>(rhs.get()));
@@ -587,28 +601,19 @@ namespace OOBase
 	template <typename T, typename T1>
 	inline SharedPtr<T> static_pointer_cast(const SharedPtr<T1>& rhs)
 	{
-		(void)static_cast<T*>(static_cast<T1*>(NULL));
-		return SharedPtr<T>(rhs,static_cast<T*>(rhs.get()));
+		return detail::shared::template_friend::staticcast<T>(rhs);
 	}
 
 	template <typename T, typename T1>
 	inline SharedPtr<T> const_pointer_cast(const SharedPtr<T1>& rhs)
 	{
-		(void)const_cast<T*>(static_cast<T1*>(NULL));
-		return SharedPtr<T>(rhs,const_cast<T*>(rhs.get()));
-	}
-
-	template <typename T, typename T1>
-	inline SharedPtr<T> dynamic_pointer_cast(const SharedPtr<T1>& rhs)
-	{
-		(void)dynamic_cast<T*>(static_cast<T1*>(NULL));
-		return SharedPtr<T>(rhs,dynamic_cast<T*>(rhs.get()));
+		return detail::shared::template_friend::constcast<T>(rhs);
 	}
 
 	template <typename T, typename T1>
 	inline SharedPtr<T> reinterpret_pointer_cast(const SharedPtr<T1>& rhs)
 	{
-		return detail::shared::template_friend::reinterpret<T>(rhs);
+		return detail::shared::template_friend::reinterpretcast<T>(rhs);
 	}
 
 	template<class T1, class T2>
