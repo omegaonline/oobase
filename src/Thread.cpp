@@ -120,11 +120,40 @@ unsigned int OOBase::Thread::oobase_thread_fn(void* param)
 	// Hold a reference to ourselves for the lifetime of the thread function
 	SharedPtr<Thread> ptrThis = pThis->shared_from_this();
 
+	// Set the TLS for self
+	if (!TLS::Set(&s_tls_key,pThis))
+		OOBase_CallCriticalFailure(GetLastError());
+
 	// Set the event, meaning we have started
 	if (!SetEvent(wrap->m_hEvent))
 		OOBase_CallCriticalFailure(GetLastError());
 
 	return static_cast<unsigned int>((*thread_fn)(p));
+}
+
+const OOBase::Thread* OOBase::Thread::self()
+{
+	void* p = NULL;
+	if (TLS::Get(&s_tls_key,&p))
+		return const_cast<const Thread*>(static_cast<Thread*>(p));
+
+	Thread* pThread = NULL;
+	if (!CrtAllocator::allocate_new(pThread))
+		OOBase_CallCriticalFailure(GetLastError());
+
+	// Do some silly windows nonsense to get the thread handle
+	if (!DuplicateHandle(GetCurrentProcess(),GetCurrentThread(),GetCurrentProcess(),&pThread->m_hThread,0,FALSE,DUPLICATE_SAME_ACCESS))
+		OOBase_CallCriticalFailure(GetLastError());
+
+	if (!TLS::Set(&s_tls_key,pThread,&destroy_thread_self))
+		OOBase_CallCriticalFailure(GetLastError());
+
+	return pThread;
+}
+
+void OOBase::Thread::destroy_thread_self(void* p)
+{
+	CrtAllocator::delete_free(static_cast<Thread*>(p));
 }
 
 #elif defined(HAVE_PTHREAD)
@@ -236,6 +265,10 @@ void* OOBase::Thread::oobase_thread_fn(void* param)
 	// Hold a reference to ourselves for the lifetime of the thread function
 	SharedPtr<Thread> ptrThis = pThis->shared_from_this();
 
+	// Set the TLS for self
+	if (!TLS::Set(&s_tls_key,pThis))
+		OOBase_CallCriticalFailure(GetLastError());
+
 	// Set the event, meaning we have started
 	wrap->m_started->set();
 
@@ -246,6 +279,29 @@ void* OOBase::Thread::oobase_thread_fn(void* param)
 	pThis->m_finished.set();
 
 	return reinterpret_cast<void*>(ret);
+}
+
+const OOBase::Thread* OOBase::Thread::self()
+{
+	void* p = NULL;
+	if (TLS::Get(&s_tls_key,&p))
+		return const_cast<const Thread*>(static_cast<Thread*>(p));
+
+	Thread* pThread = NULL;
+	if (!CrtAllocator::allocate_new(pThread))
+		OOBase_CallCriticalFailure(GetLastError());
+
+	pThread->m_thread = pthread_self();
+
+	if (!TLS::Set(&s_tls_key,pThread,&destroy_thread_self))
+		OOBase_CallCriticalFailure(GetLastError());
+
+	return pThread;
+}
+
+void OOBase::Thread::destroy_thread_self(void* p)
+{
+	CrtAllocator::delete_free(static_cast<Thread*>(p));
 }
 
 #endif // HAVE_PTHREAD
