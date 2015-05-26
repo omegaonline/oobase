@@ -210,7 +210,7 @@ bool OOBase::TLS::Get(const void* key, void** val)
 		return false;
 
 	OOBase::HashTable<const void*,TLSGlobal::tls_val,OOBase::AllocatorInstance>::iterator i = inst->m_mapVals.find(key);
-	if (i == inst->m_mapVals.end())
+	if (!i)
 		return false;
 
 	if (val)
@@ -229,7 +229,7 @@ bool OOBase::TLS::Set(const void* key, void* val, void (*destructor)(void*))
 	v.m_val = val;
 	v.m_destructor = destructor;
 
-	return inst->m_mapVals.insert(key,v) != inst->m_mapVals.end();
+	return inst->m_mapVals.insert(key,v);
 }
 
 char* OOBase::detail::get_error_buffer(size_t& len)

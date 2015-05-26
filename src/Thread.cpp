@@ -349,7 +349,7 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 		Guard<Mutex> guard(m_lock);
 
 		bool bAdd = true;
-		for (List<SharedPtr<Thread>,CrtAllocator>::iterator j = m_threads.begin();j != m_threads.end();++j)
+		for (List<SharedPtr<Thread>,CrtAllocator>::iterator j = m_threads.begin();j;++j)
 		{
 			if (!(*j)->is_running())
 			{
@@ -360,7 +360,7 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 		}
 		if (bAdd)
 		{
-			if (m_threads.push_back(ptrThread) == m_threads.end())
+			if (!m_threads.push_back(ptrThread))
 				return ERROR_OUTOFMEMORY;
 		}
 
@@ -403,7 +403,7 @@ size_t OOBase::ThreadPool::number_running() const
 	Guard<Mutex> guard(m_lock);
 
 	size_t count = 0;
-	for (List<SharedPtr<Thread>,CrtAllocator>::const_iterator i=m_threads.begin();i != m_threads.end();++i)
+	for (List<SharedPtr<Thread>,CrtAllocator>::const_iterator i=m_threads.begin();i;++i)
 	{
 		if ((*i)->is_running())
 			++count;

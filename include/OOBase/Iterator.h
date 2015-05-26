@@ -29,7 +29,7 @@ namespace OOBase
 	namespace detail
 	{
 		template <typename Container, typename T, typename Iter>
-		class IteratorImpl
+		class IteratorImpl : public SafeBoolean
 		{
 			// This is just to make Container a friend!
 			template <typename T1>
@@ -57,6 +57,11 @@ namespace OOBase
 			{
 				OOBase::swap(m_cont,rhs.m_cont);
 				OOBase::swap(m_pos,rhs.m_pos);
+			}
+
+			operator bool_type() const
+			{
+				return SafeBoolean::safe_bool(m_cont && *this != m_cont->end());
 			}
 
 			bool operator == (const IteratorImpl& rhs) const

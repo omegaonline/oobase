@@ -310,12 +310,12 @@ bool OOBase::detail::ProactorPosix::add_timer(void* param, timer_callback_t call
 	ti.m_param = param;
 	ti.m_callback = callback;
 	ti.m_timeout = timeout;
-	return m_timers.insert(ti) != m_timers.end();
+	return m_timers.insert(ti);
 }
 
 bool OOBase::detail::ProactorPosix::remove_timer(void* param)
 {
-	for (Set<TimerItem,Greater<TimerItem>,AllocatorInstance>::iterator i = m_timers.begin(); i != m_timers.end(); ++i)
+	for (Set<TimerItem,Greater<TimerItem>,AllocatorInstance>::iterator i = m_timers.begin(); i; ++i)
 	{
 		if (i->m_param == param)
 		{

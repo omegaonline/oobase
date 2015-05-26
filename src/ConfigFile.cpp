@@ -145,8 +145,8 @@ namespace
 		}
 
 		OOBase::ConfigFile::results_t::iterator i = results.find(strKey);
-		if (i == results.end())
-			return (results.insert(strKey,strValue) != results.end()) ? 0 : ERROR_OUTOFMEMORY;
+		if (!i)
+			return results.insert(strKey,strValue) ? 0 : ERROR_OUTOFMEMORY;
 
 		i->second = strValue;
 		return 0;
@@ -379,9 +379,9 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 		if (!key.empty())
 		{
 			results_t::iterator i = results.find(key);
-			if (i == results.end())
+			if (!i)
 			{
-				if (results.insert(key,value) == results.end())
+				if (!results.insert(key,value))
 				{
 					lRes = ERROR_OUTOFMEMORY;
 					break;

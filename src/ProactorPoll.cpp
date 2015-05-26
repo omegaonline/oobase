@@ -77,19 +77,19 @@ int OOBase::detail::ProactorPoll::init()
 
 	// Add the control pipe to m_poll_fds
 	pollfd pfd = { m_read_fd, POLLIN | POLLRDHUP, 0 };
-	return m_poll_fds.push_back(pfd) != m_poll_fds.end() ? 0 : ERROR_OUTOFMEMORY;
+	return m_poll_fds.push_back(pfd) ? 0 : ERROR_OUTOFMEMORY;
 }
 
 bool OOBase::detail::ProactorPoll::do_bind_fd(int fd, void* param, fd_callback_t callback)
 {
 	FdItem item = { param, callback, size_t(-1) };
-	return m_items.insert(fd,item) != m_items.end();
+	return m_items.insert(fd,item);
 }
 
 bool OOBase::detail::ProactorPoll::do_unbind_fd(int fd)
 {
 	OOBase::HashTable<int,FdItem,AllocatorInstance>::iterator i = m_items.find(fd);
-	if (i == m_items.end())
+	if (!i)
 		return false;
 
 	FdItem item = i->value;
@@ -105,7 +105,7 @@ bool OOBase::detail::ProactorPoll::do_unbind_fd(int fd)
 
 		// Reassign index
 		i = m_items.find(pfd->fd);
-		if (i != m_items.end())
+		if (i)
 			i->value.m_poll_pos = item.m_poll_pos;
 	}
 
@@ -115,7 +115,7 @@ bool OOBase::detail::ProactorPoll::do_unbind_fd(int fd)
 bool OOBase::detail::ProactorPoll::do_watch_fd(int fd, unsigned int events)
 {
 	OOBase::HashTable<int,FdItem,AllocatorInstance>::iterator i = m_items.find(fd);
-	if (i != m_items.end())
+	if (i)
 	{
 		short p_events = 0;
 		if (events & eTXSend)
@@ -133,7 +133,7 @@ bool OOBase::detail::ProactorPoll::do_watch_fd(int fd, unsigned int events)
 			{
 				// A new entry
 				pollfd pfd = { fd, p_events, 0 };
-				if (m_poll_fds.push_back(pfd) == m_poll_fds.end())
+				if (!m_poll_fds.push_back(pfd))
 					return false;
 
 				i->value.m_poll_pos = m_poll_fds.size()-1;
@@ -166,7 +166,7 @@ bool OOBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count
 
 			// Find the corresponding FdItem
 			OOBase::HashTable<int,FdItem,AllocatorInstance>::iterator i = m_items.find(pfd->fd);
-			if (i != m_items.end())
+			if (i)
 			{
 				active_fd.m_fd = pfd->fd;
 				active_fd.m_param = i->value.m_param;
@@ -220,7 +220,7 @@ bool OOBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count
 
 							// Reassign index
 							i = m_items.find(pfd->fd);
-							if (i != m_items.end())
+							if (i)
 								i->value.m_poll_pos = pos;
 						}
 					}

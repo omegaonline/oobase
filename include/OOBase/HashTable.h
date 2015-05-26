@@ -466,7 +466,7 @@ namespace OOBase
 			{
 				if (is_in_use(m_data[i].m_hash))
 				{
-					if (copy.insert(m_data[i].m_data.key,m_data[i].m_data.value) == copy.end())
+					if (!copy.insert(m_data[i].m_data.key,m_data[i].m_data.value))
 						return false;
 				}
 			}

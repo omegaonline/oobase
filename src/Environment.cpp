@@ -49,7 +49,7 @@ namespace
 				size_t eq = str.find('=');
 				if (eq == OOBase::String::npos)
 				{
-					if (tabEnv.insert(str,OOBase::String()) == tabEnv.end())
+					if (!tabEnv.insert(str,OOBase::String()))
 						err = ERROR_OUTOFMEMORY;
 				}
 				else
@@ -60,7 +60,7 @@ namespace
 						err = strRight.assign(str.c_str()+eq+1);
 					if (!err)
 					{
-						if (tabEnv.insert(strLeft,strRight) == tabEnv.end())
+						if (!tabEnv.insert(strLeft,strRight))
 							err = ERROR_OUTOFMEMORY;
 					}
 				}
@@ -118,7 +118,7 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 	Table<temp_wchar_t,temp_wchar_t,env_sort,AllocatorInstance> wenv(env_sort(),allocator);
 
 	size_t total_size = 0;
-	for (env_table_t::const_iterator i=tabEnv.begin();i!=tabEnv.end();++i)
+	for (env_table_t::const_iterator i=tabEnv.begin();i;++i)
 	{
 		int err = Win32::utf8_to_wchar_t(i->first.c_str(),ptr);
 		if (!err)
@@ -150,7 +150,7 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 					wcscpy(value.get(),ptr.get());
 				}
 
-				if (wenv.insert(key,value) == wenv.end())
+				if (!wenv.insert(key,value))
 					return ERROR_OUTOFMEMORY;
 			}
 		}
@@ -164,7 +164,7 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 		return ERROR_OUTOFMEMORY;
 
 	wchar_t* pout = ptr.get();
-	for (Table<temp_wchar_t,temp_wchar_t,env_sort,AllocatorInstance>::iterator i=wenv.begin();i!=wenv.end();++i)
+	for (Table<temp_wchar_t,temp_wchar_t,env_sort,AllocatorInstance>::iterator i=wenv.begin();i;++i)
 	{
 		const wchar_t* p = i->first.get();
 
@@ -238,7 +238,7 @@ bool OOBase::Environment::get_current(env_table_t& tabEnv)
 			if (tabEnv.exists(str))
 				continue;
 
-			if (tabEnv.insert(String(),str) == tabEnv.end())
+			if (!tabEnv.insert(String(),str))
 				return false;
 		}
 		else
@@ -250,7 +250,7 @@ bool OOBase::Environment::get_current(env_table_t& tabEnv)
 			if (tabEnv.exists(strK))
 				continue;
 
-			if (!strV.assign(str.c_str()+eq+1) || tabEnv.insert(strK,strV) != tabEnv.end())
+			if (!strV.assign(str.c_str()+eq+1) || !tabEnv.insert(strK,strV))
 				return false;
 		}
 	}
@@ -270,7 +270,7 @@ bool OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tab
 	// This might be full of bugs!!
 
 	// Substitute any ${VAR} in tabEnv with values from tabSrc
-	for (env_table_t::iterator i = tabEnv.begin(); i != tabEnv.end(); ++i)
+	for (env_table_t::iterator i = tabEnv.begin(); i; ++i)
 	{
 		// Loop finding ${VAR}
 		for (size_t offset = 0;;)
@@ -294,7 +294,7 @@ bool OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tab
 			i->second = strPrefix;
 
 			env_table_t::const_iterator j = tabSrc.find(strParam);
-			if (j != tabSrc.end())
+			if (j)
 			{
 				if (!i->second.append(j->second))
 					return false;
@@ -308,13 +308,10 @@ bool OOBase::Environment::substitute(env_table_t& tabEnv, const env_table_t& tab
 	}
 
 	// Now add any values in tabSrc not in tabEnv
-	for (env_table_t::const_iterator i = tabSrc.begin(); i != tabSrc.end(); ++i)
+	for (env_table_t::const_iterator i = tabSrc.begin(); i; ++i)
 	{
-		if (!tabEnv.exists(i->first))
-		{
-			if (tabEnv.insert(*i) == tabEnv.end())
-				return false;
-		}
+		if (!tabEnv.exists(i->first) && !tabEnv.insert(*i))
+			return false;
 	}
 
 	return true;

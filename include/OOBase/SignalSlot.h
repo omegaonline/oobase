@@ -42,14 +42,14 @@ namespace OOBase
 		{}
 
 		template <typename T>
-		int connect(T* p, void (T::*slot)())
+		bool connect(T* p, void (T::*slot)())
 		{
-			return m_slots.push_back(delegate_t(p,slot)) != m_slots.end();
+			return m_slots.push_back(delegate_t(p,slot));
 		}
 
-		int connect(void (*slot)())
+		bool connect(void (*slot)())
 		{
-			return m_slots.push_back(delegate_t(slot)) != m_slots.end();
+			return m_slots.push_back(delegate_t(slot));
 		}
 
 		template <typename T>
@@ -61,7 +61,7 @@ namespace OOBase
 		void fire() const
 		{
 			Vector<delegate_t,Allocator> slots(m_slots);
-			for (typename Vector<delegate_t,Allocator>::iterator i=slots.begin();i!=slots.end();++i)
+			for (typename Vector<delegate_t,Allocator>::iterator i=slots.begin();i;++i)
 			{
 				if (!*i)
 					m_slots.erase(*i);
@@ -86,14 +86,14 @@ namespace OOBase
 		{}
 
 		template <typename T>
-		int connect(T* p, void (T::*slot)(P1))
+		bool connect(T* p, void (T::*slot)(P1))
 		{
-			return m_slots.push_back(delegate_t(p,slot)) != m_slots.end();
+			return m_slots.push_back(delegate_t(p,slot));
 		}
 
-		int connect(void (*slot)(P1))
+		bool connect(void (*slot)(P1))
 		{
-			return m_slots.push_back(delegate_t(slot)) != m_slots.end();
+			return m_slots.push_back(delegate_t(slot));
 		}
 
 		template <typename T>
@@ -105,7 +105,7 @@ namespace OOBase
 		void fire(P1 p1) const
 		{
 			Vector<delegate_t,Allocator> slots(m_slots);
-			for (typename Vector<delegate_t,Allocator>::iterator i=slots.begin();i!=slots.end();++i)
+			for (typename Vector<delegate_t,Allocator>::iterator i=slots.begin();i;++i)
 			{
 				if (!*i)
 					m_slots.erase(*i);
@@ -130,14 +130,14 @@ namespace OOBase
 		{}
 
 		template <typename T>
-		int connect(T* p, void (T::*slot)(P1,P2))
+		bool connect(T* p, void (T::*slot)(P1,P2))
 		{
-			return m_slots.push_back(delegate_t(p,slot)) != m_slots.end();
+			return m_slots.push_back(delegate_t(p,slot));
 		}
 
-		int connect(void (*slot)(P1,P2))
+		bool connect(void (*slot)(P1,P2))
 		{
-			return m_slots.push_back(delegate_t(slot)) != m_slots.end();
+			return m_slots.push_back(delegate_t(slot));
 		}
 
 		template <typename T>
@@ -149,7 +149,7 @@ namespace OOBase
 		void fire(P1 p1, P2 p2) const
 		{
 			Vector<delegate_t,Allocator> slots(m_slots);
-			for (typename Vector<delegate_t,Allocator>::iterator i=slots.begin();i!=slots.end();++i)
+			for (typename Vector<delegate_t,Allocator>::iterator i=slots.begin();i;++i)
 			{
 				if (!*i)
 					m_slots.erase(*i);
@@ -174,14 +174,14 @@ namespace OOBase
 		{}
 
 		template <typename T>
-		int connect(T* p, void (T::*slot)(P1,P2,P3))
+		bool connect(T* p, void (T::*slot)(P1,P2,P3))
 		{
-			return m_slots.push_back(delegate_t(p,slot)) != m_slots.end();
+			return m_slots.push_back(delegate_t(p,slot));
 		}
 
-		int connect(void (*slot)(P1,P2,P3))
+		bool connect(void (*slot)(P1,P2,P3))
 		{
-			return m_slots.push_back(delegate_t(slot)) != m_slots.end();
+			return m_slots.push_back(delegate_t(slot));
 		}
 
 		template <typename T>
@@ -193,7 +193,7 @@ namespace OOBase
 		void fire(P1 p1, P2 p2, P3 p3) const
 		{
 			Vector<delegate_t,Allocator> slots(m_slots);
-			for (typename Vector<delegate_t,Allocator>::iterator i=slots.begin();i!=slots.end();++i)
+			for (typename Vector<delegate_t,Allocator>::iterator i=slots.begin();i;++i)
 			{
 				if (!*i)
 					m_slots.erase(*i);

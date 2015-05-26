@@ -509,7 +509,7 @@ int InternalAcceptor::stop()
 		m_backlog = 0;
 
 		// Close all the pending handles
-		for (OOBase::List<HANDLE>::iterator i=m_stkPending.begin();i!=m_stkPending.end();++i)
+		for (OOBase::List<HANDLE>::iterator i=m_stkPending.begin();i;++i)
 			::CloseHandle(*i);
 	}
 
@@ -581,7 +581,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 			if (err == ERROR_IO_PENDING)
 			{
 				// Will complete later...
-				if (m_stkPending.push_back((HANDLE)hPipe) == m_stkPending.end())
+				if (!m_stkPending.push_back((HANDLE)hPipe))
 				{
 					hPipe.detach();
 					pOv = NULL;
