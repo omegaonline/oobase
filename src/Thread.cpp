@@ -122,7 +122,7 @@ unsigned int OOBase::Thread::oobase_thread_fn(void* param)
 
 	// Set the TLS for self
 	if (!TLS::Set(&s_tls_key,pThis))
-		OOBase_CallCriticalFailure(GetLastError());
+		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
 	// Set the event, meaning we have started
 	if (!SetEvent(wrap->m_hEvent))
@@ -139,14 +139,14 @@ const OOBase::Thread* OOBase::Thread::self()
 
 	Thread* pThread = NULL;
 	if (!CrtAllocator::allocate_new(pThread))
-		OOBase_CallCriticalFailure(GetLastError());
+		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
 	// Do some silly windows nonsense to get the thread handle
 	if (!DuplicateHandle(GetCurrentProcess(),GetCurrentThread(),GetCurrentProcess(),&pThread->m_hThread,0,FALSE,DUPLICATE_SAME_ACCESS))
 		OOBase_CallCriticalFailure(GetLastError());
 
 	if (!TLS::Set(&s_tls_key,pThread,&destroy_thread_self))
-		OOBase_CallCriticalFailure(GetLastError());
+		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
 	return pThread;
 }
@@ -267,7 +267,7 @@ void* OOBase::Thread::oobase_thread_fn(void* param)
 
 	// Set the TLS for self
 	if (!TLS::Set(&s_tls_key,pThis))
-		OOBase_CallCriticalFailure(GetLastError());
+		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
 	// Set the event, meaning we have started
 	wrap->m_started->set();
@@ -289,12 +289,12 @@ const OOBase::Thread* OOBase::Thread::self()
 
 	Thread* pThread = NULL;
 	if (!CrtAllocator::allocate_new(pThread))
-		OOBase_CallCriticalFailure(GetLastError());
+		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
 	pThread->m_thread = pthread_self();
 
 	if (!TLS::Set(&s_tls_key,pThread,&destroy_thread_self))
-		OOBase_CallCriticalFailure(GetLastError());
+		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
 	return pThread;
 }
@@ -305,6 +305,8 @@ void OOBase::Thread::destroy_thread_self(void* p)
 }
 
 #endif // HAVE_PTHREAD
+
+const int OOBase::Thread::s_tls_key = 0;
 
 OOBase::SharedPtr<OOBase::Thread> OOBase::Thread::run(int (*thread_fn)(void*), void* param, int& err)
 {

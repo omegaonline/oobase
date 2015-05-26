@@ -52,7 +52,8 @@ namespace OOBase
 
 		int run(int (*thread_fn)(void*), void* param);
 
-		static const int s_tls_key = 0;
+		static const int s_tls_key;
+		static void destroy_thread_self(void* p);
 		
 #if defined(_WIN32)
 		struct wrapper
@@ -65,7 +66,6 @@ namespace OOBase
 
 		Win32::SmartHandle m_hThread;
 
-		static void destroy_thread_self(void* p);
 		static unsigned int __stdcall oobase_thread_fn(void* param);
 #elif defined(HAVE_PTHREAD)
 		struct wrapper
