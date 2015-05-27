@@ -501,6 +501,102 @@ namespace OOBase
 	{
 		return make_delegate<CrtAllocator,T,R,P1,P2,P3,P4>(p,fn);
 	}
+
+	template <typename R, typename P1, typename P2, typename P3, typename P4, typename P5, typename Allocator = CrtAllocator>
+	class Delegate5 : public SafeBoolean
+	{
+	public:
+		typedef Allocator allocator_type;
+		typedef R return_type;
+		typedef P1 param1_type;
+		typedef P2 param2_type;
+		typedef P3 param3_type;
+		typedef P4 param4_type;
+		typedef P5 param5_type;
+
+		Delegate5(R (*fn)(P1,P2,P3,P4,P5) = NULL) : m_static(fn)
+		{
+		}
+
+		template<typename T>
+		Delegate5(T* p, R (T::*fn)(P1,P2,P3,P4,P5)) : m_static(NULL)
+		{
+			m_ptr = OOBase::allocate_shared<Thunk<T>,Allocator>(p,fn);
+		}
+
+		bool operator == (const Delegate5& rhs) const
+		{
+			if (this == &rhs)
+				return true;
+			return m_ptr == rhs.m_ptr && m_static == rhs.m_static;
+		}
+
+		operator bool_type() const
+		{
+			return SafeBoolean::safe_bool(m_ptr || m_static != NULL);
+		}
+
+		R invoke(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5) const
+		{
+			if (m_ptr)
+				return m_ptr->thunk(p1,p2,p3,p4,p5);
+			return (*m_static)(p1,p2,p3,p4,p5);
+		}
+
+		void swap(Delegate5& rhs)
+		{
+			m_ptr.swap(rhs.m_ptr);
+			OOBase::swap(m_static,rhs.m_static);
+		}
+
+	private:
+		struct ThunkBase
+		{
+			virtual R thunk(P1, P2, P3, P4, P5) = 0;
+		};
+
+		template<typename T>
+		struct Thunk : public ThunkBase
+		{
+			Thunk(T* p, R (T::*fn)(P1,P2,P3,P4,P5)) : m_p(p), m_fn(fn)
+			{}
+
+			R thunk(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
+			{
+				return (m_p->*m_fn)(p1,p2,p3,p4,p5);
+			}
+
+			T* m_p;
+			R (T::*m_fn)(P1,P2,P3,P4,P5);
+		};
+
+		SharedPtr<ThunkBase> m_ptr;
+		R (*m_static)(P1,P2,P3,P4,P5);
+	};
+
+	template <typename Allocator, typename R, typename P1, typename P2, typename P3, typename P4, typename P5>
+	Delegate5<R,P1,P2,P3,P4,P5,Allocator> make_delegate(R (*fn)(P1,P2,P3,P4,P5))
+	{
+		return Delegate5<R,P1,P2,P3,P4,P5,Allocator>(fn);
+	}
+
+	template <typename R, typename P1, typename P2, typename P3, typename P4, typename P5>
+	Delegate5<R,P1,P2,P3,P4,P5,CrtAllocator> make_delegate(R (*fn)(P1,P2,P3,P4,P5))
+	{
+		return make_delegate<CrtAllocator,R,P1,P2,P3,P4,P5>(fn);
+	}
+
+	template <typename Allocator, typename T, typename R, typename P1, typename P2, typename P3, typename P4, typename P5>
+	Delegate5<R,P1,P2,P3,P4,P5,Allocator> make_delegate(T* p, R (T::*fn)(P1,P2,P3,P4,P5))
+	{
+		return Delegate5<R,P1,P2,P3,P4,P5,Allocator>(p,fn);
+	}
+
+	template <typename T, typename R, typename P1, typename P2, typename P3, typename P4, typename P5>
+	Delegate5<R,P1,P2,P3,P4,P5,CrtAllocator> make_delegate(T* p, R (T::*fn)(P1,P2,P3,P4,P5))
+	{
+		return make_delegate<CrtAllocator,T,R,P1,P2,P3,P4,P5>(p,fn);
+	}
 }
 
 #endif // OOBASE_DELEGATE_H_INCLUDED_
