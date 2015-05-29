@@ -171,6 +171,18 @@ namespace OOBase
 			OOBase::swap(m_static,rhs.m_static);
 		}
 
+#if defined(OOBASE_CDR_STREAM_H_INCLUDED_)
+		bool read(CDRStream& stream)
+		{
+			return (m_ptr.read(stream) && stream.read(m_static));
+		}
+
+		bool write(CDRStream& stream) const
+		{
+			return (m_ptr.write(stream) && stream.write(m_static));
+		}
+#endif
+
 	private:
 		struct ThunkBase
 		{
@@ -263,6 +275,18 @@ namespace OOBase
 			m_ptr.swap(rhs.m_ptr);
 			OOBase::swap(m_static,rhs.m_static);
 		}
+
+#if defined(OOBASE_CDR_STREAM_H_INCLUDED_)
+		bool read(CDRStream& stream)
+		{
+			return (m_ptr.read(stream) && stream.read(m_static));
+		}
+
+		bool write(CDRStream& stream) const
+		{
+			return (m_ptr.write(stream) && stream.write(m_static));
+		}
+#endif
 
 	private:
 		struct ThunkBase
@@ -357,6 +381,18 @@ namespace OOBase
 			m_ptr.swap(rhs.m_ptr);
 			OOBase::swap(m_static,rhs.m_static);
 		}
+
+#if defined(OOBASE_CDR_STREAM_H_INCLUDED_)
+		bool read(CDRStream& stream)
+		{
+			return (m_ptr.read(stream) && stream.read(m_static));
+		}
+
+		bool write(CDRStream& stream) const
+		{
+			return (m_ptr.write(stream) && stream.write(m_static));
+		}
+#endif
 
 	private:
 		struct ThunkBase
@@ -453,6 +489,18 @@ namespace OOBase
 			OOBase::swap(m_static,rhs.m_static);
 		}
 
+#if defined(OOBASE_CDR_STREAM_H_INCLUDED_)
+		bool read(CDRStream& stream)
+		{
+			return (m_ptr.read(stream) && stream.read(m_static));
+		}
+
+		bool write(CDRStream& stream) const
+		{
+			return (m_ptr.write(stream) && stream.write(m_static));
+		}
+#endif
+
 	private:
 		struct ThunkBase
 		{
@@ -548,6 +596,18 @@ namespace OOBase
 			m_ptr.swap(rhs.m_ptr);
 			OOBase::swap(m_static,rhs.m_static);
 		}
+
+#if defined(OOBASE_CDR_STREAM_H_INCLUDED_)
+		bool read(CDRStream& stream)
+		{
+			return (m_ptr.read(stream) && stream.read(m_static));
+		}
+
+		bool write(CDRStream& stream) const
+		{
+			return (m_ptr.write(stream) && stream.write(m_static));
+		}
+#endif
 
 	private:
 		struct ThunkBase
