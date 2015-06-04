@@ -565,6 +565,35 @@ void OOBase::Win32::condition_mutex_t::acquire()
 		EnterCriticalSection(&u.m_cs);
 }
 
+bool OOBase::Win32::condition_mutex_t::acquire(const Timeout& timeout)
+{
+	if (timeout.is_infinite())
+	{
+		acquire();
+		return true;
+	}
+
+	if (Win32Thunk::instance().m_InitializeConditionVariable == Win32Thunk::impl_InitializeConditionVariable)
+	{
+		DWORD dwWait = WaitForSingleObject(u.m_mutex,timeout.millisecs());
+		if (dwWait == WAIT_TIMEOUT)
+			return false;
+		else if (dwWait != WAIT_OBJECT_0)
+			OOBase_CallCriticalFailure(GetLastError());
+	}
+	else 
+	{
+		while (!timeout.has_expired())
+		{
+			if (TryEnterCriticalSection(&u.m_cs))
+				return true;
+
+			::Sleep(0);
+		}
+	}
+	return false;
+}
+
 void OOBase::Win32::condition_mutex_t::release()
 {
 	if (Win32Thunk::instance().m_InitializeConditionVariable == Win32Thunk::impl_InitializeConditionVariable)
