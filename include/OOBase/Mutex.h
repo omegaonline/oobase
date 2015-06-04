@@ -39,9 +39,7 @@ namespace OOBase
 		void acquire();
 		void release();
 
-#if defined(_WIN32)
 		bool acquire(const Timeout& timeout);
-#endif
 
 		void swap(Mutex& mutex);
 

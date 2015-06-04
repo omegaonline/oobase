@@ -256,6 +256,19 @@ void OOBase::Mutex::acquire()
 		OOBase_CallCriticalFailure(err);
 }
 
+bool OOBase::Mutex::acquire(const Timeout& timeout)
+{
+	timespec wait;
+	timeout.get_abs_timespec(wait);
+
+	int err = pthread_mutex_timedlock(&m_mutex,&wait);
+	if (err == ETIMEDOUT)
+		return false;
+	if (err)
+		OOBase_CallCriticalFailure(err);
+	return true;
+}
+
 void OOBase::Mutex::release()
 {
 	int err = pthread_mutex_unlock(&m_mutex);
