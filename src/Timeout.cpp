@@ -88,6 +88,11 @@ namespace
 
 OOBase::Clock::Clock()
 {
+	reset();
+}
+
+void OOBase::Clock::reset()
+{
 #if defined(_WIN32)
 
 	m_start = time_now();
@@ -100,15 +105,15 @@ OOBase::Clock::Clock()
 #endif
 }
 
-void OOBase::Clock::get_timeval(::timeval& timeout) const
+void OOBase::Clock::get_timeval(::timeval& interval) const
 {
 #if defined(_WIN32)
 
 	LONGLONG diff = time_now() - m_start;
 	if (diff < 0)
 	{
-		timeout.tv_sec = 0;
-		timeout.tv_usec = 0;
+		interval.tv_sec = 0;
+		interval.tv_usec = 0;
 	}
 	else
 	{
@@ -116,8 +121,8 @@ void OOBase::Clock::get_timeval(::timeval& timeout) const
 		if (freq == 0)
 			freq = 1000;
 
-		timeout.tv_sec = static_cast<long>(diff / freq);
-		timeout.tv_usec = static_cast<long>(((diff % freq) * 1000000) / freq);
+		interval.tv_sec = static_cast<long>(diff / freq);
+		interval.tv_usec = static_cast<long>(((diff % freq) * 1000000) / freq);
 	}
 
 #elif defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
@@ -129,48 +134,29 @@ void OOBase::Clock::get_timeval(::timeval& timeout) const
 	::timespec diff = {0};
 	timespec_subtract(diff,now,m_start);
 
-	timeout.tv_sec = diff.tv_sec;
-	timeout.tv_usec = diff.tv_nsec / 1000;
+	interval.tv_sec = diff.tv_sec;
+	interval.tv_usec = diff.tv_nsec / 1000;
 
-	if (timeout.tv_sec < 0)
+	if (interval.tv_sec < 0)
 	{
-		timeout.tv_sec = 0;
-		timeout.tv_usec = 0;
+		interval.tv_sec = 0;
+		interval.tv_usec = 0;
 	}
 #endif
 }
 
 unsigned long OOBase::Clock::millisecs() const
 {
-#if defined(_WIN32)
+	::timeval interval = {0};
+	get_timeval(interval);
+	return interval.tv_sec * 1000 + (interval.tv_usec / 1000);
+}
 
-	LONGLONG diff = time_now() - m_start;
-	if (diff < 0)
-		return 0;
-
-	LONGLONG freq = qp_freq();
-	if (freq == 0)
-		freq = 1000;
-
-	LONGLONG r = (diff / freq) * 1000;
-	r += ((diff % freq) * 1000) / freq;
-	return static_cast<unsigned long>(r);
-
-#elif defined(HAVE_UNISTD_H) && (_POSIX_TIMERS > 0)
-
-	::timespec now = {0};
-	if (clock_gettime(CLOCK_MONOTONIC,&now) != 0)
-		OOBase_CallCriticalFailure(errno);
-
-	::timespec diff = {0};
-	timespec_subtract(diff,now,m_start);
-
-	if (diff.tv_sec < 0)
-		return 0;
-
-	return (diff.tv_sec * 1000) + (diff.tv_nsec / 1000000);
-
-#endif
+OOBase::uint64_t OOBase::Clock::microseconds() const
+{
+	::timeval interval = {0};
+	get_timeval(interval);
+	return interval.tv_sec * 1000000 + interval.tv_usec;
 }
 
 OOBase::Timeout::Timeout() :
@@ -186,6 +172,28 @@ OOBase::Timeout::Timeout(const Timeout& rhs) :
 
 OOBase::Timeout::Timeout(unsigned long seconds, unsigned int microseconds) :
 		m_null(false)
+{
+	reset(seconds,microseconds);
+}
+
+OOBase::Timeout& OOBase::Timeout::operator = (const Timeout& rhs)
+{
+	Timeout(rhs).swap(*this);
+	return *this;
+}
+
+void OOBase::Timeout::swap(Timeout& rhs)
+{
+	OOBase::swap(m_null,rhs.m_null);
+	OOBase::swap(m_end,rhs.m_end);
+}
+
+void OOBase::Timeout::reset()
+{
+	m_null = true;
+}
+
+void OOBase::Timeout::reset(unsigned long seconds, unsigned int microseconds)
 {
 #if defined(_WIN32)
 
@@ -210,18 +218,7 @@ OOBase::Timeout::Timeout(unsigned long seconds, unsigned int microseconds) :
 	}
 	
 #endif
-}
-
-OOBase::Timeout& OOBase::Timeout::operator = (const Timeout& rhs)
-{
-	Timeout(rhs).swap(*this);
-	return *this;
-}
-
-void OOBase::Timeout::swap(Timeout& rhs)
-{
-	OOBase::swap(m_null,rhs.m_null);
-	OOBase::swap(m_end,rhs.m_end);
+	m_null = false;
 }
 
 bool OOBase::Timeout::has_expired() const

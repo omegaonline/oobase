@@ -44,8 +44,11 @@ namespace OOBase
 	public:
 		Clock();
 
-		void get_timeval(::timeval& timeout) const;
+		void reset();
+
+		void get_timeval(::timeval& interval) const;
 		unsigned long millisecs() const;
+		uint64_t microseconds() const;
 
 	private:
 #if defined(_WIN32)
@@ -71,6 +74,9 @@ namespace OOBase
 		bool operator < (const Timeout& rhs) const;
 
 		void swap(Timeout& rhs);
+
+		void reset();
+		void reset(unsigned long seconds, unsigned int microseconds);
 
 		bool has_expired() const;
 		bool is_infinite() const { return m_null; }
