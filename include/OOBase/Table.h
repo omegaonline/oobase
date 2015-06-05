@@ -132,7 +132,7 @@ namespace OOBase
 		bool remove(const K1& key)
 		{
 			iterator i = find(key);
-			if (i == end())
+			if (i == m_end)
 				return false;
 
 			erase(i);
@@ -156,7 +156,7 @@ namespace OOBase
 		{
 			const Pair<K,V>* p = bsearch(key);
 			if (!p || p->first != key)
-				return end();
+				return m_end;
 
 			// Scan for the first
 			while (p && p > this->m_data && (p-1)->first == key)
@@ -170,7 +170,7 @@ namespace OOBase
 		{
 			const Pair<K,V>* p = bsearch(key);
 			if (!p || p->first != key)
-				return end();
+				return m_cend;
 
 			// Scan for the first
 			while (p && p > this->m_data && (p-1)->first == key)
