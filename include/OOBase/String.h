@@ -214,7 +214,7 @@ namespace OOBase
 		{
 			int err = OOBase::vprintf(m_data,format,args);
 			if (!err)
-				m_len = m_data.count();
+				m_len = strlen(m_data.get());
 			return err;
 		}
 
@@ -228,7 +228,7 @@ namespace OOBase
 		{
 			int err = Win32::wchar_t_to_utf8(wsz,m_data);
 			if (!err)
-				m_len = m_data.count();
+				m_len = strlen(m_data.get());
 			return err;
 		}
 #endif
