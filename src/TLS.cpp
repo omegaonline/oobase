@@ -37,8 +37,10 @@ namespace
 	class TLSGlobal : public OOBase::NonCopyable
 	{
 	public:
-		TLSGlobal() : m_mapVals(m_allocator), m_refcount(1)
+		TLSGlobal() : m_mapVals(m_allocator), m_vecDestructors(m_allocator), m_refcount(1)
 		{}
+
+		~TLSGlobal();
 
 		void addref() 
 		{
@@ -51,12 +53,13 @@ namespace
 		
 		OOBase::ArenaAllocator m_allocator;
 
+		OOBase::HashTable<const void*,void*,OOBase::AllocatorInstance> m_mapVals;
 		struct tls_val
 		{
-			void* m_val;
+			const void* m_key;
 			void (*m_destructor)(void*);
 		};
-		OOBase::HashTable<const void*,tls_val,OOBase::AllocatorInstance> m_mapVals;
+		OOBase::Vector<tls_val,OOBase::AllocatorInstance> m_vecDestructors;
 		
 		// Special internal thread-local variables
 		char m_error_buffer[512];
@@ -203,18 +206,28 @@ void TLSGlobal::release()
 
 #endif
 
+TLSGlobal::~TLSGlobal()
+{
+	for (OOBase::Vector<tls_val,OOBase::AllocatorInstance>::iterator i=m_vecDestructors.begin();i;++i)
+	{
+		OOBase::HashTable<const void*,void*,OOBase::AllocatorInstance>::iterator j = m_mapVals.find(i->m_key);
+		if (j)
+			(*i->m_destructor)(j->value);
+	}
+}
+
 bool OOBase::TLS::Get(const void* key, void** val)
 {
 	TLSGlobal* inst = TLSGlobal::instance(false);
 	if (!inst)
 		return false;
 
-	OOBase::HashTable<const void*,TLSGlobal::tls_val,OOBase::AllocatorInstance>::iterator i = inst->m_mapVals.find(key);
+	OOBase::HashTable<const void*,void*,OOBase::AllocatorInstance>::iterator i = inst->m_mapVals.find(key);
 	if (!i)
 		return false;
 
 	if (val)
-		*val = i->value.m_val;
+		*val = i->value;
 
 	return true;
 }
@@ -225,11 +238,36 @@ bool OOBase::TLS::Set(const void* key, void* val, void (*destructor)(void*))
 	if (!inst)
 		return false;
 
-	TLSGlobal::tls_val v;
-	v.m_val = val;
-	v.m_destructor = destructor;
+	OOBase::HashTable<const void*,void*,OOBase::AllocatorInstance>::iterator i = inst->m_mapVals.find(key);
+	if (i)
+	{
+		if (destructor)
+		{
+			for (OOBase::Vector<TLSGlobal::tls_val,OOBase::AllocatorInstance>::iterator j=inst->m_vecDestructors.begin();j;++j)
+			{
+				if (j->m_key == key)
+				{
+					j->m_destructor = destructor;
+					break;
+				}
+			}
+		}
 
-	return inst->m_mapVals.insert(key,v);
+		i->value = val;
+		return true;
+	}
+	
+	if (destructor)
+	{
+		TLSGlobal::tls_val v;
+		v.m_key = key;
+		v.m_destructor = destructor;
+
+		if (!inst->m_vecDestructors.insert(v,inst->m_vecDestructors.begin()))
+			return false;
+	}
+
+	return inst->m_mapVals.insert(key,val);
 }
 
 char* OOBase::detail::get_error_buffer(size_t& len)

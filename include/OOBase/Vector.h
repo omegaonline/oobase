@@ -130,7 +130,7 @@ namespace OOBase
 						for (size_t i=0;i<rhs.m_size;++i)
 						{
 							if (!insert_at(i,rhs.m_data[i]))
-							break;
+								break;
 						}
 					}
 				}
@@ -236,7 +236,7 @@ namespace OOBase
 				return true;
 			}
 
-			bool insert_at(size_t pos, const T& value)
+			bool insert_at(size_t& pos, const T& value)
 			{
 				if (pos > this->m_size)
 					pos = this->m_size;
@@ -396,7 +396,7 @@ namespace OOBase
 				return true;
 			}
 
-			bool insert_at(size_t pos, const T& value)
+			bool insert_at(size_t& pos, const T& value)
 			{
 				if (pos > this->m_size)
 					pos = this->m_size;
