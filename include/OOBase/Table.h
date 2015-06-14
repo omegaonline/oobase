@@ -94,19 +94,19 @@ namespace OOBase
 			return true;
 		}
 
-		iterator insert(const Pair<K,V>& value)
+		iterator insert(const Pair<K,V>& item)
 		{
 			size_t start = 0;
 			for (size_t end = this->m_size;start < end;)
 			{
 				size_t mid = start + (end - start) / 2;
-				if (m_compare(this->m_data[mid].first,value.first))
+				if (m_compare(this->m_data[mid].first,item.first))
 					start = mid + 1;
 				else
 					end = mid;
 			}
 			iterator r(m_end);
-			if (baseClass::insert_at(start,value))
+			if (baseClass::insert_at(start,item))
 				r = iterator(this,start);
 			return r;
 		}

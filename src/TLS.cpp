@@ -212,7 +212,7 @@ TLSGlobal::~TLSGlobal()
 	{
 		OOBase::HashTable<const void*,void*,OOBase::AllocatorInstance>::iterator i = m_mapVals.find(val.m_key);
 		if (i)
-			(*val.m_destructor)(i->value);
+			(*val.m_destructor)(i->second);
 	}
 }
 
@@ -227,7 +227,7 @@ bool OOBase::TLS::Get(const void* key, void** val)
 		return false;
 
 	if (val)
-		*val = i->value;
+		*val = i->second;
 
 	return true;
 }
@@ -253,7 +253,7 @@ bool OOBase::TLS::Set(const void* key, void* val, void (*destructor)(void*))
 			}
 		}
 
-		i->value = val;
+		i->second = val;
 		return true;
 	}
 	

@@ -146,57 +146,42 @@ namespace OOBase
 		template <typename K, typename V, bool POD = false>
 		struct HashTableNode
 		{
-			template <typename V1>
-			HashTableNode(size_t h, const K& k, V1 v) : m_hash(h), m_data(k,v)
+			HashTableNode(size_t h, const Pair<K,V>& item) : m_hash(h), m_data(item)
 			{}
 
-			template <typename V1>
-			static void inplace_copy(HashTableNode* p, size_t h, const K& k, V1 v)
+			static void inplace_copy(HashTableNode* p, size_t h, const Pair<K,V>& item)
 			{
-				::new (p) HashTableNode(h,k,v);
+				::new (p) HashTableNode(h,item);
 			}
 
 			static void inplace_destroy(HashTableNode& p)
 			{
-				p.m_data.~pair();
+				p.m_data.~Pair<K,V>();
 			}
 
 			size_t m_hash;
-			struct pair
-			{
-				pair(K k, V v) : key(k), value(v)
-				{}
-
-				K key;
-				V value;
-			} m_data;
+			Pair<K,V> m_data;
 		};
 
 		template <typename K, typename V>
 		struct HashTableNode<K,V,true>
 		{
-			template <typename V1>
-			static void inplace_copy(void* p, size_t h, const K& k, V1 v)
+			static void inplace_copy(void* p, size_t h, const Pair<K,V>& item)
 			{
 				static_cast<HashTableNode*>(p)->m_hash = h;
-				static_cast<HashTableNode*>(p)->m_data.key = k;
-				static_cast<HashTableNode*>(p)->m_data.value = v;
+				static_cast<HashTableNode*>(p)->m_data = item;
 			}
 
 			static void inplace_destroy(HashTableNode&)
 			{}
 
 			size_t m_hash;
-			struct pair
-			{
-				K key;
-				V value;
-			} m_data;
+			Pair<K,V> m_data;
 		};
 	}
 
 	template <typename K, typename V, typename Allocator = CrtAllocator, typename H = OOBase::Hash<K> >
-	class HashTable : public Allocating<Allocator>, public NonCopyable
+	class HashTable : public Allocating<Allocator>
 	{
 		typedef Allocating<Allocator> baseClass;
 
@@ -204,17 +189,34 @@ namespace OOBase
 		typedef detail::HashTableNode<K,V,detail::is_pod<detail::HashTable::PODCheck<K,V> >::value> Node;
 
 	public:
-		typedef detail::IteratorImpl<HashTable,typename Node::pair,size_t> iterator;
-		typedef detail::IteratorImpl<const HashTable,const typename Node::pair,size_t> const_iterator;
+		typedef detail::IteratorImpl<HashTable,Pair<K,V>,size_t> iterator;
+		friend class detail::IteratorImpl<HashTable,Pair<K,V>,size_t>;
+		typedef detail::IteratorImpl<const HashTable,const Pair<K,V>,size_t> const_iterator;
+		friend class detail::IteratorImpl<const HashTable,const Pair<K,V>,size_t>;
 
-		friend class detail::IteratorImpl<HashTable,typename Node::pair,size_t>;
-		friend class detail::IteratorImpl<const HashTable,const typename Node::pair,size_t>;
+		HashTable(const H& h = H()) : baseClass(), m_data(NULL), m_size(0), m_count(0), m_hash(h), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		{
+			iterator(this,size_t(-1)).swap(m_end);
+			const_iterator(this,size_t(-1)).swap(m_cend);
+		}
 
-		HashTable(const H& h = H()) : baseClass(), m_data(NULL), m_size(0), m_count(0), m_hash(h)
-		{}
+		HashTable(AllocatorInstance& allocator, const H& h = H()) : baseClass(allocator), m_data(NULL), m_size(0), m_count(0), m_hash(h), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		{
+			iterator(this,size_t(-1)).swap(m_end);
+			const_iterator(this,size_t(-1)).swap(m_cend);
+		}
 
-		HashTable(AllocatorInstance& allocator, const H& h = H()) : baseClass(allocator), m_data(NULL), m_size(0), m_count(0), m_hash(h)
-		{}
+		HashTable(const HashTable& rhs) : baseClass(rhs), m_data(NULL), m_size(0), m_count(0), m_hash(rhs.m_hash), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		{
+			iterator(this,size_t(-1)).swap(m_end);
+			const_iterator(this,size_t(-1)).swap(m_cend);
+
+			for (size_t i=0;i<rhs.m_size;++i)
+			{
+				if (is_in_use(rhs.m_data[i].m_hash) && !insert(rhs.m_data[i].m_data))
+					break;
+			}
+		}
 
 		~HashTable()
 		{
@@ -244,11 +246,17 @@ namespace OOBase
 		iterator insert(const K& key, const V& value)
 		{
 			size_t pos = 0;
-			if (!insert_i(pos,key,value))
-				return end();
+			Pair<K,V> temp_item(key,value);
+			if (!insert_i(pos,temp_item))
+				return m_end;
 
 			++m_count;
 			return iterator(this,pos);
+		}
+
+		iterator insert(const Pair<K,V>& item)
+		{
+			return insert(item.first,item.second);
 		}
 
 		bool exists(const K& key) const
@@ -291,7 +299,7 @@ namespace OOBase
 		bool remove(const K& key, V* value = NULL)
 		{
 			iterator i = find(key);
-			if (i == end())
+			if (i == m_end)
 				return false;
 
 			if (value)
@@ -304,7 +312,7 @@ namespace OOBase
 		bool pop(K* key = NULL, V* value = NULL)
 		{
 			iterator i = begin();
-			if (i == end())
+			if (i == m_end)
 				return false;
 
 			if (key)
@@ -347,7 +355,7 @@ namespace OOBase
 					return iterator(this,i);
 			}
 
-			return end();
+			return m_end;
 		}
 
 		const_iterator cbegin() const
@@ -355,10 +363,10 @@ namespace OOBase
 			for (size_t i=0;i<m_size;++i)
 			{
 				if (is_in_use(m_data[i].m_hash))
-					return iterator(this,i);
+					return const_iterator(this,i);
 			}
 
-			return end();
+			return m_cend;
 		}
 
 		const_iterator begin() const
@@ -368,17 +376,17 @@ namespace OOBase
 
 		iterator end()
 		{
-			return iterator(this,size_t(-1));
+			return m_end;
 		}
 
 		const_iterator cend() const
 		{
-			return const_iterator(this,size_t(-1));
+			return m_cend;
 		}
 
 		const_iterator end() const
 		{
-			return cend();
+			return m_cend;
 		}
 
 	private:
@@ -387,10 +395,16 @@ namespace OOBase
 		size_t   m_count;
 		H        m_hash;
 
+		iterator m_end;
+		const_iterator m_cend;
+
 		static const size_t s_hi_bit = (size_t(1) << ((sizeof(size_t) * 8) - 1));
 
-		HashTable(const HashTable& h, Node* data, size_t size) : baseClass(h), m_data(data), m_size(size), m_count(0), m_hash(h.m_hash)
+		HashTable(const HashTable& h, Node* data, size_t size) : baseClass(h), m_data(data), m_size(size), m_count(0), m_hash(h.m_hash), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
 		{
+			iterator(this,size_t(-1)).swap(m_end);
+			const_iterator(this,size_t(-1)).swap(m_cend);
+
 			// Set nothing in use
 			for (size_t i=0;i<m_size;++i)
 				m_data[i].m_hash = 0;
@@ -443,7 +457,7 @@ namespace OOBase
 				if (!m_data[pos].m_hash || dist > probe_distance(m_data[pos].m_hash,pos))
 					break;
 
-				if (m_data[pos].m_hash == h && m_data[pos].m_data.key == key)
+				if (m_data[pos].m_hash == h && m_data[pos].m_data.first == key)
 					return pos;
 
 				pos = (pos + 1) & (m_size-1);
@@ -466,7 +480,7 @@ namespace OOBase
 			{
 				if (is_in_use(m_data[i].m_hash))
 				{
-					if (!copy.insert(m_data[i].m_data.key,m_data[i].m_data.value))
+					if (!copy.insert(m_data[i].m_data.first,m_data[i].m_data.second))
 						return false;
 				}
 			}
@@ -476,7 +490,7 @@ namespace OOBase
 			return true;
 		}
 
-		bool insert_i(size_t& pos, K key, V value)
+		bool insert_i(size_t& pos, Pair<K,V>& item)
 		{
 			if (m_count >= (m_size / 10 * 9))
 			{
@@ -484,20 +498,20 @@ namespace OOBase
 					return false;
 			}
 
-			size_t h = hash_i(key);
+			size_t h = hash_i(item.first);
 			pos = h & (m_size-1);
 			for (size_t dist = 0;;++dist)
 			{
 				if (!m_data[pos].m_hash)
 				{
-					Node::inplace_copy(&m_data[pos],h,key,value);
+					Node::inplace_copy(&m_data[pos],h,item);
 					++m_count;
 					break;
 				}
 
-				if (m_data[pos].m_hash == h && m_data[pos].m_data.key == key)
+				if (m_data[pos].m_hash == h && m_data[pos].m_data.first == item.first)
 				{
-					Node::inplace_copy(&m_data[pos],h,key,value);
+					Node::inplace_copy(&m_data[pos],h,item);
 					break;
 				}
 
@@ -507,15 +521,14 @@ namespace OOBase
 				{
 					if (is_deleted(m_data[pos].m_hash))
 					{
-						Node::inplace_copy(&m_data[pos],h,key,value);
+						Node::inplace_copy(&m_data[pos],h,item);
 						++m_count;
 						break;
 					}
 
 					OOBase::swap(m_data[pos].m_hash,h);
-					OOBase::swap(m_data[pos].m_data.key,key);
-					OOBase::swap(m_data[pos].m_data.value,value);
-
+					OOBase::swap(m_data[pos].m_data,item);
+										
 					dist = curr_dist;
 				}
 
@@ -540,7 +553,7 @@ namespace OOBase
 					return;
 				}
 
-				Node::inplace_copy(&m_data[pos],m_data[next].m_hash,m_data[next].m_data.key,m_data[next].m_data.value);
+				Node::inplace_copy(&m_data[pos],m_data[next].m_hash,m_data[next].m_data);
 				Node::inplace_destroy(m_data[next]);
 
 				pos = next;
@@ -548,12 +561,12 @@ namespace OOBase
 			m_data[pos].m_hash |= s_hi_bit;
 		}
 
-		typename Node::pair* at(size_t pos)
+		Pair<K,V>* at(size_t pos)
 		{
 			return (pos < m_size && is_in_use(m_data[pos].m_hash) ? &m_data[pos].m_data : NULL);
 		}
 
-		const typename Node::pair* at(size_t pos) const
+		const Pair<K,V>* at(size_t pos) const
 		{
 			return (pos < m_size && is_in_use(m_data[pos].m_hash) ? &m_data[pos].m_data : NULL);
 		}
@@ -574,6 +587,14 @@ namespace OOBase
 
 			while (pos-- > 0 && !is_in_use(m_data[pos].m_hash))
 				;
+		}
+
+		void iterator_move(size_t& pos, ptrdiff_t n) const
+		{
+			for (ptrdiff_t i = 0;i < n && pos < m_size;++i)
+				next(pos);
+			for (ptrdiff_t i = n;i < 0 && pos < m_size;++i)
+				prev(pos);
 		}
 	};
 }
