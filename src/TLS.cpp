@@ -37,7 +37,7 @@ namespace
 	class TLSGlobal : public OOBase::NonCopyable
 	{
 	public:
-		TLSGlobal() : m_mapVals(m_allocator), m_vecDestructors(m_allocator), m_refcount(1)
+		TLSGlobal() : m_mapVals(m_allocator), m_listDestructors(m_allocator), m_refcount(1)
 		{}
 
 		~TLSGlobal();
@@ -59,7 +59,7 @@ namespace
 			const void* m_key;
 			void (*m_destructor)(void*);
 		};
-		OOBase::Vector<tls_val,OOBase::AllocatorInstance> m_vecDestructors;
+		OOBase::List<tls_val,OOBase::AllocatorInstance> m_listDestructors;
 		
 		// Special internal thread-local variables
 		char m_error_buffer[512];
@@ -208,11 +208,11 @@ void TLSGlobal::release()
 
 TLSGlobal::~TLSGlobal()
 {
-	for (OOBase::Vector<tls_val,OOBase::AllocatorInstance>::iterator i=m_vecDestructors.begin();i;++i)
+	for (tls_val val;m_listDestructors.pop_back(&val);)
 	{
-		OOBase::HashTable<const void*,void*,OOBase::AllocatorInstance>::iterator j = m_mapVals.find(i->m_key);
-		if (j)
-			(*i->m_destructor)(j->value);
+		OOBase::HashTable<const void*,void*,OOBase::AllocatorInstance>::iterator i = m_mapVals.find(val.m_key);
+		if (i)
+			(*val.m_destructor)(i->value);
 	}
 }
 
@@ -243,7 +243,7 @@ bool OOBase::TLS::Set(const void* key, void* val, void (*destructor)(void*))
 	{
 		if (destructor)
 		{
-			for (OOBase::Vector<TLSGlobal::tls_val,OOBase::AllocatorInstance>::iterator j=inst->m_vecDestructors.begin();j;++j)
+			for (OOBase::List<TLSGlobal::tls_val,OOBase::AllocatorInstance>::iterator j=inst->m_listDestructors.begin();j;++j)
 			{
 				if (j->m_key == key)
 				{
@@ -263,7 +263,7 @@ bool OOBase::TLS::Set(const void* key, void* val, void (*destructor)(void*))
 		v.m_key = key;
 		v.m_destructor = destructor;
 
-		if (!inst->m_vecDestructors.insert(v,inst->m_vecDestructors.begin()))
+		if (!inst->m_listDestructors.push_back(v))
 			return false;
 	}
 

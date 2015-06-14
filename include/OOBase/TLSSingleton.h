@@ -63,19 +63,38 @@ namespace OOBase
 
 		static void* init()
 		{
-			T* t = NULL;
-			if (OOBase::ThreadLocalAllocator::allocate_new(t))
+			// We do this long-hand so T can friend us
+			void* t = ThreadLocalAllocator::allocate(sizeof(T),alignment_of<T>::value);
+			if (!t)
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+
+			// Add destructor before calling constructor
+			if (!TLS::Set(&s_sentinal,t,&destroy))
 			{
-				if (!TLS::Set(&s_sentinal,t,&destroy))
-					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+				ThreadLocalAllocator::free(t);
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 			}
+
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+			try
+			{
+#endif
+				::new (t) T();
+#if defined(OOBASE_HAVE_EXCEPTIONS)
+			}
+			catch (...)
+			{
+				CrtAllocator::free(t);
+				throw;
+			}
+#endif		
 			return t;
 		}
 
 		static void destroy(void* p)
 		{
 			if (p)
-				OOBase::ThreadLocalAllocator::delete_free(static_cast<T*>(p));
+				ThreadLocalAllocator::delete_free(static_cast<T*>(p));
 		}
 	};
 

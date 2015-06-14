@@ -57,10 +57,17 @@ namespace OOBase
 
 		static void init()
 		{
-			// We do this long-hand so singleton class can friend us
-			void* t = OOBase::CrtAllocator::allocate(sizeof(T),alignment_of<T>::value);
+			// We do this long-hand so T can friend us
+			void* t = CrtAllocator::allocate(sizeof(T),alignment_of<T>::value);
 			if (!t)
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+
+			// Add destructor before calling constructor
+			if (!DLLDestructor<DLL>::add_destructor(&destroy,t))
+			{
+				CrtAllocator::free(t);
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+			}
 
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 			try
@@ -71,16 +78,10 @@ namespace OOBase
 			}
 			catch (...)
 			{
-				OOBase::CrtAllocator::free(t);
+				CrtAllocator::free(t);
 				throw;
 			}
-#endif
-			if (!DLLDestructor<DLL>::add_destructor(&destroy,t))
-			{
-				destroy(t);
-				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-			}
-			
+#endif			
 			s_instance = static_cast<T*>(t);
 		}
 
@@ -101,7 +102,7 @@ namespace OOBase
 					OOBase_CallCriticalFailure("Exception in Singleton destructor");
 				}
 #endif
-				OOBase::CrtAllocator::free(i);
+				CrtAllocator::free(i);
 				s_instance = NULL;
 			}
 		}
