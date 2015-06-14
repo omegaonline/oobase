@@ -47,6 +47,15 @@ namespace OOBase
 		}
 	};
 
+	template <typename T1, typename T2>
+	struct Hash<Pair<T1,T2> >
+	{
+		static size_t hash(const Pair<T1,T2>& pair)
+		{
+			return Hash<T1>::hash(pair.first) ^ Hash<T2>::hash(pair.second);
+		}
+	};
+
 	namespace detail
 	{
 		// See http://isthe.com/chongo/tech/comp/fnv/ for details
