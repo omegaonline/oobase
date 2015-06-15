@@ -47,21 +47,19 @@ dist-hook:
 
 noinst_LTLIBRARIES = liboobase.la
 
-AM_CFLAGS = $(PTHREAD_CFLAGS)
-AM_CXXFLAGS = $(PTHREAD_CFLAGS)
-AM_LDFLAGS = $(PTHREAD_LIBS)
+liboobase_la_CFLAGS = $(PTHREAD_CFLAGS)
+liboobase_la_CXXFLAGS = $(PTHREAD_CFLAGS)
+liboobase_la_LDFLAGS = $(PTHREAD_LIBS)
 
 if WIN32
-AM_CPPFLAGS = -D_WIN32_WINNT=0x0502
+liboobase_la_CPPFLAGS = -D_WIN32_WINNT=0x0502
 endif
 
 if WIN32
-liboobase_la_CFLAGS = $(AM_CFLAGS)
-liboobase_la_CXXFLAGS = $(AM_CXXFLAGS)
 liboobase_la_LIBADD = -lws2_32 -lnetapi32 -luserenv -lshlwapi
 else
-liboobase_la_CFLAGS = $(LTDLINCL) $(AM_CFLAGS)
-liboobase_la_CXXFLAGS = $(LTDLINCL) $(AM_CXXFLAGS)
+liboobase_la_CFLAGS += $(LTDLINCL)
+liboobase_la_CXXFLAGS += $(LTDLINCL)
 liboobase_la_LIBADD = $(LIBLTDL) -lrt
 endif 
 
