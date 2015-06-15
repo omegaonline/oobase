@@ -93,7 +93,7 @@ bool OOBase::detail::ProactorPoll::do_unbind_fd(int fd)
 		return false;
 
 	FdItem item = i->second;
-	m_items.remove_at(i);
+	m_items.erase(i);
 
 	if (item.m_poll_pos != size_t(-1))
 	{

@@ -283,7 +283,7 @@ namespace OOBase
 			return iterator(this,find_i(key));
 		}
 
-		void remove_at(iterator& iter)
+		iterator erase(iterator iter)
 		{
 			assert(iter.check(this));
 			size_t pos = iter.deref();
@@ -302,7 +302,7 @@ namespace OOBase
 			if (pos >= m_size)
 				pos = size_t(-1);
 
-			iter = iterator(this,pos);
+			return iterator(this,pos);
 		}
 
 		bool remove(const K& key, V* value = NULL)
