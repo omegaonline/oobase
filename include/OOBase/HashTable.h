@@ -312,9 +312,9 @@ namespace OOBase
 				return false;
 
 			if (value)
-				*value = i->value;
+				*value = i->second;
 
-			remove_at(i);
+			erase(i);
 			return true;
 		}
 
@@ -325,12 +325,12 @@ namespace OOBase
 				return false;
 
 			if (key)
-				*key = i->key;
+				*key = i->first;
 
 			if (value)
-				*value = i->value;
+				*value = i->second;
 
-			remove_at(i);
+			erase(i);
 			return true;
 		}
 
