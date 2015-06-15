@@ -49,10 +49,6 @@ namespace OOBase
 		}
 
 	private:
-		// Prevent creation
-		Singleton();
-		~Singleton();
-
 		static T* s_instance;
 
 		static void init()

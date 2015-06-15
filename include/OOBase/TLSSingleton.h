@@ -55,11 +55,7 @@ namespace OOBase
 		}
 
 	private:
-		// Prevent creation
-		TLSSingleton();
-		~TLSSingleton();
-
-		static size_t s_sentinal;
+		static const int s_sentinal;
 
 		static void* init()
 		{
@@ -84,7 +80,7 @@ namespace OOBase
 			}
 			catch (...)
 			{
-				CrtAllocator::free(t);
+				ThreadLocalAllocator::free(t);
 				throw;
 			}
 #endif		
@@ -99,7 +95,7 @@ namespace OOBase
 	};
 
 	template <typename T, typename DLL>
-	size_t TLSSingleton<T,DLL>::s_sentinal = 1;
+	const int TLSSingleton<T,DLL>::s_sentinal = 1;
 }
 
 #endif // OOBASE_TLS_SINGLETON_H_INCLUDED_

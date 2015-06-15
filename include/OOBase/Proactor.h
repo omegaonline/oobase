@@ -300,10 +300,6 @@ namespace OOBase
 		}
 
 	private:
-		// Prevent creation
-		Singleton();
-		~Singleton();
-
 		static Proactor* s_instance;
 
 		static void init()
