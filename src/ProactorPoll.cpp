@@ -92,7 +92,7 @@ bool OOBase::detail::ProactorPoll::do_unbind_fd(int fd)
 	if (!i)
 		return false;
 
-	FdItem item = i->value;
+	FdItem item = i->second;
 	m_items.remove_at(i);
 
 	if (item.m_poll_pos != size_t(-1))
@@ -106,7 +106,7 @@ bool OOBase::detail::ProactorPoll::do_unbind_fd(int fd)
 		// Reassign index
 		i = m_items.find(pfd->fd);
 		if (i)
-			i->value.m_poll_pos = item.m_poll_pos;
+			i->second.m_poll_pos = item.m_poll_pos;
 	}
 
 	return true;
@@ -127,8 +127,8 @@ bool OOBase::detail::ProactorPoll::do_watch_fd(int fd, unsigned int events)
 		if (p_events)
 		{
 			// See if fd already exists in the poll stack
-			if (i->value.m_poll_pos != size_t(-1))
-				m_poll_fds.at(i->value.m_poll_pos)->events |= p_events;
+			if (i->second.m_poll_pos != size_t(-1))
+				m_poll_fds.at(i->second.m_poll_pos)->events |= p_events;
 			else
 			{
 				// A new entry
@@ -136,7 +136,7 @@ bool OOBase::detail::ProactorPoll::do_watch_fd(int fd, unsigned int events)
 				if (!m_poll_fds.push_back(pfd))
 					return false;
 
-				i->value.m_poll_pos = m_poll_fds.size()-1;
+				i->second.m_poll_pos = m_poll_fds.size()-1;
 			}
 		}
 	}
@@ -169,8 +169,8 @@ bool OOBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count
 			if (i)
 			{
 				active_fd.m_fd = pfd->fd;
-				active_fd.m_param = i->value.m_param;
-				active_fd.m_callback = i->value.m_callback;
+				active_fd.m_param = i->second.m_param;
+				active_fd.m_callback = i->second.m_callback;
 				active_fd.m_events = 0;
 
 				// If we have errored, favour eTXRecv...
@@ -207,7 +207,7 @@ bool OOBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count
 					if (!pfd->events)
 					{
 						// We are now longer in m_poll_fds
-						i->value.m_poll_pos = size_t(-1);
+						i->second.m_poll_pos = size_t(-1);
 
 						// If we have no pending events, remove from m_poll_fds
 						if (pos == m_poll_fds.size()-1)
@@ -221,7 +221,7 @@ bool OOBase::detail::ProactorPoll::update_fds(FdEvent& active_fd, int poll_count
 							// Reassign index
 							i = m_items.find(pfd->fd);
 							if (i)
-								i->value.m_poll_pos = pos;
+								i->second.m_poll_pos = pos;
 						}
 					}
 
