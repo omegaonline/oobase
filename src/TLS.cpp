@@ -189,7 +189,7 @@ TLSGlobal* TLSGlobal::instance(bool create)
 	OOBase::Once::Run(&key,init);
 		
 	TLSGlobal* inst = static_cast<TLSGlobal*>(pthread_getspecific(s_key));
-	if (!inst && OOBase::CrtAllocator::allocate_new(inst))
+	if (!inst && create && OOBase::CrtAllocator::allocate_new(inst))
 	{
 		pthread_setspecific(s_key,inst);
 		OOBase::DLLDestructor<OOBase::Module>::add_destructor(&term,inst);
