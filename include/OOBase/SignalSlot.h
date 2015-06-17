@@ -55,7 +55,7 @@ namespace OOBase
 		template <typename T>
 		bool disconnect(T* p, void (T::*slot)())
 		{
-			return m_slots.remove(delegate_t(p,slot));
+			return m_slots.erase(delegate_t(p,slot));
 		}
 
 		void fire() const
