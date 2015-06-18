@@ -30,13 +30,14 @@ namespace OOBase
 	class CmdArgs
 	{
 	public:
-		typedef Table<String,String> results_t;
+		typedef Table<String,String> options_t;
+		typedef Vector<String> arguments_t;
 
 		int add_option(const char* id, char short_opt = 0, bool has_value = false, const char* long_opt = NULL);
-		int parse(int argc, char* argv[], results_t& results, int skip = 1) const;
-		int parse(int argc, const char* argv[], results_t& results, int skip = 1) const;
+		int parse(int argc, char* argv[], options_t& options, arguments_t& args, int skip = 1) const;
+		int parse(int argc, const char* argv[], options_t& options, arguments_t& args, int skip = 1) const;
 #if defined(_WIN32)
-		int parse(results_t& results, int skip = 1) const;
+		int parse(options_t& options, arguments_t& args, int skip = 1) const;
 #endif
 
 	private:
@@ -49,10 +50,9 @@ namespace OOBase
 
 		Table<String,Option> m_map_opts;
 		
-		int parse_long_option(results_t& results, const char** argv, int& arg, int argc) const;
-		int parse_short_options(results_t& results, const char** argv, int& arg, int argc) const;
-		int parse_arg(results_t& results, const char* opt, unsigned int position) const;
-		int error(results_t& results, int err, const char* key, const char* value) const;
+		int parse_long_option(options_t& options, const char** argv, int& arg, int argc) const;
+		int parse_short_options(options_t& options, const char** argv, int& arg, int argc) const;
+		int error(options_t& options, int err, const char* key, const char* value) const;
 	};
 }
 

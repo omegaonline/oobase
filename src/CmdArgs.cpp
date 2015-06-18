@@ -48,21 +48,21 @@ int OOBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, 
 	return m_map_opts.insert(strId,opt) ? 0 : ERROR_OUTOFMEMORY;
 }
 
-int OOBase::CmdArgs::error(results_t& results, int err, const char* key, const char* value) const
+int OOBase::CmdArgs::error(options_t& options, int err, const char* key, const char* value) const
 {
 	String strErr,strVal;
 	if (!strErr.assign(key) || !strVal.assign(value))
 		return ERROR_OUTOFMEMORY;
 	
-	results.clear();
-	if (!results.insert(strErr,strVal))
+	options.clear();
+	if (!options.insert(strErr,strVal))
 		return ERROR_OUTOFMEMORY;
 
 	return err;
 }
 
 #if defined(_WIN32)
-int OOBase::CmdArgs::parse(results_t& results, int skip) const
+int OOBase::CmdArgs::parse(options_t& options, arguments_t& args, int skip) const
 {
 	int argc = 0;
 	UniquePtr<LPWSTR,Win32::LocalAllocator> argvw(CommandLineToArgvW(GetCommandLineW(),&argc));
@@ -83,19 +83,18 @@ int OOBase::CmdArgs::parse(results_t& results, int skip) const
 		argv[i] = arg_strings[i].c_str();
 	}
 
-	return parse(argc,argv.get(),results,skip);
+	return parse(argc,argv.get(),options,args,skip);
 }
 #endif
 
-int OOBase::CmdArgs::parse(int argc, char* argv[], results_t& results, int skip) const
+int OOBase::CmdArgs::parse(int argc, char* argv[], options_t& options, arguments_t& args, int skip) const
 {
-	return parse(argc,(const char**)argv,results,skip);
+	return parse(argc,(const char**)argv,options,args,skip);
 }
 
-int OOBase::CmdArgs::parse(int argc, const char* argv[], results_t& results, int skip) const
+int OOBase::CmdArgs::parse(int argc, const char* argv[], options_t& options, arguments_t& args, int skip) const
 {
 	bool bEndOfOpts = false;
-	unsigned int pos = 0;
 	int err = 0;
 	for (int i=skip; i<argc && err==0; ++i)
 	{
@@ -112,25 +111,29 @@ int OOBase::CmdArgs::parse(int argc, const char* argv[], results_t& results, int
 			if (argv[i][1] == '-')
 			{
 				// Long option
-				err = parse_long_option(results,argv,i,argc);
+				err = parse_long_option(options,argv,i,argc);
 			}
 			else
 			{
 				// Short options
-				err = parse_short_options(results,argv,i,argc);
+				err = parse_short_options(options,argv,i,argc);
 			}
 		}
 		else
 		{
-			// Arguments
-			err = parse_arg(results,argv[i],++pos);
+			// Argument
+			String strVal;
+			if (!strVal.assign(argv[i]))
+				err = ERROR_OUTOFMEMORY;
+			else
+				err = args.push_back(strVal) ? 0 : ERROR_OUTOFMEMORY;
 		}
 	}
 
 	return err;
 }
 
-int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, int& arg, int argc) const
+int OOBase::CmdArgs::parse_long_option(options_t& options, const char** argv, int& arg, int argc) const
 {
 	String strKey,strVal;
 	for (Table<String,Option>::const_iterator i = m_map_opts.begin();i; ++i)
@@ -141,12 +144,12 @@ int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, in
 			if (i->second.m_has_value)
 			{
 				if (arg >= argc-1)
-					return error(results,EINVAL,"missing",argv[arg]);
+					return error(options,EINVAL,"missing",argv[arg]);
 					
 				value = argv[++arg];
 			}
 
-			if (!strVal.assign(value) || !results.insert(i->first,strVal))
+			if (!strVal.assign(value) || !options.insert(i->first,strVal))
 				return ERROR_OUTOFMEMORY;
 
 			return 0;
@@ -157,17 +160,17 @@ int OOBase::CmdArgs::parse_long_option(results_t& results, const char** argv, in
 			if (i->second.m_has_value)
 				value = &argv[arg][i->second.m_long_opt.length()+3];
 
-			if (!strVal.assign(value) || !results.insert(i->first,strVal))
+			if (!strVal.assign(value) || !options.insert(i->first,strVal))
 				return ERROR_OUTOFMEMORY;
 
 			return 0;
 		}
 	}
 
-	return error(results,ENOENT,"unknown",argv[arg]);
+	return error(options,ENOENT,"unknown",argv[arg]);
 }
 
-int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, int& arg, int argc) const
+int OOBase::CmdArgs::parse_short_options(options_t& options, const char** argv, int& arg, int argc) const
 {
 	String strKey,strVal;
 	for (const char* c = argv[arg]+1; *c!='\0'; ++c)
@@ -189,7 +192,7 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 							if (err)
 								return err;
 
-							return error(results,EINVAL,"missing",strVal.c_str());
+							return error(options,EINVAL,"missing",strVal.c_str());
 						}
 						
 						value = argv[++arg];
@@ -197,7 +200,7 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 					else
 						value = &c[1];
 
-					if (!strVal.assign(value) || !results.insert(i->first,strVal))
+					if (!strVal.assign(value) || !options.insert(i->first,strVal))
 						return ERROR_OUTOFMEMORY;
 
 					// No more for this arg...
@@ -205,7 +208,7 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 				}
 				else
 				{
-					if (!strVal.assign("true") || !results.insert(i->first,strVal))
+					if (!strVal.assign("true") || !options.insert(i->first,strVal))
 						return ERROR_OUTOFMEMORY;
 
 					break;
@@ -219,23 +222,9 @@ int OOBase::CmdArgs::parse_short_options(results_t& results, const char** argv, 
 			if (err)
 				return err;
 				
-			return error(results,ENOENT,"unknown",strVal.c_str());
+			return error(options,ENOENT,"unknown",strVal.c_str());
 		}
 	}
 
 	return 0;
-}
-
-int OOBase::CmdArgs::parse_arg(results_t& results, const char* arg, unsigned int position) const
-{
-	String strArg;
-	if (!strArg.assign(arg))
-		return ERROR_OUTOFMEMORY;
-	
-	String strResult;
-	int err = strResult.printf("$%u",position);
-	if (err != 0)
-		return err;
-
-	return results.insert(strResult,strArg) ? 0 : ERROR_OUTOFMEMORY;
 }
