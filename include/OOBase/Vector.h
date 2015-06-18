@@ -629,20 +629,40 @@ namespace OOBase
 
 		iterator insert(const T& value, const iterator& before)
 		{
-			size_t pos = before.deref();
-			return baseClass::insert_at(pos,value) ? iterator(this,pos) : m_end;
+			assert(before.check(this));
+			return insert(value,before.deref());
+		}
+
+		iterator insert(const T& value, size_t before)
+		{
+			return baseClass::insert_at(before,value) ? iterator(this,before) : m_end;
 		}
 
 		iterator erase(iterator iter)
 		{
-			assert(iter.check(this));
-			return iterator(this,baseClass::remove_at(iter.deref(),1));
+			return erase(iter,1);
+		}
+
+		iterator erase(size_t pos)
+		{
+			return erase(pos,1);
 		}
 
 		iterator erase(iterator first, iterator last)
 		{
 			assert(first.check(this) && last.check(this) && last >= first);
-			return iterator(this,baseClass::remove_at(first.deref(),last.deref() - first.deref()));
+			return erase(first.deref(),last.deref() - first.deref());
+		}
+
+		iterator erase(iterator first, size_t count)
+		{
+			assert(first.check(this));
+			return erase(first.deref(),count);
+		}
+
+		iterator erase(size_t first, size_t count)
+		{
+			return iterator(this,baseClass::remove_at(first,count));
 		}
 
 		size_t erase(const T& value)
@@ -659,6 +679,22 @@ namespace OOBase
 					++pos;
 			}
 			return ret;
+		}
+
+		iterator position(size_t pos)
+		{
+			if (pos >= this->m_size)
+				return m_end;
+
+			return iterator(this,pos);
+		}
+
+		const_iterator position(size_t pos) const
+		{
+			if (pos >= this->m_size)
+				return m_cend;
+
+			return const_iterator(this,pos);
 		}
 
 		pointer at(size_t pos)
