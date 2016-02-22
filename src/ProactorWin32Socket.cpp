@@ -631,7 +631,7 @@ int InternalAcceptor::bind(const sockaddr* addr, socklen_t addr_len)
 	
 	// Create an event to wait on
 	m_hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
-	if (!m_hEvent.is_valid())
+	if (!m_hEvent.valid())
 		return GetLastError();
 
 	// Set up a registered wait

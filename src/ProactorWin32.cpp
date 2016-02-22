@@ -281,14 +281,14 @@ void InternalWaitAcceptor::stop()
 		OOBase::Win32::SmartHandle event(::CreateEvent(NULL,TRUE,FALSE,NULL));
 
 		int err = 0;
-		if (!UnregisterWaitEx(m_hWait,event.is_valid() ? (HANDLE)event : INVALID_HANDLE_VALUE))
+		if (!UnregisterWaitEx(m_hWait,event.valid() ? (HANDLE)event : INVALID_HANDLE_VALUE))
 			err = GetLastError();
 		
 		if (!err)
 			m_callback(m_param,m_hObject,true,ERROR_CANCELLED);
 		else if (err == ERROR_IO_PENDING)
 		{
-			if (event.is_valid())
+			if (event.valid())
 				WaitForSingleObject(event,INFINITE);
 		}		
 	}

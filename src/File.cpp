@@ -54,7 +54,7 @@ int OOBase::File::open(const char* filename, bool writeable)
 	}
 
 	m_fd = ::CreateFileW(wname.get(),dwAccess,FILE_SHARE_READ,NULL,dwDisp,FILE_ATTRIBUTE_NORMAL,NULL);
-	if (!m_fd.is_valid())
+	if (!m_fd.valid())
 		return ::GetLastError();
 
 #elif defined(HAVE_UNISTD_H)
@@ -64,7 +64,7 @@ int OOBase::File::open(const char* filename, bool writeable)
 		flags = O_RDWR | O_CREAT;
 		
 	m_fd = POSIX::open(filename,flags,0664);
-	if (!m_fd.is_valid())
+	if (!m_fd.valid())
 		return errno;
 #endif
 	return 0;

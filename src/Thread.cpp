@@ -69,7 +69,7 @@ int OOBase::Thread::run(int (*thread_fn)(void*), void* param)
 
 bool OOBase::Thread::join(const Timeout& timeout)
 {
-	if (!m_hThread.is_valid())
+	if (!m_hThread.valid())
 		return true;
 
 	DWORD dwWait = WaitForSingleObject(m_hThread,timeout.millisecs());
@@ -90,7 +90,7 @@ void OOBase::Thread::abort()
 
 bool OOBase::Thread::is_running() const
 {
-	if (!m_hThread.is_valid())
+	if (!m_hThread.valid())
 		return false;
 
 	DWORD dwWait = WaitForSingleObject(m_hThread,0);

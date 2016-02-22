@@ -131,7 +131,7 @@ void OOBase::Condition::broadcast()
 OOBase::Event::Event(bool bSet, bool bAutoReset) :
 		m_handle(::CreateEvent(NULL,bAutoReset ? FALSE : TRUE,bSet ? TRUE : FALSE,NULL))
 {
-	if (!m_handle.is_valid())
+	if (!m_handle.valid())
 		OOBase_CallCriticalFailure(GetLastError());
 }
 

@@ -552,7 +552,7 @@ int InternalAcceptor::do_accept(OOBase::Guard<OOBase::Condition::Mutex>& guard, 
 												PIPE_UNLIMITED_INSTANCES,
 												0,0,0,m_null_sa ? NULL : &m_sa));
 
-		if (!hPipe.is_valid())
+		if (!hPipe.valid())
 		{
 			err = GetLastError();
 			break;
@@ -764,7 +764,7 @@ OOBase::AsyncSocket* OOBase::detail::ProactorWin32::connect(const char* path, in
 							FILE_FLAG_OVERLAPPED,
 							NULL);
 
-		if (hPipe.is_valid())
+		if (hPipe.valid())
 			break;
 
 		err = GetLastError();
@@ -911,7 +911,7 @@ int InternalUniqueAcceptor::start()
 				1,
 				0,0,0,m_null_sa ? NULL : &m_sa);
 
-	if (!m_hPipe.is_valid())
+	if (!m_hPipe.valid())
 		return GetLastError();
 
 	dwErr = m_pProactor->bind(m_hPipe);

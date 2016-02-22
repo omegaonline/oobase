@@ -191,7 +191,7 @@ int OOBase::Server::create_pid_file(const char* szPidFile, bool& already)
 	}
 
 	OOBase::Win32::SmartHandle e(CreateEvent(NULL,TRUE,FALSE,strFullPidFile.c_str()));
-	if (!e.is_valid())
+	if (!e.valid())
 	{
 		err = GetLastError();
 		if (err == ERROR_ALREADY_EXISTS)

@@ -529,10 +529,10 @@ DWORD WinSocket::send_i(WSABUF* wsabuf, DWORD count, int& err, const OOBase::Tim
 			return 0;
 		}
 
-		if (!m_send_event.is_valid())
+		if (!m_send_event.valid())
 		{
 			m_send_event = CreateEventW(NULL,TRUE,FALSE,NULL);
-			if (!m_send_event.is_valid())
+			if (!m_send_event.valid())
 			{
 				err = GetLastError();
 				return 0;
@@ -605,10 +605,10 @@ size_t WinSocket::send_msg(const void* data_buf, size_t data_len, const void* ct
 			return 0;
 		}
 
-		if (!m_send_event.is_valid())
+		if (!m_send_event.valid())
 		{
 			m_send_event = CreateEventW(NULL,TRUE,FALSE,NULL);
-			if (!m_send_event.is_valid())
+			if (!m_send_event.valid())
 			{
 				err = GetLastError();
 				return 0;
@@ -762,10 +762,10 @@ DWORD WinSocket::recv_i(WSABUF* wsabuf, DWORD count, bool bAll, int& err, const 
 			return 0;
 		}
 
-		if (!m_recv_event.is_valid())
+		if (!m_recv_event.valid())
 		{
 			m_recv_event = CreateEventW(NULL,TRUE,FALSE,NULL);
-			if (!m_recv_event.is_valid())
+			if (!m_recv_event.valid())
 			{
 				err = GetLastError();
 				return 0;
@@ -839,10 +839,10 @@ size_t WinSocket::recv_msg(void* data_buf, size_t data_len, const OOBase::RefPtr
 			return 0;
 		}
 
-		if (!m_recv_event.is_valid())
+		if (!m_recv_event.valid())
 		{
 			m_recv_event = CreateEventW(NULL,TRUE,FALSE,NULL);
-			if (!m_recv_event.is_valid())
+			if (!m_recv_event.valid())
 			{
 				err = GetLastError();
 				return 0;

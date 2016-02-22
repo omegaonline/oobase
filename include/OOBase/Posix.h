@@ -75,7 +75,7 @@ namespace OOBase
 
 			int close()
 			{
-				if (!is_valid())
+				if (!valid())
 					return 0;
 
 				int err = POSIX::close(m_fd);
@@ -84,7 +84,7 @@ namespace OOBase
 				return err;
 			}
 
-			bool is_valid() const
+			bool valid() const
 			{
 				return (m_fd != -1);
 			}

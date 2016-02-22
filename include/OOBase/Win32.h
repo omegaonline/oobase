@@ -79,14 +79,14 @@ namespace OOBase
 
 			DWORD close()
 			{
-				if (is_valid() && !CloseHandle(m_handle))
+				if (valid() && !CloseHandle(m_handle))
 					return GetLastError();
 
 				m_handle = INVALID_HANDLE_VALUE;
 				return 0;
 			}
 
-			bool is_valid() const
+			bool valid() const
 			{
 				return (m_handle != NULL && m_handle != INVALID_HANDLE_VALUE);
 			}

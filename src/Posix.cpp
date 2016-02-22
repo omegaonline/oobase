@@ -252,10 +252,10 @@ int OOBase::POSIX::close_file_descriptors(int* except, size_t ex_count)
 int OOBase::POSIX::random_bytes(void* buffer, size_t len)
 {
 	OOBase::POSIX::SmartFD fd(OOBase::POSIX::open("/dev/urandom",O_RDONLY));
-	if (!fd.is_valid())
+	if (!fd.valid())
 		fd = OOBase::POSIX::open("/dev/random",O_RDONLY);
 
-	if (!fd.is_valid())
+	if (!fd.valid())
 		return errno;
 
 	ssize_t r = OOBase::POSIX::read(fd,buffer,len);

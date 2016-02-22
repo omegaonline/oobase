@@ -155,10 +155,10 @@ size_t Pipe::send_i(const void* buf, size_t len, int& err, const OOBase::Timeout
 		return 0;
 	}
 
-	if (!m_send_event.is_valid())
+	if (!m_send_event.valid())
 	{
 		m_send_event = CreateEventW(NULL,TRUE,FALSE,NULL);
-		if (!m_send_event.is_valid())
+		if (!m_send_event.valid())
 		{
 			err = GetLastError();
 			return 0;
@@ -287,10 +287,10 @@ size_t Pipe::recv_i(void* buf, size_t len, bool bAll, int& err, const OOBase::Ti
 		return 0;
 	}
 
-	if (!m_recv_event.is_valid())
+	if (!m_recv_event.valid())
 	{
 		m_recv_event = CreateEventW(NULL,TRUE,FALSE,NULL);
-		if (!m_recv_event.is_valid())
+		if (!m_recv_event.valid())
 		{
 			err = GetLastError();
 			return 0;
@@ -379,7 +379,7 @@ int Pipe::shutdown(bool bSend, bool bRecv)
 		m_send_allowed = false;
 
 		// This will halt all send's
-		if (m_send_event.is_valid())
+		if (m_send_event.valid())
 			::SetEvent(m_send_event);
 
 		// This ensures there are no other sends in progress...
@@ -391,7 +391,7 @@ int Pipe::shutdown(bool bSend, bool bRecv)
 		m_recv_allowed = false;
 
 		// This will halt all recv's
-		if (m_recv_event.is_valid())
+		if (m_recv_event.valid())
 			::SetEvent(m_recv_event);
 
 		// This ensures there are no other recvs in progress...
@@ -411,11 +411,11 @@ int Pipe::close()
 	m_recv_allowed = false;
 
 	// This will halt all send's
-	if (m_send_event.is_valid())
+	if (m_send_event.valid())
 		SetEvent(m_send_event);
 
 	// This will halt all recv's
-	if (m_recv_event.is_valid())
+	if (m_recv_event.valid())
 		SetEvent(m_recv_event);
 
 	// This ensures there are no other sends in progress...
