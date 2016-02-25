@@ -261,9 +261,17 @@ bool OOBase::Mutex::acquire(const Timeout& timeout)
 	timespec wait;
 	timeout.get_abs_timespec(wait);
 
-	int err = pthread_mutex_timedlock(&m_mutex,&wait);
-	if (err == ETIMEDOUT)
-		return false;
+	int err = 0;
+
+	// Don't wait more than a year!
+	if (wait.tv_sec >= 31557600)
+		err = pthread_mutex_lock(&m_mutex);
+	else
+	{
+		err = pthread_mutex_timedlock(&m_mutex,&wait);
+		if (err == ETIMEDOUT)
+			return false;
+	}
 	if (err)
 		OOBase_CallCriticalFailure(err);
 	return true;
