@@ -31,7 +31,9 @@
 #include <dirent.h>
 #include <sys/wait.h>
 
-#include "BSDSocket.h"
+#if defined(HAVE_SYS_SOCKET_H)
+#include <sys/socket.h>
+#endif
 
 int OOBase::POSIX::socketpair(int type, SmartFD fds[2])
 {

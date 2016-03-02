@@ -65,7 +65,6 @@ endif
 
 liboobase_la_SOURCES = \
 	src/ArenaAllocator.cpp \
-	src/BSDSocket.cpp \
 	src/Builtins.cpp \
 	src/Buffer.cpp \
 	src/CmdArgs.cpp \
@@ -81,21 +80,10 @@ liboobase_la_SOURCES = \
 	src/Once.cpp \
 	src/Posix.cpp \
 	src/ScratchAllocator.cpp \
-	src/Server.cpp \
 	src/Thread.cpp \
 	src/Timeout.cpp \
 	src/TLS.cpp \
 	src/tr24731.cpp \
 	src/utf8.cpp \
 	src/Win32.cpp \
-	src/Win32Pipe.cpp \
-	src/Win32Debugger.cpp \
-	src/Win32Security.cpp \
-	src/Win32Socket.cpp	\
-	src/Proactor.cpp \
-	src/ProactorPosix.cpp \
-	src/ProactorPosixSocket.cpp \
-	src/ProactorPoll.cpp \
-	src/ProactorWin32.cpp \
-	src/ProactorWin32Pipe.cpp \
-	src/ProactorWin32Socket.cpp
+	src/Win32Debugger.cpp
