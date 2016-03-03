@@ -152,12 +152,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ArenaAllocator.cpp" />
-    <ClCompile Include="BSDSocket.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="Buffer.cpp" />
     <ClCompile Include="Builtins.cpp" />
     <ClCompile Include="CmdArgs.cpp" />
@@ -182,30 +176,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="Proactor.cpp" />
-    <ClCompile Include="ProactorPoll.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="ProactorPosix.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="ProactorPosixSocket.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="ProactorWin32.cpp" />
-    <ClCompile Include="ProactorWin32Pipe.cpp" />
-    <ClCompile Include="ProactorWin32Socket.cpp" />
     <ClCompile Include="ScratchAllocator.cpp" />
-    <ClCompile Include="Server.cpp" />
     <ClCompile Include="Thread.cpp" />
     <ClCompile Include="Timeout.cpp" />
     <ClCompile Include="TLS.cpp" />
@@ -213,9 +184,7 @@
     <ClCompile Include="utf8.cpp" />
     <ClCompile Include="Win32.cpp" />
     <ClCompile Include="Win32Debugger.cpp" />
-    <ClCompile Include="Win32Pipe.cpp" />
     <ClCompile Include="Win32Security.cpp" />
-    <ClCompile Include="Win32Socket.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\OOBase\ArenaAllocator.h" />
@@ -225,7 +194,6 @@
     <ClInclude Include="..\include\OOBase\BoundedQueue.h" />
     <ClInclude Include="..\include\OOBase\BTree.h" />
     <ClInclude Include="..\include\OOBase\Cache.h" />
-    <ClInclude Include="..\include\OOBase\CDRIO.h" />
     <ClInclude Include="..\include\OOBase\CmdArgs.h" />
     <ClInclude Include="..\include\OOBase\ConfigFile.h" />
     <ClInclude Include="..\include\OOBase\Delegate.h" />
@@ -234,10 +202,8 @@
     <ClInclude Include="..\include\OOBase\Iterator.h" />
     <ClInclude Include="..\include\OOBase\List.h" />
     <ClInclude Include="..\include\OOBase\Logger.h" />
-    <ClInclude Include="..\include\OOBase\Proactor.h" />
     <ClInclude Include="..\include\OOBase\RefCount.h" />
     <ClInclude Include="..\include\OOBase\ScopedArrayPtr.h" />
-    <ClInclude Include="..\include\OOBase\Server.h" />
     <ClInclude Include="..\include\OOBase\Set.h" />
     <ClInclude Include="..\include\OOBase\SharedPtr.h" />
     <ClInclude Include="..\include\OOBase\SignalSlot.h" />
@@ -246,10 +212,8 @@
     <ClInclude Include="..\include\OOBase\UniquePtr.h" />
     <ClInclude Include="..\include\OOBase\Vector.h" />
     <ClInclude Include="..\include\OOBase\Win32Security.h" />
-    <ClInclude Include="BSDSocket.h" />
     <ClInclude Include="..\include\OOBase\Buffer.h" />
     <ClInclude Include="..\include\OOBase\ByteSwap.h" />
-    <ClInclude Include="..\include\OOBase\CDRStream.h" />
     <ClInclude Include="..\include\OOBase\Condition.h" />
     <ClInclude Include="..\include\OOBase\Destructor.h" />
     <ClInclude Include="..\include\OOBase\DLL.h" />
@@ -260,7 +224,6 @@
     <ClInclude Include="..\include\OOBase\Posix.h" />
     <ClInclude Include="..\include\OOBase\Queue.h" />
     <ClInclude Include="..\include\OOBase\Singleton.h" />
-    <ClInclude Include="..\include\OOBase\Socket.h" />
     <ClInclude Include="..\include\OOBase\String.h" />
     <ClInclude Include="..\include\OOBase\Table.h" />
     <ClInclude Include="..\include\OOBase\Thread.h" />
@@ -269,11 +232,7 @@
     <ClInclude Include="..\include\OOBase\utf8.h" />
     <ClInclude Include="..\include\OOBase\Win32.h" />
     <ClInclude Include="config-base.h" />
-    <ClInclude Include="ProactorPoll.h" />
-    <ClInclude Include="ProactorPosix.h" />
-    <ClInclude Include="ProactorWin32.h" />
     <ClInclude Include="Win32Impl.h" />
-    <ClInclude Include="Win32Socket.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
