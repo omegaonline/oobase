@@ -93,6 +93,12 @@ void OOBase::Mutex::acquire()
 
 bool OOBase::Mutex::acquire(const Timeout& timeout)
 {
+	if (timeout.is_infinite())
+	{
+		acquire();
+		return true;
+	}
+
 	DWORD dwWait = WaitForSingleObject(m_mutex,timeout.millisecs());
 	if (dwWait == WAIT_TIMEOUT)
 		return false;
@@ -258,20 +264,19 @@ void OOBase::Mutex::acquire()
 
 bool OOBase::Mutex::acquire(const Timeout& timeout)
 {
+	if (timeout.is_infinite())
+	{
+		acquire();
+		return true;
+	}
+
 	timespec wait;
 	timeout.get_abs_timespec(wait);
 
-	int err = 0;
-
-	// Don't wait more than a year!
-	if (wait.tv_sec >= 31557600)
-		err = pthread_mutex_lock(&m_mutex);
-	else
-	{
-		err = pthread_mutex_timedlock(&m_mutex,&wait);
-		if (err == ETIMEDOUT)
-			return false;
-	}
+	int err = pthread_mutex_timedlock(&m_mutex,&wait);
+	if (err == ETIMEDOUT)
+		return false;
+	
 	if (err)
 		OOBase_CallCriticalFailure(err);
 	return true;
