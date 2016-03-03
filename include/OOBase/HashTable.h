@@ -130,10 +130,10 @@ namespace OOBase
 	};
 
 #if defined(OOBASE_STRING_H_INCLUDED_)
-	template <>
-	struct Hash<String>
+	template <typename A>
+	struct Hash<SharedString<A> >
 	{
-		static size_t hash(const String& v)
+		static size_t hash(const SharedString<A>& v)
 		{
 			return Hash<const char*>::hash(v.c_str());
 		}
