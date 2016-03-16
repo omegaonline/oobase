@@ -152,7 +152,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ArenaAllocator.cpp" />
-    <ClCompile Include="Buffer.cpp" />
     <ClCompile Include="Builtins.cpp" />
     <ClCompile Include="CmdArgs.cpp" />
     <ClCompile Include="Condition.cpp" />
@@ -202,7 +201,6 @@
     <ClInclude Include="..\include\OOBase\Iterator.h" />
     <ClInclude Include="..\include\OOBase\List.h" />
     <ClInclude Include="..\include\OOBase\Logger.h" />
-    <ClInclude Include="..\include\OOBase\RefCount.h" />
     <ClInclude Include="..\include\OOBase\ScopedArrayPtr.h" />
     <ClInclude Include="..\include\OOBase\Set.h" />
     <ClInclude Include="..\include\OOBase\SharedPtr.h" />
@@ -212,7 +210,6 @@
     <ClInclude Include="..\include\OOBase\UniquePtr.h" />
     <ClInclude Include="..\include\OOBase\Vector.h" />
     <ClInclude Include="..\include\OOBase\Win32Security.h" />
-    <ClInclude Include="..\include\OOBase\Buffer.h" />
     <ClInclude Include="..\include\OOBase\ByteSwap.h" />
     <ClInclude Include="..\include\OOBase\Condition.h" />
     <ClInclude Include="..\include\OOBase\Destructor.h" />
