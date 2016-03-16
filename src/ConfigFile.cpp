@@ -20,7 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/ConfigFile.h"
-#include "../include/OOBase/Buffer.h"
+#include "../include/OOBase/String.h"
 #include "../include/OOBase/StackAllocator.h"
 #include "../include/OOBase/File.h"
 #include "../include/OOBase/Posix.h"
@@ -28,21 +28,21 @@
 
 namespace
 {
-	bool whitespace(const OOBase::uint8_t c)
+	bool whitespace(char c)
 	{
 		return (c == ' ' || c == '\r' || c == '\n' || c == '\t');
 	}
 
-	bool comment(const OOBase::uint8_t c)
+	bool comment(char c)
 	{
 		return (c == '#');
 	}
 
-	int parse_section(const OOBase::uint8_t* key_start, const OOBase::uint8_t* end, OOBase::String& strSection, OOBase::ConfigFile::error_pos_t* error_pos)
+	int parse_section(const char* key_start, const char* end, OOBase::String& strSection, OOBase::ConfigFile::error_pos_t* error_pos)
 	{
-		// Check for closing ] (And whitespace or comments in the section name)
-		const OOBase::uint8_t* key_end = key_start + 1;
-		while (key_end < end && *key_end != ']' && !comment(*key_end) && !whitespace(*key_end))
+		// Check for closing ]
+		const char* key_end = key_start + 1;
+		while (key_end < end && *key_end != ']' && *key_end > 31 && *key_end < 127)
 			++key_end;
 
 		if (*key_end != ']')
@@ -54,7 +54,7 @@ namespace
 		}
 
 		// Check for trailing nonsense
-		const OOBase::uint8_t* p = key_end + 1;
+		const char* p = key_end + 1;
 		while (p < end && whitespace(*p))
 			++p;
 
@@ -69,8 +69,8 @@ namespace
 		// Update the section name, [] clears it...
 		if (key_end != key_start + 1)
 		{
-			if (!strSection.assign((const char*)(key_start+1),key_end - key_start - 1))
-				return ERROR_OUTOFMEMORY;
+			if (!strSection.assign((key_start+1),key_end - key_start - 1))
+				return OOBase::system_error();
 		}
 		else
 			strSection.clear();
@@ -78,14 +78,14 @@ namespace
 		return 0;
 	}
 
-	int parse_line(const OOBase::uint8_t* key_start, const OOBase::uint8_t* end, const OOBase::String& strSection, OOBase::ConfigFile::results_t& results, OOBase::ConfigFile::error_pos_t* error_pos)
+	int parse_line(const char* key_start, const char* end, const OOBase::String& strSection, OOBase::ConfigFile::results_t& results, OOBase::ConfigFile::error_pos_t* error_pos)
 	{
 		// Check for = (and whitespace or comments)
-		const OOBase::uint8_t* key_end = key_start;
+		const char* key_end = key_start;
 		while (key_end < end && *key_end != '=' && !comment(*key_end) && !whitespace(*key_end))
 			++key_end;
 
-		const OOBase::uint8_t* value_start = NULL;
+		const char* value_start = NULL;
 		if (key_end < end && whitespace(*key_end))
 		{
 			// Skip whitespace after key up to =
@@ -120,10 +120,10 @@ namespace
 
 		OOBase::String strKey = strSection;
 		if (!strKey.empty() && !strKey.append("/",1))
-			return ERROR_OUTOFMEMORY;
+			return OOBase::system_error();
 
 		if (!strKey.append((const char*)key_start,key_end - key_start))
-			return ERROR_OUTOFMEMORY;
+			return OOBase::system_error();
 
 		OOBase::String strValue;
 		if (value_start)
@@ -133,33 +133,33 @@ namespace
 				++value_start;
 
 			// Search for the end of the value...
-			const OOBase::uint8_t* value_end = value_start;
+			const char* value_end = value_start;
 			while (value_end < end && !comment(*value_end))
 				++value_end;
 
 			if (value_end > value_start)
 			{
 				if (!strValue.assign((const char*)value_start,value_end - value_start))
-					return ERROR_OUTOFMEMORY;
+					return OOBase::system_error();
 			}
 		}
 
 		OOBase::ConfigFile::results_t::iterator i = results.find(strKey);
 		if (!i)
-			return results.insert(strKey,strValue) ? 0 : ERROR_OUTOFMEMORY;
+			return results.insert(strKey,strValue) ? 0 : OOBase::system_error();
 
 		i->second = strValue;
 		return 0;
 	}
 
-	int parse_text(OOBase::RefPtr<OOBase::Buffer>& buffer, OOBase::String& strSection, OOBase::ConfigFile::results_t& results, OOBase::ConfigFile::error_pos_t* error_pos)
+	int parse_text(OOBase::SharedString<OOBase::ThreadLocalAllocator>& buffer, OOBase::String& strSection, OOBase::ConfigFile::results_t& results, OOBase::ConfigFile::error_pos_t* error_pos)
 	{
 		// Split into lines...
-		while (buffer->length() > 0)
+		while (buffer.length() > 0)
 		{
-			const OOBase::uint8_t* start = buffer->rd_ptr();
-			const OOBase::uint8_t* end = start + buffer->length();
-			const OOBase::uint8_t* p = start;
+			const char* start = buffer.c_str();
+			const char* end = start + buffer.length();
+			const char* p = start;
 
 			// Skip leading whitespace
 			while (p < end && whitespace(*p))
@@ -178,7 +178,7 @@ namespace
 			}
 
 			// Find the next LF
-			const OOBase::uint8_t* key_start = p;
+			const char* key_start = p;
 			while (p < end && *p != '\n')
 				++p;
 
@@ -187,7 +187,9 @@ namespace
 				// Incomplete line
 
 				// Move rd_ptr to the start of the key, ready for next parse
-				buffer->rd_ptr(key_start - start);
+				if (!buffer.assign(key_start,end - key_start))
+					return OOBase::system_error();
+
 				break;
 			}
 
@@ -211,7 +213,8 @@ namespace
 			}
 
 			// Move rd_ptr to the next line
-			buffer->rd_ptr(end - start);
+			if (!buffer.assign(end))
+				return OOBase::system_error();
 
 			// Update error counter
 			if (error_pos)
@@ -238,26 +241,23 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 	if (err)
 		return err;
 
-	static const size_t s_read_block_size = 400;
-
-	OOBase::StackAllocator<512> allocator;
-	RefPtr<Buffer> buffer = Buffer::create(allocator,s_read_block_size,1);
-	if (!buffer)
-		return ERROR_OUTOFMEMORY;
-
+	SharedString<ThreadLocalAllocator> buffer;
 	String strSection;
 	for (;;)
 	{
-		size_t r = file.read(buffer,err);
+		char buf[1024];
+		size_t r = file.read(buf,sizeof(buf));
 		if (err)
 			return err;
 
 		if (r == 0)
 		{
 			// Add a trailing /n
-			*buffer->wr_ptr() = '\n';
-			buffer->wr_ptr(1);
+			if (!buffer.append('\n'))
+				return OOBase::system_error();
 		}
+		else if (!buffer.append(buf,r))
+			return OOBase::system_error();
 		
 		err = parse_text(buffer,strSection,results,error_pos);
 		if (err)
@@ -265,14 +265,6 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 
 		if (r == 0)
 			return 0;
-
-		// Compact before reading again...
-		buffer->compact();
-
-		// And ensure we have at least s_read_block_size bytes of room
-		err = buffer->space(s_read_block_size);
-		if (err)
-			return err;
 	}
 }
 
@@ -334,7 +326,7 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 		{
 			if (!wszKey.resize(dwValLen/sizeof(wchar_t)))
 			{
-				lRes = ERROR_OUTOFMEMORY;
+				lRes = system_error();
 				break;
 			}
 
@@ -357,7 +349,7 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 
 					if (!ptrEnv.resize(dwNewLen + 1))
 					{
-						lRes = ERROR_OUTOFMEMORY;
+						lRes = system_error();
 						break;
 					}
 				}
@@ -383,7 +375,7 @@ int OOBase::ConfigFile::load_registry(HKEY hRootKey, const char* key_name, resul
 			{
 				if (!results.insert(key,value))
 				{
-					lRes = ERROR_OUTOFMEMORY;
+					lRes = system_error();
 					break;
 				}
 			}

@@ -66,7 +66,6 @@ endif
 liboobase_la_SOURCES = \
 	src/ArenaAllocator.cpp \
 	src/Builtins.cpp \
-	src/Buffer.cpp \
 	src/CmdArgs.cpp \
 	src/Condition.cpp \
 	src/ConfigFile.cpp \

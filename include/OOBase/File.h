@@ -22,7 +22,6 @@
 #ifndef OOBASE_FILE_H_INCLUDED_
 #define OOBASE_FILE_H_INCLUDED_
 
-#include "Buffer.h"
 #include "Win32.h"
 #include "Posix.h"
 
@@ -37,10 +36,7 @@ namespace OOBase
 		int open(const char* filename, bool writeable = false);
 
 		size_t read(void* p, size_t size);
-		size_t read(const RefPtr<Buffer>& buffer, int& err, size_t len = 0);
-
 		size_t write(const void* p, size_t size);
-		int write(const RefPtr<Buffer>& buffer, size_t len = 0);
 
 		enum seek_direction
 		{

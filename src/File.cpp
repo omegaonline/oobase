@@ -91,32 +91,6 @@ size_t OOBase::File::read(void* p, size_t size)
 #endif
 }
 
-size_t OOBase::File::read(const RefPtr<Buffer>& buffer, int& err, size_t len)
-{
-	if (!buffer)
-	{
-		err = EINVAL;
-		return size_t(-1);
-	}
-
-	if (!len)
-		len = buffer->space();
-
-	size_t r = read(buffer->wr_ptr(),len);
-	if (r == size_t(-1))
-	{
-#if defined(_WIN32)
-		err = ::GetLastError();
-#elif defined(HAVE_UNISTD_H)
-		err = errno;
-#endif
-	}
-	else
-		buffer->wr_ptr(r);
-
-	return r;
-}
-
 size_t OOBase::File::write(const void* p, size_t size)
 {
 #if defined(_WIN32)
@@ -135,28 +109,6 @@ size_t OOBase::File::write(const void* p, size_t size)
 #elif defined(HAVE_UNISTD_H)
 	return POSIX::write(m_fd,p,size);
 #endif
-}
-
-int OOBase::File::write(const RefPtr<Buffer>& buffer, size_t len)
-{
-	if (!buffer)
-		return EINVAL;
-
-	if (!len)
-		len = buffer->length();
-
-	size_t w = write(buffer->rd_ptr(),len);
-	if (w == size_t(-1))
-	{
-#if defined(_WIN32)
-		return ::GetLastError();
-#elif defined(HAVE_UNISTD_H)
-		return errno;
-#endif
-	}
-		
-	buffer->rd_ptr(w);
-	return 0;
 }
 
 OOBase::uint64_t OOBase::File::seek(int64_t offset, enum seek_direction dir)
