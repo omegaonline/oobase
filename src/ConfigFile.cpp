@@ -28,201 +28,141 @@
 
 namespace
 {
-	bool whitespace(char c)
+	int invalid_parameter()
+	{
+	#if defined(_WIN32)
+		return ERROR_INVALID_PARAMETER;
+	#else
+		return EINVAL;
+	#endif
+	}
+
+	bool is_whitespace(char c)
 	{
 		return (c == ' ' || c == '\r' || c == '\n' || c == '\t');
 	}
 
-	bool comment(char c)
+	const char*& inc_p(const char*& p, OOBase::ConfigFile::error_pos_t* error_pos)
 	{
-		return (c == '#');
+		if (error_pos && *++p == '\n')
+		{
+			++error_pos->line;
+			error_pos->col = 1;
+		}
+		return p;
 	}
 
-	int parse_section(const char* key_start, const char* end, OOBase::String& strSection, OOBase::ConfigFile::error_pos_t* error_pos)
+	void skip_to(char to, const char*& p, const char* pe, OOBase::ConfigFile::error_pos_t* error_pos)
 	{
-		// Check for closing ]
-		const char* key_end = key_start + 1;
-		while (key_end < end && *key_end != ']' && *key_end > 31 && *key_end < 127)
-			++key_end;
+		while (p != pe && *p != to)
+			inc_p(p,error_pos);
 
-		if (*key_end != ']')
+		if (p != pe)
+			inc_p(p,error_pos);
+	}
+
+	void skip_whitespace(const char*& p, const char* pe, OOBase::ConfigFile::error_pos_t* error_pos)
+	{
+		for (;p != pe;inc_p(p,error_pos))
 		{
-			if (error_pos)
-				error_pos->col += (key_end - key_start);
+			if (*p == '#' || *p == ';')
+			{
+				// Comment, skip to \n
+				skip_to('\n',inc_p(p,error_pos),pe,error_pos);
+			}
 
-			return EINVAL;
+			if (!is_whitespace(*p))
+				break;
 		}
+	}
 
-		// Check for trailing nonsense
-		const char* p = key_end + 1;
-		while (p < end && whitespace(*p))
-			++p;
-
-		if (p < end && !comment(*p))
+	const char* ident(const char*& p, const char* pe, OOBase::ConfigFile::error_pos_t* error_pos)
+	{
+		for (;p != pe;inc_p(p,error_pos))
 		{
-			if (error_pos)
-				error_pos->col += (p - key_start);
-
-			return EINVAL;
+			if (!strchr("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_",*p))
+				break;
 		}
+		return p;
+	}
 
-		// Update the section name, [] clears it...
-		if (key_end != key_start + 1)
-		{
-			if (!strSection.assign((key_start+1),key_end - key_start - 1))
-				return OOBase::system_error();
-		}
-		else
-			strSection.clear();
+	int parse_section(const char*& p, const char* pe, OOBase::String& section, OOBase::ConfigFile::error_pos_t* error_pos)
+	{
+		skip_whitespace(p,pe,error_pos);
+		if (p == pe)
+			return invalid_parameter();
+
+		const char* start = p;
+		const char* end = ident(p,pe,error_pos);
+		if (start == end)
+			return invalid_parameter();
+
+		skip_whitespace(p,pe,error_pos);
+		if (p == pe || *p != ']')
+			return invalid_parameter();
+		inc_p(p,error_pos);
+
+		if (!section.assign(start,end-start))
+			return OOBase::system_error();
 
 		return 0;
 	}
 
-	int parse_line(const char* key_start, const char* end, const OOBase::String& strSection, OOBase::ConfigFile::results_t& results, OOBase::ConfigFile::error_pos_t* error_pos)
+	int parse_entry(const char*& p, const char* pe, const OOBase::String& section, OOBase::ConfigFile::results_t& results, OOBase::ConfigFile::error_pos_t* error_pos)
 	{
-		// Check for = (and whitespace or comments)
-		const char* key_end = key_start;
-		while (key_end < end && *key_end != '=' && !comment(*key_end) && !whitespace(*key_end))
-			++key_end;
+		const char* start = p;
+		const char* end = ident(p,pe,error_pos);
+		if (start == end)
+			return invalid_parameter();
 
-		const char* value_start = NULL;
-		if (key_end < end && whitespace(*key_end))
-		{
-			// Skip whitespace after key up to =
-			value_start = key_end + 1;
-			while (value_start < end && whitespace(*value_start))
-				++value_start;
-
-			if (value_start == end || comment(*value_start))
-			{
-				value_start = NULL;
-			}
-			else if (*value_start == '=')
-			{
-				++value_start;
-			}
-			else
-			{
-				if (error_pos)
-					error_pos->col += (value_start - key_start);
-
-				return EINVAL;
-			}
-		}
-		else if (*key_end == '=')
-		{
-			value_start = key_end + 1;
-		}
-		else if (key_start == key_end)
-		{
-			return 0;
-		}
-
-		OOBase::String strKey = strSection;
-		if (!strKey.empty() && !strKey.append("/",1))
+		OOBase::String key(section);
+		if (!key.empty() && !key.append('\\'))
 			return OOBase::system_error();
 
-		if (!strKey.append((const char*)key_start,key_end - key_start))
+		if (!key.append(start,end - start))
 			return OOBase::system_error();
 
-		OOBase::String strValue;
-		if (value_start)
+		skip_whitespace(p,pe,error_pos);
+		if (p == pe || *p != '=')
+			return invalid_parameter();
+		inc_p(p,error_pos);
+
+		start = p;
+		for (;p != pe;inc_p(p,error_pos))
 		{
-			// Skip leading whitespace before value
-			while (value_start < end && whitespace(*value_start))
-				++value_start;
-
-			// Search for the end of the value...
-			const char* value_end = value_start;
-			while (value_end < end && !comment(*value_end))
-				++value_end;
-
-			if (value_end > value_start)
+			if (*p == '\n')
+				break;
+			if (p != (pe-1) && *p == '\r' && p[1] == '\n')
 			{
-				if (!strValue.assign((const char*)value_start,value_end - value_start))
-					return OOBase::system_error();
-			}
-		}
-
-		OOBase::ConfigFile::results_t::iterator i = results.find(strKey);
-		if (!i)
-			return results.insert(strKey,strValue) ? 0 : OOBase::system_error();
-
-		i->second = strValue;
-		return 0;
-	}
-
-	int parse_text(OOBase::SharedString<OOBase::ThreadLocalAllocator>& buffer, OOBase::String& strSection, OOBase::ConfigFile::results_t& results, OOBase::ConfigFile::error_pos_t* error_pos)
-	{
-		// Split into lines...
-		while (buffer.length() > 0)
-		{
-			const char* start = buffer.c_str();
-			const char* end = start + buffer.length();
-			const char* p = start;
-
-			// Skip leading whitespace
-			while (p < end && whitespace(*p))
-			{
-				if (error_pos)
-				{
-					if (*p == '\n')
-					{
-						++error_pos->line;
-						error_pos->col = 1;
-					}
-					else
-						++error_pos->col;
-				}
-				++p;
-			}
-
-			// Find the next LF
-			const char* key_start = p;
-			while (p < end && *p != '\n')
-				++p;
-
-			if (*p != '\n')
-			{
-				// Incomplete line
-
-				// Move rd_ptr to the start of the key, ready for next parse
-				if (!buffer.assign(key_start,end - key_start))
-					return OOBase::system_error();
-
+				inc_p(p,error_pos);
 				break;
 			}
+		}
+		end = p;
 
-			// Mark end of current line
-			end = p + 1;
-
-			// Trim trailing whitespace
-			while (p > key_start && whitespace(*p))
-				--p;
-
-			if (p > key_start)
+		OOBase::String value;
+		const char* q = start;
+		for (;q < end;++q)
+		{
+			if (*q == '\\' && q != (end-1))
 			{
-				int err = 0;
-				if (*key_start == '[')
-					err = parse_section(key_start,p+1,strSection,error_pos);
-				else
-					err = parse_line(key_start,p+1,strSection,results,error_pos);
+				if (q > start && !value.append(start,q - start))
+					return OOBase::system_error();
 
-				if (err)
-					return err;
-			}
+				if (q[1] == 'r' && !value.append('\r'))
+					return OOBase::system_error();
+				else if (q[1] == 'n' && !value.append('\n'))
+					return OOBase::system_error();
 
-			// Move rd_ptr to the next line
-			if (!buffer.assign(end))
-				return OOBase::system_error();
-
-			// Update error counter
-			if (error_pos)
-			{
-				++error_pos->line;
-				error_pos->col = 1;
+				start = q + 1;
 			}
 		}
+
+		if (q > start && !value.append(start,q - start))
+			return OOBase::system_error();
+
+		if (!results.insert(key,value))
+			return OOBase::system_error();
 
 		return 0;
 	}
@@ -237,35 +177,38 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 	}
 
 	File file;
-	int err = file.open(filename);
+	int err = file.open(filename,false);
 	if (err)
 		return err;
 
-	SharedString<ThreadLocalAllocator> buffer;
-	String strSection;
-	for (;;)
+	uint64_t len = file.length();
+	if (len == 0)
+		return 0;
+
+	if (len > size_t(-1))
+		return invalid_parameter();
+
+	SharedPtr<const char> data = file.auto_map<const char>(File::map_read);
+	if (!data)
+		return system_error();
+
+	const char* p = data.get();
+	const char* pe = p + file.length();
+
+	OOBase::String section;
+	while (!err && p != pe)
 	{
-		char buf[1024];
-		size_t r = file.read(buf,sizeof(buf));
-		if (err)
-			return err;
+		skip_whitespace(p,pe,error_pos);
+		if (p == pe)
+			break;
 
-		if (r == 0)
-		{
-			// Add a trailing /n
-			if (!buffer.append('\n'))
-				return OOBase::system_error();
-		}
-		else if (!buffer.append(buf,r))
-			return OOBase::system_error();
-		
-		err = parse_text(buffer,strSection,results,error_pos);
-		if (err)
-			return err;
-
-		if (r == 0)
-			return 0;
+		if (*p == '[')
+			err = parse_section(inc_p(p,error_pos),pe,section,error_pos);
+		else
+			err = parse_entry(p,pe,section,results,error_pos);
 	}
+
+	return err;
 }
 
 #if defined(_WIN32)

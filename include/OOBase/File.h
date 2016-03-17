@@ -33,7 +33,7 @@ namespace OOBase
 		File();
 		~File();
 
-		int open(const char* filename, bool writeable = false);
+		int open(const char* filename, bool writeable);
 
 		size_t read(void* p, size_t size);
 		size_t write(const void* p, size_t size);
@@ -49,6 +49,24 @@ namespace OOBase
 
 		uint64_t length() const;
 
+		enum map_flags
+		{
+			map_read = 1,
+			map_write = 2,
+			map_exec = 4,
+			map_shared = 8,
+			map_private = 0,
+		};
+
+		void* map(unsigned int flags, uint64_t offset, size_t& length);
+		bool unmap(void* p, size_t length);
+
+		template <typename T>
+		SharedPtr<T> auto_map(unsigned int flags, uint64_t offset = 0, size_t length = -1)
+		{
+			return reinterpret_pointer_cast<T,char>(auto_map_i(flags,offset,length));
+		}
+
 	private:
 #if defined(_WIN32)
 		Win32::SmartHandle m_fd;
@@ -57,6 +75,7 @@ namespace OOBase
 #else
 		#error Implement platform native file handling
 #endif
+		SharedPtr<char> auto_map_i(unsigned int flags, uint64_t offset, size_t length);
 	};
 }
 

@@ -24,7 +24,39 @@
 
 #if defined(HAVE_UNISTD_H)
 #include <sys/stat.h>
+#include <sys/mman.h>
 #endif
+
+namespace
+{
+	class FileMapping : public OOBase::detail::SharedCountBase
+	{
+	public:
+		FileMapping(OOBase::File* file, void* map, size_t length) :
+			OOBase::detail::SharedCountBase(), m_file(file), m_map(map), m_length(length)
+		{
+		}
+
+		void dispose();
+		void destroy();
+
+	private:
+		OOBase::File* m_file;
+		void* m_map;
+		size_t m_length;
+	};
+}
+
+void FileMapping::dispose()
+{
+	// Unmap the buffer
+	m_file->unmap(m_map,m_length);
+}
+
+void FileMapping::destroy()
+{
+	OOBase::CrtAllocator::delete_free(this);
+}
 
 OOBase::File::File()
 {
@@ -190,4 +222,89 @@ OOBase::uint64_t OOBase::File::length() const
 
 	return s.st_size;
 #endif
+}
+
+void* OOBase::File::map(unsigned int flags, uint64_t offset, size_t& length)
+{
+	uint64_t file_len = this->length();
+	if (offset >= file_len)
+	{
+#if defined(_WIN32)
+		SetLastError(ERROR_INVALID_PARAMETER);
+#else
+		errno = EINVAL;
+#endif
+		return NULL;
+	}
+
+	if (length > file_len)
+		length = file_len;
+
+	if (file_len - length > offset)
+		length = file_len - offset;
+
+#if defined(_WIN32)
+#error TODO!!
+#elif defined(HAVE_UNISTD_H)
+	int prot = 0;
+	if (flags & map_read)
+		prot |= PROT_READ;
+	if (flags & map_write)
+		prot |= PROT_WRITE;
+	if (flags & map_exec)
+		prot |= PROT_EXEC;
+
+	int mflags = (flags & map_shared) ? MAP_SHARED : MAP_PRIVATE;
+
+	uint64_t pa_offset = offset & ~(sysconf(_SC_PAGE_SIZE) - 1);
+	size_t lead = (offset - pa_offset);
+
+	void* p = mmap(NULL,length + lead,prot,mflags,m_fd,pa_offset);
+	if (p == MAP_FAILED)
+		return NULL;
+
+	return static_cast<void*>(static_cast<char*>(p) - lead);
+#else
+#error Implement memory mapping for your platform
+#endif
+}
+
+bool OOBase::File::unmap(void* p, size_t length)
+{
+#if defined(_WIN32)
+#error TODO!!
+#elif defined(HAVE_UNISTD_H)
+	uint64_t u_p = reinterpret_cast<uint64_t>(p);
+	uint64_t u_pa = u_p & ~(sysconf(_SC_PAGE_SIZE) - 1);
+	size_t lead = u_p - u_pa;
+
+	return (munmap(reinterpret_cast<void*>(u_pa),length + lead) != -1);
+
+#else
+#error Implement memory mapping for your platform
+#endif
+}
+
+OOBase::SharedPtr<char> OOBase::File::auto_map_i(unsigned int flags, uint64_t offset, size_t length)
+{
+	if (length == size_t(-1))
+		length = this->length();
+
+	OOBase::SharedPtr<char> ret;
+	void* m = map(flags,offset,length);
+	if (m)
+	{
+		FileMapping* fm = NULL;
+		if (OOBase::CrtAllocator::allocate_new(fm,this,m,length))
+		{
+			ret = OOBase::make_shared(reinterpret_cast<char*>(m),fm);
+			if (!ret)
+				OOBase::CrtAllocator::delete_free(fm);
+		}
+
+		if (!ret)
+			unmap(m,length);
+	}
+
+	return ret;
 }
