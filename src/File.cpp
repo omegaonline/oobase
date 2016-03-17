@@ -240,7 +240,7 @@ void* OOBase::File::map(unsigned int flags, uint64_t offset, size_t& length)
 	if (length > file_len)
 		length = file_len;
 
-	if (file_len - length > offset)
+	if (file_len - offset < length)
 		length = file_len - offset;
 
 #if defined(_WIN32)
@@ -263,7 +263,7 @@ void* OOBase::File::map(unsigned int flags, uint64_t offset, size_t& length)
 	if (p == MAP_FAILED)
 		return NULL;
 
-	return static_cast<void*>(static_cast<char*>(p) - lead);
+	return static_cast<void*>(static_cast<char*>(p) + lead);
 #else
 #error Implement memory mapping for your platform
 #endif
