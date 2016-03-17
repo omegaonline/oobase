@@ -45,6 +45,20 @@ namespace
 		void* m_map;
 		size_t m_length;
 	};
+
+	OOBase::uint64_t page_size_mask()
+	{
+		static OOBase::uint64_t s_page_size_mask = 0;
+		if (!s_page_size_mask)
+		{
+#if defined(_WIN32)
+#error TODO!
+#else
+			s_page_size_mask = ~(sysconf(_SC_PAGE_SIZE) - 1);
+#endif
+		}
+		return s_page_size_mask;
+	}
 }
 
 void FileMapping::dispose()
@@ -256,7 +270,7 @@ void* OOBase::File::map(unsigned int flags, uint64_t offset, size_t& length)
 
 	int mflags = (flags & map_shared) ? MAP_SHARED : MAP_PRIVATE;
 
-	uint64_t pa_offset = offset & ~(sysconf(_SC_PAGE_SIZE) - 1);
+	uint64_t pa_offset = offset & page_size_mask();
 	size_t lead = (offset - pa_offset);
 
 	void* p = mmap(NULL,length + lead,prot,mflags,m_fd,pa_offset);
@@ -275,7 +289,7 @@ bool OOBase::File::unmap(void* p, size_t length)
 #error TODO!!
 #elif defined(HAVE_UNISTD_H)
 	uint64_t u_p = reinterpret_cast<uint64_t>(p);
-	uint64_t u_pa = u_p & ~(sysconf(_SC_PAGE_SIZE) - 1);
+	uint64_t u_pa = u_p & page_size_mask();
 	size_t lead = u_p - u_pa;
 
 	return (munmap(reinterpret_cast<void*>(u_pa),length + lead) != -1);
