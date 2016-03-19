@@ -188,7 +188,7 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 	if (len > size_t(-1))
 		return invalid_parameter();
 
-	SharedPtr<const char> data = file.auto_map<const char>(File::map_read);
+	SharedPtr<const char> data = file.auto_map<const char>(false);
 	if (!data)
 		return system_error();
 

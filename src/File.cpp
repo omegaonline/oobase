@@ -52,7 +52,9 @@ namespace
 		if (!s_page_size_mask)
 		{
 #if defined(_WIN32)
-#error TODO!
+			SYSTEM_INFO si = {0};
+			GetSystemInfo(&si);
+			s_page_size_mask = ~(si.dwAllocationGranularity - 1);
 #else
 			s_page_size_mask = ~(sysconf(_SC_PAGE_SIZE) - 1);
 #endif
@@ -238,7 +240,7 @@ OOBase::uint64_t OOBase::File::length() const
 #endif
 }
 
-void* OOBase::File::map(unsigned int flags, uint64_t offset, size_t& length)
+void* OOBase::File::map(bool writeable, uint64_t offset, size_t& length)
 {
 	uint64_t file_len = this->length();
 	if (offset >= file_len)
@@ -257,41 +259,51 @@ void* OOBase::File::map(unsigned int flags, uint64_t offset, size_t& length)
 	if (file_len - offset < length)
 		length = file_len - offset;
 
-#if defined(_WIN32)
-#error TODO!!
-#elif defined(HAVE_UNISTD_H)
-	int prot = 0;
-	if (flags & map_read)
-		prot |= PROT_READ;
-	if (flags & map_write)
-		prot |= PROT_WRITE;
-	if (flags & map_exec)
-		prot |= PROT_EXEC;
-
-	int mflags = (flags & map_shared) ? MAP_SHARED : MAP_PRIVATE;
-
 	uint64_t pa_offset = offset & page_size_mask();
 	size_t lead = (offset - pa_offset);
 
-	void* p = mmap(NULL,length + lead,prot,mflags,m_fd,pa_offset);
+#if defined(_WIN32)
+	if (!m_mapping.valid())
+	{
+		m_mapping = ::CreateFileMapping(m_fd,NULL,writeable ? PAGE_READWRITE : PAGE_READONLY,0,0,NULL);
+		if (!m_mapping.valid())
+			return NULL;
+	}
+
+	 ULARGE_INTEGER ul;
+	 ul.QuadPart = pa_offset;
+	 void* p = ::MapViewOfFile(m_mapping,writeable ? FILE_MAP_WRITE : FILE_MAP_READ,ul.HighPart,ul.LowPart,length + lead);
+	 if (!p)
+		 return NULL;
+
+#elif defined(HAVE_UNISTD_H)
+	int prot = PROT_READ;
+	if (writeable)
+		prot |= PROT_WRITE;
+	
+	void* p = mmap(NULL,length + lead,prot,MAP_PRIVATE,m_fd,pa_offset);
 	if (p == MAP_FAILED)
 		return NULL;
-
-	return static_cast<void*>(static_cast<char*>(p) + lead);
 #else
 #error Implement memory mapping for your platform
 #endif
+
+	return static_cast<void*>(static_cast<char*>(p) + lead);
 }
 
 bool OOBase::File::unmap(void* p, size_t length)
 {
-#if defined(_WIN32)
-#error TODO!!
-#elif defined(HAVE_UNISTD_H)
 	uint64_t u_p = reinterpret_cast<uint64_t>(p);
 	uint64_t u_pa = u_p & page_size_mask();
-	size_t lead = u_p - u_pa;
+	
+#if defined(_WIN32)
+	
+	(void)length;
+	return UnmapViewOfFile(reinterpret_cast<void*>(u_pa)) == TRUE;
 
+#elif defined(HAVE_UNISTD_H)
+	
+	size_t lead = u_p - u_pa;
 	return (munmap(reinterpret_cast<void*>(u_pa),length + lead) != -1);
 
 #else
@@ -299,13 +311,13 @@ bool OOBase::File::unmap(void* p, size_t length)
 #endif
 }
 
-OOBase::SharedPtr<char> OOBase::File::auto_map_i(unsigned int flags, uint64_t offset, size_t length)
+OOBase::SharedPtr<char> OOBase::File::auto_map_i(bool writeable, uint64_t offset, size_t length)
 {
 	if (length == size_t(-1))
 		length = this->length();
 
 	OOBase::SharedPtr<char> ret;
-	void* m = map(flags,offset,length);
+	void* m = map(writeable,offset,length);
 	if (m)
 	{
 		FileMapping* fm = NULL;

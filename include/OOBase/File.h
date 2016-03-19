@@ -49,33 +49,25 @@ namespace OOBase
 
 		uint64_t length() const;
 
-		enum map_flags
-		{
-			map_read = 1,
-			map_write = 2,
-			map_exec = 4,
-			map_shared = 8,
-			map_private = 0,
-		};
-
-		void* map(unsigned int flags, uint64_t offset, size_t& length);
+		void* map(bool writeable, uint64_t offset, size_t& length);
 		bool unmap(void* p, size_t length);
 
 		template <typename T>
-		SharedPtr<T> auto_map(unsigned int flags, uint64_t offset = 0, size_t length = -1)
+		SharedPtr<T> auto_map(bool writeable = false, uint64_t offset = 0, size_t length = -1)
 		{
-			return reinterpret_pointer_cast<T,char>(auto_map_i(flags,offset,length));
+			return reinterpret_pointer_cast<T,char>(auto_map_i(writeable,offset,length));
 		}
 
 	private:
 #if defined(_WIN32)
 		Win32::SmartHandle m_fd;
+		Win32::SmartHandle m_mapping;
 #elif defined(HAVE_UNISTD_H)
 		POSIX::SmartFD m_fd;
 #else
 		#error Implement platform native file handling
 #endif
-		SharedPtr<char> auto_map_i(unsigned int flags, uint64_t offset, size_t length);
+		SharedPtr<char> auto_map_i(bool writeable, uint64_t offset, size_t length);
 	};
 }
 
