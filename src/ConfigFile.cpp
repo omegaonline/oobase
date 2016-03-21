@@ -56,15 +56,6 @@ namespace
 		return p;
 	}
 
-	void skip_to(char to, const char*& p, const char* pe, OOBase::ConfigFile::error_pos_t* error_pos)
-	{
-		while (p != pe && *p != to)
-			inc_p(p,pe,error_pos);
-
-		if (p != pe)
-			inc_p(p,pe,error_pos);
-	}
-
 	void skip_whitespace(const char*& p, const char* pe, OOBase::ConfigFile::error_pos_t* error_pos)
 	{
 		for (;p != pe;inc_p(p,pe,error_pos))
@@ -72,10 +63,10 @@ namespace
 			if (*p == '#' || *p == ';')
 			{
 				// Comment, skip to \n
-				skip_to('\n',inc_p(p,pe,error_pos),pe,error_pos);
+				while (p != pe && *p != '\n')
+					inc_p(p,pe,error_pos);
 			}
-
-			if (!is_whitespace(*p))
+			else if (!is_whitespace(*p))
 				break;
 		}
 	}
