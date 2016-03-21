@@ -42,33 +42,37 @@ namespace
 		return (c == ' ' || c == '\r' || c == '\n' || c == '\t');
 	}
 
-	const char*& inc_p(const char*& p, OOBase::ConfigFile::error_pos_t* error_pos)
+	const char*& inc_p(const char*& p, const char* pe, OOBase::ConfigFile::error_pos_t* error_pos)
 	{
-		if (error_pos && *++p == '\n')
+		if (p != pe)
+			++p;
+
+		if (error_pos && p != pe && *p == '\n')
 		{
 			++error_pos->line;
 			error_pos->col = 1;
 		}
+
 		return p;
 	}
 
 	void skip_to(char to, const char*& p, const char* pe, OOBase::ConfigFile::error_pos_t* error_pos)
 	{
 		while (p != pe && *p != to)
-			inc_p(p,error_pos);
+			inc_p(p,pe,error_pos);
 
 		if (p != pe)
-			inc_p(p,error_pos);
+			inc_p(p,pe,error_pos);
 	}
 
 	void skip_whitespace(const char*& p, const char* pe, OOBase::ConfigFile::error_pos_t* error_pos)
 	{
-		for (;p != pe;inc_p(p,error_pos))
+		for (;p != pe;inc_p(p,pe,error_pos))
 		{
 			if (*p == '#' || *p == ';')
 			{
 				// Comment, skip to \n
-				skip_to('\n',inc_p(p,error_pos),pe,error_pos);
+				skip_to('\n',inc_p(p,pe,error_pos),pe,error_pos);
 			}
 
 			if (!is_whitespace(*p))
@@ -78,9 +82,9 @@ namespace
 
 	const char* ident(const char*& p, const char* pe, OOBase::ConfigFile::error_pos_t* error_pos)
 	{
-		for (;p != pe;inc_p(p,error_pos))
+		for (;p != pe;inc_p(p,pe,error_pos))
 		{
-			if (!strchr("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_",*p))
+			if (*p < 'A' || (*p > 'Z' && *p < '_') || (*p > '_' && *p < 'a') || *p > 'z')
 				break;
 		}
 		return p;
@@ -100,7 +104,7 @@ namespace
 		skip_whitespace(p,pe,error_pos);
 		if (p == pe || *p != ']')
 			return invalid_parameter();
-		inc_p(p,error_pos);
+		inc_p(p,pe,error_pos);
 
 		if (!section.assign(start,end-start))
 			return OOBase::system_error();
@@ -125,26 +129,34 @@ namespace
 		skip_whitespace(p,pe,error_pos);
 		if (p == pe || *p != '=')
 			return invalid_parameter();
-		inc_p(p,error_pos);
+		inc_p(p,pe,error_pos);
 
 		start = p;
-		for (;p != pe;inc_p(p,error_pos))
+		for (;p != pe;inc_p(p,pe,error_pos))
 		{
 			if (*p == '\n')
 				break;
-			if (p != (pe-1) && *p == '\r' && p[1] == '\n')
+
+			if (*p == '\r' && p != (pe-1) && p[1] == '\n')
 			{
-				inc_p(p,error_pos);
+				inc_p(p,pe,error_pos);
 				break;
+			}
+			else if (*p == '\\')
+			{
+				if (p == (pe-1) || (p[1] != 'n' && p[1] != 'r' && p[1] != '\\'))
+					return invalid_parameter();
+				inc_p(p,pe,error_pos);
 			}
 		}
 		end = p;
+		inc_p(p,pe,error_pos);
 
 		OOBase::String value;
 		const char* q = start;
 		for (;q < end;++q)
 		{
-			if (*q == '\\' && q != (end-1))
+			if (*q == '\\')
 			{
 				if (q > start && !value.append(start,q - start))
 					return OOBase::system_error();
@@ -152,6 +164,8 @@ namespace
 				if (q[1] == 'r' && !value.append('\r'))
 					return OOBase::system_error();
 				else if (q[1] == 'n' && !value.append('\n'))
+					return OOBase::system_error();
+				else if (q[1] == '\\' && !value.append('\\'))
 					return OOBase::system_error();
 
 				start = q + 1;
@@ -203,7 +217,7 @@ int OOBase::ConfigFile::load(const char* filename, results_t& results, error_pos
 			break;
 
 		if (*p == '[')
-			err = parse_section(inc_p(p,error_pos),pe,section,error_pos);
+			err = parse_section(inc_p(p,pe,error_pos),pe,section,error_pos);
 		else
 			err = parse_entry(p,pe,section,results,error_pos);
 	}
