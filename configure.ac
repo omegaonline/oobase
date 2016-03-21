@@ -1,7 +1,7 @@
 AC_PREREQ(2.61)
 
 AC_INIT(OOBase,0.6.0)
-AC_CONFIG_SRCDIR([src/Buffer.cpp])
+AC_CONFIG_SRCDIR([src/Memory.cpp])
 AC_CONFIG_HEADERS([autoheader_dummy.h include/oobase-platform.h src/oobase-config.h])
 
 AC_CONFIG_AUX_DIR([build-aux])
