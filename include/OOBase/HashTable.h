@@ -43,7 +43,7 @@ namespace OOBase
 			size_t r = reinterpret_cast<size_t>(v);
 
 			// Because pointers are commonly aligned
-			return (r >> 4) | (r << (sizeof(size_t)*8 -4));
+			return (r >> 16) | (r << (sizeof(size_t)*8 -16));
 		}
 	};
 
@@ -91,20 +91,11 @@ namespace OOBase
 	template <>
 	struct Hash<char*>
 	{
-		static size_t hash(const char* c)
+		static size_t hash(const char* c, size_t len = size_t(-1))
 		{
-			size_t hash = detail::FNV<sizeof(size_t)>::offset_bias;
-			do
-			{
-				hash ^= static_cast<unsigned char>(*c);
-				detail::FNV<sizeof(size_t)>::hash(hash);
-			}
-			while (*c++ != '\0');
-			return hash;
-		}
+			if (len == size_t(-1))
+				len = strlen(c);
 
-		static size_t hash(const char* c, size_t len)
-		{
 			size_t hash = detail::FNV<sizeof(size_t)>::offset_bias;
 			for (size_t i=0;i<len;++i)
 			{
@@ -113,29 +104,46 @@ namespace OOBase
 			}
 			return hash;
 		}
+
+#if defined(OOBASE_STRING_H_INCLUDED_)
+		template <typename S>
+		static size_t hash(const S& v)
+		{
+			return hash(v.c_str(),v.length());
+		}
+#endif
 	};
 
 	template <>
 	struct Hash<const char*>
 	{
-		static size_t hash(const char* c)
-		{
-			return Hash<char*>::hash(c);
-		}
-
-		static size_t hash(const char* c, size_t len)
+		static size_t hash(const char* c, size_t len = size_t(-1))
 		{
 			return Hash<char*>::hash(c,len);
 		}
+
+#if defined(OOBASE_STRING_H_INCLUDED_)
+		template <typename S>
+		static size_t hash(const S& v)
+		{
+			return hash(v.c_str(),v.length());
+		}
+#endif
 	};
 
 #if defined(OOBASE_STRING_H_INCLUDED_)
 	template <typename A>
 	struct Hash<SharedString<A> >
 	{
-		static size_t hash(const SharedString<A>& v)
+		template <typename S>
+		static size_t hash(const S& v)
 		{
-			return Hash<const char*>::hash(v.c_str());
+			return Hash<const char*>::hash(v.c_str(),v.length());
+		}
+
+		static size_t hash(const char* c, size_t len = size_t(-1))
+		{
+			return Hash<const char*>::hash(c,len);
 		}
 	};
 #endif
@@ -268,17 +276,20 @@ namespace OOBase
 			return insert(item.first,item.second);
 		}
 
-		bool exists(const K& key) const
+		template <typename K1>
+		bool exists(const K1& key) const
 		{
 			return (find_i(key) < m_size);
 		}
 
-		const_iterator find(const K& key) const
+		template <typename K1>
+		const_iterator find(const K1& key) const
 		{
 			return const_iterator(this,find_i(key));
 		}
 
-		iterator find(const K& key)
+		template <typename K1>
+		iterator find(const K1& key)
 		{
 			return iterator(this,find_i(key));
 		}
@@ -419,7 +430,8 @@ namespace OOBase
 				m_data[i].m_hash = 0;
 		}
 
-		size_t hash_i(const K& key) const
+		template <typename K1>
+		size_t hash_i(const K1& key) const
 		{
 			size_t h = m_hash.hash(key);
 
@@ -454,7 +466,8 @@ namespace OOBase
 			return (pos + m_size - (hash & (m_size-1))) & (m_size-1);
 		}
 
-		size_t find_i(const K& key) const
+		template <typename K1>
+		size_t find_i(const K1& key) const
 		{
 			if (m_count == 0)
 				return size_t(-1);
