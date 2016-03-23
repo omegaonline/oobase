@@ -373,6 +373,14 @@ namespace OOBase
 			return !m_ptr ? NULL : m_ptr->c_str();
 		}
 
+		operator ScopedStringImpl<Allocator>& ()
+		{
+			if (!m_ptr && !(m_ptr = new_node()))
+				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+
+			return *m_ptr;
+		}
+
 		char operator [](ptrdiff_t i) const
 		{
 			return m_ptr->operator [](i);
