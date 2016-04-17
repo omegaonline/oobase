@@ -10,6 +10,13 @@ AC_CONFIG_FILES([Makefile])
 
 AM_INIT_AUTOMAKE([foreign 1.10 no-define subdir-objects])
 
+dnl disable unnecessary compiler checks
+AC_DEFUN([AC_PROG_F77], [:])
+AC_DEFUN([AC_PROG_FC], [:])
+AC_DEFUN([AC_PROG_OBJC], [:])
+AC_DEFUN([AC_PROG_OBJCCPP], [:])
+AC_DEFUN([AC_LIBTOOL_F77], [:])
+
 # Use the latest short output macro if available
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
