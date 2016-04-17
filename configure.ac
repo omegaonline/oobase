@@ -33,6 +33,9 @@ AM_CONDITIONAL([DEBUG], [test "x$debug" = "xtrue"])
 OO_PROG_CC
 OO_PROG_CXX
 
+# Check if we can use compiler caching
+FUMA_AX_CCACHE
+
 # Check the multi-threading flags
 AS_CASE([$host_os],
 	[mingw*],[PTHREAD_CFLAGS=-mthreads AC_SUBST(PTHREAD_LIBS) AC_SUBST(PTHREAD_CFLAGS)],
