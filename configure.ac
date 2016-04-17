@@ -106,7 +106,7 @@ AS_IF([test "x$debug" = "xtrue"],[CPPFLAGS="$CPPFLAGS -D_DEBUG"],[CPPFLAGS="$CPP
 OO_C_BUILTINS
 
 # Check for the headers we use
-AC_CHECK_HEADERS([stdint.h windows.h asl.h syslog.h unistd.h sys/socket.h])
+AC_CHECK_HEADERS([stdint.h windows.h asl.h syslog.h unistd.h sys/socket.h malloc.h])
 AC_CHECK_FUNCS([pipe2 accept4])
 
 # Set up libtool correctly
