@@ -10,6 +10,13 @@ AC_CONFIG_FILES([Makefile])
 
 AM_INIT_AUTOMAKE([foreign 1.10 no-define subdir-objects])
 
+dnl disable unnecessary compiler checks
+AC_DEFUN([AC_PROG_F77], [:])
+AC_DEFUN([AC_PROG_FC], [:])
+AC_DEFUN([AC_PROG_OBJC], [:])
+AC_DEFUN([AC_PROG_OBJCCPP], [:])
+AC_DEFUN([AC_LIBTOOL_F77], [:])
+
 # Use the latest short output macro if available
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
@@ -32,6 +39,9 @@ AM_CONDITIONAL([DEBUG], [test "x$debug" = "xtrue"])
 
 OO_PROG_CC
 OO_PROG_CXX
+
+# Check if we can use compiler caching
+FUMA_AX_CCACHE
 
 # Check the multi-threading flags
 AS_CASE([$host_os],
@@ -96,7 +106,7 @@ AS_IF([test "x$debug" = "xtrue"],[CPPFLAGS="$CPPFLAGS -D_DEBUG"],[CPPFLAGS="$CPP
 OO_C_BUILTINS
 
 # Check for the headers we use
-AC_CHECK_HEADERS([stdint.h windows.h asl.h syslog.h unistd.h sys/socket.h])
+AC_CHECK_HEADERS([stdint.h windows.h asl.h syslog.h unistd.h sys/socket.h malloc.h])
 AC_CHECK_FUNCS([pipe2 accept4])
 
 # Set up libtool correctly
