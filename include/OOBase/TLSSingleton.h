@@ -39,7 +39,7 @@ namespace OOBase
 		static T* instance_ptr()
 		{
 			void* inst = NULL;
-			if (!TLS::Get(&init,&inst))
+			if (!TLS::Get(reinterpret_cast<void*>(&init),&inst))
 				inst = init();
 
 			return static_cast<T*>(inst);
@@ -63,7 +63,7 @@ namespace OOBase
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
 			// Add destructor before calling constructor
-			if (!TLS::Set(&init,t,&destroy))
+			if (!TLS::Set(reinterpret_cast<void*>(&init),t,&destroy))
 			{
 				ThreadLocalAllocator::free(t);
 				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
