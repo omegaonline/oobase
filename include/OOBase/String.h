@@ -327,16 +327,28 @@ namespace OOBase
 			return compare(rhs.c_str());
 		}
 
+		template <typename A2>
+		int compare(const SharedString<A2>& rhs) const
+		{
+			return compare(rhs.c_str());
+		}
+
+		template <typename A2>
+		int compare(const ScopedStringImpl<A2>& rhs) const
+		{
+			return (m_ptr ? m_ptr->compare(rhs) : compare(rhs.c_str()));
+		}
+
 		bool assign(const char* sz, size_t len = npos)
 		{
-			node_t ptr = new_node();
-			if (!ptr)
-				return false;
+			if (sz && len)
+			{
+				node_t ptr = new_node();
+				if (!ptr || !ptr->assign(sz,len))
+					return false;
 
-			if (sz && len && !ptr->assign(sz,len))
-				return false;
-
-			m_ptr.swap(ptr);
+				m_ptr.swap(ptr);
+			}
 			return true;
 		}
 
@@ -383,7 +395,7 @@ namespace OOBase
 
 		char operator [](ptrdiff_t i) const
 		{
-			return m_ptr->operator [](i);
+			return !m_ptr ? 0 : m_ptr->operator [](i);
 		}
 
 		bool empty() const
