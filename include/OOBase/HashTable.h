@@ -105,13 +105,11 @@ namespace OOBase
 			return hash;
 		}
 
-#if defined(OOBASE_STRING_H_INCLUDED_)
 		template <typename S>
 		static size_t hash(const S& v)
 		{
 			return hash(v.c_str(),v.length());
 		}
-#endif
 	};
 
 	template <>
@@ -122,13 +120,11 @@ namespace OOBase
 			return Hash<char*>::hash(c,len);
 		}
 
-#if defined(OOBASE_STRING_H_INCLUDED_)
 		template <typename S>
 		static size_t hash(const S& v)
 		{
 			return hash(v.c_str(),v.length());
 		}
-#endif
 	};
 
 #if defined(OOBASE_STRING_H_INCLUDED_)
