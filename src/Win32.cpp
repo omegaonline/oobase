@@ -780,8 +780,11 @@ void OOBase::Win32::condition_variable_t::broadcast()
 int OOBase::Win32::detail::wchar_t_to_utf8(const wchar_t* wsz, char* sz, int& len)
 {
 	int len2 = WideCharToMultiByte(CP_UTF8,0,wsz,-1,sz,len,NULL,NULL);
-	if (len2 <= 0 && GetLastError() != ERROR_INSUFFICIENT_BUFFER)
-		return GetLastError();
+	if (len2 <= 0)
+	{
+		if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
+			return GetLastError();
+	}
 	else if (len2 < len)
 		return 0;
 
@@ -792,8 +795,11 @@ int OOBase::Win32::detail::wchar_t_to_utf8(const wchar_t* wsz, char* sz, int& le
 int OOBase::Win32::detail::utf8_to_wchar_t(const char* sz, wchar_t* wsz, int& len)
 {
 	int len2 = MultiByteToWideChar(CP_UTF8,0,sz,-1,wsz,len);
-	if (len2 <= 0 && GetLastError() != ERROR_INSUFFICIENT_BUFFER)
-		return GetLastError();
+	if (len2 <= 0)
+	{
+		if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
+			return GetLastError();
+	}
 	else if (len2 < len)
 		return 0;
 	
