@@ -126,22 +126,27 @@ namespace
 		for (;p != pe;inc_p(p,pe,error_pos))
 		{
 			if (*p == '\n')
-				break;
-
-			if (*p == '\r' && p != (pe-1) && p[1] == '\n')
 			{
+				end = p;
 				inc_p(p,pe,error_pos);
 				break;
 			}
-			else if (*p == '\\')
+
+			if (*p == '\r' && p != (pe-1) && p[1] == '\n')
+			{
+				end = p;
+				inc_p(p,pe,error_pos);
+				inc_p(p,pe,error_pos);
+				break;
+			}
+			
+			if (*p == '\\')
 			{
 				if (p == (pe-1) || (p[1] != 'n' && p[1] != 'r' && p[1] != '\\'))
 					return invalid_parameter();
 				inc_p(p,pe,error_pos);
 			}
-		}
-		end = p;
-		inc_p(p,pe,error_pos);
+		}		
 
 		OOBase::String value;
 		const char* q = start;
@@ -159,7 +164,7 @@ namespace
 				else if (q[1] == '\\' && !value.append('\\'))
 					return OOBase::system_error();
 
-				start = q + 1;
+				start = ++q + 1;
 			}
 		}
 
