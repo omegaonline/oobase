@@ -37,17 +37,25 @@ namespace OOBase
 			{
 			   typedef T1 type;
 			};
-#if defined(_MSC_VER)
+
 			friend typename friend_helper<Container>::type;
-#else
-			friend class friend_helper<Container>::type;
-#endif
+			friend typename Container::const_iterator;
+			friend typename Container::iterator;
 
 		public:
-			IteratorImpl(const IteratorImpl& rhs) : m_cont(rhs.m_cont), m_pos(rhs.m_pos)
+			IteratorImpl(const typename Container::const_iterator& rhs) : m_cont(rhs.m_cont), m_pos(rhs.m_pos)
 			{}
 
-			IteratorImpl& operator = (const IteratorImpl& rhs)
+			IteratorImpl(const typename Container::iterator& rhs) : m_cont(rhs.m_cont), m_pos(rhs.m_pos)
+			{}
+
+			IteratorImpl& operator = (const typename Container::const_iterator& rhs)
+			{
+				IteratorImpl(rhs).swap(*this);
+				return *this;
+			}
+
+			IteratorImpl& operator = (const typename Container::iterator& rhs)
 			{
 				IteratorImpl(rhs).swap(*this);
 				return *this;
