@@ -476,30 +476,6 @@ namespace OOBase
 				return this->m_data;
 			}
 
-			T& front()
-			{
-				assert(baseClass::at(0));
-				return *baseClass::at(0);
-			}
-
-			const_reference front() const
-			{
-				assert(baseClass::at(0));
-				return *baseClass::at(0);
-			}
-
-			T& back()
-			{
-				assert(baseClass::at(this->m_size-1));
-				return *baseClass::at(this->m_size-1);
-			}
-
-			const_reference back() const
-			{
-				assert(baseClass::at(this->m_size-1));
-				return *baseClass::at(this->m_size-1);
-			}
-
 			bool push_back(const T& value)
 			{
 				return baseClass::insert_at(this->m_size,value);
@@ -572,7 +548,7 @@ namespace OOBase
 			return baseClass::reserve(n);
 		}
 
-		T* data()
+		pointer data()
 		{
 			return baseClass::data();
 		}
@@ -580,26 +556,6 @@ namespace OOBase
 		const_pointer data() const
 		{
 			return baseClass::data();
-		}
-
-		T& front()
-		{
-			return baseClass::front();
-		}
-
-		const_reference front() const
-		{
-			return baseClass::front();
-		}
-
-		T& back()
-		{
-			return baseClass::back();
-		}
-
-		const_reference back() const
-		{
-			return baseClass::back();
 		}
 
 		bool resize(size_t new_size, const T& value)
@@ -665,7 +621,7 @@ namespace OOBase
 			return iterator(this,baseClass::remove_at(first,count));
 		}
 
-		size_t erase(const T& value)
+		size_t remove(const T& value)
 		{
 			size_t ret = 0;
 			for (size_t pos = 0;pos < this->m_size;)
@@ -732,6 +688,16 @@ namespace OOBase
 		const_iterator begin() const
 		{
 			return cbegin();
+		}
+
+		iterator back()
+		{
+			return (this->m_size ? iterator(this,this->m_size-1) : m_end);
+		}
+
+		const_iterator back() const
+		{
+			return (this->m_size ? const_iterator(this,this->m_size-1) : m_cend);
 		}
 
 		const iterator& end()

@@ -125,7 +125,7 @@ bool Logger::disconnect(void (*callback)(void* param, const ::timeval& t, OOBase
 {
 	OOBase::Guard<OOBase::Mutex> guard(m_lock);
 
-	return m_vecOutputs.erase(OutputShim(callback,param)) > 0;
+	return m_vecOutputs.remove(OutputShim(callback,param)) > 0;
 }
 
 void Logger::log(OOBase::Logger::Priority priority, const char* msg)
