@@ -12,20 +12,6 @@ astyle:
 	astyle -A1 -T4 -K -N -w -U -c -n -R $(srcdir)/*.h
 	astyle -A1 -T4 -K -N -w -U -c -n -R $(srcdir)/*.inl
 	astyle -A1 -T4 -K -N -w -U -c -n -R $(srcdir)/*.cpp
-
-reallyclean: maintainer-clean
-	rm -f $(srcdir)/Makefile.in
-	rm -f $(srcdir)/aclocal.m4
-	rm -f $(srcdir)/configure
-	rm -f $(srcdir)/autoheader_dummy.h.in
-	rm -f $(srcdir)/autoheader_dummy.h.in~
-	rm -f $(srcdir)/m4/argz.m4
-	rm -f $(srcdir)/m4/libtool.m4
-	rm -f $(srcdir)/m4/ltdl.m4
-	rm -f $(srcdir)/m4/ltoptions.m4
-	rm -f $(srcdir)/m4/ltsugar.m4
-	rm -f $(srcdir)/m4/ltversion.m4
-	rm -f $(srcdir)/m4/lt~obsolete.m4
 	
 ####################################
 # Hook to make the ChangeLog
@@ -53,9 +39,6 @@ liboobase_la_LDFLAGS = $(PTHREAD_LIBS)
 
 if WIN32
 liboobase_la_CPPFLAGS = -D_WIN32_WINNT=0x0502
-endif
-
-if WIN32
 liboobase_la_LIBADD = -lws2_32 -lnetapi32 -luserenv -lshlwapi
 else
 liboobase_la_CFLAGS += $(LTDLINCL)

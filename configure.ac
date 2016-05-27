@@ -113,7 +113,7 @@ AC_CHECK_FUNCS([pipe2 accept4])
 m4_ifdef([LT_PREREQ],,[AC_MSG_ERROR([Need libtool version 2.2.6 or later])])
 LT_PREREQ([2.2.6])
 LT_CONFIG_LTDL_DIR([libltdl])
-LT_INIT([dlopen static disable-shared])
+LT_INIT([static disable-shared])
 LTDL_INIT
 
 AC_OUTPUT
