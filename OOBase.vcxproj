@@ -151,83 +151,83 @@
     <Lib />
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ArenaAllocator.cpp" />
-    <ClCompile Include="Builtins.cpp" />
-    <ClCompile Include="CmdArgs.cpp" />
-    <ClCompile Include="Condition.cpp" />
-    <ClCompile Include="ConfigFile.cpp" />
-    <ClCompile Include="DLL.cpp" />
-    <ClCompile Include="Environment.cpp" />
-    <ClCompile Include="Error.cpp" />
-    <ClCompile Include="File.cpp" />
-    <ClCompile Include="Logger.cpp" />
-    <ClCompile Include="Memory.cpp">
+    <ClCompile Include="src\ArenaAllocator.cpp" />
+    <ClCompile Include="src\Builtins.cpp" />
+    <ClCompile Include="src\CmdArgs.cpp" />
+    <ClCompile Include="src\Condition.cpp" />
+    <ClCompile Include="src\ConfigFile.cpp" />
+    <ClCompile Include="src\DLL.cpp" />
+    <ClCompile Include="src\Environment.cpp" />
+    <ClCompile Include="src\Error.cpp" />
+    <ClCompile Include="src\File.cpp" />
+    <ClCompile Include="src\Logger.cpp" />
+    <ClCompile Include="src\Memory.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="Mutex.cpp" />
-    <ClCompile Include="Once.cpp" />
-    <ClCompile Include="Posix.cpp">
+    <ClCompile Include="src\Mutex.cpp" />
+    <ClCompile Include="src\Once.cpp" />
+    <ClCompile Include="src\Posix.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="ScratchAllocator.cpp" />
-    <ClCompile Include="Thread.cpp" />
-    <ClCompile Include="Timeout.cpp" />
-    <ClCompile Include="TLS.cpp" />
-    <ClCompile Include="tr24731.cpp" />
-    <ClCompile Include="utf8.cpp" />
-    <ClCompile Include="Win32.cpp" />
-    <ClCompile Include="Win32Debugger.cpp" />
-    <ClCompile Include="Win32Security.cpp" />
+    <ClCompile Include="src\ScratchAllocator.cpp" />
+    <ClCompile Include="src\Thread.cpp" />
+    <ClCompile Include="src\Timeout.cpp" />
+    <ClCompile Include="src\TLS.cpp" />
+    <ClCompile Include="src\tr24731.cpp" />
+    <ClCompile Include="src\utf8.cpp" />
+    <ClCompile Include="src\Win32.cpp" />
+    <ClCompile Include="src\Win32Debugger.cpp" />
+    <ClCompile Include="src\Win32Security.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\OOBase\ArenaAllocator.h" />
-    <ClInclude Include="..\include\OOBase\AsyncResponse.h" />
-    <ClInclude Include="..\include\OOBase\Atomic.h" />
-    <ClInclude Include="..\include\OOBase\Base.h" />
-    <ClInclude Include="..\include\OOBase\BoundedQueue.h" />
-    <ClInclude Include="..\include\OOBase\BTree.h" />
-    <ClInclude Include="..\include\OOBase\Cache.h" />
-    <ClInclude Include="..\include\OOBase\CmdArgs.h" />
-    <ClInclude Include="..\include\OOBase\ConfigFile.h" />
-    <ClInclude Include="..\include\OOBase\Delegate.h" />
-    <ClInclude Include="..\include\OOBase\Environment.h" />
-    <ClInclude Include="..\include\OOBase\File.h" />
-    <ClInclude Include="..\include\OOBase\Iterator.h" />
-    <ClInclude Include="..\include\OOBase\List.h" />
-    <ClInclude Include="..\include\OOBase\Logger.h" />
-    <ClInclude Include="..\include\OOBase\ScopedArrayPtr.h" />
-    <ClInclude Include="..\include\OOBase\Set.h" />
-    <ClInclude Include="..\include\OOBase\SharedPtr.h" />
-    <ClInclude Include="..\include\OOBase\SignalSlot.h" />
-    <ClInclude Include="..\include\OOBase\StackAllocator.h" />
-    <ClInclude Include="..\include\OOBase\tr24731.h" />
-    <ClInclude Include="..\include\OOBase\UniquePtr.h" />
-    <ClInclude Include="..\include\OOBase\Vector.h" />
-    <ClInclude Include="..\include\OOBase\Win32Security.h" />
-    <ClInclude Include="..\include\OOBase\ByteSwap.h" />
-    <ClInclude Include="..\include\OOBase\Condition.h" />
-    <ClInclude Include="..\include\OOBase\Destructor.h" />
-    <ClInclude Include="..\include\OOBase\DLL.h" />
-    <ClInclude Include="..\include\OOBase\HashTable.h" />
-    <ClInclude Include="..\include\OOBase\Memory.h" />
-    <ClInclude Include="..\include\OOBase\Mutex.h" />
-    <ClInclude Include="..\include\OOBase\Once.h" />
-    <ClInclude Include="..\include\OOBase\Posix.h" />
-    <ClInclude Include="..\include\OOBase\Queue.h" />
-    <ClInclude Include="..\include\OOBase\Singleton.h" />
-    <ClInclude Include="..\include\OOBase\String.h" />
-    <ClInclude Include="..\include\OOBase\Table.h" />
-    <ClInclude Include="..\include\OOBase\Thread.h" />
-    <ClInclude Include="..\include\OOBase\Timeout.h" />
-    <ClInclude Include="..\include\OOBase\TLSSingleton.h" />
-    <ClInclude Include="..\include\OOBase\utf8.h" />
-    <ClInclude Include="..\include\OOBase\Win32.h" />
+    <ClInclude Include="include\OOBase\ArenaAllocator.h" />
+    <ClInclude Include="include\OOBase\AsyncResponse.h" />
+    <ClInclude Include="include\OOBase\Atomic.h" />
+    <ClInclude Include="include\OOBase\Base.h" />
+    <ClInclude Include="include\OOBase\BoundedQueue.h" />
+    <ClInclude Include="include\OOBase\BTree.h" />
+    <ClInclude Include="include\OOBase\Cache.h" />
+    <ClInclude Include="include\OOBase\CmdArgs.h" />
+    <ClInclude Include="include\OOBase\ConfigFile.h" />
+    <ClInclude Include="include\OOBase\Delegate.h" />
+    <ClInclude Include="include\OOBase\Environment.h" />
+    <ClInclude Include="include\OOBase\File.h" />
+    <ClInclude Include="include\OOBase\Iterator.h" />
+    <ClInclude Include="include\OOBase\List.h" />
+    <ClInclude Include="include\OOBase\Logger.h" />
+    <ClInclude Include="include\OOBase\ScopedArrayPtr.h" />
+    <ClInclude Include="include\OOBase\Set.h" />
+    <ClInclude Include="include\OOBase\SharedPtr.h" />
+    <ClInclude Include="include\OOBase\SignalSlot.h" />
+    <ClInclude Include="include\OOBase\StackAllocator.h" />
+    <ClInclude Include="include\OOBase\tr24731.h" />
+    <ClInclude Include="include\OOBase\UniquePtr.h" />
+    <ClInclude Include="include\OOBase\Vector.h" />
+    <ClInclude Include="include\OOBase\Win32Security.h" />
+    <ClInclude Include="include\OOBase\ByteSwap.h" />
+    <ClInclude Include="include\OOBase\Condition.h" />
+    <ClInclude Include="include\OOBase\Destructor.h" />
+    <ClInclude Include="include\OOBase\DLL.h" />
+    <ClInclude Include="include\OOBase\HashTable.h" />
+    <ClInclude Include="include\OOBase\Memory.h" />
+    <ClInclude Include="include\OOBase\Mutex.h" />
+    <ClInclude Include="include\OOBase\Once.h" />
+    <ClInclude Include="include\OOBase\Posix.h" />
+    <ClInclude Include="include\OOBase\Queue.h" />
+    <ClInclude Include="include\OOBase\Singleton.h" />
+    <ClInclude Include="include\OOBase\String.h" />
+    <ClInclude Include="include\OOBase\Table.h" />
+    <ClInclude Include="include\OOBase\Thread.h" />
+    <ClInclude Include="include\OOBase\Timeout.h" />
+    <ClInclude Include="include\OOBase\TLSSingleton.h" />
+    <ClInclude Include="include\OOBase\utf8.h" />
+    <ClInclude Include="include\OOBase\Win32.h" />
     <ClInclude Include="config-base.h" />
     <ClInclude Include="Win32Impl.h" />
   </ItemGroup>

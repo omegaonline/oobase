@@ -1,207 +1,207 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="Condition.cpp">
+    <ClCompile Include="src\Condition.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DLL.cpp">
+    <ClCompile Include="src\DLL.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Error.cpp">
+    <ClCompile Include="src\Error.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Mutex.cpp">
+    <ClCompile Include="src\Mutex.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Once.cpp">
+    <ClCompile Include="src\Once.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Thread.cpp">
+    <ClCompile Include="src\Thread.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TLS.cpp">
+    <ClCompile Include="src\TLS.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="utf8.cpp">
+    <ClCompile Include="src\utf8.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Win32.cpp">
+    <ClCompile Include="src\Win32.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CmdArgs.cpp">
+    <ClCompile Include="src\CmdArgs.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Logger.cpp">
+    <ClCompile Include="src\Logger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="tr24731.cpp">
+    <ClCompile Include="src\tr24731.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Timeout.cpp">
+    <ClCompile Include="src\Timeout.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Environment.cpp">
+    <ClCompile Include="src\Environment.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ConfigFile.cpp">
+    <ClCompile Include="src\ConfigFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ArenaAllocator.cpp">
+    <ClCompile Include="src\ArenaAllocator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Win32Debugger.cpp">
+    <ClCompile Include="src\Win32Debugger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Win32Security.cpp">
+    <ClCompile Include="src\Win32Security.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ScratchAllocator.cpp">
+    <ClCompile Include="src\ScratchAllocator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Builtins.cpp">
+    <ClCompile Include="src\Builtins.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="File.cpp">
+    <ClCompile Include="src\File.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Memory.cpp">
+    <ClCompile Include="src\Memory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Posix.cpp">
+    <ClCompile Include="src\Posix.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\OOBase\Atomic.h">
+    <ClInclude Include="include\OOBase\Atomic.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\BoundedQueue.h">
+    <ClInclude Include="include\OOBase\BoundedQueue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\ByteSwap.h">
+    <ClInclude Include="include\OOBase\ByteSwap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Cache.h">
+    <ClInclude Include="include\OOBase\Cache.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Condition.h">
+    <ClInclude Include="include\OOBase\Condition.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Destructor.h">
+    <ClInclude Include="include\OOBase\Destructor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\DLL.h">
+    <ClInclude Include="include\OOBase\DLL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\HashTable.h">
+    <ClInclude Include="include\OOBase\HashTable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Memory.h">
+    <ClInclude Include="include\OOBase\Memory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Mutex.h">
+    <ClInclude Include="include\OOBase\Mutex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Once.h">
+    <ClInclude Include="include\OOBase\Once.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Posix.h">
+    <ClInclude Include="include\OOBase\Posix.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Queue.h">
+    <ClInclude Include="include\OOBase\Queue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Singleton.h">
+    <ClInclude Include="include\OOBase\Singleton.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\String.h">
+    <ClInclude Include="include\OOBase\String.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Table.h">
+    <ClInclude Include="include\OOBase\Table.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Thread.h">
+    <ClInclude Include="include\OOBase\Thread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\TLSSingleton.h">
+    <ClInclude Include="include\OOBase\TLSSingleton.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\utf8.h">
+    <ClInclude Include="include\OOBase\utf8.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Win32.h">
+    <ClInclude Include="include\OOBase\Win32.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\CmdArgs.h">
+    <ClInclude Include="include\OOBase\CmdArgs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Logger.h">
+    <ClInclude Include="include\OOBase\Logger.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Set.h">
+    <ClInclude Include="include\OOBase\Set.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Timeout.h">
+    <ClInclude Include="include\OOBase\Timeout.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Environment.h">
+    <ClInclude Include="include\OOBase\Environment.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\ConfigFile.h">
+    <ClInclude Include="include\OOBase\ConfigFile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\StackAllocator.h">
+    <ClInclude Include="include\OOBase\StackAllocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\ArenaAllocator.h">
+    <ClInclude Include="include\OOBase\ArenaAllocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Win32Security.h">
+    <ClInclude Include="include\OOBase\Win32Security.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Win32Impl.h">
+    <ClInclude Include="src\Win32Impl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\tr24731.h">
+    <ClInclude Include="include\OOBase\tr24731.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Vector.h">
+    <ClInclude Include="include\OOBase\Vector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="config-base.h">
+    <ClInclude Include="src\config-base.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\AsyncResponse.h">
+    <ClInclude Include="include\OOBase\AsyncResponse.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Base.h">
+    <ClInclude Include="include\OOBase\Base.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\List.h">
+    <ClInclude Include="include\OOBase\List.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\File.h">
+    <ClInclude Include="include\OOBase\File.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\UniquePtr.h">
+    <ClInclude Include="include\OOBase\UniquePtr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\BTree.h">
+    <ClInclude Include="include\OOBase\BTree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Iterator.h">
+    <ClInclude Include="include\OOBase\Iterator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\ScopedArrayPtr.h">
+    <ClInclude Include="include\OOBase\ScopedArrayPtr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\SharedPtr.h">
+    <ClInclude Include="include\OOBase\SharedPtr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\SignalSlot.h">
+    <ClInclude Include="include\OOBase\SignalSlot.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\OOBase\Delegate.h">
+    <ClInclude Include="include\OOBase\Delegate.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
