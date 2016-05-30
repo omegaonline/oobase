@@ -159,17 +159,11 @@
     <ClInclude Include="include\OOBase\Win32Security.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Win32Impl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\OOBase\tr24731.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\OOBase\Vector.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\config-base.h">
-      <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="include\OOBase\AsyncResponse.h">
       <Filter>Header Files</Filter>
@@ -204,6 +198,8 @@
     <ClInclude Include="include\OOBase\Delegate.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="config-base.h" />
+    <ClInclude Include="Win32Impl.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
