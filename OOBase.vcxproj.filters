@@ -200,6 +200,9 @@
     </ClInclude>
     <ClInclude Include="config-base.h" />
     <ClInclude Include="Win32Impl.h" />
+    <ClInclude Include="include\OOBase\Morton.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">

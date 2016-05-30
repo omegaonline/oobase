@@ -201,6 +201,7 @@
     <ClInclude Include="include\OOBase\Iterator.h" />
     <ClInclude Include="include\OOBase\List.h" />
     <ClInclude Include="include\OOBase\Logger.h" />
+    <ClInclude Include="include\OOBase\Morton.h" />
     <ClInclude Include="include\OOBase\ScopedArrayPtr.h" />
     <ClInclude Include="include\OOBase\Set.h" />
     <ClInclude Include="include\OOBase\SharedPtr.h" />

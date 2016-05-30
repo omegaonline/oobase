@@ -1,9 +1,23 @@
-/*
- * Morton.h
- *
- *  Created on: 26 Feb 2015
- *      Author: taylorr
- */
+///////////////////////////////////////////////////////////////////////////////////
+//
+// Copyright (C) 2015 Rick Taylor
+//
+// This file is part of OOBase, the Omega Online Base library.
+//
+// OOBase is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// OOBase is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with OOBase.  If not, see <http://www.gnu.org/licenses/>.
+//
+///////////////////////////////////////////////////////////////////////////////////
 
 #ifndef OOBASE_INCLUDE_OOBASE_MORTON_H_
 #define OOBASE_INCLUDE_OOBASE_MORTON_H_
@@ -337,9 +351,9 @@ namespace OOBase
 	inline uint8_t MortonDecode16(uint16_t c)
 	{
 		c &= detail::MortonMAX<uint16_t,sizeof(uint16_t)>::value;
-		c = (c ^ (c >> 2))  & 0x30C3;
-		c = (c ^ (c >> 4))  & 0xF00F;
-		c = (c ^ (c >> 8))  & 0x00FF;
+		c = (c ^ (c >> 2)) & 0x30C3;
+		c = (c ^ (c >> 4)) & 0xF00F;
+		c = (c ^ (c >> 8)) & 0x00FF;
 		return static_cast<uint8_t>(c);
 	}
 
