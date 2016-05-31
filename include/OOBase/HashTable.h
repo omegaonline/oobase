@@ -23,6 +23,9 @@
 #define OOBASE_HASHTABLE_H_INCLUDED_
 
 #include "Iterator.h"
+#include "Memory.h"
+
+#include <string.h>
 
 namespace OOBase
 {
