@@ -47,28 +47,28 @@ namespace OOBase
 		typedef detail::IteratorImpl<const Table,const value_type,size_t> const_iterator;
 		friend class detail::IteratorImpl<const Table,const value_type,size_t>;
 
-		Table(const Compare& comp = Compare()) : baseClass(), m_compare(comp), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		Table(const Compare& comp = Compare()) : baseClass(), m_compare(comp), m_end(NULL,-1), m_cend(NULL,-1)
 		{
-			iterator(this,size_t(-1)).swap(m_end);
-			const_iterator(this,size_t(-1)).swap(m_cend);
+			iterator(this,-1).swap(m_end);
+			const_iterator(this,-1).swap(m_cend);
 		}
 
-		Table(AllocatorInstance& allocator) : baseClass(allocator), m_compare(), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		Table(AllocatorInstance& allocator) : baseClass(allocator), m_compare(), m_end(NULL,-1), m_cend(NULL,-1)
 		{
-			iterator(this,size_t(-1)).swap(m_end);
-			const_iterator(this,size_t(-1)).swap(m_cend);
+			iterator(this,-1).swap(m_end);
+			const_iterator(this,-1).swap(m_cend);
 		}
 
-		Table(const Compare& comp, AllocatorInstance& allocator) : baseClass(allocator), m_compare(comp), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		Table(const Compare& comp, AllocatorInstance& allocator) : baseClass(allocator), m_compare(comp), m_end(NULL,-1), m_cend(NULL,-1)
 		{
-			iterator(this,size_t(-1)).swap(m_end);
-			const_iterator(this,size_t(-1)).swap(m_cend);
+			iterator(this,-1).swap(m_end);
+			const_iterator(this,-1).swap(m_cend);
 		}
 
-		Table(const Table& rhs) : baseClass(rhs), m_compare(rhs.m_compare), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		Table(const Table& rhs) : baseClass(rhs), m_compare(rhs.m_compare), m_end(NULL,-1), m_cend(NULL,-1)
 		{
-			iterator(this,size_t(-1)).swap(m_end);
-			const_iterator(this,size_t(-1)).swap(m_cend);
+			iterator(this,-1).swap(m_end);
+			const_iterator(this,-1).swap(m_cend);
 		}
 
 		Table& operator = (const Table& rhs)

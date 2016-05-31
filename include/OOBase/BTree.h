@@ -717,7 +717,7 @@ namespace OOBase
 					else
 						end = mid;
 				}
-				return size_t(-1);
+				return -1;
 			}
 
 			bool insert_i(BTreeImpl<K,V,Compare,B,Allocator>* tree, const Pair<K,V>& value, size_t parent_pos)
