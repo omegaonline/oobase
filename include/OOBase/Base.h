@@ -191,12 +191,12 @@ namespace OOBase
 	/// Return the system supplied error string from error code 'err'.
 	const char* system_error_text(int err = system_error());
 
-	int stderr_write(const char* sz, size_t len = size_t(-1));
-	int stdout_write(const char* sz, size_t len = size_t(-1));
+	int stderr_write(const char* sz, size_t len = -1);
+	int stdout_write(const char* sz, size_t len = -1);
 
 #if defined(_WIN32)
-	int stderr_write(const wchar_t* wsz, size_t len = size_t(-1));
-	int stdout_write(const wchar_t* wsz, size_t len = size_t(-1));
+	int stderr_write(const wchar_t* wsz, size_t len = -1);
+	int stdout_write(const wchar_t* wsz, size_t len = -1);
 #endif
 
 	typedef bool (*OnCriticalFailure)(const char*);

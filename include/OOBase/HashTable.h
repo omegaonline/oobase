@@ -94,7 +94,7 @@ namespace OOBase
 	template <>
 	struct Hash<char*>
 	{
-		static size_t hash(const char* c, size_t len = size_t(-1))
+		static size_t hash(const char* c, size_t len = -1)
 		{
 			if (len == size_t(-1))
 				len = strlen(c);
@@ -118,7 +118,7 @@ namespace OOBase
 	template <>
 	struct Hash<const char*>
 	{
-		static size_t hash(const char* c, size_t len = size_t(-1))
+		static size_t hash(const char* c, size_t len = -1)
 		{
 			return Hash<char*>::hash(c,len);
 		}
@@ -140,7 +140,7 @@ namespace OOBase
 			return Hash<const char*>::hash(v.c_str(),v.length());
 		}
 
-		static size_t hash(const char* c, size_t len = size_t(-1))
+		static size_t hash(const char* c, size_t len = -1)
 		{
 			return Hash<const char*>::hash(c,len);
 		}
@@ -210,22 +210,22 @@ namespace OOBase
 		typedef detail::IteratorImpl<const HashTable,const Pair<K,V>,size_t> const_iterator;
 		friend class detail::IteratorImpl<const HashTable,const Pair<K,V>,size_t>;
 
-		HashTable(const H& h = H()) : baseClass(), m_data(NULL), m_size(0), m_count(0), m_hash(h), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		HashTable(const H& h = H()) : baseClass(), m_data(NULL), m_size(0), m_count(0), m_hash(h), m_end(NULL,-1), m_cend(NULL,-1)
 		{
-			iterator(this,size_t(-1)).swap(m_end);
-			const_iterator(this,size_t(-1)).swap(m_cend);
+			iterator(this,-1).swap(m_end);
+			const_iterator(this,-1).swap(m_cend);
 		}
 
-		HashTable(AllocatorInstance& allocator, const H& h = H()) : baseClass(allocator), m_data(NULL), m_size(0), m_count(0), m_hash(h), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		HashTable(AllocatorInstance& allocator, const H& h = H()) : baseClass(allocator), m_data(NULL), m_size(0), m_count(0), m_hash(h), m_end(NULL,-1), m_cend(NULL,-1)
 		{
-			iterator(this,size_t(-1)).swap(m_end);
-			const_iterator(this,size_t(-1)).swap(m_cend);
+			iterator(this,-1).swap(m_end);
+			const_iterator(this,-1).swap(m_cend);
 		}
 
-		HashTable(const HashTable& rhs) : baseClass(rhs), m_data(NULL), m_size(0), m_count(0), m_hash(rhs.m_hash), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		HashTable(const HashTable& rhs) : baseClass(rhs), m_data(NULL), m_size(0), m_count(0), m_hash(rhs.m_hash), m_end(NULL,-1), m_cend(NULL,-1)
 		{
-			iterator(this,size_t(-1)).swap(m_end);
-			const_iterator(this,size_t(-1)).swap(m_cend);
+			iterator(this,-1).swap(m_end);
+			const_iterator(this,-1).swap(m_cend);
 
 			for (size_t i=0;i<rhs.m_size;++i)
 			{
@@ -310,7 +310,7 @@ namespace OOBase
 				++pos;
 
 			if (pos >= m_size)
-				pos = size_t(-1);
+				pos = -1;
 
 			return iterator(this,pos);
 		}
@@ -419,10 +419,10 @@ namespace OOBase
 
 		static const size_t s_hi_bit = (size_t(1) << ((sizeof(size_t) * 8) - 1));
 
-		HashTable(const HashTable& h, Node* data, size_t size) : baseClass(h), m_data(data), m_size(size), m_count(0), m_hash(h.m_hash), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		HashTable(const HashTable& h, Node* data, size_t size) : baseClass(h), m_data(data), m_size(size), m_count(0), m_hash(h.m_hash), m_end(NULL,-1), m_cend(NULL,-1)
 		{
-			iterator(this,size_t(-1)).swap(m_end);
-			const_iterator(this,size_t(-1)).swap(m_cend);
+			iterator(this,-1).swap(m_end);
+			const_iterator(this,-1).swap(m_cend);
 
 			// Set nothing in use
 			for (size_t i=0;i<m_size;++i)
@@ -469,7 +469,7 @@ namespace OOBase
 		size_t find_i(const K1& key) const
 		{
 			if (m_count == 0)
-				return size_t(-1);
+				return -1;
 
 			size_t h = hash_i(key);
 			size_t pos = h & (m_size-1);
@@ -484,7 +484,7 @@ namespace OOBase
 				pos = (pos + 1) & (m_size-1);
 			}
 
-			return size_t(-1);
+			return -1;
 		}
 
 		bool clone()
@@ -598,7 +598,7 @@ namespace OOBase
 				;
 
 			if (pos >= m_size)
-				pos = size_t(-1);
+				pos = -1;
 		}
 
 		void prev(size_t& pos) const

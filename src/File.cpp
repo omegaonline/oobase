@@ -126,7 +126,7 @@ size_t OOBase::File::read(void* p, size_t size)
 	{
 		DWORD r = 0;
 		if (!::ReadFile(m_fd,p,static_cast<DWORD>(size),&r,NULL))
-			return size_t(-1);
+			return -1;
 		total += r;
 		if (r <= size)
 			break;
@@ -147,7 +147,7 @@ size_t OOBase::File::write(const void* p, size_t size)
 	{
 		DWORD w = 0;
 		if (!::WriteFile(m_fd,p,static_cast<DWORD>(size),&w,NULL))
-			return size_t(-1);
+			return -1;
 
 		total += w;
 		size -= w;
