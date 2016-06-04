@@ -92,7 +92,7 @@ namespace OOBase
 				assert(pos + n >= 0);
 				pos += n;
 				if (pos >= m_size)
-					pos = -1;
+					pos = size_t(-1);
 			}
 
 			ptrdiff_t iterator_diff(size_t pos1, size_t pos2) const
@@ -322,7 +322,7 @@ namespace OOBase
 							this->m_data[pos].~T();
 					}
 				}
-				return pos < this->m_size ? pos : -1;
+				return pos < this->m_size ? pos : size_t(-1);
 			}
 		};
 
@@ -429,7 +429,7 @@ namespace OOBase
 							memmove(&this->m_data[pos],&this->m_data[pos+len],(this->m_size - (pos + len)) * sizeof(T));
 					}
 				}
-				return pos < this->m_size ? pos : -1;
+				return pos < this->m_size ? pos : size_t(-1);
 			}
 		};
 
@@ -508,22 +508,22 @@ namespace OOBase
 		typedef detail::IteratorImpl<const Vector,const value_type,size_t> const_iterator;
 		friend class detail::IteratorImpl<const Vector,const value_type,size_t>;
 
-		Vector() : baseClass(), m_end(NULL,-1), m_cend(NULL,-1)
+		Vector() : baseClass(), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
 		{
-			iterator(this,-1).swap(m_end);
-			const_iterator(this,-1).swap(m_cend);
+			iterator(this,size_t(-1)).swap(m_end);
+			const_iterator(this,size_t(-1)).swap(m_cend);
 		}
 
-		Vector(AllocatorInstance& allocator) : baseClass(allocator), m_end(NULL,-1), m_cend(NULL,-1)
+		Vector(AllocatorInstance& allocator) : baseClass(allocator), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
 		{
-			iterator(this,-1).swap(m_end);
-			const_iterator(this,-1).swap(m_cend);
+			iterator(this,size_t(-1)).swap(m_end);
+			const_iterator(this,size_t(-1)).swap(m_cend);
 		}
 
-		Vector(const Vector& rhs) : baseClass(rhs), m_end(NULL,-1), m_cend(NULL,-1)
+		Vector(const Vector& rhs) : baseClass(rhs), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
 		{
-			iterator(this,-1).swap(m_end);
-			const_iterator(this,-1).swap(m_cend);
+			iterator(this,size_t(-1)).swap(m_end);
+			const_iterator(this,size_t(-1)).swap(m_cend);
 		}
 
 		Vector& operator = (const Vector& rhs)

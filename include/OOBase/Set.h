@@ -45,28 +45,28 @@ namespace OOBase
 		typedef detail::IteratorImpl<const Set,const value_type,size_t> const_iterator;
 		friend class detail::IteratorImpl<const Set,const value_type,size_t>;
 
-		Set(const Compare& comp) : baseClass(), m_compare(comp), m_end(NULL,-1), m_cend(NULL,-1)
+		Set(const Compare& comp) : baseClass(), m_compare(comp), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
 		{
-			iterator(this,-1).swap(m_end);
-			const_iterator(this,-1).swap(m_cend);
+			iterator(this,size_t(-1)).swap(m_end);
+			const_iterator(this,size_t(-1)).swap(m_cend);
 		}
 		
-		Set(AllocatorInstance& allocator) : baseClass(allocator), m_compare(), m_end(NULL,-1), m_cend(NULL,-1)
+		Set(AllocatorInstance& allocator) : baseClass(allocator), m_compare(), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
 		{
-			iterator(this,-1).swap(m_end);
-			const_iterator(this,-1).swap(m_cend);
+			iterator(this,size_t(-1)).swap(m_end);
+			const_iterator(this,size_t(-1)).swap(m_cend);
 		}
 
-		Set(const Compare& comp, AllocatorInstance& allocator) : baseClass(allocator), m_compare(comp), m_end(NULL,-1), m_cend(NULL,-1)
+		Set(const Compare& comp, AllocatorInstance& allocator) : baseClass(allocator), m_compare(comp), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
 		{
-			iterator(this,-1).swap(m_end);
-			const_iterator(this,-1).swap(m_cend);
+			iterator(this,size_t(-1)).swap(m_end);
+			const_iterator(this,size_t(-1)).swap(m_cend);
 		}
 
-		Set(const Set& rhs) : baseClass(rhs), m_compare(rhs.m_compare), m_end(NULL,-1), m_cend(NULL,-1)
+		Set(const Set& rhs) : baseClass(rhs), m_compare(rhs.m_compare), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
 		{
-			iterator(this,-1).swap(m_end);
-			const_iterator(this,-1).swap(m_cend);
+			iterator(this,size_t(-1)).swap(m_end);
+			const_iterator(this,size_t(-1)).swap(m_cend);
 		}
 
 		Set& operator = (const Set& rhs)
