@@ -176,7 +176,7 @@ namespace OOBase
 
 		const_iterator cbegin() const
 		{
-			return baseClass::empty() ? m_end : const_iterator(this,0);
+			return baseClass::empty() ? m_cend : const_iterator(this,0);
 		}
 
 		const_iterator begin() const
