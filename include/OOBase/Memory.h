@@ -30,33 +30,6 @@
 
 namespace OOBase
 {
-	template <typename T>
-	class Ref
-	{
-	public:
-		Ref(T& r) : m_r(r)
-		{}
-
-		Ref(const Ref& rhs) : m_r(rhs.m_r)
-		{}
-
-		Ref& operator = (const Ref& rhs)
-		{
-			if (this != &rhs)
-				m_r = rhs.m_r;
-			return *this;
-		}
-
-		operator T&() const
-		{
-			return m_r;
-		}
-
-	private:
-		T& m_r;
-	};
-
-
 	template <typename Derived>
 	class AllocateNewStatic
 	{
@@ -72,7 +45,15 @@ namespace OOBase
 		}
 
 		template <typename T>
-		static bool allocate_new(T*& t)
+		static T* allocate_new()
+		{
+			T* t = NULL;
+			allocate_new_ref(t);
+			return t;
+		}
+
+		template <typename T>
+		static bool allocate_new_ref(T*& t)
 		{
 			t = NULL;
 			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
@@ -97,7 +78,15 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1>
-		static bool allocate_new(T*& t, P1 p1)
+		static T* allocate_new(P1 p1)
+		{
+			T* t = NULL;
+			allocate_new_ref(t,p1);
+			return t;
+		}
+
+		template <typename T, typename P1>
+		static bool allocate_new_ref(T*& t, P1 p1)
 		{
 			t = NULL;
 			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
@@ -113,7 +102,15 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2>
-		static bool allocate_new(T*& t, P1 p1, P2 p2)
+		static T* allocate_new(P1 p1, P2 p2)
+		{
+			T* t = NULL;
+			allocate_new_ref(t,p1,p2);
+			return t;
+		}
+
+		template <typename T, typename P1, typename P2>
+		static bool allocate_new_ref(T*& t, P1 p1, P2 p2)
 		{
 			t = NULL;
 			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
@@ -130,7 +127,15 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2, typename P3>
-		static bool allocate_new(T*& t, P1 p1, P2 p2, P3 p3)
+		static T* allocate_new(P1 p1, P2 p2, P3 p3)
+		{
+			T* t = NULL;
+			allocate_new_ref(t,p1,p2,p3);
+			return t;
+		}
+
+		template <typename T, typename P1, typename P2, typename P3>
+		static bool allocate_new_ref(T*& t, P1 p1, P2 p2, P3 p3)
 		{
 			t = NULL;
 			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
@@ -146,7 +151,15 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2, typename P3, typename P4>
-		static bool allocate_new(T*& t, P1 p1, P2 p2, P3 p3, P4 p4)
+		static T* allocate_new(P1 p1, P2 p2, P3 p3, P4 p4)
+		{
+			T* t = NULL;
+			allocate_new_ref(t,p1,p2,p3,p4);
+			return t;
+		}
+
+		template <typename T, typename P1, typename P2, typename P3, typename P4>
+		static bool allocate_new_ref(T*& t, P1 p1, P2 p2, P3 p3, P4 p4)
 		{
 			t = NULL;
 			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
@@ -162,7 +175,15 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5>
-		static bool allocate_new(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
+		static T* allocate_new(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
+		{
+			T* t = NULL;
+			allocate_new_ref(t,p1,p2,p3,p4,p5);
+			return t;
+		}
+
+		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5>
+		static bool allocate_new_ref(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
 		{
 			t = NULL;
 			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
@@ -178,7 +199,15 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
-		static bool allocate_new(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6)
+		static T* allocate_new(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6)
+		{
+			T* t = NULL;
+			allocate_new_ref(t,p1,p2,p3,p4,p5,p6);
+			return t;
+		}
+
+		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
+		static bool allocate_new_ref(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6)
 		{
 			t = NULL;
 			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
@@ -194,7 +223,15 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
-		static bool allocate_new(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7)
+		static T* allocate_new(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7)
+		{
+			T* t = NULL;
+			allocate_new_ref(t,p1,p2,p3,p4,p5,p6,p7);
+			return t;
+		}
+
+		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
+		static bool allocate_new_ref(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7)
 		{
 			t = NULL;
 			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
@@ -210,7 +247,15 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
-		static bool allocate_new(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8)
+		static T* allocate_new(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8)
+		{
+			T* t = NULL;
+			allocate_new_ref(t,p1,p2,p3,p4,p5,p6,p7,p8);
+			return t;
+		}
+
+		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
+		static bool allocate_new_ref(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8)
 		{
 			t = NULL;
 			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
@@ -226,7 +271,15 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
-		static bool allocate_new(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9)
+		static T* allocate_new(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9)
+		{
+			T* t = NULL;
+			allocate_new_ref(t,p1,p2,p3,p4,p5,p6,p7,p8,p9);
+			return t;
+		}
+
+		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
+		static bool allocate_new_ref(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9)
 		{
 			t = NULL;
 			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
@@ -242,7 +295,15 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9, typename P10>
-		static bool allocate_new(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10)
+		static T* allocate_new(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10)
+		{
+			T* t = NULL;
+			allocate_new_ref(t,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10);
+			return t;
+		}
+
+		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9, typename P10>
+		static bool allocate_new_ref(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10)
 		{
 			t = NULL;
 			void* p = Derived::allocate(sizeof(T),alignment_of<T>::value);
@@ -284,7 +345,15 @@ namespace OOBase
 		}
 
 		template <typename T>
-		bool allocate_new(T*& t)
+		T* allocate_new()
+		{
+			T* t = NULL;
+			allocate_new_ref(t);
+			return t;
+		}
+
+		template <typename T>
+		bool allocate_new_ref(T*& t)
 		{
 			t = NULL;
 			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);
@@ -309,7 +378,15 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1>
-		bool allocate_new(T*& t, P1 p1)
+		T* allocate_new(P1 p1)
+		{
+			T* t = NULL;
+			allocate_new_ref(t,p1);
+			return t;
+		}
+
+		template <typename T, typename P1>
+		bool allocate_new_ref(T*& t, P1 p1)
 		{
 			t = NULL;
 			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);
@@ -325,14 +402,21 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2>
-		bool allocate_new(T*& t, P1 p1, P2 p2)
+		T* allocate_new(P1 p1, P2 p2)
+		{
+			T* t = NULL;
+			allocate_new_ref(t,p1,p2);
+			return t;
+		}
+
+		template <typename T, typename P1, typename P2>
+		bool allocate_new_ref(T*& t, P1 p1, P2 p2)
 		{
 			t = NULL;
 			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);
 			if (p)
 #if defined(OOBASE_HAVE_EXCEPTIONS)
-				try
-				{
+				try {
 #endif
 					t = ::new (p) T(p1,p2);
 #if defined(OOBASE_HAVE_EXCEPTIONS)
@@ -342,7 +426,15 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2, typename P3>
-		bool allocate_new(T*& t, P1 p1, P2 p2, P3 p3)
+		T* allocate_new(P1 p1, P2 p2, P3 p3)
+		{
+			T* t = NULL;
+			allocate_new_ref(t,p1,p2,p3);
+			return t;
+		}
+
+		template <typename T, typename P1, typename P2, typename P3>
+		bool allocate_new_ref(T*& t, P1 p1, P2 p2, P3 p3)
 		{
 			t = NULL;
 			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);
@@ -358,7 +450,15 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2, typename P3, typename P4>
-		bool allocate_new(T*& t, P1 p1, P2 p2, P3 p3, P4 p4)
+		T* allocate_new(P1 p1, P2 p2, P3 p3, P4 p4)
+		{
+			T* t = NULL;
+			allocate_new_ref(t,p1,p2,p3,p4);
+			return t;
+		}
+
+		template <typename T, typename P1, typename P2, typename P3, typename P4>
+		bool allocate_new_ref(T*& t, P1 p1, P2 p2, P3 p3, P4 p4)
 		{
 			t = NULL;
 			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);
@@ -374,7 +474,15 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5>
-		bool allocate_new(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
+		T* allocate_new(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
+		{
+			T* t = NULL;
+			allocate_new_ref(t,p1,p2,p3,p4,p5);
+			return t;
+		}
+
+		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5>
+		bool allocate_new_ref(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
 		{
 			t = NULL;
 			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);
@@ -390,7 +498,15 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
-		bool allocate_new(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6)
+		T* allocate_new(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6)
+		{
+			T* t = NULL;
+			allocate_new_ref(t,p1,p2,p3,p4,p5,p6);
+			return t;
+		}
+
+		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
+		bool allocate_new_ref(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6)
 		{
 			t = NULL;
 			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);
@@ -406,7 +522,15 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
-		bool allocate_new(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7)
+		T* allocate_new(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7)
+		{
+			T* t = NULL;
+			allocate_new_ref(t,p1,p2,p3,p4,p5,p6,p7);
+			return t;
+		}
+
+		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
+		bool allocate_new_ref(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7)
 		{
 			t = NULL;
 			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);
@@ -422,7 +546,15 @@ namespace OOBase
 		}
 
 		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
-		bool allocate_new(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8)
+		T* allocate_new(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8)
+		{
+			T* t = NULL;
+			allocate_new_ref(t,p1,p2,p3,p4,p5,p6,p7,p8);
+			return t;
+		}
+
+		template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
+		bool allocate_new_ref(T*& t, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8)
 		{
 			t = NULL;
 			void* p = static_cast<Derived*>(this)->allocate(sizeof(T),alignment_of<T>::value);

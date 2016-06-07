@@ -243,7 +243,9 @@ namespace
 
 	void Win32Thunk::impl_InitializeSRWLock(SRWLOCK* SRWLock)
 	{
-		if (!OOBase::CrtAllocator::allocate_new(*reinterpret_cast<OOBase::Win32::rwmutex_t**>(SRWLock)))
+		OOBase::Win32::rwmutex_t*& m = *reinterpret_cast<OOBase::Win32::rwmutex_t**>(SRWLock);
+		m = OOBase::CrtAllocator::allocate_new<OOBase::Win32::rwmutex_t>();
+		if (!m)
 			OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 	}
 
@@ -279,7 +281,9 @@ namespace
 
 	void Win32Thunk::impl_InitializeConditionVariable(CONDITION_VARIABLE* ConditionVariable)
 	{
-		if (!OOBase::CrtAllocator::allocate_new(*reinterpret_cast<OOBase::Win32::condition_variable_t**>(ConditionVariable)))
+		OOBase::Win32::condition_variable_t*& c = *reinterpret_cast<OOBase::Win32::condition_variable_t**>(ConditionVariable);
+		c = OOBase::CrtAllocator::allocate_new<OOBase::Win32::condition_variable_t>();
+		if (!c)
 			OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 	}
 

@@ -138,10 +138,14 @@ TLSGlobal* TLSGlobal::instance(bool create)
 	if (s_key != TLS_OUT_OF_INDEXES)
 	{
 		inst = static_cast<TLSGlobal*>(TlsGetValue(s_key));
-		if (!inst && create && OOBase::CrtAllocator::allocate_new(inst))
+		if (!inst && create)
 		{
-			OOBase::DLLDestructor<OOBase::Module>::add_destructor(&term,inst);
-			TlsSetValue(s_key,inst);
+			inst = OOBase::CrtAllocator::allocate_new<TLSGlobal>();
+			if (inst)
+			{
+				OOBase::DLLDestructor<OOBase::Module>::add_destructor(&term,inst);
+				TlsSetValue(s_key,inst);
+			}
 		}
 	}
 	return inst;
@@ -189,10 +193,14 @@ TLSGlobal* TLSGlobal::instance(bool create)
 	OOBase::Once::Run(&key,init);
 		
 	TLSGlobal* inst = static_cast<TLSGlobal*>(pthread_getspecific(s_key));
-	if (!inst && create && OOBase::CrtAllocator::allocate_new(inst))
+	if (!inst && create)
 	{
-		pthread_setspecific(s_key,inst);
-		OOBase::DLLDestructor<OOBase::Module>::add_destructor(&term,inst);
+		inst = OOBase::CrtAllocator::allocate_new<TLSGlobal>();
+		if (inst)
+		{
+			pthread_setspecific(s_key,inst);
+			OOBase::DLLDestructor<OOBase::Module>::add_destructor(&term,inst);
+		}
 	}
 		
 	return inst;

@@ -157,7 +157,7 @@ namespace OOBase
 			SharedCount(const Allocator*, T* p) : m_impl(NULL)
 			{
 				SharedCountAlloc<T,Allocator>* i = NULL;
-				if (!Allocator::allocate_new(i,p))
+				if (!Allocator::allocate_new_ref(i,p))
 					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 				m_impl = i;
 			}
@@ -165,8 +165,8 @@ namespace OOBase
 			template <typename T>
 			SharedCount(AllocatorInstance& alloc, T* p) : m_impl(NULL)
 			{
-				SharedCountAllocInstance<T>* i = NULL;
-				if (!alloc.allocate_new(i,Ref<AllocatorInstance>(alloc),p))
+				SharedCountAllocInstance<T>* i = alloc.allocate_new<SharedCountAllocInstance<T> >(alloc,p);
+				if (!i)
 					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 				m_impl = i;
 			}
@@ -680,7 +680,7 @@ namespace OOBase
 	inline SharedPtr<T> allocate_shared()
 	{
 		T* p = NULL;
-		Allocator::allocate_new(p);
+		Allocator::allocate_new_ref(p);
 		return make_shared<T,Allocator>(p);
 	}
 
@@ -694,7 +694,7 @@ namespace OOBase
 	inline SharedPtr<T> allocate_shared(P1 p1)
 	{
 		T* p = NULL;
-		Allocator::allocate_new(p,p1);
+		Allocator::allocate_new_ref(p,p1);
 		return make_shared<T,Allocator>(p);
 	}
 
@@ -708,7 +708,7 @@ namespace OOBase
 	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2)
 	{
 		T* p = NULL;
-		Allocator::allocate_new(p,p1,p2);
+		Allocator::allocate_new_ref(p,p1,p2);
 		return make_shared<T,Allocator>(p);
 	}
 
@@ -722,7 +722,7 @@ namespace OOBase
 	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3)
 	{
 		T* p = NULL;
-		Allocator::allocate_new(p,p1,p2,p3);
+		Allocator::allocate_new_ref(p,p1,p2,p3);
 		return make_shared<T,Allocator>(p);
 	}
 
@@ -736,7 +736,7 @@ namespace OOBase
 	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4)
 	{
 		T* p = NULL;
-		Allocator::allocate_new(p,p1,p2,p3,p4);
+		Allocator::allocate_new_ref(p,p1,p2,p3,p4);
 		return make_shared<T,Allocator>(p);
 	}
 
@@ -750,7 +750,7 @@ namespace OOBase
 	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
 	{
 		T* p = NULL;
-		Allocator::allocate_new(p,p1,p2,p3,p4,p5);
+		Allocator::allocate_new_ref(p,p1,p2,p3,p4,p5);
 		return make_shared<T,Allocator>(p);
 	}
 
@@ -764,7 +764,7 @@ namespace OOBase
 	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6)
 	{
 		T* p = NULL;
-		Allocator::allocate_new(p,p1,p2,p3,p4,p5,p6);
+		Allocator::allocate_new_ref(p,p1,p2,p3,p4,p5,p6);
 		return make_shared<T,Allocator>(p);
 	}
 
@@ -778,7 +778,7 @@ namespace OOBase
 	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7)
 	{
 		T* p = NULL;
-		Allocator::allocate_new(p,p1,p2,p3,p4,p5,p6,p7);
+		Allocator::allocate_new_ref(p,p1,p2,p3,p4,p5,p6,p7);
 		return make_shared<T,Allocator>(p);
 	}
 
@@ -792,7 +792,7 @@ namespace OOBase
 	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8)
 	{
 		T* p = NULL;
-		Allocator::allocate_new(p,p1,p2,p3,p4,p5,p6,p7,p8);
+		Allocator::allocate_new_ref(p,p1,p2,p3,p4,p5,p6,p7,p8);
 		return make_shared<T,Allocator>(p);
 	}
 
@@ -806,7 +806,7 @@ namespace OOBase
 	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9)
 	{
 		T* p = NULL;
-		Allocator::allocate_new(p,p1,p2,p3,p4,p5,p6,p7,p8,p9);
+		Allocator::allocate_new_ref(p,p1,p2,p3,p4,p5,p6,p7,p8,p9);
 		return make_shared<T,Allocator>(p);
 	}
 
@@ -820,7 +820,7 @@ namespace OOBase
 	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10)
 	{
 		T* p = NULL;
-		Allocator::allocate_new(p,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10);
+		Allocator::allocate_new_ref(p,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10);
 		return make_shared<T,Allocator>(p);
 	}
 

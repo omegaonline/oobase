@@ -131,8 +131,8 @@ namespace
 		try
 		{
 #endif
-			MyMessageFilter* pFilter = NULL;
-			if (OOBase::CrtAllocator::allocate_new(pFilter))
+			MyMessageFilter* pFilter = OOBase::CrtAllocator::allocate_new<MyMessageFilter>(pFilter);
+			if (pFilter)
 			{
 				IMessageFilter* pPrev = 0;
 				hr = CoRegisterMessageFilter(pFilter,&pPrev);

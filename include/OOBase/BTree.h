@@ -850,19 +850,19 @@ namespace OOBase
 			leaf_page_t* new_leaf(internal_page_t* parent, leaf_page_t* prev, leaf_page_t* next)
 			{
 				BTreeLeafPage<K,V,Compare,B,Allocator>* page = NULL;
-				return Allocator::allocate_new(page,parent,prev,next) ? page : NULL;
+				return Allocator::allocate_new_ref(page,parent,prev,next) ? page : NULL;
 			}
 
 			internal_page_t* new_internal_leaf(internal_page_t* parent, leaf_page_t* leaf)
 			{
 				BTreeInternalPageLeaf<K,V,Compare,B,Allocator>* page = NULL;
-				return Allocator::allocate_new(page,parent,leaf) ? page : NULL;
+				return Allocator::allocate_new_ref(page,parent,leaf) ? page : NULL;
 			}
 
 			internal_page_t* new_internal_page(internal_page_t* parent, internal_page_t* internal)
 			{
 				BTreeInternalPageInternal<K,V,Compare,B,Allocator>* page = NULL;
-				return Allocator::allocate_new(page,parent,internal) ? page : NULL;
+				return Allocator::allocate_new_ref(page,parent,internal) ? page : NULL;
 			}
 
 			void destroy_page(base_page_t* page)
@@ -881,20 +881,17 @@ namespace OOBase
 		public:
 			leaf_page_t* new_leaf(internal_page_t* parent, leaf_page_t* prev, leaf_page_t* next)
 			{
-				leaf_page_t* page = NULL;
-				return m_allocator.allocate_new(page,m_allocator,parent,prev,next) ? page : NULL;
+				return m_allocator.allocate_new<leaf_page_t>(m_allocator,parent,prev,next);
 			}
 
 			internal_page_t* new_internal_leaf(internal_page_t* parent, leaf_page_t* leaf)
 			{
-				BTreeInternalPageLeaf<K,V,Compare,B,AllocatorInstance>* page = NULL;
-				return m_allocator.allocate_new(page,m_allocator,parent,leaf) ? page : NULL;
+				return m_allocator.allocate_new<BTreeInternalPageLeaf<K,V,Compare,B,AllocatorInstance> >(m_allocator,parent,leaf) ? page : NULL;
 			}
 
 			internal_page_t* new_internal_page(internal_page_t* parent, internal_page_t* internal)
 			{
-				BTreeInternalPageInternal<K,V,Compare,B,AllocatorInstance>* page = NULL;
-				return m_allocator.allocate_new(page,m_allocator,parent,internal) ? page : NULL;
+				return m_allocator.allocate_new<BTreeInternalPageInternal<K,V,Compare,B,AllocatorInstance> >(m_allocator,parent,internal) ? page : NULL;
 			}
 
 			void destroy_page(base_page_t* page)

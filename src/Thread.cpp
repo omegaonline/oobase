@@ -137,8 +137,8 @@ const OOBase::Thread* OOBase::Thread::self()
 	if (TLS::Get(&s_tls_key,&p))
 		return const_cast<const Thread*>(static_cast<Thread*>(p));
 
-	Thread* pThread = NULL;
-	if (!CrtAllocator::allocate_new(pThread))
+	Thread* pThread = CrtAllocator::allocate_new<Thread>();
+	if (!pThread)
 		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
 	// Do some silly windows nonsense to get the thread handle
@@ -287,8 +287,8 @@ const OOBase::Thread* OOBase::Thread::self()
 	if (TLS::Get(&s_tls_key,&p))
 		return const_cast<const Thread*>(static_cast<Thread*>(p));
 
-	Thread* pThread = NULL;
-	if (!CrtAllocator::allocate_new(pThread))
+	Thread* pThread = CrtAllocator::allocate_new<Thread>();
+	if (!pThread)
 		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
 
 	pThread->m_thread = pthread_self();

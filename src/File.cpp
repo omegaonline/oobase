@@ -320,8 +320,8 @@ OOBase::SharedPtr<char> OOBase::File::auto_map_i(bool writeable, uint64_t offset
 	void* m = map(writeable,offset,length);
 	if (m)
 	{
-		FileMapping* fm = NULL;
-		if (OOBase::CrtAllocator::allocate_new(fm,this,m,length))
+		FileMapping* fm = OOBase::CrtAllocator::allocate_new<FileMapping>(this,m,length);
+		if (!fm)
 		{
 			ret = OOBase::make_shared(reinterpret_cast<char*>(m),fm);
 			if (!ret)

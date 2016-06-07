@@ -237,7 +237,7 @@ namespace OOBase
 		ListNode* insert_before(const T& value, ListNode* before)
 		{
 			ListNode* new_node = NULL;
-			if (!baseClass::allocate_new(new_node,before->m_prev,before,value))
+			if (!baseClass::allocate_new_ref(new_node,before->m_prev,before,value))
 				return NULL;
 
 			if (!before->m_prev)
@@ -258,7 +258,7 @@ namespace OOBase
 
 			ListNode* null = NULL;
 			ListNode* new_node = NULL;
-			if (!baseClass::allocate_new(new_node,null,null,value))
+			if (!baseClass::allocate_new_ref(new_node,null,null,value))
 				return NULL;
 
 			m_head = new_node;
@@ -275,7 +275,7 @@ namespace OOBase
 
 			ListNode* null = NULL;
 			ListNode* new_node = NULL;
-			if (!baseClass::allocate_new(new_node,m_tail,null,value))
+			if (!baseClass::allocate_new_ref(new_node,m_tail,null,value))
 				return NULL;
 
 			m_tail->m_next = new_node;
