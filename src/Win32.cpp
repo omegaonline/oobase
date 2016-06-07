@@ -246,7 +246,7 @@ namespace
 		OOBase::Win32::rwmutex_t*& m = *reinterpret_cast<OOBase::Win32::rwmutex_t**>(SRWLock);
 		m = OOBase::CrtAllocator::allocate_new<OOBase::Win32::rwmutex_t>();
 		if (!m)
-			OOBase_CallCriticalFailure(system_error());
+			OOBase_CallCriticalFailure(OOBase::system_error());
 	}
 
 	void Win32Thunk::impl_AcquireSRWLockShared(SRWLOCK* SRWLock)
@@ -284,7 +284,7 @@ namespace
 		OOBase::Win32::condition_variable_t*& c = *reinterpret_cast<OOBase::Win32::condition_variable_t**>(ConditionVariable);
 		c = OOBase::CrtAllocator::allocate_new<OOBase::Win32::condition_variable_t>();
 		if (!c)
-			OOBase_CallCriticalFailure(system_error());
+			OOBase_CallCriticalFailure(OOBase::system_error());
 	}
 
 	void Win32Thunk::impl_WakeConditionVariable(CONDITION_VARIABLE* ConditionVariable)

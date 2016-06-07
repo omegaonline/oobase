@@ -361,16 +361,7 @@ namespace OOBase
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				try {
 #endif
-
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable : 4345)
-#endif
 					t = ::new (p) T();
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 				} catch (...) { static_cast<Derived*>(this)->free(p); throw; }
 #endif

@@ -50,7 +50,7 @@ namespace
 				if (eq == OOBase::String::npos)
 				{
 					if (!tabEnv.insert(str,OOBase::String()))
-						err = system_error();
+						err = OOBase::system_error();
 				}
 				else
 				{
@@ -61,7 +61,7 @@ namespace
 					if (!err)
 					{
 						if (!tabEnv.insert(strLeft,strRight))
-							err = system_error();
+							err = OOBase::system_error();
 					}
 				}
 			}

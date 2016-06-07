@@ -123,7 +123,7 @@ namespace OOBase
 		class SharedCountAllocInstance : public SharedCountBase
 		{
 		public:
-			SharedCountAllocInstance(AllocatorInstance& alloc, T* p) : m_alloc(alloc), m_ptr(p)
+			SharedCountAllocInstance(AllocatorInstance* alloc, T* p) : m_alloc(*alloc), m_ptr(p)
 			{}
 
 			virtual void dispose()
@@ -165,7 +165,7 @@ namespace OOBase
 			template <typename T>
 			SharedCount(AllocatorInstance& alloc, T* p) : m_impl(NULL)
 			{
-				SharedCountAllocInstance<T>* i = alloc.allocate_new<SharedCountAllocInstance<T> >(alloc,p);
+				SharedCountAllocInstance<T>* i = alloc.allocate_new<SharedCountAllocInstance<T> >(&alloc,p);
 				if (!i)
 					OOBase_CallCriticalFailure(system_error());
 				m_impl = i;
