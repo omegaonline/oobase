@@ -131,7 +131,7 @@ namespace
 		try
 		{
 #endif
-			MyMessageFilter* pFilter = OOBase::CrtAllocator::allocate_new<MyMessageFilter>(pFilter);
+			MyMessageFilter* pFilter = OOBase::CrtAllocator::allocate_new<MyMessageFilter>();
 			if (pFilter)
 			{
 				IMessageFilter* pPrev = 0;
