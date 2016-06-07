@@ -471,7 +471,7 @@ namespace OOBase
 	template <typename T>
 	struct call_traits
 	{
-		typedef typename detail::call_traits_impl<T,detail::is_pod<T>::value>::param_type param_type;
+		typedef typename detail::call_traits_impl<T,detail::is_pod<T>::value && sizeof(T) <= sizeof(const T&)>::param_type param_type;
 	};
 
 	template <typename T>
@@ -484,12 +484,6 @@ namespace OOBase
 	struct call_traits<const T&>
 	{
 		typedef const T& param_type;
-	};
-
-	template <typename T>
-	struct call_traits<T*>
-	{
-		typedef T*  param_type;
 	};
 
 	template <typename T>
