@@ -691,7 +691,7 @@ namespace OOBase
 	}
 
 	template <typename T, typename Allocator, typename P1>
-	inline SharedPtr<T> allocate_shared(const P1& p1)
+	inline SharedPtr<T> allocate_shared(P1 p1)
 	{
 		T* p = NULL;
 		Allocator::allocate_new(p,p1);
@@ -699,13 +699,13 @@ namespace OOBase
 	}
 
 	template <typename T, typename P1>
-	inline SharedPtr<T> allocate_shared(const P1& p1)
+	inline SharedPtr<T> allocate_shared(P1 p1)
 	{
 		return allocate_shared<T,CrtAllocator>(p1);
 	}
 
 	template <typename T, typename Allocator, typename P1, typename P2>
-	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2)
+	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2)
 	{
 		T* p = NULL;
 		Allocator::allocate_new(p,p1,p2);
@@ -713,13 +713,13 @@ namespace OOBase
 	}
 
 	template <typename T, typename P1, typename P2>
-	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2)
+	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2)
 	{
 		return allocate_shared<T,CrtAllocator>(p1,p2);
 	}
 
 	template <typename T, typename Allocator, typename P1, typename P2, typename P3>
-	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3)
+	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3)
 	{
 		T* p = NULL;
 		Allocator::allocate_new(p,p1,p2,p3);
@@ -727,13 +727,13 @@ namespace OOBase
 	}
 
 	template <typename T, typename P1, typename P2, typename P3>
-	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3)
+	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3)
 	{
 		return allocate_shared<T,CrtAllocator>(p1,p2,p3);
 	}
 
 	template <typename T, typename Allocator, typename P1, typename P2, typename P3, typename P4>
-	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4)
+	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4)
 	{
 		T* p = NULL;
 		Allocator::allocate_new(p,p1,p2,p3,p4);
@@ -741,13 +741,13 @@ namespace OOBase
 	}
 
 	template <typename T, typename P1, typename P2, typename P3, typename P4>
-	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4)
+	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4)
 	{
 		return allocate_shared<T,CrtAllocator>(p1,p2,p3,p4);
 	}
 
 	template <typename T, typename Allocator, typename P1, typename P2, typename P3, typename P4, typename P5>
-	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5)
+	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
 	{
 		T* p = NULL;
 		Allocator::allocate_new(p,p1,p2,p3,p4,p5);
@@ -755,13 +755,13 @@ namespace OOBase
 	}
 
 	template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5>
-	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5)
+	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
 	{
 		return allocate_shared<T,CrtAllocator>(p1,p2,p3,p4,p5);
 	}
 
 	template <typename T, typename Allocator, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
-	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6)
+	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6)
 	{
 		T* p = NULL;
 		Allocator::allocate_new(p,p1,p2,p3,p4,p5,p6);
@@ -769,13 +769,13 @@ namespace OOBase
 	}
 
 	template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
-	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6)
+	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6)
 	{
 		return allocate_shared<T,CrtAllocator>(p1,p2,p3,p4,p5,p6);
 	}
 
 	template <typename T, typename Allocator, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
-	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7)
+	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7)
 	{
 		T* p = NULL;
 		Allocator::allocate_new(p,p1,p2,p3,p4,p5,p6,p7);
@@ -783,13 +783,13 @@ namespace OOBase
 	}
 
 	template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
-	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7)
+	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7)
 	{
 		return allocate_shared<T,CrtAllocator>(p1,p2,p3,p4,p5,p6,p7);
 	}
 
 	template <typename T, typename Allocator, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
-	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7, const P8& p8)
+	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8)
 	{
 		T* p = NULL;
 		Allocator::allocate_new(p,p1,p2,p3,p4,p5,p6,p7,p8);
@@ -797,13 +797,13 @@ namespace OOBase
 	}
 
 	template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
-	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7, const P8& p8)
+	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8)
 	{
 		return allocate_shared<T,CrtAllocator>(p1,p2,p3,p4,p5,p6,p7,p8);
 	}
 
 	template <typename T, typename Allocator, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
-	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7, const P8& p8, const P9& p9)
+	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9)
 	{
 		T* p = NULL;
 		Allocator::allocate_new(p,p1,p2,p3,p4,p5,p6,p7,p8,p9);
@@ -811,13 +811,13 @@ namespace OOBase
 	}
 
 	template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
-	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7, const P8& p8, const P9& p9)
+	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9)
 	{
 		return allocate_shared<T,CrtAllocator>(p1,p2,p3,p4,p5,p6,p7,p8,p9);
 	}
 
 	template <typename T, typename Allocator, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9, typename P10>
-	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7, const P8& p8, const P9& p9, const P10& p10)
+	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10)
 	{
 		T* p = NULL;
 		Allocator::allocate_new(p,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10);
@@ -825,7 +825,7 @@ namespace OOBase
 	}
 
 	template <typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9, typename P10>
-	inline SharedPtr<T> allocate_shared(const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7, const P8& p8, const P9& p9, const P10& p10)
+	inline SharedPtr<T> allocate_shared(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9, P10 p10)
 	{
 		return allocate_shared<T,CrtAllocator>(p1,p2,p3,p4,p5,p6,p7,p8,p9,p10);
 	}

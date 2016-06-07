@@ -102,7 +102,7 @@ namespace OOBase
 			return m_slots.remove(delegate_t(p,slot));
 		}
 
-		void fire(P1 p1) const
+		void fire(typename call_traits<P1>::param_type p1) const
 		{
 			Vector<delegate_t,Allocator> slots(m_slots);
 			for (typename Vector<delegate_t,Allocator>::iterator i=slots.begin();i;++i)
@@ -146,7 +146,7 @@ namespace OOBase
 			return m_slots.remove(delegate_t(p,slot));
 		}
 
-		void fire(P1 p1, P2 p2) const
+		void fire(typename call_traits<P1>::param_type p1, typename call_traits<P2>::param_type p2) const
 		{
 			Vector<delegate_t,Allocator> slots(m_slots);
 			for (typename Vector<delegate_t,Allocator>::iterator i=slots.begin();i;++i)
@@ -190,7 +190,7 @@ namespace OOBase
 			return m_slots.remove(delegate_t(p,slot));
 		}
 
-		void fire(P1 p1, P2 p2, P3 p3) const
+		void fire(typename call_traits<P1>::param_type p1, typename call_traits<P2>::param_type p2, typename call_traits<P3>::param_type p3) const
 		{
 			Vector<delegate_t,Allocator> slots(m_slots);
 			for (typename Vector<delegate_t,Allocator>::iterator i=slots.begin();i;++i)

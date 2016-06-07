@@ -30,8 +30,6 @@ namespace OOBase
 	class Delegate0 : public SafeBoolean
 	{
 	public:
-		typedef R return_type;
-
 		Delegate0(R (*fn)() = NULL) : m_static(fn)
 		{
 		}
@@ -132,10 +130,6 @@ namespace OOBase
 	class Delegate1 : public SafeBoolean
 	{
 	public:
-		typedef Allocator allocator_type;
-		typedef R return_type;
-		typedef P1 param1_type;
-
 		Delegate1(R (*fn)(P1) = NULL) : m_static(fn)
 		{
 		}
@@ -158,7 +152,7 @@ namespace OOBase
 			return SafeBoolean::safe_bool(m_ptr || m_static != NULL);
 		}
 
-		R invoke(P1 p1) const
+		R invoke(typename call_traits<P1>::param_type p1) const
 		{
 			if (m_ptr)
 				return m_ptr->thunk(p1);
@@ -186,7 +180,7 @@ namespace OOBase
 	private:
 		struct ThunkBase
 		{
-			virtual R thunk(P1) = 0;
+			virtual R thunk(typename call_traits<P1>::param_type) = 0;
 		};
 
 		template<typename T>
@@ -195,7 +189,7 @@ namespace OOBase
 			Thunk(T* p, R (T::*fn)(P1)) : m_p(p), m_fn(fn)
 			{}
 
-			R thunk(P1 p1)
+			R thunk(typename call_traits<P1>::param_type p1)
 			{
 				return (m_p->*m_fn)(p1);
 			}
@@ -236,11 +230,6 @@ namespace OOBase
 	class Delegate2 : public SafeBoolean
 	{
 	public:
-		typedef Allocator allocator_type;
-		typedef R return_type;
-		typedef P1 param1_type;
-		typedef P2 param2_type;
-
 		Delegate2(R (*fn)(P1,P2) = NULL) : m_static(fn)
 		{
 		}
@@ -263,7 +252,7 @@ namespace OOBase
 			return SafeBoolean::safe_bool(m_ptr || m_static != NULL);
 		}
 
-		R invoke(P1 p1, P2 p2) const
+		R invoke(typename call_traits<P1>::param_type p1, typename call_traits<P2>::param_type p2) const
 		{
 			if (m_ptr)
 				return m_ptr->thunk(p1,p2);
@@ -291,7 +280,7 @@ namespace OOBase
 	private:
 		struct ThunkBase
 		{
-			virtual R thunk(P1, P2) = 0;
+			virtual R thunk(typename call_traits<P1>::param_type, typename call_traits<P2>::param_type) = 0;
 		};
 
 		template<typename T>
@@ -300,7 +289,7 @@ namespace OOBase
 			Thunk(T* p, R (T::*fn)(P1,P2)) : m_p(p), m_fn(fn)
 			{}
 
-			R thunk(P1 p1, P2 p2)
+			R thunk(typename call_traits<P1>::param_type p1, typename call_traits<P2>::param_type p2)
 			{
 				return (m_p->*m_fn)(p1,p2);
 			}
@@ -341,12 +330,6 @@ namespace OOBase
 	class Delegate3 : public SafeBoolean
 	{
 	public:
-		typedef Allocator allocator_type;
-		typedef R return_type;
-		typedef P1 param1_type;
-		typedef P2 param2_type;
-		typedef P3 param3_type;
-
 		Delegate3(R (*fn)(P1,P2,P3) = NULL) : m_static(fn)
 		{
 		}
@@ -369,7 +352,7 @@ namespace OOBase
 			return SafeBoolean::safe_bool(m_ptr || m_static != NULL);
 		}
 
-		R invoke(P1 p1, P2 p2, P3 p3) const
+		R invoke(typename call_traits<P1>::param_type p1, typename call_traits<P2>::param_type p2, typename call_traits<P3>::param_type p3) const
 		{
 			if (m_ptr)
 				return m_ptr->thunk(p1,p2,p3);
@@ -397,7 +380,7 @@ namespace OOBase
 	private:
 		struct ThunkBase
 		{
-			virtual R thunk(P1, P2, P3) = 0;
+			virtual R thunk(typename call_traits<P1>::param_type, typename call_traits<P2>::param_type, typename call_traits<P3>::param_type) = 0;
 		};
 
 		template<typename T>
@@ -406,7 +389,7 @@ namespace OOBase
 			Thunk(T* p, R (T::*fn)(P1,P2,P3)) : m_p(p), m_fn(fn)
 			{}
 
-			R thunk(P1 p1, P2 p2, P3 p3)
+			R thunk(typename call_traits<P1>::param_type p1, typename call_traits<P2>::param_type p2, typename call_traits<P3>::param_type p3)
 			{
 				return (m_p->*m_fn)(p1,p2,p3);
 			}
@@ -447,13 +430,6 @@ namespace OOBase
 	class Delegate4 : public SafeBoolean
 	{
 	public:
-		typedef Allocator allocator_type;
-		typedef R return_type;
-		typedef P1 param1_type;
-		typedef P2 param2_type;
-		typedef P3 param3_type;
-		typedef P4 param4_type;
-
 		Delegate4(R (*fn)(P1,P2,P3,P4) = NULL) : m_static(fn)
 		{
 		}
@@ -476,7 +452,7 @@ namespace OOBase
 			return SafeBoolean::safe_bool(m_ptr || m_static != NULL);
 		}
 
-		R invoke(P1 p1, P2 p2, P3 p3, P4 p4) const
+		R invoke(typename call_traits<P1>::param_type p1, typename call_traits<P2>::param_type p2, typename call_traits<P3>::param_type p3, typename call_traits<P4>::param_type p4) const
 		{
 			if (m_ptr)
 				return m_ptr->thunk(p1,p2,p3,p4);
@@ -504,7 +480,7 @@ namespace OOBase
 	private:
 		struct ThunkBase
 		{
-			virtual R thunk(P1, P2, P3, P4) = 0;
+			virtual R thunk(typename call_traits<P1>::param_type, typename call_traits<P2>::param_type, typename call_traits<P3>::param_type, typename call_traits<P4>::param_type) = 0;
 		};
 
 		template<typename T>
@@ -513,7 +489,7 @@ namespace OOBase
 			Thunk(T* p, R (T::*fn)(P1,P2,P3,P4)) : m_p(p), m_fn(fn)
 			{}
 
-			R thunk(P1 p1, P2 p2, P3 p3, P4 p4)
+			R thunk(typename call_traits<P1>::param_type p1, typename call_traits<P2>::param_type p2, typename call_traits<P3>::param_type p3, typename call_traits<P4>::param_type p4)
 			{
 				return (m_p->*m_fn)(p1,p2,p3,p4);
 			}
@@ -554,14 +530,6 @@ namespace OOBase
 	class Delegate5 : public SafeBoolean
 	{
 	public:
-		typedef Allocator allocator_type;
-		typedef R return_type;
-		typedef P1 param1_type;
-		typedef P2 param2_type;
-		typedef P3 param3_type;
-		typedef P4 param4_type;
-		typedef P5 param5_type;
-
 		Delegate5(R (*fn)(P1,P2,P3,P4,P5) = NULL) : m_static(fn)
 		{
 		}
@@ -584,7 +552,7 @@ namespace OOBase
 			return SafeBoolean::safe_bool(m_ptr || m_static != NULL);
 		}
 
-		R invoke(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5) const
+		R invoke(typename call_traits<P1>::param_type p1, typename call_traits<P2>::param_type p2, typename call_traits<P3>::param_type p3, typename call_traits<P4>::param_type p4, typename call_traits<P5>::param_type p5) const
 		{
 			if (m_ptr)
 				return m_ptr->thunk(p1,p2,p3,p4,p5);
@@ -612,7 +580,7 @@ namespace OOBase
 	private:
 		struct ThunkBase
 		{
-			virtual R thunk(P1, P2, P3, P4, P5) = 0;
+			virtual R thunk(typename call_traits<P1>::param_type, typename call_traits<P2>::param_type, typename call_traits<P3>::param_type, typename call_traits<P4>::param_type, typename call_traits<P5>::param_type) = 0;
 		};
 
 		template<typename T>
@@ -621,7 +589,7 @@ namespace OOBase
 			Thunk(T* p, R (T::*fn)(P1,P2,P3,P4,P5)) : m_p(p), m_fn(fn)
 			{}
 
-			R thunk(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
+			R thunk(typename call_traits<P1>::param_type p1, typename call_traits<P2>::param_type p2, typename call_traits<P3>::param_type p3, typename call_traits<P4>::param_type p4, typename call_traits<P5>::param_type p5)
 			{
 				return (m_p->*m_fn)(p1,p2,p3,p4,p5);
 			}

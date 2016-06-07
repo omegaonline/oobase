@@ -302,6 +302,54 @@ namespace OOBase
 	};
 
 	template <typename T>
+	struct add_const_ref
+	{
+		typedef T const& type;
+	};
+
+	template <typename T>
+	struct add_const_ref<T const>
+	{
+		typedef T const& type;
+	};
+
+	template <typename T>
+	struct add_const_ref<T&>
+	{
+		typedef T const& type;
+	};
+
+	template <typename T>
+	struct add_const_ref<T const&>
+	{
+		typedef T const& type;
+	};
+
+	template <typename T>
+	struct remove_const_ref
+	{
+		typedef T type;
+	};
+
+	template <typename T>
+	struct remove_const_ref<T const>
+	{
+		typedef T type;
+	};
+
+	template <typename T>
+	struct remove_const_ref<T&>
+	{
+		typedef T type;
+	};
+
+	template <typename T>
+	struct remove_const_ref<T const&>
+	{
+		typedef T type;
+	};
+
+	template <typename T>
 	struct add_pointer
 	{
 		typedef T* type;
@@ -311,18 +359,6 @@ namespace OOBase
 	struct add_pointer<T&>
 	{
 		typedef T* type;
-	};
-
-	template <typename T>
-	struct remove_pointer
-	{
-		typedef T type;
-	};
-
-	template <typename T>
-	struct remove_pointer<T*>
-	{
-		typedef T type;
 	};
 
 	template <typename T>
@@ -377,6 +413,18 @@ namespace OOBase
 			static const bool value = is_pod<T>::value;
 		};
 
+		template <typename T, bool pod = true>
+		struct call_traits_impl
+		{
+			typedef T const param_type;
+		};
+
+		template <typename T>
+		struct call_traits_impl<T,false>
+		{
+			typedef T const& param_type;
+		};
+
 		namespace swap
 		{
 			template <typename Type>
@@ -419,6 +467,30 @@ namespace OOBase
 			};
 		}
 	}
+
+	template <typename T>
+	struct call_traits
+	{
+		typedef typename detail::call_traits_impl<T,detail::is_pod<T>::value>::param_type param_type;
+	};
+
+	template <typename T>
+	struct call_traits<T&>
+	{
+		typedef T& param_type;
+	};
+
+	template <typename T>
+	struct call_traits<const T&>
+	{
+		typedef const T& param_type;
+	};
+
+	template <typename T>
+	struct call_traits<T*>
+	{
+		typedef T*  param_type;
+	};
 
 	template <typename T>
 	inline void swap(T& lhs, T& rhs)
