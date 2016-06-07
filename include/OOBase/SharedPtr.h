@@ -158,7 +158,7 @@ namespace OOBase
 			{
 				SharedCountAlloc<T,Allocator>* i = NULL;
 				if (!Allocator::allocate_new_ref(i,p))
-					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+					OOBase_CallCriticalFailure(system_error());
 				m_impl = i;
 			}
 
@@ -167,7 +167,7 @@ namespace OOBase
 			{
 				SharedCountAllocInstance<T>* i = alloc.allocate_new<SharedCountAllocInstance<T> >(alloc,p);
 				if (!i)
-					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+					OOBase_CallCriticalFailure(system_error());
 				m_impl = i;
 			}
 

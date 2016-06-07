@@ -46,7 +46,7 @@ namespace OOBase
 			{
 				m_cache = static_cast<CacheEntry*>(Allocator::allocate(m_size*sizeof(CacheEntry)));
 				if (!m_cache)
-					return ERROR_OUTOFMEMORY;
+					return system_error();
 
 				// Set nothing in use
 				for (size_t i=0;i<m_size;++i)

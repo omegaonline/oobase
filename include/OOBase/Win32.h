@@ -196,7 +196,7 @@ namespace OOBase
 				return 0;
 
 			if (!ptrBuf.resize(len))
-				return ERROR_OUTOFMEMORY;
+				return system_error();
 
 			return detail::utf8_to_wchar_t(sz,ptrBuf.get(),len);
 		}
@@ -210,7 +210,7 @@ namespace OOBase
 				return 0;
 
 			if (!ptrBuf.resize(len))
-				return ERROR_OUTOFMEMORY;
+				return system_error();
 
 			return detail::wchar_t_to_utf8(wsz,ptrBuf.get(),len);
 		}

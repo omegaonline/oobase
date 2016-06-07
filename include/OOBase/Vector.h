@@ -124,7 +124,7 @@ namespace OOBase
 				if (rhs.m_size)
 				{
 					if (!reserve(rhs.m_size))
-						OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+						OOBase_CallCriticalFailure(system_error());
 					else
 					{
 						for (size_t i=0;i<rhs.m_size;++i)
@@ -142,7 +142,7 @@ namespace OOBase
 				if (rhs.m_size)
 				{
 					if (!reserve(rhs.m_size))
-						OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+						OOBase_CallCriticalFailure(system_error());
 					else
 					{
 						for (size_t i=0;i<rhs.m_size;++i)
@@ -343,7 +343,7 @@ namespace OOBase
 				if (rhs.m_size)
 				{
 					if (!reserve(rhs.m_size))
-						OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+						OOBase_CallCriticalFailure(system_error());
 					else
 					{
 						memcpy(this->m_data,rhs.m_data,rhs.m_size*sizeof(T));
@@ -358,7 +358,7 @@ namespace OOBase
 				if (rhs.m_size)
 				{
 					if (!reserve(rhs.m_size))
-						OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+						OOBase_CallCriticalFailure(system_error());
 					else
 					{
 						memcpy(this->m_data,rhs.m_data,rhs.m_size*sizeof(T));

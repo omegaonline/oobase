@@ -925,7 +925,7 @@ namespace OOBase
 			BTreeImpl(const BTreeImpl& rhs) : baseClass(rhs), m_compare(rhs.m_compare), m_root_page(NULL), m_head(NULL), m_tail(NULL)
 			{
 				if (!insert(rhs.begin(),rhs.end()))
-					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+					OOBase_CallCriticalFailure(system_error());
 			}
 
 			~BTreeImpl()
@@ -984,7 +984,7 @@ namespace OOBase
 		BTree(const BTree& rhs) : baseClass(rhs)
 		{
 			if (!insert(rhs.begin(),rhs.end()))
-				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+				OOBase_CallCriticalFailure(system_error());
 		}
 
 		BTree& operator = (const BTree& rhs)

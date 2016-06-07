@@ -129,7 +129,7 @@ namespace OOBase
 				{
 					if (!push(rhs.m_data[pos]))
 					{
-						OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+						OOBase_CallCriticalFailure(system_error());
 						break;
 					}
 				}
@@ -225,7 +225,7 @@ namespace OOBase
 			{
 				this->m_data = static_cast<T*>(baseClass::allocate(rhs.m_data,rhs.m_capacity*sizeof(T),alignment_of<T>::value));
 				if (!this->m_data)
-					OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+					OOBase_CallCriticalFailure(system_error());
 				else
 				{
 					memcpy(this->m_data,rhs.m_data,rhs.m_capacity*sizeof(T));

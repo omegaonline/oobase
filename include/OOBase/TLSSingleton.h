@@ -60,14 +60,11 @@ namespace OOBase
 			// We do this long-hand so T can friend us
 			void* t = ThreadLocalAllocator::allocate(sizeof(T),alignment_of<T>::value);
 			if (!t)
-				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+				OOBase_CallCriticalFailure(system_error());
 
 			// Add destructor before calling constructor
 			if (!TLS::Set(reinterpret_cast<void*>(&init),t,&destroy))
-			{
-				ThreadLocalAllocator::free(t);
-				OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
-			}
+				OOBase_CallCriticalFailure(system_error());
 
 #if defined(OOBASE_HAVE_EXCEPTIONS)
 			try

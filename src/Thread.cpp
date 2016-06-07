@@ -122,7 +122,7 @@ unsigned int OOBase::Thread::oobase_thread_fn(void* param)
 
 	// Set the TLS for self
 	if (!TLS::Set(&s_tls_key,pThis))
-		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+		OOBase_CallCriticalFailure(system_error());
 
 	// Set the event, meaning we have started
 	if (!SetEvent(wrap->m_hEvent))
@@ -139,14 +139,14 @@ const OOBase::Thread* OOBase::Thread::self()
 
 	Thread* pThread = CrtAllocator::allocate_new<Thread>();
 	if (!pThread)
-		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+		OOBase_CallCriticalFailure(system_error());
 
 	// Do some silly windows nonsense to get the thread handle
 	if (!DuplicateHandle(GetCurrentProcess(),GetCurrentThread(),GetCurrentProcess(),&pThread->m_hThread,0,FALSE,DUPLICATE_SAME_ACCESS))
 		OOBase_CallCriticalFailure(GetLastError());
 
 	if (!TLS::Set(&s_tls_key,pThread,&destroy_thread_self))
-		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+		OOBase_CallCriticalFailure(system_error());
 
 	return pThread;
 }
@@ -267,7 +267,7 @@ void* OOBase::Thread::oobase_thread_fn(void* param)
 
 	// Set the TLS for self
 	if (!TLS::Set(&s_tls_key,pThis))
-		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+		OOBase_CallCriticalFailure(system_error());
 
 	// Set the event, meaning we have started
 	wrap->m_started->set();
@@ -289,12 +289,12 @@ const OOBase::Thread* OOBase::Thread::self()
 
 	Thread* pThread = CrtAllocator::allocate_new<Thread>();
 	if (!pThread)
-		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+		OOBase_CallCriticalFailure(system_error());
 
 	pThread->m_thread = pthread_self();
 
 	if (!TLS::Set(&s_tls_key,pThread,&destroy_thread_self))
-		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+		OOBase_CallCriticalFailure(system_error());
 
 	return pThread;
 }
@@ -312,7 +312,7 @@ OOBase::SharedPtr<OOBase::Thread> OOBase::Thread::run(int (*thread_fn)(void*), v
 {
 	SharedPtr<Thread> ptrThread = allocate_shared<Thread>();
 	if (!ptrThread)
-		err = ERROR_OUTOFMEMORY;
+		err = system_error();
 	else
 	{
 		err = ptrThread->run(thread_fn,param);
@@ -361,7 +361,7 @@ int OOBase::ThreadPool::run(int (*thread_fn)(void*), void* param, size_t threads
 		if (bAdd)
 		{
 			if (!m_threads.push_back(ptrThread))
-				return ERROR_OUTOFMEMORY;
+				return system_error();
 		}
 
 		guard.release();

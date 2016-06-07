@@ -410,7 +410,7 @@ int OOBase::Logger::connect_system_log(const char* name, const char*)
 	if (!hLog)
 		return GetLastError();
 
-	return Logger::connect(&onSysLog,hLog) ? 0 : ERROR_OUTOFMEMORY;
+	return Logger::connect(&onSysLog,hLog) ? 0 : system_error();
 }
 
 bool OOBase::Logger::connect_debug_log()
@@ -501,7 +501,7 @@ int OOBase::Logger::connect_system_log(const char* name, const char* category)
 	}
 	openlog(name,LOG_NDELAY,id | LOG_CONS | LOG_PID);
 
-	return Logger::connect(&onSysLog,NULL) ? 0 : ERROR_OUTOFMEMORY;
+	return Logger::connect(&onSysLog,NULL) ? 0 : system_error();
 }
 
 #endif // defined(HAVE_SYSLOG_H)

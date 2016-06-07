@@ -138,12 +138,12 @@ DWORD OOBase::Win32::GetNameFromToken(HANDLE hToken, ScopedArrayPtr<wchar_t>& st
 		return GetLastError();
 
 	if (!strUserName.resize(dwUNameSize))
-		return ERROR_OUTOFMEMORY;
+		return system_error();
 
 	if (dwDNameSize)
 	{
 		if (!strDomainName.resize(dwDNameSize))
-			return ERROR_OUTOFMEMORY;
+			return system_error();
 	}
 
 	if (!LookupAccountSidW(NULL,ptrUserInfo->User.Sid,strUserName.get(),&dwUNameSize,strDomainName.get(),&dwDNameSize,&name_use))
@@ -209,7 +209,7 @@ DWORD OOBase::Win32::GetLogonSID(HANDLE hToken, UniquePtr<SID,AllocatorInstance>
 
 				pSIDLogon.reset(static_cast<SID*>(pSIDLogon.get_allocator().allocate(dwLen,16)));
 				if (!pSIDLogon)
-					return ERROR_OUTOFMEMORY;
+					return system_error();
 
 				if (!CopySid(dwLen,pSIDLogon.get(),ptrGroups->Groups[dwIndex].Sid))
 					return GetLastError();

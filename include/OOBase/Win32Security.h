@@ -150,7 +150,7 @@ namespace OOBase
 
 			info.reset(static_cast<T*>(Allocator::allocate(dwLen,16)));
 			if (!info)
-				return ERROR_OUTOFMEMORY;
+				return system_error();
 
 			if (GetTokenInformation(hToken,cls,info.get(),dwLen,&dwLen))
 				return ERROR_SUCCESS;
@@ -171,7 +171,7 @@ namespace OOBase
 
 			info.reset(static_cast<T*>(info.get_allocator().allocate(dwLen,16)));
 			if (!info)
-				return ERROR_OUTOFMEMORY;
+				return system_error();
 
 			if (GetTokenInformation(hToken,cls,info.get(),dwLen,&dwLen))
 				return ERROR_SUCCESS;

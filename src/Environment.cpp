@@ -50,7 +50,7 @@ namespace
 				if (eq == OOBase::String::npos)
 				{
 					if (!tabEnv.insert(str,OOBase::String()))
-						err = ERROR_OUTOFMEMORY;
+						err = system_error();
 				}
 				else
 				{
@@ -61,7 +61,7 @@ namespace
 					if (!err)
 					{
 						if (!tabEnv.insert(strLeft,strRight))
-							err = ERROR_OUTOFMEMORY;
+							err = system_error();
 					}
 				}
 			}
@@ -129,7 +129,7 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 
 			temp_wchar_t key = make_shared(static_cast<wchar_t*>(allocator.allocate(len+1,alignment_of<wchar_t>::value)),allocator);
 			if (!key)
-				return ERROR_OUTOFMEMORY;
+				return system_error();
 
 			wcscpy(key.get(),ptr.get());
 
@@ -145,13 +145,13 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 
 					value = make_shared(static_cast<wchar_t*>(allocator.allocate(len+1,alignment_of<wchar_t>::value)),allocator);
 					if (!value)
-						return ERROR_OUTOFMEMORY;
+						return system_error();
 
 					wcscpy(value.get(),ptr.get());
 				}
 
 				if (!wenv.insert(key,value))
-					return ERROR_OUTOFMEMORY;
+					return system_error();
 			}
 		}
 		
@@ -161,7 +161,7 @@ int OOBase::Environment::get_block(const env_table_t& tabEnv, ScopedArrayPtr<wch
 
 	// And now copy into one giant block
 	if (!ptr.resize(total_size + 2))
-		return ERROR_OUTOFMEMORY;
+		return system_error();
 
 	wchar_t* pout = ptr.get();
 	for (Table<temp_wchar_t,temp_wchar_t,env_sort,AllocatorInstance>::iterator i=wenv.begin();i;++i)

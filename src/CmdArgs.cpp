@@ -31,7 +31,7 @@ int OOBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, 
 {
 	String strId,strLongOpt;
 	if (!strId.assign(id) || !strLongOpt.assign(long_opt))
-		return ERROR_OUTOFMEMORY;
+		return system_error();
 
 	if (strId.empty())
 		return EINVAL;
@@ -45,18 +45,18 @@ int OOBase::CmdArgs::add_option(const char* id, char short_opt, bool has_value, 
 
 	opt.m_has_value = has_value;
 
-	return m_map_opts.insert(strId,opt) ? 0 : ERROR_OUTOFMEMORY;
+	return m_map_opts.insert(strId,opt) ? 0 : system_error();
 }
 
 int OOBase::CmdArgs::error(options_t& options, int err, const char* key, const char* value) const
 {
 	String strErr,strVal;
 	if (!strErr.assign(key) || !strVal.assign(value))
-		return ERROR_OUTOFMEMORY;
+		return system_error();
 	
 	options.clear();
 	if (!options.insert(strErr,strVal))
-		return ERROR_OUTOFMEMORY;
+		return system_error();
 
 	return err;
 }
@@ -72,7 +72,7 @@ int OOBase::CmdArgs::parse(options_t& options, arguments_t& args, int skip) cons
 	ScopedArrayPtr<const char*> argv;
 	Vector<SharedString<ThreadLocalAllocator>,ThreadLocalAllocator> arg_strings;
 	if (!argv.resize(argc) || !arg_strings.resize(argc))
-		return ERROR_OUTOFMEMORY;
+		return system_error();
 
 	for (int i=0;i<argc;++i)
 	{
@@ -124,9 +124,9 @@ int OOBase::CmdArgs::parse(int argc, const char* argv[], options_t& options, arg
 			// Argument
 			String strVal;
 			if (!strVal.assign(argv[i]))
-				err = ERROR_OUTOFMEMORY;
+				err = system_error();
 			else
-				err = args.push_back(strVal) ? 0 : ERROR_OUTOFMEMORY;
+				err = args.push_back(strVal) ? 0 : system_error();
 		}
 	}
 
@@ -150,7 +150,7 @@ int OOBase::CmdArgs::parse_long_option(options_t& options, const char** argv, in
 			}
 
 			if (!strVal.assign(value) || !options.insert(i->first,strVal))
-				return ERROR_OUTOFMEMORY;
+				return system_error();
 
 			return 0;
 		}
@@ -161,7 +161,7 @@ int OOBase::CmdArgs::parse_long_option(options_t& options, const char** argv, in
 				value = &argv[arg][i->second.m_long_opt.length()+3];
 
 			if (!strVal.assign(value) || !options.insert(i->first,strVal))
-				return ERROR_OUTOFMEMORY;
+				return system_error();
 
 			return 0;
 		}
@@ -201,7 +201,7 @@ int OOBase::CmdArgs::parse_short_options(options_t& options, const char** argv, 
 						value = &c[1];
 
 					if (!strVal.assign(value) || !options.insert(i->first,strVal))
-						return ERROR_OUTOFMEMORY;
+						return system_error();
 
 					// No more for this arg...
 					return 0;
@@ -209,7 +209,7 @@ int OOBase::CmdArgs::parse_short_options(options_t& options, const char** argv, 
 				else
 				{
 					if (!strVal.assign("true") || !options.insert(i->first,strVal))
-						return ERROR_OUTOFMEMORY;
+						return system_error();
 
 					break;
 				}

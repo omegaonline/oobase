@@ -295,7 +295,7 @@ OOBase::POSIX::pw_info::pw_info(uid_t uid) : m_pwd(NULL)
 {
 	size_t size = get_size();
 	if (!m_data.resize(size))
-		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+		OOBase_CallCriticalFailure(system_error());
 
 	int err = 0;
 	do
@@ -311,7 +311,7 @@ OOBase::POSIX::pw_info::pw_info(const char* uname) : m_pwd(NULL)
 {
 	size_t size = get_size();
 	if (!m_data.resize(size))
-		OOBase_CallCriticalFailure(ERROR_OUTOFMEMORY);
+		OOBase_CallCriticalFailure(system_error());
 
 	int err = 0;
 	do
