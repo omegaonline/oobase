@@ -653,6 +653,24 @@ namespace OOBase
 			return ret;
 		}
 
+		template <typename V>
+		bool exists(V value) const
+		{
+			return find_i(value) != size_t(-1);
+		}
+
+		template <typename V>
+		iterator find(V value)
+		{
+			return iterator(this,find_i(value));
+		}
+
+		template <typename V>
+		const_iterator find(V value) const
+		{
+			return const_iterator(this,find_i(value));
+		}
+
 		iterator position(size_t pos)
 		{
 			if (pos >= this->m_size)
@@ -734,6 +752,17 @@ namespace OOBase
 	private:
 		iterator m_end;
 		const_iterator m_cend;
+
+		template <typename T1>
+		size_t find_i(T1 value) const
+		{
+			for (size_t pos = 0;pos < this->m_size;++pos)
+			{
+				if (this->m_data[pos] == value)
+					return pos;
+			}
+			return size_t(-1);
+		}
 	};
 }
 
