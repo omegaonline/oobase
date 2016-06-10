@@ -179,6 +179,17 @@ namespace OOBase
 			return (p ? const_iterator(this,static_cast<size_t>(p - this->m_data)) : m_cend);
 		}
 
+		template <typename K1>
+		bool find_first(K1 key, V& val) const
+		{
+			const_iterator i = find(key);
+			if (!i)
+				return false;
+
+			val = i->second;
+			return true;
+		}
+
 		iterator begin()
 		{
 			return baseClass::empty() ? m_end : iterator(this,0);

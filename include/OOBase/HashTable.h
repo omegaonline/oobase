@@ -293,6 +293,17 @@ namespace OOBase
 			return iterator(this,find_i(key));
 		}
 
+		template <typename K1>
+		bool find(K1 key, V& val) const
+		{
+			size_t pos = find_i(key);
+			if (pos == size_t(-1))
+				return false;
+
+			val = m_data[pos].m_data.second;
+			return true;
+		}
+
 		iterator erase(iterator iter)
 		{
 			assert(iter.check(this));
