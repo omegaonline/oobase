@@ -40,7 +40,7 @@ namespace OOBase
 			Allocator::free(m_cache);
 		}
 
-		int insert(const K& key, const V& value)
+		int insert(typename call_traits<K>::param_type key, typename call_traits<V>::param_type value)
 		{
 			if (!m_cache)
 			{
@@ -99,7 +99,7 @@ namespace OOBase
 			unsigned m_in_use : 1;
 			unsigned m_clk    : 1;
 
-			CacheEntry(const K& k) : m_key(k), m_in_use(1), m_clk(1)
+			CacheEntry(typename call_traits<K>::param_type k) : m_key(k), m_in_use(1), m_clk(1)
 			{}
 		};
 

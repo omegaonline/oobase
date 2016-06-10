@@ -81,7 +81,7 @@ namespace OOBase
 			}
 
 			template <typename T1>
-			bool find(const T1& v) const
+			bool find(T1 v) const
 			{
 				for (size_t pos = m_front;m_capacity != 0 && pos != m_back;pos = (pos+1) % m_capacity)
 				{
@@ -135,7 +135,7 @@ namespace OOBase
 				}
 			}
 
-			bool push(const T& val)
+			bool push(typename call_traits<T>::param_type val)
 			{
 				if (this->m_capacity == 0 || baseClass::size() == (this->m_capacity - 1))
 				{
@@ -235,7 +235,7 @@ namespace OOBase
 				}
 			}
 
-			bool push(const T& val)
+			bool push(typename call_traits<T>::param_type val)
 			{
 				if (this->m_capacity == 0 || baseClass::size() == (this->m_capacity - 1))
 				{

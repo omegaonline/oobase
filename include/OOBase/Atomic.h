@@ -41,7 +41,7 @@ namespace OOBase
 		Atomic() : m_val()
 		{}
 
-		Atomic(const T& v) : m_val(v)
+		Atomic(const T v) : m_val(v)
 		{}
 
 		Atomic(const Atomic& a) : m_val(a.m_val)

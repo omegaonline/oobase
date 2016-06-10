@@ -95,7 +95,7 @@ namespace OOBase
 	}
 
 	template <typename T>
-	T byte_swap(const T& val)
+	T byte_swap(T val)
 	{
 		static_assert(detail::is_pod<T>::value,"Attempting to byte swap non-POD");
 		return detail::byte_swapper<sizeof(T)>::byte_swap(val);

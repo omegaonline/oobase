@@ -111,7 +111,7 @@ namespace OOBase
 			return r;
 		}
 
-		iterator insert(const K& key, const V& value)
+		iterator insert(typename call_traits<K>::param_type key, typename call_traits<V>::param_type value)
 		{
 			return insert(OOBase::make_pair(key,value));
 		}
@@ -129,7 +129,7 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		bool remove(const K1& key)
+		bool remove(K1 key)
 		{
 			iterator i = find(key);
 			if (i == m_end)
@@ -145,14 +145,14 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		bool exists(const K1& key) const
+		bool exists(K1 key) const
 		{
 			const Pair<K,V>* p = bsearch(key);
 			return (p && p->first == key);
 		}
 
 		template <typename K1>
-		iterator find(const K1& key)
+		iterator find(K1 key)
 		{
 			const Pair<K,V>* p = bsearch(key);
 			if (!p || p->first != key)
@@ -166,7 +166,7 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		const_iterator find(const K1& key) const
+		const_iterator find(K1 key) const
 		{
 			const Pair<K,V>* p = bsearch(key);
 			if (!p || p->first != key)
@@ -177,24 +177,6 @@ namespace OOBase
 				--p;
 
 			return (p ? const_iterator(this,static_cast<size_t>(p - this->m_data)) : m_cend);
-		}
-
-		template <typename K1>
-		bool find(const K1& key, V& value) const
-		{
-			const Pair<K,V>* p = bsearch(key);
-			if (!p || p->first != key)
-				return false;
-
-			// Scan for the first
-			while (p && p > this->m_data && (p-1)->first == key)
-				--p;
-
-			if (!p)
-				return false;
-
-			value = p->second;
-			return true;
 		}
 
 		iterator begin()
@@ -239,7 +221,7 @@ namespace OOBase
 
 	private:
 		template <typename K1>
-		const Pair<K,V>* bsearch(const K1& key) const
+		const Pair<K,V>* bsearch(K1 key) const
 		{
 			size_t start = 0;
 			for (size_t end = this->m_size;start < end;)

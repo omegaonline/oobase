@@ -109,7 +109,7 @@ namespace OOBase
 		}
 
 		template <typename S>
-		static size_t hash(const S& v)
+		static size_t hash(S v)
 		{
 			return hash(v.c_str(),v.length());
 		}
@@ -135,7 +135,7 @@ namespace OOBase
 	struct Hash<SharedString<A> >
 	{
 		template <typename S>
-		static size_t hash(const S& v)
+		static size_t hash(S v)
 		{
 			return Hash<const char*>::hash(v.c_str(),v.length());
 		}
@@ -259,7 +259,7 @@ namespace OOBase
 			OOBase::swap(m_hash,rhs.m_hash);
 		}
 
-		iterator insert(const K& key, const V& value)
+		iterator insert(typename call_traits<K>::param_type key, typename call_traits<V>::param_type value)
 		{
 			size_t pos = 0;
 			Pair<K,V> temp_item(key,value);
@@ -276,19 +276,19 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		bool exists(const K1& key) const
+		bool exists(K1 key) const
 		{
 			return (find_i(key) < m_size);
 		}
 
 		template <typename K1>
-		const_iterator find(const K1& key) const
+		const_iterator find(K1 key) const
 		{
 			return const_iterator(this,find_i(key));
 		}
 
 		template <typename K1>
-		iterator find(const K1& key)
+		iterator find(K1 key)
 		{
 			return iterator(this,find_i(key));
 		}
@@ -315,7 +315,7 @@ namespace OOBase
 			return iterator(this,pos);
 		}
 
-		bool remove(const K& key, V* value = NULL)
+		bool remove(typename call_traits<K>::param_type key, V* value = NULL)
 		{
 			iterator i = find(key);
 			if (i == m_end)
@@ -430,7 +430,7 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		size_t hash_i(const K1& key) const
+		size_t hash_i(K1 key) const
 		{
 			size_t h = m_hash.hash(key);
 
@@ -466,7 +466,7 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		size_t find_i(const K1& key) const
+		size_t find_i(K1 key) const
 		{
 			if (m_count == 0)
 				return size_t(-1);

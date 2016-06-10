@@ -59,7 +59,7 @@ namespace OOBase
 			return m_errored;
 		}
 
-		Result push(const T& val, const Timeout& timeout = Timeout())
+		Result push(typename call_traits<T>::param_type val, const Timeout& timeout = Timeout())
 		{
 			Guard<Condition::Mutex> guard(m_lock);
 

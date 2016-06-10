@@ -208,7 +208,12 @@ namespace OOBase
 				return true;
 			}
 
-			bool assign(size_t n, const T& value = T())
+			bool assign(size_t n)
+			{
+				return assign(n,T());
+			}
+
+			bool assign(size_t n, typename call_traits<T>::param_type value)
 			{
 				if (n > this->m_capacity)
 				{
@@ -236,7 +241,7 @@ namespace OOBase
 				return true;
 			}
 
-			bool insert_at(size_t& pos, const T& value)
+			bool insert_at(size_t& pos, typename call_traits<T>::param_type value)
 			{
 				if (pos > this->m_size)
 					pos = this->m_size;
@@ -369,7 +374,12 @@ namespace OOBase
 			}
 
 		protected:
-			bool assign(size_t n, const T& value = T())
+			bool assign(size_t n)
+			{
+				return assign(n,T());
+			}
+
+			bool assign(size_t n, typename call_traits<T>::param_type value)
 			{
 				if (!reserve(n))
 					return false;
@@ -396,7 +406,7 @@ namespace OOBase
 				return true;
 			}
 
-			bool insert_at(size_t& pos, const T& value)
+			bool insert_at(size_t& pos, typename call_traits<T>::param_type value)
 			{
 				if (pos > this->m_size)
 					pos = this->m_size;
@@ -476,7 +486,7 @@ namespace OOBase
 				return this->m_data;
 			}
 
-			bool push_back(const T& value)
+			bool push_back(typename call_traits<T>::param_type value)
 			{
 				return baseClass::insert_at(this->m_size,value);
 			}
@@ -538,7 +548,12 @@ namespace OOBase
 			return baseClass::assign(first,last);
 		}
 
-		bool assign(size_t n, const T& value = T())
+		bool assign(size_t n)
+		{
+			return assign(n,T());
+		}
+
+		bool assign(size_t n, typename call_traits<T>::param_type value)
 		{
 			return baseClass::assign(n,value);
 		}
@@ -558,7 +573,7 @@ namespace OOBase
 			return baseClass::data();
 		}
 
-		bool resize(size_t new_size, const T& value)
+		bool resize(size_t new_size, typename call_traits<T>::param_type value)
 		{
 			bool ret = reserve(new_size);
 			while (this->m_size < new_size && ret)
@@ -573,7 +588,7 @@ namespace OOBase
 			return resize(new_size,T());
 		}
 
-		iterator push_back(const T& value)
+		iterator push_back(typename call_traits<T>::param_type value)
 		{
 			return baseClass::push_back(value) ? iterator(this,this->m_size-1) : m_end;
 		}
@@ -583,13 +598,13 @@ namespace OOBase
 			return baseClass::pop_back();
 		}
 
-		iterator insert(const T& value, const iterator& before)
+		iterator insert(typename call_traits<T>::param_type value, const iterator& before)
 		{
 			assert(before.check(this));
 			return insert(value,before.deref());
 		}
 
-		iterator insert(const T& value, size_t before)
+		iterator insert(typename call_traits<T>::param_type value, size_t before)
 		{
 			return baseClass::insert_at(before,value) ? iterator(this,before) : m_end;
 		}
@@ -621,7 +636,8 @@ namespace OOBase
 			return iterator(this,baseClass::remove_at(first,count));
 		}
 
-		size_t remove(const T& value)
+		template <typename V>
+		size_t remove(V value)
 		{
 			size_t ret = 0;
 			for (size_t pos = 0;pos < this->m_size;)

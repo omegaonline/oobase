@@ -92,7 +92,7 @@ namespace OOBase
 			return true;
 		}
 
-		iterator insert(const T& value)
+		iterator insert(typename call_traits<T>::param_type value)
 		{
 			size_t start = 0;
 			for (size_t end = this->m_size;start < end;)
@@ -119,7 +119,7 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		bool remove(const T1& value)
+		bool remove(T1 value)
 		{
 			iterator i = find(value);
 			if (i == m_end)
@@ -135,38 +135,22 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		bool exists(const T1& value) const
+		bool exists(T1 value) const
 		{
 			const T* p = bsearch(value);
 			return (p && *p == value);
 		}
 
 		template <typename T1>
-		iterator find(const T1& value)
+		iterator find(T1 value)
 		{
-			const T* p = bsearch(value);
-			if (!p || *p != value)
-				return m_end;
-
-			// Scan for the first
-			while (p && p > this->m_data && *(p-1) == value)
-				--p;
-
-			return (p ? iterator(this,static_cast<size_t>(p - this->m_data)) : m_end);
+			return iterator(this,find_i(value));
 		}
 
 		template <typename T1>
-		const_iterator find(const T1& value) const
+		const_iterator find(T1 value) const
 		{
-			const T* p = bsearch(value);
-			if (!p || *p != value)
-				return m_cend;
-
-			// Scan for the first
-			while (p && p > this->m_data && *(p-1) == value)
-				--p;
-
-			return (p ? const_iterator(this,static_cast<size_t>(p - this->m_data)) : m_cend);
+			return const_iterator(this,find_i(value));
 		}
 
 		iterator begin()
@@ -211,7 +195,7 @@ namespace OOBase
 
 	private:
 		template <typename K1>
-		const T* bsearch(const K1& key) const
+		const T* bsearch(K1 key) const
 		{
 			size_t start = 0;
 			for (size_t end = this->m_size;start < end;)
@@ -226,6 +210,21 @@ namespace OOBase
 			}
 			return NULL;
 		}
+
+		template <typename T1>
+		size_t find_i(T1 value) const
+		{
+			const T* p = bsearch(value);
+			if (!p || *p != value)
+				return size_t(-1);
+
+			// Scan for the first
+			while (p && p > this->m_data && *(p-1) == value)
+				--p;
+
+			return (p ? static_cast<size_t>(p - this->m_data) : size_t(-1));
+		}
+
 		Compare m_compare;
 
 		iterator m_end;

@@ -35,7 +35,7 @@ namespace OOBase
 		struct ListNode
 		{
 			template <typename T1>
-			ListNode(ListNode* prev, ListNode* next, const T1& data) :
+			ListNode(ListNode* prev, ListNode* next, T1 data) :
 				m_prev(prev), m_next(next), m_data(data)
 			{}
 
@@ -84,18 +84,18 @@ namespace OOBase
 			return m_size;
 		}
 
-		iterator insert(const T& value, const iterator& before)
+		iterator insert(typename call_traits<T>::param_type value, const iterator& before)
 		{
 			assert(before.check(this));
 			return iterator(this,insert_before(value,before.deref()));
 		}
 
-		iterator push_back(const T& value)
+		iterator push_back(typename call_traits<T>::param_type value)
 		{
 			return iterator(this,insert_tail(value));
 		}
 
-		iterator push_front(const T& value)
+		iterator push_front(typename call_traits<T>::param_type value)
 		{
 			return iterator(this,insert_head(value));
 		}
@@ -107,7 +107,7 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		bool remove(const T1& value)
+		bool remove(T1 value)
 		{
 			iterator i = find(value);
 			if (i == m_end)
@@ -130,7 +130,7 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		iterator find(const T1& value)
+		iterator find(T1 value)
 		{
 			iterator i = begin();
 			for (;i != m_end;++i)
@@ -142,7 +142,7 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		const_iterator find(const T1& value) const
+		const_iterator find(T1 value) const
 		{
 			const_iterator i = cbegin();
 			for (;i != m_end;++i)
@@ -234,7 +234,7 @@ namespace OOBase
 			return r;
 		}
 
-		ListNode* insert_before(const T& value, ListNode* before)
+		ListNode* insert_before(typename call_traits<T>::param_type value, ListNode* before)
 		{
 			ListNode* new_node = NULL;
 			if (!baseClass::allocate_new_ref(new_node,before->m_prev,before,value))
@@ -251,7 +251,7 @@ namespace OOBase
 			return new_node;
 		}
 
-		ListNode* insert_head(const T& value)
+		ListNode* insert_head(typename call_traits<T>::param_type value)
 		{
 			if (m_head)
 				return insert_before(value,m_head);
@@ -268,7 +268,7 @@ namespace OOBase
 			return new_node;
 		}
 
-		ListNode* insert_tail(const T& value)
+		ListNode* insert_tail(typename call_traits<T>::param_type value)
 		{
 			if (!m_tail)
 				return insert_head(value);

@@ -45,8 +45,8 @@ namespace OOBase
 			virtual ~BTreeCompareBase()
 			{}
 
-			virtual bool less_than(const K& key) const = 0;
-			virtual bool equal(const K& key) const = 0;
+			virtual bool less_than(typename call_traits<K>::param_type key) const = 0;
+			virtual bool equal(typename call_traits<K>::param_type key) const = 0;
 		};
 
 		template <typename K1, typename K2, typename Compare>
@@ -186,7 +186,7 @@ namespace OOBase
 				return m_pages[page]->find(compare);
 			}
 
-			bool insert_page(BTreeImpl<K,V,Compare,B,Allocator>* tree, baseClass* page, const K& key, size_t insert_pos)
+			bool insert_page(BTreeImpl<K,V,Compare,B,Allocator>* tree, baseClass* page, typename call_traits<K>::param_type key, size_t insert_pos)
 			{
 				if (m_key_count >= B - 1)
 					return split(tree,insert_pos,page,key);
@@ -231,7 +231,7 @@ namespace OOBase
 
 			virtual BTreeInternalPageBase* new_page(BTreeImpl<K,V,Compare,B,Allocator>* tree) = 0;
 
-			bool split(BTreeImpl<K,V,Compare,B,Allocator>* tree, size_t insert_pos, baseClass* child, const K& child_key)
+			bool split(BTreeImpl<K,V,Compare,B,Allocator>* tree, size_t insert_pos, baseClass* child, typename call_traits<K>::param_type child_key)
 			{
 				// Make sure we have a parent
 				if (!this->m_parent)
@@ -323,7 +323,7 @@ namespace OOBase
 				return true;
 			}
 
-			baseClass* const* find_exact(const K& key, const Compare& compare) const
+			baseClass* const* find_exact(typename call_traits<K>::param_type key, const Compare& compare) const
 			{
 				size_t start = 0;
 				for (size_t end = m_key_count;start < end;)
@@ -1016,19 +1016,19 @@ namespace OOBase
 			return this->m_root_page->insert(this,value);
 		}
 
-		bool insert(const K& key, const V& value)
+		bool insert(typename call_traits<K>::param_type key, typename call_traits<V>::param_type value)
 		{
 			return insert(OOBase::make_pair(key,value));
 		}
 
 		template <typename K1>
-		bool remove(const K1& key)
+		bool remove(K1 key)
 		{
 			return this->m_root_page && this->m_root_page->remove(this,detail::BTreeCompare<K,K1,Compare>(this->m_compare,key));
 		}
 
 		template <typename K1>
-		bool exists(const K1& key) const
+		bool exists(K1 key) const
 		{
 			return (find_i(key) != NULL);
 		}
@@ -1093,7 +1093,7 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		bool find(const K1& key) const
+		bool find(K1 key) const
 		{
 			return this->m_root_page && this->m_root_page->find(detail::BTreeCompare<K,K1,Compare>(this->m_compare,key)) != NULL;
 		}

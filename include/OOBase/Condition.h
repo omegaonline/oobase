@@ -99,10 +99,10 @@ namespace OOBase
 		Future() : m_complete(false)
 		{}
 
-		Future(const T& v) : m_complete(false), m_value(v)
+		Future(typename call_traits<T>::param_type v) : m_complete(false), m_value(v)
 		{}
 
-		void signal(const T& v)
+		void signal(typename call_traits<T>::param_type v)
 		{
 			Guard<Condition::Mutex> guard(m_lock);
 			m_complete = true;
@@ -110,7 +110,7 @@ namespace OOBase
 			m_condition.signal();
 		}
 
-		void broadcast(const T& v)
+		void broadcast(typename call_traits<T>::param_type v)
 		{
 			Guard<Condition::Mutex> guard(m_lock);
 			m_complete = true;
@@ -134,7 +134,7 @@ namespace OOBase
 			return true;
 		}
 
-		const T& wait(bool bReset)
+		typename call_traits<T>::param_type wait(bool bReset)
 		{
 			OOBase::Guard<OOBase::Condition::Mutex> guard(m_lock);
 			while (!m_complete)
