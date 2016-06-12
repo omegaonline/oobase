@@ -53,7 +53,7 @@ namespace OOBase
 				baseClass::swap(rhs);
 				OOBase::swap(m_data,rhs.m_data);
 				OOBase::swap(m_size,rhs.m_size);
-				OOBase::swap(m_capacity,rhs.m_size);
+				OOBase::swap(m_capacity,rhs.m_capacity);
 			}
 
 			bool empty() const
