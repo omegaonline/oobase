@@ -652,6 +652,258 @@ namespace OOBase
 		return s1.get() >= s2.get();
 	}
 
+	template<class T1, class T2>
+	inline bool operator == (const SharedPtr<T1>& s1, const WeakPtr<T2>& s2)
+	{
+		return s1.get() == s2.lock().get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator != (const SharedPtr<T1>& s1, const WeakPtr<T2>& s2)
+	{
+		return s1.get() != s2.lock().get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator < (const SharedPtr<T1>& s1, const WeakPtr<T2>& s2)
+	{
+		return s1.get() < s2.lock().get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator <= (const SharedPtr<T1>& s1, const WeakPtr<T2>& s2)
+	{
+		return s1.get() <= s2.lock().get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator > (const SharedPtr<T1>& s1, const WeakPtr<T2>& s2)
+	{
+		return s1.get() > s2.lock().get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator >= (const SharedPtr<T1>& s1, const WeakPtr<T2>& s2)
+	{
+		return s1.get() >= s2.lock().get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator == (const WeakPtr<T1>& s1, const WeakPtr<T2>& s2)
+	{
+		return s1.lock().get() == s2.lock().get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator != (const WeakPtr<T1>& s1, const WeakPtr<T2>& s2)
+	{
+		return s1.lock().get() != s2.lock().get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator < (const WeakPtr<T1>& s1, const WeakPtr<T2>& s2)
+	{
+		return s1.lock().get() < s2.lock().get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator <= (const WeakPtr<T1>& s1, const WeakPtr<T2>& s2)
+	{
+		return s1.lock().get() <= s2.lock().get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator > (const WeakPtr<T1>& s1, const WeakPtr<T2>& s2)
+	{
+		return s1.lock().get() > s2.lock().get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator >= (const WeakPtr<T1>& s1, const WeakPtr<T2>& s2)
+	{
+		return s1.lock().get() >= s2.lock().get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator == (const WeakPtr<T1>& s1, const SharedPtr<T2>& s2)
+	{
+		return s1.lock().get() == s2.get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator != (const WeakPtr<T1>& s1, const SharedPtr<T2>& s2)
+	{
+		return s1.lock().get() != s2.get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator < (const WeakPtr<T1>& s1, const SharedPtr<T2>& s2)
+	{
+		return s1.lock().get() < s2.get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator <= (const WeakPtr<T1>& s1, const SharedPtr<T2>& s2)
+	{
+		return s1.lock().get() <= s2.get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator > (const WeakPtr<T1>& s1, const SharedPtr<T2>& s2)
+	{
+		return s1.lock().get() > s2.get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator >= (const WeakPtr<T1>& s1, const SharedPtr<T2>& s2)
+	{
+		return s1.lock().get() >= s2.get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator == (const SharedPtr<T1>& s1, T2* const s2)
+	{
+		return s1.get() == s2;
+	}
+
+	template<class T1, class T2>
+	inline bool operator != (const SharedPtr<T1>& s1, T2* const s2)
+	{
+		return s1.get() != s2;
+	}
+
+	template<class T1, class T2>
+	inline bool operator < (const SharedPtr<T1>& s1, T2* const s2)
+	{
+		return s1.get() < s2;
+	}
+
+	template<class T1, class T2>
+	inline bool operator <= (const SharedPtr<T1>& s1, T2* const s2)
+	{
+		return s1.get() <= s2;
+	}
+
+	template<class T1, class T2>
+	inline bool operator > (const SharedPtr<T1>& s1, T2* const s2)
+	{
+		return s1.get() > s2;
+	}
+
+	template<class T1, class T2>
+	inline bool operator >= (const SharedPtr<T1>& s1, T2* const s2)
+	{
+		return s1.get() >= s2;
+	}
+
+	template<class T1, class T2>
+	inline bool operator == (T1* const s1, const SharedPtr<T2>& s2)
+	{
+		return s1 == s2.get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator != (T1* const s1, const SharedPtr<T2>& s2)
+	{
+		return s1 != s2.get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator < (T1* const s1, const SharedPtr<T2>& s2)
+	{
+		return s1 < s2.get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator <= (T1* const s1, const SharedPtr<T2>& s2)
+	{
+		return s1 <= s2.get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator > (T1* const s1, const SharedPtr<T2>& s2)
+	{
+		return s1 > s2.get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator >= (T1* const s1, const SharedPtr<T2>& s2)
+	{
+		return s1 >= s2.get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator == (const WeakPtr<T1>& s1, T2* const s2)
+	{
+		return s1.lock().get() == s2;
+	}
+
+	template<class T1, class T2>
+	inline bool operator != (const WeakPtr<T1>& s1, T2* const s2)
+	{
+		return s1.lock().get() != s2;
+	}
+
+	template<class T1, class T2>
+	inline bool operator < (const WeakPtr<T1>& s1, T2* const s2)
+	{
+		return s1.lock().get() < s2;
+	}
+
+	template<class T1, class T2>
+	inline bool operator <= (const WeakPtr<T1>& s1, T2* const s2)
+	{
+		return s1.lock().get() <= s2;
+	}
+
+	template<class T1, class T2>
+	inline bool operator > (const WeakPtr<T1>& s1, T2* const s2)
+	{
+		return s1.lock().get() > s2;
+	}
+
+	template<class T1, class T2>
+	inline bool operator >= (const WeakPtr<T1>& s1, T2* const s2)
+	{
+		return s1.lock().get() >= s2;
+	}
+
+	template<class T1, class T2>
+	inline bool operator == (T1* const s1, const WeakPtr<T2>& s2)
+	{
+		return s1 == s2.lock().get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator != (T1* const s1, const WeakPtr<T2>& s2)
+	{
+		return s1 != s2.lock().get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator < (T1* const s1, const WeakPtr<T2>& s2)
+	{
+		return s1 < s2.lock().get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator <= (T1* const s1, const WeakPtr<T2>& s2)
+	{
+		return s1 <= s2.lock().get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator > (T1* const s1, const WeakPtr<T2>& s2)
+	{
+		return s1 > s2.lock().get();
+	}
+
+	template<class T1, class T2>
+	inline bool operator >= (T1* const s1, const WeakPtr<T2>& s2)
+	{
+		return s1 >= s2.lock().get();
+	}
+
 	template <typename T, typename Allocator>
 	inline SharedPtr<T> make_shared(T* p)
 	{
