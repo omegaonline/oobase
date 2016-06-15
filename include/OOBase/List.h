@@ -107,7 +107,7 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		bool remove(T1 value)
+		bool remove(const T1& value)
 		{
 			iterator i = find(value);
 			if (i == m_end)
@@ -130,7 +130,7 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		iterator find(T1 value)
+		iterator find(const T1& value)
 		{
 			iterator i = begin();
 			for (;i != m_end;++i)
@@ -142,7 +142,7 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		const_iterator find(T1 value) const
+		const_iterator find(const T1& value) const
 		{
 			const_iterator i = cbegin();
 			for (;i != m_end;++i)

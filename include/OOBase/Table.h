@@ -129,7 +129,7 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		bool remove(K1 key)
+		bool remove(const K1& key)
 		{
 			iterator i = find(key);
 			if (i == m_end)
@@ -145,14 +145,14 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		bool exists(K1 key) const
+		bool exists(const K1& key) const
 		{
 			const Pair<K,V>* p = bsearch(key);
 			return (p && p->first == key);
 		}
 
 		template <typename K1>
-		iterator find(K1 key)
+		iterator find(const K1& key)
 		{
 			const Pair<K,V>* p = bsearch(key);
 			if (!p || p->first != key)
@@ -166,7 +166,7 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		const_iterator find(K1 key) const
+		const_iterator find(const K1& key) const
 		{
 			const Pair<K,V>* p = bsearch(key);
 			if (!p || p->first != key)
@@ -180,7 +180,7 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		bool find_first(K1 key, V& val) const
+		bool find_first(const K1& key, V& val) const
 		{
 			const_iterator i = find(key);
 			if (!i)
@@ -232,7 +232,7 @@ namespace OOBase
 
 	private:
 		template <typename K1>
-		const Pair<K,V>* bsearch(K1 key) const
+		const Pair<K,V>* bsearch(const K1& key) const
 		{
 			size_t start = 0;
 			for (size_t end = this->m_size;start < end;)

@@ -119,7 +119,7 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		bool remove(T1 value)
+		bool remove(const T1& value)
 		{
 			iterator i = find(value);
 			if (i == m_end)
@@ -135,20 +135,20 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		bool exists(T1 value) const
+		bool exists(const T1& value) const
 		{
 			const T* p = bsearch(value);
 			return (p && *p == value);
 		}
 
 		template <typename T1>
-		iterator find(T1 value)
+		iterator find(const T1& value)
 		{
 			return iterator(this,find_i(value));
 		}
 
 		template <typename T1>
-		const_iterator find(T1 value) const
+		const_iterator find(const T1& value) const
 		{
 			return const_iterator(this,find_i(value));
 		}
@@ -194,16 +194,16 @@ namespace OOBase
 		}
 
 	private:
-		template <typename K1>
-		const T* bsearch(K1 key) const
+		template <typename T1>
+		const T* bsearch(const T1& value) const
 		{
 			size_t start = 0;
 			for (size_t end = this->m_size;start < end;)
 			{
 				size_t mid = start + (end - start) / 2;
-				if (m_compare(this->m_data[mid],key))
+				if (m_compare(this->m_data[mid],value))
 					start = mid + 1;
-				else if (this->m_data[mid] == key)
+				else if (this->m_data[mid] == value)
 					return &this->m_data[mid];
 				else
 					end = mid;
@@ -212,7 +212,7 @@ namespace OOBase
 		}
 
 		template <typename T1>
-		size_t find_i(T1 value) const
+		size_t find_i(const T1& value) const
 		{
 			const T* p = bsearch(value);
 			if (!p || *p != value)

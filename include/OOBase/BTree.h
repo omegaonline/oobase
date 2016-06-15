@@ -53,15 +53,15 @@ namespace OOBase
 		class BTreeCompare : public BTreeCompareBase<K1,Compare>
 		{
 		public:
-			BTreeCompare(const Compare& compare, const K2& k) : m_compare(compare), m_key(k)
+			BTreeCompare(const Compare& compare, typename call_traits<K2>::param_type k) : m_compare(compare), m_key(k)
 			{}
 
-			bool less_than(const K1& key) const
+			bool less_than(typename call_traits<K1>::param_type key) const
 			{
 				return m_compare(key,m_key);
 			}
 
-			bool equal(const K1& key) const
+			bool equal(typename call_traits<K1>::param_type key) const
 			{
 				return key == m_key;
 			}
@@ -849,7 +849,7 @@ namespace OOBase
 		public:
 			leaf_page_t* new_leaf(internal_page_t* parent, leaf_page_t* prev, leaf_page_t* next)
 			{
-				BTreeLeafPage<K,V,Compare,B,Allocator>* page = NULL;
+				leaf_page_t* page = NULL;
 				return Allocator::allocate_new_ref(page,parent,prev,next) ? page : NULL;
 			}
 
@@ -881,17 +881,20 @@ namespace OOBase
 		public:
 			leaf_page_t* new_leaf(internal_page_t* parent, leaf_page_t* prev, leaf_page_t* next)
 			{
-				return m_allocator.allocate_new<leaf_page_t>(m_allocator,parent,prev,next);
+				leaf_page_t* page = NULL;
+				return m_allocator.allocate_new_ref(page,m_allocator,parent,prev,next) ? page : NULL;
 			}
 
 			internal_page_t* new_internal_leaf(internal_page_t* parent, leaf_page_t* leaf)
 			{
-				return m_allocator.allocate_new<BTreeInternalPageLeaf<K,V,Compare,B,AllocatorInstance> >(m_allocator,parent,leaf) ? page : NULL;
+				BTreeInternalPageLeaf<K,V,Compare,B,AllocatorInstance>* page = NULL;
+				return m_allocator.allocate_new_ref(page,m_allocator,parent,leaf) ? page : NULL;
 			}
 
 			internal_page_t* new_internal_page(internal_page_t* parent, internal_page_t* internal)
 			{
-				return m_allocator.allocate_new<BTreeInternalPageInternal<K,V,Compare,B,AllocatorInstance> >(m_allocator,parent,internal) ? page : NULL;
+				BTreeInternalPageInternal<K,V,Compare,B,AllocatorInstance>* page = NULL;
+				return m_allocator.allocate_new(page,m_allocator,parent,internal) ? page : NULL;
 			}
 
 			void destroy_page(base_page_t* page)
@@ -1022,15 +1025,15 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		bool remove(K1 key)
+		bool remove(const K1& key)
 		{
 			return this->m_root_page && this->m_root_page->remove(this,detail::BTreeCompare<K,K1,Compare>(this->m_compare,key));
 		}
 
 		template <typename K1>
-		bool exists(K1 key) const
+		bool exists(const K1& key) const
 		{
-			return (find_i(key) != NULL);
+			return (find_i<K1>(key) != NULL);
 		}
 
 		size_t size() const
@@ -1093,7 +1096,7 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		bool find(K1 key) const
+		bool find(const K1& key) const
 		{
 			return this->m_root_page && this->m_root_page->find(detail::BTreeCompare<K,K1,Compare>(this->m_compare,key)) != NULL;
 		}

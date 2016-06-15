@@ -636,8 +636,8 @@ namespace OOBase
 			return iterator(this,baseClass::remove_at(first,count));
 		}
 
-		template <typename V>
-		size_t remove(V value)
+		template <typename T1>
+		size_t remove(const T1& value)
 		{
 			size_t ret = 0;
 			for (size_t pos = 0;pos < this->m_size;)
@@ -653,20 +653,20 @@ namespace OOBase
 			return ret;
 		}
 
-		template <typename V>
-		bool exists(V value) const
+		template <typename T1>
+		bool exists(const T1& value) const
 		{
 			return find_i(value) != size_t(-1);
 		}
 
-		template <typename V>
-		iterator find(V value)
+		template <typename T1>
+		iterator find(const T1& value)
 		{
 			return iterator(this,find_i(value));
 		}
 
-		template <typename V>
-		const_iterator find(V value) const
+		template <typename T1>
+		const_iterator find(const T1& value) const
 		{
 			return const_iterator(this,find_i(value));
 		}
@@ -754,7 +754,7 @@ namespace OOBase
 		const_iterator m_cend;
 
 		template <typename T1>
-		size_t find_i(T1 value) const
+		size_t find_i(const T1& value) const
 		{
 			for (size_t pos = 0;pos < this->m_size;++pos)
 			{
