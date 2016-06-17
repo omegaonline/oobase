@@ -236,7 +236,7 @@ namespace OOBase
 
 		~HashTable()
 		{
-			for (size_t i=0;i<m_size;++i)
+			for (size_t i=0;i<m_size && m_count;++i)
 			{
 				if (is_in_use(m_data[i].m_hash))
 					Node::inplace_destroy(m_data[i]);
@@ -266,7 +266,6 @@ namespace OOBase
 			if (!insert_i(pos,temp_item))
 				return m_end;
 
-			++m_count;
 			return iterator(this,pos);
 		}
 
@@ -358,7 +357,7 @@ namespace OOBase
 
 		void clear()
 		{
-			for (size_t i=0;i<m_size && m_count>0;++i)
+			for (size_t i=0;i<m_size && m_count;++i)
 			{
 				if (is_in_use(m_data[i].m_hash))
 				{
@@ -366,6 +365,7 @@ namespace OOBase
 					m_data[i].m_hash = 0;
 				}
 			}
+			m_count = 0;
 		}
 
 		bool empty() const
@@ -442,7 +442,7 @@ namespace OOBase
 		}
 
 		template <typename K1>
-		size_t hash_i(K1 key) const
+		size_t hash_i(const K1& key) const
 		{
 			size_t h = m_hash.hash(key);
 
