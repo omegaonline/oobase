@@ -789,7 +789,7 @@ int OOBase::Win32::detail::wchar_t_to_utf8(const wchar_t* wsz, char* sz, int& le
 		if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
 			return GetLastError();
 	}
-	else if (len2 < len)
+	else if (len2 <= len)
 		return 0;
 
 	len = WideCharToMultiByte(CP_UTF8,0,wsz,-1,NULL,0,NULL,NULL);
@@ -804,7 +804,7 @@ int OOBase::Win32::detail::utf8_to_wchar_t(const char* sz, wchar_t* wsz, int& le
 		if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
 			return GetLastError();
 	}
-	else if (len2 < len)
+	else if (len2 <= len)
 		return 0;
 	
 	len = MultiByteToWideChar(CP_UTF8,0,sz,-1,NULL,0);
