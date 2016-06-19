@@ -24,6 +24,7 @@
 
 #include "Memory.h"
 #include "Iterator.h"
+#include "Random.h"
 
 namespace OOBase
 {
@@ -495,6 +496,18 @@ namespace OOBase
 			{
 				baseClass::remove_at(this->m_size - 1,1);
 				return !baseClass::empty();
+			}
+
+			void shuffle(Random<size_t>& random)
+			{
+				if (this->m_size > 1)
+				{
+					for (size_t i = this->m_size - 1;i > 0; --i)
+					{
+						size_t r = random.next(0,i+1);
+						swap(this->m_data[i],this->m_data[r]);
+					}
+				}
 			}
 		};
 	}
