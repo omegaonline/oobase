@@ -431,16 +431,6 @@ namespace OOBase
 
 		static const size_t s_hi_bit = (size_t(1) << ((sizeof(size_t) * 8) - 1));
 
-		HashTable(const HashTable& h, Node* data, size_t size) : baseClass(h), m_data(data), m_size(size), m_count(0), m_hash(h.m_hash), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
-		{
-			iterator(this,size_t(-1)).swap(m_end);
-			const_iterator(this,size_t(-1)).swap(m_cend);
-
-			// Set nothing in use
-			for (size_t i=0;i<m_size;++i)
-				m_data[i].m_hash = 0;
-		}
-
 		template <typename K1>
 		size_t hash_i(const K1& key) const
 		{
@@ -499,75 +489,89 @@ namespace OOBase
 			return size_t(-1);
 		}
 
-		bool clone()
+		bool grow()
 		{
 			size_t new_size = (m_size == 0 ? 16 : m_size * 2);
 			Node* new_data = static_cast<Node*>(baseClass::allocate(new_size * sizeof(Node),alignment_of<Node>::value));
 			if (!new_data)
 				return false;
 
-			HashTable copy(*this,new_data,new_size);
+			// Set nothing in use
+			for (size_t i=0;i<new_size;++i)
+				new_data[i].m_hash = 0;
 
 			// Now insert the contents of m_data into copy
-			for (size_t i=0;i<m_size;++i)
+			size_t c = 0;
+			for (size_t i=0;i<m_size && c<m_count;++i)
 			{
 				if (is_in_use(m_data[i].m_hash))
 				{
-					if (!copy.insert(m_data[i].m_data.first,m_data[i].m_data.second))
-						return false;
+					++c;
+					size_t count = 0;
+					insert_other(m_data[i].m_data,new_size,new_data,count);
 				}
 			}
 
-			// Swap ourselves with the copy
-			swap(copy);
+			baseClass::free(m_data);
+			m_data = new_data;
+			m_size = new_size;
+
 			return true;
+		}
+
+		size_t insert_other(Pair<K,V>& item, size_t size, Node* data, size_t& count)
+		{
+			size_t pos = 0;
+			size_t h = hash_i(item.first);
+			pos = h & (size-1);
+			for (size_t dist = 0;;++dist)
+			{
+				if (!data[pos].m_hash)
+				{
+					Node::inplace_copy(&data[pos],h,item);
+					++count;
+					break;
+				}
+
+				if (data[pos].m_hash == h && data[pos].m_data.first == item.first)
+				{
+					// Replace existing
+					Node::inplace_copy(&data[pos],h,item);
+					break;
+				}
+
+				// If the existing element has probed less than us then swap, Robin Hood!
+				size_t curr_dist = probe_distance(data[pos].m_hash,pos);
+				if (curr_dist < dist)
+				{
+					if (is_deleted(data[pos].m_hash))
+					{
+						Node::inplace_copy(&data[pos],h,item);
+						++count;
+						break;
+					}
+
+					OOBase::swap(data[pos].m_hash,h);
+					OOBase::swap(data[pos].m_data,item);
+										
+					dist = curr_dist;
+				}
+
+				pos = (pos + 1) & (size-1);
+			}
+
+			return pos;
 		}
 
 		bool insert_i(size_t& pos, Pair<K,V>& item)
 		{
 			if (m_count >= (m_size / 10 * 9))
 			{
-				if (!clone())
+				if (!grow())
 					return false;
 			}
 
-			size_t h = hash_i(item.first);
-			pos = h & (m_size-1);
-			for (size_t dist = 0;;++dist)
-			{
-				if (!m_data[pos].m_hash)
-				{
-					Node::inplace_copy(&m_data[pos],h,item);
-					++m_count;
-					break;
-				}
-
-				if (m_data[pos].m_hash == h && m_data[pos].m_data.first == item.first)
-				{
-					Node::inplace_copy(&m_data[pos],h,item);
-					break;
-				}
-
-				// If the existing element has probed less than us then swap, Robin Hood!
-				size_t curr_dist = probe_distance(m_data[pos].m_hash,pos);
-				if (curr_dist < dist)
-				{
-					if (is_deleted(m_data[pos].m_hash))
-					{
-						Node::inplace_copy(&m_data[pos],h,item);
-						++m_count;
-						break;
-					}
-
-					OOBase::swap(m_data[pos].m_hash,h);
-					OOBase::swap(m_data[pos].m_data,item);
-										
-					dist = curr_dist;
-				}
-
-				pos = (pos + 1) & (m_size-1);
-			}
-
+			pos = insert_other(item,m_size,m_data,m_count);
 			return true;
 		}
 
