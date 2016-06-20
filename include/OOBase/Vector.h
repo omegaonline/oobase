@@ -505,7 +505,7 @@ namespace OOBase
 					for (size_t i = this->m_size - 1;i > 0; --i)
 					{
 						size_t r = random.next(0,i+1);
-						swap(this->m_data[i],this->m_data[r]);
+						OOBase::swap(this->m_data[i],this->m_data[r]);
 					}
 				}
 			}
