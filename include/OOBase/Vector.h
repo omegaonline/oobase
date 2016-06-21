@@ -762,6 +762,11 @@ namespace OOBase
 			return m_cend;
 		}
 
+		void shuffle(Random& random)
+		{
+			baseClass::shuffle();
+		}
+
 	private:
 		iterator m_end;
 		const_iterator m_cend;
