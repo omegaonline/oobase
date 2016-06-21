@@ -498,13 +498,13 @@ namespace OOBase
 				return !baseClass::empty();
 			}
 
-			void shuffle(Random<size_t>& random)
+			void shuffle(Random& random)
 			{
 				if (this->m_size > 1)
 				{
 					for (size_t i = this->m_size - 1;i > 0; --i)
 					{
-						size_t r = random.next(0,i+1);
+						size_t r = random.next<size_t>(0,i+1);
 						OOBase::swap(this->m_data[i],this->m_data[r]);
 					}
 				}

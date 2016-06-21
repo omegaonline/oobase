@@ -82,6 +82,9 @@ namespace
 		typedef BOOL (__stdcall *pfn_BindIoCompletionCallback)(HANDLE FileHandle, LPOVERLAPPED_COMPLETION_ROUTINE Function, ULONG Flags);
 		pfn_BindIoCompletionCallback m_BindIoCompletionCallback;
 
+		typedef BOOLEAN (APIENTRY *pfn_RtlGenRandom)(PVOID, ULONG);
+		pfn_RtlGenRandom m_RtlGenRandom;
+
 		HANDLE  m_hHeap;
 		
 	private:
@@ -140,6 +143,16 @@ namespace
 			instance->m_SleepConditionVariableCS = NULL;
 			instance->m_WakeConditionVariable = impl_WakeConditionVariable;
 			instance->m_WakeAllConditionVariable = impl_WakeAllConditionVariable;
+		}
+
+		if (!instance->m_RtlGenRandom)
+		{
+			HMODULE hADVAPI32 = GetModuleHandleW(L"ADVAPI32.DLL");
+			if (hADVAPI32)
+				m_RtlGenRandom = (pfn_RtlGenRandom)(GetProcAddress(hADVAPI32,"SystemFunction036"));
+
+			if (!m_RtlGenRandom)
+				OOBase_CallCriticalFailure("No RtlGenRandom function!");
 		}
 
 		instance->m_hHeap = HeapCreate(0,0,0);
@@ -809,6 +822,17 @@ int OOBase::Win32::detail::utf8_to_wchar_t(const char* sz, wchar_t* wsz, int& le
 	
 	len = MultiByteToWideChar(CP_UTF8,0,sz,-1,NULL,0);
 	return GetLastError();
+}
+
+int OOBase::random_bytes(void* buffer, size_t len)
+{
+	if (!Win32Thunk::instance().m_RtlGenRandom)
+		return ERROR_INVALID_FUNCTION;
+
+	if (!Win32Thunk::instance().m_RtlGenRandom(buffer,(ULONG)len))
+		return GetLastError();
+
+	return 0;
 }
 
 #if 0

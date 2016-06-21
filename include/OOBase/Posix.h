@@ -45,9 +45,6 @@ namespace OOBase
 		int close(int fd);
 		pid_t waitpid(pid_t pid, int* status, int options);
 
-		int random_bytes(void* buffer, size_t len);
-		int random_chars(char* buffer, size_t len);
-
 		class SmartFD : public NonCopyable
 		{
 		public:

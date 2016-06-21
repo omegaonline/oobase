@@ -61,6 +61,7 @@ liboobase_la_SOURCES = \
 	src/Mutex.cpp \
 	src/Once.cpp \
 	src/Posix.cpp \
+	src/Random.cpp \
 	src/ScratchAllocator.cpp \
 	src/Thread.cpp \
 	src/Timeout.cpp \

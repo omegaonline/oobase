@@ -93,6 +93,8 @@ namespace OOBase
 			   a 64-bit seed, we suggest to seed a splitmix64 generator and use its
 			   output to fill s. */
 
+			xoroshiro128plus();
+
 			xoroshiro128plus(const uint64_t s0, const uint64_t s1) :
 				m_s0(s0), m_s1(s1)
 			{}
@@ -131,24 +133,40 @@ namespace OOBase
 		};
 	}
 
-	template <typename T>
 	class Random : public NonCopyable
 	{
 	public:
+		Random()
+		{}
+
+		template <typename T>
 		Random(const T seed) : m_generator(static_cast<uint64_t>(seed))
 		{}
 
+		template<class T>
+		struct next_return
+		{
+			typedef T type;
+		};
+
+		template <typename T>
 		T next()
 		{
 			// Use the high bits
 			return static_cast<T>(m_generator.next() >> ((sizeof(uint64_t) - sizeof(T)) * 8));
 		}
 
+		bool next()
+		{
+			return static_cast<int64_t>(m_generator.next()) >= 0;
+		}
+
+		template <typename T>
 		T next(const T min, const T max) // [min,max)
 		{
 			T r;			
 			do {
-				r = next();
+				r = next<T>();
 			} while (r < min || r >= max);
 			return r;
 		}
@@ -157,21 +175,8 @@ namespace OOBase
 		detail::xoroshiro128plus m_generator;
 	};
 
-	template <>
-	class Random<bool> : public NonCopyable
-	{
-	public:
-		Random(const uint64_t seed) : m_generator(seed)
-		{}
-
-		bool next()
-		{
-			return static_cast<int64_t>(m_generator.next()) >= 0;
-		}
-
-	private:
-		detail::xoroshiro128plus m_generator;
-	};
+	int random_bytes(void* buffer, size_t len);
+	int random_chars(char* buffer, size_t len);
 }
 
 #endif // OOBASE_RANDOM_H_INCLUDED_

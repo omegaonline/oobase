@@ -23,6 +23,7 @@
 
 #include "../include/OOBase/Posix.h"
 #include "../include/OOBase/String.h"
+#include "../include/OOBase/Random.h"
 
 #if defined(HAVE_UNISTD_H)
 
@@ -251,7 +252,7 @@ int OOBase::POSIX::close_file_descriptors(int* except, size_t ex_count)
 	return 0;
 }
 
-int OOBase::POSIX::random_bytes(void* buffer, size_t len)
+int OOBase::random_bytes(void* buffer, size_t len)
 {
 	OOBase::POSIX::SmartFD fd(OOBase::POSIX::open("/dev/urandom",O_RDONLY));
 	if (!fd.valid())
@@ -266,27 +267,6 @@ int OOBase::POSIX::random_bytes(void* buffer, size_t len)
 
 	if (static_cast<size_t>(r) != len)
 		return EIO;
-
-	return 0;
-}
-
-int OOBase::POSIX::random_chars(char* buffer, size_t len)
-{
-	static const char c[] = "ABCDEFGHIJKLMNOPQRSTUVWXYUZabcdefghijklmnopqrstuvwxyz0123456789";
-
-	if (len)
-		buffer[--len] = '\0';
-
-	while (len)
-	{
-		unsigned char buf[128] = {0};
-		int err = random_bytes(buf,sizeof(buf));
-		if (err)
-			return err;
-
-		for (size_t i = 0;i < sizeof(buf) && len;)
-			buffer[--len] = c[buf[i++] % (sizeof(c)-1)];
-	}
 
 	return 0;
 }
