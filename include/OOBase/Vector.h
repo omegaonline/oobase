@@ -764,7 +764,7 @@ namespace OOBase
 
 		void shuffle(Random& random)
 		{
-			baseClass::shuffle();
+			baseClass::shuffle(random);
 		}
 
 	private:
