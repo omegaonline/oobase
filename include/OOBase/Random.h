@@ -99,17 +99,6 @@ namespace OOBase
 				m_s0(s0), m_s1(s1)
 			{}
 
-			xoroshiro128plus(const uint64_t s)
-			{
-				splitmix64 sm(s);
-				m_s0 = sm.next();
-				m_s1 = sm.next();
-			}
-
-			xoroshiro128plus(splitmix64& sm) :
-				m_s0(sm.next()), m_s1(sm.next())
-			{}
-
 			uint64_t next() 
 			{
 				const uint64_t result = m_s0 + m_s1;

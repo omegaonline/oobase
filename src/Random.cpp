@@ -20,6 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "../include/OOBase/Random.h"
+#include "../include/OOBase/Timeout.h"
 
 int OOBase::random_chars(char* buffer, size_t len)
 {
@@ -46,8 +47,14 @@ OOBase::detail::xoroshiro128plus::xoroshiro128plus()
 {
 	uint64_t s[2];
 	if (random_bytes(s,sizeof(s)) != 0)
-		OOBase_CallCriticalFailure(system_error());
-
-	m_s0 = s[0];
-	m_s1 = s[1];
+	{
+		splitmix64 sm(Clock().microseconds());
+		m_s0 = sm.next();
+		m_s1 = sm.next();
+	}
+	else
+	{
+		m_s0 = s[0];
+		m_s1 = s[1];
+	}
 }
