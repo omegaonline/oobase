@@ -149,10 +149,7 @@ namespace
 		{
 			HMODULE hADVAPI32 = GetModuleHandleW(L"ADVAPI32.DLL");
 			if (hADVAPI32)
-				m_RtlGenRandom = (pfn_RtlGenRandom)(GetProcAddress(hADVAPI32,"SystemFunction036"));
-
-			if (!m_RtlGenRandom)
-				OOBase_CallCriticalFailure("No RtlGenRandom function!");
+				instance->m_RtlGenRandom = (pfn_RtlGenRandom)(GetProcAddress(hADVAPI32,"SystemFunction036"));
 		}
 
 		instance->m_hHeap = HeapCreate(0,0,0);
