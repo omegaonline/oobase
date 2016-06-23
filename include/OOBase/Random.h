@@ -132,15 +132,10 @@ namespace OOBase
 		Random(const T seed) : m_generator(static_cast<uint64_t>(seed))
 		{}
 
-		template<class T>
-		struct next_return
-		{
-			typedef T type;
-		};
-
 		template <typename T>
 		T next()
 		{
+			static_assert(sizeof(T) <= sizeof(uint64_t),"sizeof(T) <= sizeof(uint64_t)");
 			// Use the high bits
 			return static_cast<T>(m_generator.next() >> ((sizeof(uint64_t) - sizeof(T)) * 8));
 		}
@@ -151,13 +146,20 @@ namespace OOBase
 		}
 
 		template <typename T>
+		T next(const T max) // [0,max)
+		{
+			uint64_t r_max = uint64_t(-1) / max * max;
+			uint64_t r;
+			do {
+				r = m_generator.next();
+			} while (r >= r_max);
+			return static_cast<T>(r / max);
+		}
+
+		template <typename T>
 		T next(const T min, const T max) // [min,max)
 		{
-			T r;			
-			do {
-				r = next<T>();
-			} while (r < min || r >= max);
-			return r;
+			return next(max-min) + min;
 		}
 
 	private:
