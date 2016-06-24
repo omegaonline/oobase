@@ -175,6 +175,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="src\Random.cpp" />
     <ClCompile Include="src\ScratchAllocator.cpp" />
     <ClCompile Include="src\Thread.cpp" />
     <ClCompile Include="src\Timeout.cpp" />
