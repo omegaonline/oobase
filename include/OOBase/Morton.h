@@ -302,12 +302,12 @@ namespace OOBase
 
 	inline uint32_t MortonDecode64_Y(uint64_t c)
 	{
-		return MortonDecode64(c << 1);
+		return MortonDecode64(c >> 1);
 	}
 
 	inline uint32_t MortonDecode64_Z(uint64_t c)
 	{
-		return MortonDecode64(c << 2);
+		return MortonDecode64(c >> 2);
 	}
 
 	inline uint32_t MortonEncode32(uint16_t x, uint16_t y, uint16_t z)
@@ -335,12 +335,12 @@ namespace OOBase
 
 	inline uint16_t MortonDecode32_Y(uint32_t c)
 	{
-		return MortonDecode32(c << 1);
+		return MortonDecode32(c >> 1);
 	}
 
 	inline uint16_t MortonDecode32_Z(uint32_t c)
 	{
-		return MortonDecode32(c << 2);
+		return MortonDecode32(c >> 2);
 	}
 
 	inline uint16_t MortonEncode16(uint8_t x, uint8_t y, uint8_t z)
@@ -364,12 +364,12 @@ namespace OOBase
 
 	inline uint8_t MortonDecode16_Y(uint16_t c)
 	{
-		return MortonDecode16(c << 1);
+		return MortonDecode16(c >> 1);
 	}
 
 	inline uint8_t MortonDecode16_Z(uint16_t c)
 	{
-		return MortonDecode16(c << 2);
+		return MortonDecode16(c >> 2);
 	}
 }
 
