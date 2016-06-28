@@ -45,7 +45,7 @@ namespace OOBase
 		typedef detail::IteratorImpl<const Set,const value_type,size_t> const_iterator;
 		friend class detail::IteratorImpl<const Set,const value_type,size_t>;
 
-		Set(const Compare& comp) : baseClass(), m_compare(comp), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
+		Set(const Compare& comp = Compare()) : baseClass(), m_compare(comp), m_end(NULL,size_t(-1)), m_cend(NULL,size_t(-1))
 		{
 			iterator(this,size_t(-1)).swap(m_end);
 			const_iterator(this,size_t(-1)).swap(m_cend);
