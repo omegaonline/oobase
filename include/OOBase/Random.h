@@ -153,7 +153,7 @@ namespace OOBase
 			do {
 				r = m_generator.next();
 			} while (r >= r_max);
-			return static_cast<T>(r / max);
+			return static_cast<T>(r % max);
 		}
 
 		template <typename T>
